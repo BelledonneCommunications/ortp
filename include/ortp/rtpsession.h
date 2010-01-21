@@ -99,7 +99,7 @@ typedef struct _RtpTransport
 typedef struct _RtpStream
 {
 	ortp_socket_t socket;
-        struct _RtpTransport *tr; 
+	struct _RtpTransport *tr; 
 	int sockfamily;
 	int max_rq_size;
 	int time_jump;
@@ -145,14 +145,14 @@ typedef struct _RtpStream
 	int send_errno;
 	int snd_socket_size;
 	int rcv_socket_size;
+	int ssrc_changed_thres;
 }RtpStream;
 
 typedef struct _RtcpStream
 {
 	ortp_socket_t socket;
 	int sockfamily;
-        struct _RtpTransport *tr; 
-
+	struct _RtpTransport *tr; 
 	mblk_t *cached_mp;
 #ifdef ORTP_INET6
 	struct sockaddr_storage rem_addr;
@@ -301,6 +301,8 @@ void rtp_session_set_symmetric_rtp (RtpSession * session, bool_t yesno);
 void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno);
 
 void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
+
+void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
 
 /*low level recv and send functions */
 mblk_t * rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts);

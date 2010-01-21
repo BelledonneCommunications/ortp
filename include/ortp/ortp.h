@@ -64,8 +64,8 @@
 #ifndef ORTP_H
 #define ORTP_H
 
-#include <ortp/rtpsession.h>
-#include <ortp/sessionset.h>
+#include "ortp/rtpsession.h"
+#include "ortp/sessionset.h"
 
 #ifdef __cplusplus
 extern "C"

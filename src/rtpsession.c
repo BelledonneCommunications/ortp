@@ -246,6 +246,7 @@ rtp_session_init (RtpSession * session, int mode)
 #else
 	session->rtp.snd_socket_size=session->rtp.rcv_socket_size=65536;
 #endif
+	session->rtp.ssrc_changed_thres=50;
 	session->dscp=RTP_DEFAULT_DSCP;
 	session->multicast_ttl=RTP_DEFAULT_MULTICAST_TTL;
 	session->multicast_loopback=RTP_DEFAULT_MULTICAST_LOOPBACK;
@@ -1332,6 +1333,14 @@ void rtp_session_uninit (RtpSession * session)
 
 	session->signal_tables = o_list_free(session->signal_tables);
 	msgb_allocator_uninit(&session->allocator);
+}
+
+/**
+ * Sets the number of packets containg a new SSRC that will trigger the
+ * "ssrc_changed" callback.
+**/
+void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets){
+	session->rtp.ssrc_changed_thres=numpackets;
 }
 
 /**

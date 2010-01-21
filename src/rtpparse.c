@@ -18,12 +18,10 @@
 */
 
 
-#include <ortp/ortp.h>
+#include "ortp/ortp.h"
 #include "jitterctl.h"
 #include "utils.h"
 #include "rtpsession_priv.h"
-
-#define SSRC_CHANGED_THRESHOLD 50
 
 static void queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded)
 {
@@ -135,7 +133,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 				session->inc_same_ssrc_count=0;
 				session->inc_ssrc_candidate=rtp->ssrc;
 			}
-			if (session->inc_same_ssrc_count>SSRC_CHANGED_THRESHOLD){
+			if (session->inc_same_ssrc_count>=session->rtp.ssrc_changed_thres){
 
 				/* store the sender rtp address to do symmetric RTP */
 				if (!session->use_connect){
