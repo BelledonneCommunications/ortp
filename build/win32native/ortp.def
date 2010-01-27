@@ -32,6 +32,7 @@ EXPORTS
 	rtp_session_set_profile
 	rtp_session_get_profile
 	rtp_session_set_data
+	rtp_session_set_ssrc_changed_threshold
 
 	rtp_session_signal_connect
 	rtp_session_signal_disconnect_by_callback
