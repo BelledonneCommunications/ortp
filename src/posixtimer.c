@@ -19,7 +19,7 @@
 
 #if defined(WIN32) || defined(_WIN32_WCE)
 #include "ortp-config-win32.h"
-#else
+#elif HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 
