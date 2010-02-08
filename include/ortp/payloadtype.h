@@ -100,6 +100,9 @@ void payload_type_set_send_fmtp(PayloadType *pt, const char *fmtp);
 void payload_type_append_recv_fmtp(PayloadType *pt, const char *fmtp);
 void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp);
 
+#define payload_type_get_bitrate(pt)	((pt)->normal_bitrate)
+#define payload_type_get_rate(pt)		((pt)->clock_rate)
+#define payload_type_get_mime(pt)		((pt)->mime_type)
 
 bool_t fmtp_get_value(const char *fmtp, const char *param_name, char *result, size_t result_len);
 
