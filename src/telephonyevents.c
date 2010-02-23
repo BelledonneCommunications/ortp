@@ -30,7 +30,7 @@ PayloadType	payload_type_telephone_event={
 	0,		/*pattern_length N/A */
 	0,		/*	normal_bitrate */
 	"telephone-event",	/* MIME subtype */
-	0,		/* Audio Channels N/A */
+	1,		/* Audio Channels */
 	0		/*flags */
 };
 
