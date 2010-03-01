@@ -9,12 +9,25 @@ else
 	AUTOMAKE=automake-${AM_VERSION}
 fi
 
-if test -f /opt/local/bin/glibtoolize ; then
-        # darwin
-        LIBTOOLIZE=/opt/local/bin/glibtoolize
-else
-        LIBTOOLIZE=libtoolize
-fi
+libtoolize="libtoolize"
+for lt in glibtoolize libtoolize15 libtoolize14 libtoolize13 ; do
+        if test -x /usr/bin/$lt ; then
+                libtoolize=$lt ; break
+        fi
+        if test -x /usr/local/bin/$lt ; then
+                libtoolize=$lt ; break
+        fi
+        if test -x /opt/local/bin/$lt ; then
+                libtoolize=$lt ; break
+        fi
+done
+AUTOMAKE_FLAGS=""
+case $libtoolize in
+*glibtoolize)
+	AUTOMAKE_FLAGS="-i"
+	;;
+esac
+
 if test -d /opt/local/share/aclocal ; then
         ACLOCAL_ARGS="-I /opt/local/share/aclocal"
 fi
@@ -22,9 +35,9 @@ fi
 
 set -x
 rm -rf config.cache autom4te.cache
-$LIBTOOLIZE --copy --force
+$libtoolize --copy --force
 $ACLOCAL $ACLOCAL_ARGS
 autoheader
-$AUTOMAKE --add-missing --copy
+$AUTOMAKE --add-missing --copy  ${AUTOMAKE_FLAGS}
 autoconf
 
