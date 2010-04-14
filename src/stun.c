@@ -1186,7 +1186,7 @@ stunRand(void)
       asm("rdtsc" : "=A" (tick));
 #elif defined (__SUNPRO_CC) && defined( __sparc__ )	
       tick = gethrtime();
-#elif defined(__linux) || defined(HAVE_DEV_RANDOM) 
+#elif defined(__linux) || defined(__linux__) || defined(HAVE_DEV_RANDOM) 
       {
  	fd_set fdSet;
 	int maxFd=0;
