@@ -61,11 +61,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmtd.lib"
+				AdditionalDependencies="Qwave.lib delayimp.lib libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmtd.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
 				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile="oRTP.def"
+				DelayLoadDLLs="Qwave.dll"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/oRTP.pdb"
 				SubSystem="2"
@@ -141,11 +142,13 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmt.lib"
+				AdditionalDependencies="Qwave.lib delayimp.lib libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmt.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
 				IgnoreAllDefaultLibraries="true"
 				ModuleDefinitionFile="oRTP.def"
+				DelayLoadDLLs="Qwave.dll"
+				AssemblyLinkResource=""
 				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"

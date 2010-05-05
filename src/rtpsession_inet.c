@@ -22,11 +22,16 @@
 #include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
 
-
 #if defined(WIN32) || defined(_WIN32_WCE)
 #include "ortp-config-win32.h"
 #elif HAVE_CONFIG_H
 #include "ortp-config.h" /*needed for HAVE_SYS_UIO_H */
+#endif
+
+#if (_WIN32_WINNT >= 0x0600)
+#include <delayimp.h>
+#undef ExternC
+#include <QOS2.h>
 #endif
 
 #ifdef HAVE_SYS_UIO_H
@@ -444,6 +449,9 @@ int rtp_session_get_multicast_loopback(RtpSession *session)
 int rtp_session_set_dscp(RtpSession *session, int dscp){
 	int retval=0;
 	int tos;
+#if (_WIN32_WINNT >= 0x0600)
+	OSVERSIONINFOEX ovi;
+#endif
 
 	// Store new DSCP value if one is specified
 	if (dscp>=0) session->dscp = dscp;
@@ -451,27 +459,90 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	// Don't do anything if socket hasn't been created yet
 	if (session->rtp.socket < 0) return 0;
 
-	// DSCP value is in the upper six bits of the TOS field
-	tos = (session->dscp << 2) & 0xFC;
-	switch (session->rtp.sockfamily) {
-		case AF_INET:
-		retval = setsockopt(session->rtp.socket, IPPROTO_IP, IP_TOS, (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
-		break;
+#if (_WIN32_WINNT >= 0x0600)
+	memset(&ovi, 0, sizeof(ovi));
+	ovi.dwOSVersionInfoSize = sizeof(ovi);
+	GetVersionEx((LPOSVERSIONINFO) & ovi);
+
+	ortp_message("check OS support for qwave.lib: %i %i %i\n",
+				ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
+	if (ovi.dwMajorVersion > 5) {
+
+		if (FAILED(__HrLoadAllImportsForDll("qwave.dll"))) {
+			ortp_warning("Failed to load qwave.dll: no QoS available\n" );
+		}
+		else
+		{
+			if (session->dscp==0)
+				tos=QOSTrafficTypeBestEffort;
+			else if (session->dscp==0x8)
+				tos=QOSTrafficTypeBackground;
+			else if (session->dscp==0x28)
+				tos=QOSTrafficTypeAudioVideo;
+			else if (session->dscp==0x38)
+				tos=QOSTrafficTypeVoice;
+			else
+				tos=QOSTrafficTypeExcellentEffort; /* 0x28 */
+
+			if (session->rtp.QoSHandle==NULL) {
+				QOS_VERSION version;
+				BOOL QoSResult;
+
+				version.MajorVersion = 1;
+				version.MinorVersion = 0;
+
+				QoSResult = QOSCreateHandle(&version, &session->rtp.QoSHandle);
+
+				if (QoSResult != TRUE){
+					ortp_error("QOSCreateHandle failed to create handle with error %d\n",
+						GetLastError());
+					retval=-1;
+				}
+			}
+			if (session->rtp.QoSHandle!=NULL) {
+				BOOL QoSResult;
+				QoSResult = QOSAddSocketToFlow(
+					session->rtp.QoSHandle, 
+					session->rtp.socket,
+					(struct sockaddr*)&session->rtp.rem_addr,
+					tos, 
+					QOS_NON_ADAPTIVE_FLOW, 
+					&session->rtp.QoSFlowID);
+
+				if (QoSResult != TRUE){
+					ortp_error("QOSAddSocketToFlow failed to add a flow with error %d\n", 
+						GetLastError());
+					retval=-1;
+				}
+			}
+		}
+	} else {
+#endif
+		// DSCP value is in the upper six bits of the TOS field
+		tos = (session->dscp << 2) & 0xFC;
+		switch (session->rtp.sockfamily) {
+			case AF_INET:
+			retval = setsockopt(session->rtp.socket, IPPROTO_IP, IP_TOS, (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+			break;
 #ifdef ORTP_INET6
-	case AF_INET6:
+		case AF_INET6:
 #	ifdef IPV6_TCLASS /*seems not defined by my libc*/
-		retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_TCLASS,
-		 (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_TCLASS,
+			 (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
 #	else
-		/*in case that works:*/
-		retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IP_TOS,
-		 (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+			/*in case that works:*/
+			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IP_TOS,
+			 (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+#	endif
+			break;
 #endif
-		break;
-#endif
-	default:
-		retval=-1;
+		default:
+			retval=-1;
+		}
+#if (_WIN32_WINNT >= 0x0600)
 	}
+#endif
+
 	if (retval<0)
 		ortp_warning("Failed to set DSCP value on socket.");
 

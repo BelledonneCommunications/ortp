@@ -32,6 +32,12 @@
 #include "utils.h"
 #include "rtpsession_priv.h"
 
+#if (_WIN32_WINNT >= 0x0600)
+#include <delayimp.h>
+#undef ExternC /* avoid redefinition... */
+#include <QOS2.h>
+#endif
+
 extern mblk_t *rtcp_create_simple_bye_packet(uint32_t ssrc, const char *reason);
 extern int rtcp_sr_init(RtpSession *session, char *buf, int size);
 extern int rtcp_rr_init(RtpSession *session, char *buf, int size);
@@ -1333,6 +1339,45 @@ void rtp_session_uninit (RtpSession * session)
 
 	session->signal_tables = o_list_free(session->signal_tables);
 	msgb_allocator_uninit(&session->allocator);
+
+#if (_WIN32_WINNT >= 0x0600)
+	if (session->rtp.QoSFlowID != 0)
+    {
+		OSVERSIONINFOEX ovi;
+		memset(&ovi, 0, sizeof(ovi));
+		ovi.dwOSVersionInfoSize = sizeof(ovi);
+		GetVersionEx((LPOSVERSIONINFO) & ovi);
+
+		ortp_message("check OS support for qwave.lib: %i %i %i\n",
+					ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
+		if (ovi.dwMajorVersion > 5) {
+
+			if (FAILED(__HrLoadAllImportsForDll("qwave.dll"))) {
+				ortp_warning("Failed to load qwave.dll: no QoS available\n" );
+			}
+			else
+			{
+				BOOL QoSResult;
+				QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle, 
+													0, 
+													session->rtp.QoSFlowID, 
+													0);
+
+				if (QoSResult != TRUE){
+					ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d\n", 
+							GetLastError());
+				}
+				session->rtp.QoSFlowID=0;
+			}
+		}
+    }
+
+    if (session->rtp.QoSHandle != NULL)
+    {
+        QOSCloseHandle(session->rtp.QoSHandle);
+		session->rtp.QoSHandle=NULL;
+    }
+#endif
 }
 
 /**
