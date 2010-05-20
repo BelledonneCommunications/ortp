@@ -67,7 +67,7 @@ typedef struct rtp_stats
 	uint64_t recv; 		/* bytes of payload received and delivered in time to the application */
 	uint64_t hw_recv;		/* bytes of payload received */
 	uint64_t packet_recv;	/* number of packets received */
-	uint64_t unavaillable;	/* packets not availlable when they were queried */
+	uint64_t unavaillable;	/* totally useless*/
 	uint64_t outoftime;		/* number of packets that were received too late */
 	uint64_t cum_packet_loss; /* cumulative number of packet lost */
 	uint64_t bad;			/* packets that did not appear to be RTP */
