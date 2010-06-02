@@ -259,8 +259,8 @@ typedef struct _OrtpMemoryFunctions{
 
 void ortp_set_memory_functions(OrtpMemoryFunctions *functions);
 
-#define ortp_new(type,count)	ortp_malloc(sizeof(type)*(count))
-#define ortp_new0(type,count)	ortp_malloc0(sizeof(type)*(count))
+#define ortp_new(type,count)	(type*)ortp_malloc(sizeof(type)*(count))
+#define ortp_new0(type,count)	(type*)ortp_malloc0(sizeof(type)*(count))
 
 int close_socket(ortp_socket_t sock);
 int set_non_blocking_socket(ortp_socket_t sock);
