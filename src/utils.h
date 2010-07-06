@@ -43,6 +43,7 @@ typedef struct _OList OList;
 OList * o_list_append(OList *elem, void * data);
 OList * o_list_remove(OList *list, void *data);
 OList * o_list_free(OList *elem);
+OList *o_list_remove_link(OList *list, OList *elem);
 
 #ifndef MIN
 #define MIN(a,b) (((a)>(b)) ? (b) : (a))
