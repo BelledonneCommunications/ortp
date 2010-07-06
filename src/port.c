@@ -32,6 +32,10 @@
 #include <process.h>
 #endif
 
+#ifdef HAVE_SYS_SHM_H
+#include <sys/shm.h>
+#endif
+
 static void *ortp_libc_malloc(size_t sz){
 	return malloc(sz);
 }
@@ -436,6 +440,38 @@ int ortp_client_pipe_close(ortp_socket_t sock){
 	return close(sock);
 }
 
+#ifdef HAVE_SYS_SHM_H
+
+void *ortp_shm_open(unsigned int keyid, int size, int create){
+	key_t key=keyid;
+	void *mem;
+	int fd=shmget(key,size,create ? (IPC_CREAT | 0666) : 0666);
+	if (fd==-1){
+		printf("shmget failed: %s\n",strerror(errno));
+		return NULL;
+	}
+	mem=shmat(fd,NULL,0);
+	if (mem==(void*)-1){
+		printf("shmat() failed: %s", strerror(errno));
+		return NULL;
+	}
+	return mem;
+}
+
+void ortp_shm_close(void *mem){
+	shmdt(mem);
+}
+
+#else
+void *ortp_shm_open(unsigned int keyid, int size, int create){
+	ortp_error("No shared memory support for this OS.");
+}
+
+void ortp_shm_close(void *mem){
+}
+
+
+#endif
 
 #elif defined(WIN32) && !defined(_WIN32_WCE)
 
@@ -528,5 +564,11 @@ int ortp_client_pipe_close(ortp_pipe_t sock){
 	return CloseHandle(sock);
 }
 
+void *ortp_shm_open(unsigned int keyid, int size, int create{
+	return NULL;
+}
+
+void ortp_shm_close(void *mem){
+}
 
 #endif

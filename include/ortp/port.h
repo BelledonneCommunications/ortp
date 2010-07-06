@@ -271,7 +271,7 @@ char *ortp_strdup_vprintf(const char *fmt, va_list ap);
 
 int ortp_file_exist(const char *pathname);
 
-/* portable named pipes */
+/* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)
 #ifdef WIN32
 typedef HANDLE ortp_pipe_t;
@@ -296,6 +296,10 @@ int ortp_client_pipe_close(ortp_pipe_t sock);
 
 int ortp_pipe_read(ortp_pipe_t p, uint8_t *buf, int len);
 int ortp_pipe_write(ortp_pipe_t p, const uint8_t *buf, int len);
+
+void *ortp_shm_open(unsigned int keyid, int size, int create);
+void ortp_shm_close(void *memory);
+
 #endif
 
 #ifdef __cplusplus
