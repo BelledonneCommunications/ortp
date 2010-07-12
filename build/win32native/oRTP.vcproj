@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8,00"
+	Version="9,00"
 	Name="oRTP"
 	ProjectGUID="{4A07BB2B-F56E-4F1B-A719-D28B782AC128}"
 	RootNamespace="oRTP"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -42,9 +43,9 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;..\..\..\win32-bin\include&quot;;&quot;..\..\include&quot;;&quot;..\..\include\ortp&quot;;&quot;..\..\src&quot;;&quot;..\..\build\win32native\include&quot;"
-				PreprocessorDefinitions="HAVE_OPENSSL_HMAC_H;HAVE_OPENSSL_MD5_H;_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;_DEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;_DEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE"
 				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
+				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -61,15 +62,17 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="Qwave.lib delayimp.lib libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmtd.lib"
+				AdditionalDependencies="Ws2_32.lib Winmm.lib qwave.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
-				IgnoreAllDefaultLibraries="true"
+				IgnoreAllDefaultLibraries="false"
 				ModuleDefinitionFile="oRTP.def"
-				DelayLoadDLLs="Qwave.dll"
+				DelayLoadDLLs="qwave.lib"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/oRTP.pdb"
 				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -89,9 +92,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -153,6 +153,8 @@
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -172,9 +174,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -263,10 +262,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\sessionset.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\srtp.c"
 				>
 			</File>
 			<File

@@ -149,12 +149,6 @@ EXPORTS
     getWinSocketError
 
     rtp_session_set_transports
-    srtp_transport_new
-    
-    ortp_srtp_init
-    ortp_srtp_create
-	ortp_srtp_dealloc
-	ortp_srtp_add_stream
 
 	rtp_session_set_dscp
     rtp_session_compute_recv_bandwidth
