@@ -287,6 +287,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
 
 		return 0;
 	}
+	ortp_error("Could not bind RTP socket on port to %s port %i",addr,port);
 	return -1;
 }
 
