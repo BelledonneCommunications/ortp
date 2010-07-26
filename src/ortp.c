@@ -259,11 +259,9 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
  	OutputDebugString(msg);
   	OutputDebugString("\r\n");
-#else
+#endif
 	fprintf(__log_file,"ortp-%s-%s" ENDLINE,lname,msg);
 	fflush(__log_file);
-#endif
-
 	ortp_free(msg);
 }
 
