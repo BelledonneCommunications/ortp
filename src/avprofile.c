@@ -303,6 +303,7 @@ void av_profile_init(RtpProfile *profile)
 	rtp_profile_set_payload(profile,7,&payload_type_lpc);
 	rtp_profile_set_payload(profile,4,&payload_type_g7231);
 	rtp_profile_set_payload(profile,8,&payload_type_pcma8000);
+	rtp_profile_set_payload(profile,9,&payload_type_g722);
 	rtp_profile_set_payload(profile,10,&payload_type_l16_stereo);
 	rtp_profile_set_payload(profile,11,&payload_type_l16_mono);
 	rtp_profile_set_payload(profile,18,&payload_type_g729);
@@ -513,4 +514,16 @@ PayloadType	payload_type_x_udpftp={
 	0,
 	0
 };
+
+PayloadType payload_type_g722={
+       TYPE( PAYLOAD_AUDIO_PACKETIZED),
+       CLOCK_RATE(16000),
+       BITS_PER_SAMPLE( 0),
+       ZERO_PATTERN(NULL),
+       PATTERN_LENGTH( 0),
+       NORMAL_BITRATE( 64000),
+       MIME_TYPE ("G722"),
+       CHANNELS(1)
+};
+
 
