@@ -169,7 +169,7 @@ char * ortp_strdup_vprintf(const char *fmt, va_list ap)
 	/* Guess we need no more than 100 bytes. */
 	int n, size = 200;
 	char *p,*np;
-#ifdef __linux
+#ifndef WIN32
 	va_list cap;/*copy of our argument list: a va_list cannot be re-used (SIGSEGV on linux 64 bits)*/
 #endif
 	if ((p = (char *) ortp_malloc (size)) == NULL)
@@ -177,7 +177,7 @@ char * ortp_strdup_vprintf(const char *fmt, va_list ap)
 	while (1)
 	{
 		/* Try to print in the allocated space. */
-#ifdef __linux
+#ifndef WIN32
 		va_copy(cap,ap);
 		n = vsnprintf (p, size, fmt, cap);
 		va_end(cap);
