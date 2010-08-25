@@ -517,7 +517,7 @@ PayloadType	payload_type_x_udpftp={
 
 PayloadType payload_type_g722={
        TYPE( PAYLOAD_AUDIO_PACKETIZED),
-       CLOCK_RATE(16000),
+       CLOCK_RATE(8000),
        BITS_PER_SAMPLE( 0),
        ZERO_PATTERN(NULL),
        PATTERN_LENGTH( 0),
