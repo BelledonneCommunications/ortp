@@ -612,7 +612,11 @@ stunParseMessage( char* buf, unsigned int bufLen, StunMessage *msg)
             }
             else
             {
-               ortp_debug("stun: SA_XORMAPPEDADDRESS = %s\n", ipaddr(&msg->xorMappedAddress.ipv4) );
+				uint32_t cookie = 0x2112A442;
+      			uint16_t cookie16 = 0x2112A442 >> 16;
+      			msg->xorMappedAddress.ipv4.port = msg->xorMappedAddress.ipv4.port^cookie16;
+      			msg->xorMappedAddress.ipv4.addr = msg->xorMappedAddress.ipv4.addr^cookie;
+				ortp_debug("stun: SA_XORMAPPEDADDRESS = %s\n", ipaddr(&msg->xorMappedAddress.ipv4) );
             }
       }
       else if (atrType == SA_XORONLY)
@@ -2538,10 +2542,8 @@ stunOpenSocket( StunAddress4 *dest, StunAddress4* mapAddr,
 
    if (resp.hasXorMappedAddress==TRUE)
    {
-      uint32_t cookie = 0x2112A442;
-      uint16_t cookie16 = 0x2112A442 >> 16;
-      mappedAddr.port = resp.xorMappedAddress.ipv4.port^cookie16;
-      mappedAddr.addr = resp.xorMappedAddress.ipv4.addr^cookie;
+      mappedAddr.port = resp.xorMappedAddress.ipv4.port;
+      mappedAddr.addr = resp.xorMappedAddress.ipv4.addr;
    }
    else
      mappedAddr = resp.mappedAddress.ipv4;
@@ -2648,10 +2650,8 @@ stunOpenSocketPair(StunAddress4 *dest,
 	  
       if (resp.hasXorMappedAddress==TRUE)
       {
-        uint32_t cookie = 0x2112A442;
-        uint16_t cookie16 = 0x2112A442 >> 16;
-        mappedAddr[i].port = resp.xorMappedAddress.ipv4.port^cookie16;
-        mappedAddr[i].addr = resp.xorMappedAddress.ipv4.addr^cookie;
+        mappedAddr[i].port = resp.xorMappedAddress.ipv4.port;
+        mappedAddr[i].addr = resp.xorMappedAddress.ipv4.addr;
       }
       else
         mappedAddr[i] = resp.mappedAddress.ipv4;
@@ -2840,10 +2840,8 @@ turnAllocateSocketPair(StunAddress4 *dest,
       {
         if (resp.hasXorRelayedAddress==TRUE)
         {
-          uint32_t cookie = 0x2112A442;
-          uint16_t cookie16 = 0x2112A442 >> 16;
-          mappedAddr[i].port = resp.xorRelayedAddress.ipv4.port^cookie16;
-          mappedAddr[i].addr = resp.xorRelayedAddress.ipv4.addr^cookie;
+          mappedAddr[i].port = resp.xorRelayedAddress.ipv4.port;
+          mappedAddr[i].addr = resp.xorRelayedAddress.ipv4.addr;
         }
         else
         {
