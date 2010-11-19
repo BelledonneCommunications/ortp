@@ -1701,6 +1701,10 @@ stunServerProcessMsg( char* buf,
             resp->xorMappedAddress.ipv4.port = mapped.port^(cookie>>16);
             resp->xorMappedAddress.ipv4.addr = mapped.addr^cookie;
          }
+
+		resp->hasMappedAddress = TRUE;
+		resp->mappedAddress.ipv4.port=mapped.port;
+		resp->mappedAddress.ipv4.addr=mapped.addr;
          
          resp->hasSourceAddress = TRUE;
          resp->sourceAddress.ipv4.port = (*changePort) ? altAddr->port : myAddr->port;
