@@ -94,8 +94,12 @@ typedef LONGLONG Int64;
 #else
 
 typedef int Socket;
+#ifndef INVALID_SOCKET 
 #define INVALID_SOCKET -1
+#endif
+#ifndef SOCKET_ERROR 
 #define SOCKET_ERROR -1
+#endif
 
 #define closesocket(fd) close(fd)
 
