@@ -201,6 +201,7 @@ VAR_DECLSPEC PayloadType payload_type_x_snow;
 VAR_DECLSPEC PayloadType payload_type_jpeg;
 
 VAR_DECLSPEC PayloadType payload_type_t140;
+VAR_DECLSPEC PayloadType payload_type_g722;
 
 /* non standard file transfer over UDP */
 VAR_DECLSPEC PayloadType payload_type_x_udpftp;

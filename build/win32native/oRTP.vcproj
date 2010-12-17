@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="8,00"
+	Version="9,00"
 	Name="oRTP"
 	ProjectGUID="{4A07BB2B-F56E-4F1B-A719-D28B782AC128}"
 	RootNamespace="oRTP"
 	Keyword="Win32Proj"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -42,9 +43,9 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="&quot;..\..\..\win32-bin\include&quot;;&quot;..\..\include&quot;;&quot;..\..\include\ortp&quot;;&quot;..\..\src&quot;;&quot;..\..\build\win32native\include&quot;"
-				PreprocessorDefinitions="HAVE_OPENSSL_HMAC_H;HAVE_OPENSSL_MD5_H;_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;_DEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;_DEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE"
 				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
+				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -61,14 +62,18 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmtd.lib"
+				AdditionalDependencies="Ws2_32.lib delayimp.lib Winmm.lib qwave.lib"
+				OutputFile="ortp.dll"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
-				IgnoreAllDefaultLibraries="true"
+				IgnoreAllDefaultLibraries="false"
 				ModuleDefinitionFile="oRTP.def"
+				DelayLoadDLLs="Qwave.dll"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/oRTP.pdb"
 				SubSystem="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -88,9 +93,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -121,8 +123,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				Optimization="2"
 				AdditionalIncludeDirectories="&quot;..\..\..\win32-bin\include&quot;;&quot;..\..\include&quot;;&quot;..\..\include\ortp&quot;;&quot;..\..\src&quot;;&quot;..\..\build\win32native\include&quot;"
-				PreprocessorDefinitions="HAVE_OPENSSL_HMAC_H;HAVE_OPENSSL_MD5_H;_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;NDEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;_CRT_SECURE_NO_DEPRECATE"
+				PreprocessorDefinitions="_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;NDEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE"
 				RuntimeLibrary="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -141,15 +144,19 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libeay32.lib Ws2_32.lib  libsrtp.lib Winmm.lib libcmt.lib"
+				AdditionalDependencies="Qwave.lib delayimp.lib Ws2_32.lib  Winmm.lib "
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
-				IgnoreAllDefaultLibraries="true"
+				AdditionalLibraryDirectories=""
+				IgnoreAllDefaultLibraries="false"
 				ModuleDefinitionFile="oRTP.def"
+				DelayLoadDLLs="Qwave.dll"
+				AssemblyLinkResource=""
 				GenerateDebugInformation="false"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
 			/>
 			<Tool
@@ -169,9 +176,6 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
-			/>
-			<Tool
-				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -208,10 +212,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\ortp.c"
-				>
-			</File>
-			<File
-				RelativePath=".\ortp.def"
 				>
 			</File>
 			<File
@@ -260,10 +260,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\sessionset.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\srtp.c"
 				>
 			</File>
 			<File
@@ -386,6 +382,10 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\ortp.def"
+				>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

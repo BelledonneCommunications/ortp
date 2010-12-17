@@ -32,23 +32,18 @@ LOCAL_SRC_FILES := \
 	src/rtpparse.c \
 	src/rtpsession.c \
 	src/rtpsession_inet.c \
-	src/rtpsession_priv.h \
 	src/jitterctl.c \
-	src/jitterctl.h \
 	src/rtpsignaltable.c  \
 	src/rtptimer.c \
-	src/rtptimer.h \
 	src/posixtimer.c \
 	src/ortp.c \
 	src/scheduler.c \
-	src/scheduler.h \
 	src/avprofile.c \
 	src/sessionset.c \
 	src/telephonyevents.c \
 	src/payloadtype.c \
 	src/rtcp.c \
 	src/utils.c \
-	src/utils.h \
 	src/rtcpparse.c \
 	src/event.c \
 	src/stun.c \

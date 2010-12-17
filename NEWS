@@ -1,3 +1,10 @@
+June 3, 2010 : ortp-0.16.3
+	- cosmetics improvements for compilation.
+
+May 10, 2010 : ortp-0.16.2
+	- add support for setting dscp on windows
+	- add accessors to struct PayloadType
+
 September 17, 2009: ortp-0.16.1
 	- minor compilation fixes
 

@@ -114,6 +114,8 @@ typedef struct _RtpStream
 	struct sockaddr_in rem_addr;
 #endif
 	int rem_addrlen;
+	void *QoSHandle;
+	unsigned long QoSFlowID;
 	JitterControl jittctl;
 	uint32_t snd_time_offset;/*the scheduler time when the application send its first timestamp*/	
 	uint32_t snd_ts_offset;	/* the first application timestamp sent by the application */

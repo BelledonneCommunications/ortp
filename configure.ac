@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([ortp],[0.16.1])
+AC_INIT([ortp],[0.16.3])
 AC_CANONICAL_SYSTEM
 
 dnl Source packaging numbers
@@ -240,7 +240,7 @@ fi
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS(poll.h sys/poll.h sys/uio.h fcntl.h sys/time.h unistd.h sys/audio.h linux/soundcard.h)
+AC_CHECK_HEADERS(poll.h sys/poll.h sys/uio.h fcntl.h sys/time.h unistd.h sys/audio.h linux/soundcard.h sys/shm.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

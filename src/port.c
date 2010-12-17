@@ -32,6 +32,10 @@
 #include <process.h>
 #endif
 
+#ifdef HAVE_SYS_SHM_H
+#include <sys/shm.h>
+#endif
+
 static void *ortp_libc_malloc(size_t sz){
 	return malloc(sz);
 }
@@ -436,6 +440,29 @@ int ortp_client_pipe_close(ortp_socket_t sock){
 	return close(sock);
 }
 
+#ifdef HAVE_SYS_SHM_H
+
+void *ortp_shm_open(unsigned int keyid, int size, int create){
+	key_t key=keyid;
+	void *mem;
+	int fd=shmget(key,size,create ? (IPC_CREAT | 0666) : 0666);
+	if (fd==-1){
+		printf("shmget failed: %s\n",strerror(errno));
+		return NULL;
+	}
+	mem=shmat(fd,NULL,0);
+	if (mem==(void*)-1){
+		printf("shmat() failed: %s", strerror(errno));
+		return NULL;
+	}
+	return mem;
+}
+
+void ortp_shm_close(void *mem){
+	shmdt(mem);
+}
+
+#endif
 
 #elif defined(WIN32) && !defined(_WIN32_WCE)
 
@@ -526,6 +553,70 @@ int ortp_pipe_write(ortp_pipe_t p, const uint8_t *buf, int len){
 
 int ortp_client_pipe_close(ortp_pipe_t sock){
 	return CloseHandle(sock);
+}
+
+
+typedef struct MapInfo{
+	HANDLE h;
+	void *mem;
+}MapInfo;
+
+static OList *maplist=NULL;
+
+void *ortp_shm_open(unsigned int keyid, int size, int create){
+	HANDLE h;
+	char name[64];
+	void *buf;
+
+	snprintf(name,sizeof(name),"%x",keyid);
+	if (create){
+		h = CreateFileMapping(
+			INVALID_HANDLE_VALUE,    // use paging file
+			NULL,                    // default security 
+			PAGE_READWRITE,          // read/write access
+			0,                       // maximum object size (high-order DWORD) 
+			size,                // maximum object size (low-order DWORD)  
+			name);                 // name of mapping object
+	}else{
+		h = OpenFileMapping(
+			FILE_MAP_ALL_ACCESS,   // read/write access
+			FALSE,                 // do not inherit the name
+			name);               // name of mapping object 
+	}
+	if (h==(HANDLE)-1) {
+		ortp_error("Fail to open file mapping (create=%i)",create);
+		return NULL;
+	}
+	buf = (LPTSTR) MapViewOfFile(h, // handle to map object
+		FILE_MAP_ALL_ACCESS,  // read/write permission
+		0,                    
+		0,                    
+		size);
+	if (buf!=NULL){
+		MapInfo *i=(MapInfo*)ortp_new(MapInfo,1);
+		i->h=h;
+		i->mem=buf;
+		maplist=o_list_append(maplist,i);
+	}else{
+		CloseHandle(h);
+		ortp_error("MapViewOfFile failed");
+	}
+	return buf;
+}
+
+void ortp_shm_close(void *mem){
+	OList *elem;
+	for(elem=maplist;elem!=NULL;elem=elem->next){
+		MapInfo *i=(MapInfo*)elem->data;
+		if (i->mem==mem){
+			CloseHandle(i->h);
+			UnmapViewOfFile(mem);
+			ortp_free(i);
+			maplist=o_list_remove_link(maplist,elem);
+			return;
+		}
+	}
+	ortp_error("No shared memory at %p was found.",mem);
 }
 
 

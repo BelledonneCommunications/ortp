@@ -107,6 +107,8 @@ EXPORTS
     dupb
     concatb
     esballoc
+    copyb
+    copymsg
     
     WIN_thread_create
     WIN_thread_join
@@ -149,12 +151,6 @@ EXPORTS
     getWinSocketError
 
     rtp_session_set_transports
-    srtp_transport_new
-    
-    ortp_srtp_init
-    ortp_srtp_create
-	ortp_srtp_dealloc
-	ortp_srtp_add_stream
 
 	rtp_session_set_dscp
     rtp_session_compute_recv_bandwidth
@@ -182,7 +178,6 @@ EXPORTS
     rtp_session_set_remote_addr_and_port
     rtp_session_set_time_jump_limit
 
-    copymsg
 	rtp_session_enable_jitter_buffer
 
 	rtp_session_set_rtp_socket_recv_buffer_size
@@ -200,5 +195,12 @@ EXPORTS
 	rtp_session_get_local_port
 	rtp_session_get_jitter_buffer_params
 
-	copyb
 	turnAllocateSocketPair
+
+	ortp_shm_open
+	ortp_shm_close
+	ortp_pipe_read
+	ortp_pipe_write
+	ortp_client_pipe_connect
+	ortp_client_pipe_close
+	ortp_file_exist
