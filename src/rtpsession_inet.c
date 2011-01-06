@@ -997,17 +997,18 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 		else
 		{
 		 	int errnum=getSocketErrorCode();
-			if (error == 0){
+			if (error == 0 || (error == -1 && errnum==0)){
 				/*0 can be returned by RtpTransport functions in case of EWOULDBLOCK*/
 				/*we ignore it*/
 				/*ortp_warning
 					("rtp_recv: strange... recv() returned zero.");*/
+				/*(error == -1 && errnum==0) for buggy drivers*/
 			}
 			else if (!is_would_block_error(errnum))
 			{
 				if (session->on_network_error.count>0){
 					rtp_signal_table_emit3(&session->on_network_error,(long)"Error receiving RTP packet",INT_TO_POINTER(getSocketErrorCode()));
-				}else ortp_warning("Error receiving RTP packet: %s.",getSocketError());
+				}else ortp_warning("Error receiving RTP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
 			}
 			/* don't free the cached_mp, it will be reused next time */
 			return -1;	/* avoids an infinite loop ! */
@@ -1085,10 +1086,11 @@ rtp_session_rtcp_recv (RtpSession * session)
 		{
 			int errnum=getSocketErrorCode();
 
-			if (error == 0)
+			if (error == 0 || (error=-1 && errnum==0))
 			{
-				ortp_warning
-					("rtcp_recv: strange... recv() returned zero.");
+				/*ortp_warning
+					("rtcp_recv: strange... recv() returned zero.");*/
+				/*(error == -1 && errnum==0) for buggy drivers*/
 			}
 			else if (!is_would_block_error(errnum))
 			{
