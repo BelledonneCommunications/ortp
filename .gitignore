@@ -17,3 +17,5 @@ depcomp
 *~
 autom4te.cache/
 install-sh
+ortp-config.h.in
+
