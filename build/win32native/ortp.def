@@ -82,6 +82,7 @@ EXPORTS
 	rtp_profile_clone_full
 	rtp_profile_destroy
 	rtp_profile_get_payload_from_rtpmap
+	rtp_profile_get_payload_from_mime
 	
 	payload_type_set_send_fmtp
 	payload_type_clone
