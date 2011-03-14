@@ -45,11 +45,32 @@ void session_set_destroy(SessionSet *set)
 	ortp_free(set);
 }
 
+int count_power_items_simple(int v) 
+{
+    int c = 0,j;
+    for (j=0;j<32;j++){
+        if ( ((v)>>j) & 1){
+	    ++c;
+        }
+    }
+    return c;
+}
+
+int count_power_items_fast(int v) 
+{
+    int c = 0;
+    while(v) {
+        c += (v & 1);
+	v >>= 1;
+    }
+    return c;
+}
+
 int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, SessionSet *result_set)
 {
 	uint32_t *mask1,*mask2,*mask3;
 	int i=0;
-	int j,ret=0;
+	int ret=0;
 	mask1=(uint32_t*)(void*)&sched_set->rtpset;
 	mask2=(uint32_t*)(void*)&user_set->rtpset;
 	mask3=(uint32_t*)(void*)&result_set->rtpset;
@@ -57,13 +78,7 @@ int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, Sessi
 		*mask3=(*mask1) & (*mask2);	/* computes the AND between the two masks*/
 		/* and unset the sessions that have been found from the sched_set */
 		*mask1=(*mask1) & (~(*mask3));
-		if ((*mask3)!=0){
-			for (j=0;j<32;j++){
-				if ( ((*mask3)>>j) & 1){
-					ret++;
-				}
-			}
-		}
+		ret += count_power_items_fast(*mask3);
 		i+=32;
 		mask1++;
 		mask2++;
