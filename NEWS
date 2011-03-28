@@ -1,3 +1,6 @@
+March 28th, 2011: ortp-0.16.5
+	- optimisations in session-set intersection computation
+
 February 7, 2011: ortp-0.16.4
 	- workaround fix for some versions of uclibc
 
