@@ -52,8 +52,10 @@ LOCAL_SRC_FILES := \
 	src/b64.c 
 
 LOCAL_CFLAGS += \
+	-DORTP_INET6 \
 	-UHAVE_CONFIG_H \
 	-include $(LOCAL_PATH)/build/android/ortp_AndroidConfig.h
+
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	$(LOCAL_PATH)/include
