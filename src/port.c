@@ -170,7 +170,7 @@ int ortp_file_exist(const char *pathname) {
 char *ortp_strndup(const char *str,int n){
 	int min=MIN((int)strlen(str),n)+1;
 	char *ret=(char*)ortp_malloc(min);
-	strncpy(ret,str,n);
+	strncpy(ret,str,min);
 	ret[min-1]='\0';
 	return ret;
 }
