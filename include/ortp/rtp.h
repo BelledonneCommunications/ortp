@@ -72,7 +72,15 @@ typedef struct rtp_stats
 	uint64_t cum_packet_loss; /* cumulative number of packet lost */
 	uint64_t bad;			/* packets that did not appear to be RTP */
 	uint64_t discarded;		/* incoming packets discarded because the queue exceeds its max size */
+	uint64_t sent_rtcp_packets;	/* sent RTCP packets counter (only packets that embed a report block are considered) */
 } rtp_stats_t;
+
+typedef struct jitter_stats
+{
+	uint64_t sum_jitter;		/* sum of all interarrival jitter (value in stream clock unit) */
+	uint64_t max_jitter;		/* biggest interarrival jitter (value in stream clock unit) */
+	uint64_t max_jitter_ts;		/* date (in ms since Epoch) of the biggest interarrival jitter */
+} jitter_stats_t;
 
 #define RTP_TIMESTAMP_IS_NEWER_THAN(ts1,ts2) \
 	((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2))< (uint32_t)(1<<31))

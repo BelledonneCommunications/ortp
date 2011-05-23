@@ -1439,6 +1439,63 @@ const rtp_stats_t * rtp_session_get_stats(const RtpSession *session){
 	return &session->rtp.stats;
 }
 
+/**
+ * Retrieves the session's jitter specific statistics.
+**/
+const jitter_stats_t * rtp_session_get_jitter_stats( const RtpSession *session ) {
+	return &session->rtp.jitter_stats;
+}
+
+/**
+ * @brief For <b>test purpose only</b>, sets a constant lost packet value within <b>all</b> RTCP output packets.@n
+ *
+ * The SR or RR RTCP packet contain a lost packet field. After this procedure is called, the lost packet field will be set to a constant value in all output SR or RR packets. This parameter will overridden the actual number of lost packets in the input RTP stream that the RTCP stack had previously processed.
+ * @param s : the rtp session.
+ * @param value : the lost packets test vector value.
+**/
+void rtp_session_rtcp_set_lost_packet_value( struct _RtpSession *s, const unsigned int value ) {
+	s->lost_packets_test_vector = value;
+	s->flags|=RTCP_OVERRIDE_LOST_PACKETS;
+}
+
+/**
+ * @brief For <b>test purpose only</b>, sets a constant interarrival_jitter value within <b>all</b> RTCP output packets.@n
+ *
+ * The SR or RR RTCP packet contain an interarrival jitter field. After this procedure is called, the interarrival jitter field will be set to a constant value in all output SR or RR packets. This parameter will overridden the actual interarrival jitter value that was processed by the RTCP stack.
+ * @param s : the rtp session.
+ * @param value : the interarrival jitter test vector value.
+**/
+void rtp_session_rtcp_set_jitter_value( struct _RtpSession *s, const unsigned int value ) {
+	s->interarrival_jitter_test_vector = value;
+	s->flags|=RTCP_OVERRIDE_JITTER;
+}
+
+/**
+ * @brief For <b>test purpose only</b>, simulates a constant RTT (Round Trip Time) value by setting the LSR field within <b>all</b> returned RTCP output packets.@n
+ *
+ * The RTT processing involves two RTCP packets exchanged between two different devices.@n
+ * In a <b>normal</b> operation the device 1 issues a SR packets at time T0, hence this packet has a timestamp field set to T0.
+ * The LSR and DLSR fiels of that packet are not considered here. This packet is received by the Device 2 at T1. 
+ * In response, the Device 2 issues another SR or RR packets at T2 with the following fields;
+ * - a timestamp set to T2.
+ * - a LSR (Last SR packet timestamp) field set to T0 ( this value has been extracted from the first packet).
+ * - a DLSR (Delay since Last SR packet) field set to (T2 - T1).
+ * .
+ * This packet is received by The Device 1 at T3. So the Device 1 is now able to process the RTT using the formula :
+ * RTT = T3 - LSR - DLSR = (T1 - T0) - (T3 - T2).@n
+ * This way of processing is described in par. 6.4 of the RFC3550 standard.
+ *
+ * In the <b>test</b> mode that is enabled by this procedure, the RTCP stack is considered as beeing part of the device 2. For setting the RTT to a constant RTT0 value, the Device 2 artificially sets the LSR field of the second packet to (T1 - RTT0), instead of T0 in normal mode. The two other fields (timestamp and DLSR) are set as in the normal mode. So the Device 1 will process :
+ * RTT = T3 - LSR - DLSR = RTT0 + (T3 - T2) that is near to RTT0 is T3 - T2 is small enough.
+ * @note It is impossible to actually make the mesured RTT strictly equal to RTT0, as the packet trip time (T3 - T2) is unknown when this packet is issued by the Device 2.
+ * @param s : the rtp session.
+ * @param value : The desired RTT test vector value (RTT0).
+**/
+void rtp_session_rtcp_set_delay_value( struct _RtpSession *s, const unsigned int value ) {
+	s->delay_test_vector= value;
+	s->flags|=RTCP_OVERRIDE_DELAY;
+}
+
 void rtp_session_reset_stats(RtpSession *session){
 	memset(&session->rtp.stats,0,sizeof(rtp_stats_t));
 }
@@ -1534,6 +1591,21 @@ int rtp_session_get_last_recv_error_code(RtpSession *session){
 
 void rtp_session_clear_recv_error_code(RtpSession *session){
 	session->rtp.send_errno=0;
+}
+
+/**
+ * Returns the last known round trip propagation delay.
+ *
+ * This value is known after successful RTCP SR or RR exchanged between a sender and a receiver.
+ * oRTP automatically takes care of sending SR or RR packets.
+ * You might want to call this function when you receive an RTCP event (see rtp_session_register_event_queue() ).
+ * This value might not be known: at the beginning when no RTCP packets have been exchanged yet, or simply because the
+ * rtcp channel is broken due to firewall problematics, or because the remote implementation does not support RTCP.
+ *
+ * @returns the round trip propagation time in milliseconds if known, -1 if unknown. 
+**/
+int rtp_session_get_round_trip_propagation(RtpSession *session){
+	return session->rtt;
 }
 
 /**

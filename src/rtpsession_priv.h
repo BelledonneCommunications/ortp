@@ -33,7 +33,10 @@ typedef enum {
 	RTP_SESSION_USING_EXT_SOCKETS=1<<7, /* the session is using externaly supplied sockets */
 	RTP_SOCKET_CONNECTED=1<<8,
 	RTCP_SOCKET_CONNECTED=1<<9,
-	RTP_SESSION_USING_TRANSPORT=1<<10
+	RTP_SESSION_USING_TRANSPORT=1<<10,
+	RTCP_OVERRIDE_LOST_PACKETS=1<11,
+	RTCP_OVERRIDE_JITTER=1<<12,
+	RTCP_OVERRIDE_DELAY=1<<13
 }RtpSessionFlags;
 
 #define rtp_session_using_transport(s, stream) (((s)->flags & RTP_SESSION_USING_TRANSPORT) && (s->stream.tr != 0))

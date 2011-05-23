@@ -1027,6 +1027,92 @@ void rtp_session_notify_inc_rtcp(RtpSession *session, mblk_t *m){
 	else freemsg(m);  /* avoid memory leak */
 }
 
+static void compute_rtt(RtpSession *session, rtcp_sr_t *sr){
+	RtpStream * rtpstream = &session->rtp;
+	uint64_t curntp=ortp_timeval_to_ntp(&rtpstream->last_rcv_SR_time);
+	uint32_t approx_ntp=(curntp>>16) & 0xFFFFFFFF;
+	uint32_t last_sr_time=report_block_get_last_SR_time(&sr->rb[0]);
+	uint32_t sr_delay=report_block_get_last_SR_delay(&sr->rb[0]);
+	/*ortp_message("rtt curntp=%u, last_sr_time=%u, sr_delay=%u",approx_ntp,last_sr_time,sr_delay);*/
+	if (last_sr_time!=0 && sr_delay!=0){
+		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
+		rtt_frac/=65536.0;
+		/*express the result in milliseconds*/
+		session->rtt=rtt_frac/1000.0;
+		/*ortp_message("rtt estimated to %i ms",session->rtt);*/
+	}
+}
+
+/*
+ * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
+ * @param session : the current session descriptor.
+ * @param block : the block descriptor that may contain a SR RTCP message.
+ * @note a basic parsing is done on the block structure. However, if it fails, no error is returned, and the session descriptor is left as is, so it does not induce any change in the caller procedure behaviour.
+ */
+static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
+	rtcp_common_header_t *rtcp;
+	RtpStream * rtpstream = &session->rtp;
+
+	int msgsize = (int) ( block->b_wptr - block->b_rptr );
+	if ( msgsize < RTCP_COMMON_HEADER_SIZE ) {
+		ortp_debug( "Receiving a too short RTCP packet" );
+		return;
+	}
+
+	rtcp = (rtcp_common_header_t *)block->b_rptr;
+	/* compound rtcp packet can be composed by more than one rtcp message */
+	while ( msgsize >= RTCP_COMMON_HEADER_SIZE ) {
+		if ( rtcp->version != 2 ) {
+			ortp_debug( "Receiving an illegal RTCP packet (version number <> 2)" );
+			return;
+		}
+
+		/* Convert header data from network order to host order */
+		rtcp->length = ntohs( rtcp->length );
+
+		/* compute length */
+		int rtcp_pk_size = ( rtcp->length + 1 ) * 4;
+		/* Sanity check of simple RTCP packet length. */
+		if ( rtcp_pk_size > msgsize ) {
+			ortp_debug( "Receiving a RTCP packet shorter than the specified length" );
+			return;
+		}
+
+		if ( rtcp->packet_type == RTCP_SR ) {
+			rtcp_sr_t *sr = (rtcp_sr_t *) rtcp;
+			
+			/* The session descriptor values are reset in case there is an error in the SR block parsing */
+			rtpstream->last_rcv_SR_ts = 0;
+			rtpstream->last_rcv_SR_time.tv_usec = 0;
+			rtpstream->last_rcv_SR_time.tv_sec = 0;
+
+			
+			if ( ntohl( sr->ssrc ) != session->rcv.ssrc ) {
+				ortp_debug( "Receiving a RTCP SR packet from an unknown ssrc" );
+				return;
+			}
+
+			if ( msgsize < RTCP_COMMON_HEADER_SIZE + RTCP_SSRC_FIELD_SIZE + RTCP_SENDER_INFO_SIZE + ( RTCP_REPORT_BLOCK_SIZE * sr->ch.rc ) ) {
+				ortp_debug( "Receiving a too short RTCP SR packet" );
+				return;
+			}
+
+			/* Getting the reception date from the main clock */
+			struct timeval reception_date;
+			gettimeofday( &reception_date, NULL );
+
+			/* Saving the data to fill LSR and DLSR field in next RTCP report to be transmitted */
+			/* This value will be the LSR field of the next RTCP report (only the central 32 bits are kept, as described in par.4 of RC3550) */
+			rtpstream->last_rcv_SR_ts = ( ntohl( sr->si.ntp_timestamp_msw ) << 16 ) | ( ntohl( sr->si.ntp_timestamp_lsw ) >> 16 );
+			/* This value will help in processing the DLSR of the next RTCP report ( see report_block_init() in rtcp.cc ) */
+			rtpstream->last_rcv_SR_time.tv_usec = reception_date.tv_usec;
+			rtpstream->last_rcv_SR_time.tv_sec = reception_date.tv_sec;
+			compute_rtt(session,sr);
+		}
+	}
+}
+
+
 int
 rtp_session_rtcp_recv (RtpSession * session)
 {
@@ -1067,6 +1153,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 		if (error > 0)
 		{
 			mp->b_wptr += error;
+			process_rtcp_packet( session, mp );
 			/* post an event to notify the application*/
 			{
 				rtp_session_notify_inc_rtcp(session,mp);

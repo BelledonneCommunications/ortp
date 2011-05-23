@@ -301,9 +301,6 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header)
 	   " number of incoming rtp bytes successfully delivered to the application=%lld ",
 	   (long long)stats->recv);
   ortp_log(ORTP_MESSAGE,
-	   " number of times the application queried a packet that didn't exist=%lld ",
-	   (long long)stats->unavaillable);
-  ortp_log(ORTP_MESSAGE,
 	   " number of rtp packet lost=%lld",
 	   (long long) stats->cum_packet_loss);
   ortp_log(ORTP_MESSAGE,
@@ -334,9 +331,6 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header)
   ortp_log(ORTP_MESSAGE,
 	   " number of incoming rtp bytes successfully delivered to the application=%I64d ",
 	   (uint64_t)stats->recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of times the application queried a packet that didn't exist=%I64d ",
-	   (uint64_t)stats->unavaillable);
   ortp_log(ORTP_MESSAGE,
 	   " number of rtp packet lost=%I64d",
 	   (uint64_t) stats->cum_packet_loss);

@@ -148,6 +148,7 @@ typedef struct _RtpStream
 	int snd_socket_size;
 	int rcv_socket_size;
 	int ssrc_changed_thres;
+	jitter_stats_t jitter_stats;
 }RtpStream;
 
 typedef struct _RtcpStream
@@ -217,6 +218,10 @@ struct _RtpSession
 	mblk_t *current_tev;		/* the pending telephony events */
 	mblk_t *sd;
 	queue_t contributing_sources;
+	unsigned int lost_packets_test_vector;
+	unsigned int interarrival_jitter_test_vector;
+	unsigned int delay_test_vector;
+	int rtt;/*last round trip delay calculated*/
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -336,6 +341,7 @@ void rtp_session_reset(RtpSession *session);
 void rtp_session_destroy(RtpSession *session);
 
 const rtp_stats_t * rtp_session_get_stats(const RtpSession *session);
+const jitter_stats_t * rtp_session_get_jitter_stats( const RtpSession *session );
 void rtp_session_reset_stats(RtpSession *session);
 
 void rtp_session_set_data(RtpSession *session, void *data);
@@ -370,6 +376,13 @@ int rtp_session_get_last_send_error_code(RtpSession *session);
 void rtp_session_clear_send_error_code(RtpSession *session);
 int rtp_session_get_last_recv_error_code(RtpSession *session);
 void rtp_session_clear_recv_error_code(RtpSession *session);
+
+
+int rtp_session_get_round_trip_propagation(RtpSession *session);
+
+void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const unsigned int value );
+void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
+void rtp_session_rtcp_set_delay_value(RtpSession *session, const unsigned int value );
 
 /*private */
 void rtp_session_init(RtpSession *session, int mode);

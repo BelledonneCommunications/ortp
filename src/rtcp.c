@@ -24,6 +24,9 @@
  *  Copyright  2004  Simon Morlat
  *  Email simon dot morlat at linphone dot org
  ****************************************************************************/
+
+#include <math.h>
+
 #include "ortp/ortp.h"
 #include "ortp/rtpsession.h"
 #include "ortp/rtcp.h"
@@ -200,17 +203,21 @@ void rtp_session_remove_contributing_sources(RtpSession *session, uint32_t ssrc)
 	rtp_session_rtcp_send(session,tmp);
 }
 
+uint64_t ortp_timeval_to_ntp(const struct timeval *tv){
+	uint64_t msw;
+	uint64_t lsw;
+	msw=tv->tv_sec + 0x83AA7E80; /* 0x83AA7E80 is the number of seconds from 1900 to 1970 */
+	lsw=(uint32_t)((double)tv->tv_usec*(double)(((uint64_t)1)<<32)*1.0e-6);
+	return msw<<32 | lsw; 
+}
+
 static void sender_info_init(sender_info_t *info, RtpSession *session){
 	struct timeval tv;
-	uint32_t tmp;
+	uint64_t ntp;
 	gettimeofday(&tv,NULL);
-	info->ntp_timestamp_msw=htonl(tv.tv_sec + 0x83AA7E80); /* 0x83AA7E80 is the number of seconds from 1900 to 1970 */
-#if defined(_WIN32_WCE)
-	tmp=(uint32_t)((double)tv.tv_usec*(double)(((uint64_t)1)<<32)*1.0e-6);
-#else
-	tmp=(uint32_t)((double)tv.tv_usec*(double)(1LL<<32)*1.0e-6);
-#endif
-	info->ntp_timestamp_lsw=htonl(tmp);
+	ntp=ortp_timeval_to_ntp(&tv);
+	info->ntp_timestamp_msw=htonl(ntp >>32);
+	info->ntp_timestamp_lsw=htonl(ntp & 0xFFFFFFFF);
 	info->rtp_timestamp=htonl(session->rtp.snd_last_ts);
 	info->senders_packet_count=(uint32_t) htonl((u_long) session->rtp.stats.packet_sent);
 	info->senders_octet_count=(uint32_t) htonl((u_long) session->rtp.sent_payload_bytes);
@@ -233,11 +240,22 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		stream->hwrcv_since_last_SR
 		);*/
 	if (stream->hwrcv_seq_at_last_SR!=0){
-		packet_loss=(stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR) - stream->hwrcv_since_last_SR;
-		if (packet_loss<0)
-			packet_loss=0;
-		stream->stats.cum_packet_loss+=packet_loss;
-		loss_fraction=(int)(256.0*(float)packet_loss/(float)stream->hwrcv_since_last_SR);
+		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
+			/* If the test mode is enabled, replace the lost packet field with the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
+			packet_loss = session->lost_packets_test_vector;
+			if ( packet_loss < 0 )
+				packet_loss = 0;
+			/* The test value is the definite cumulative one, no need to increment it each time a packet is sent */
+			stream->stats.cum_packet_loss = packet_loss;
+		}
+		else {
+			/* Normal mode */
+			packet_loss = ( stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR ) - stream->hwrcv_since_last_SR;
+			if ( packet_loss < 0 )
+				packet_loss = 0;
+			stream->stats.cum_packet_loss += packet_loss;
+		}
+		loss_fraction=(int)( 256 * packet_loss) / stream->hwrcv_since_last_SR ;
 	}
 	/* reset them */
 	stream->hwrcv_since_last_SR=0;
@@ -245,22 +263,59 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	
 	if (stream->last_rcv_SR_time.tv_sec!=0){
 		struct timeval now;
-		float delay;
+		double delay;
 		gettimeofday(&now,NULL);
-		delay=(float) ((now.tv_sec-stream->last_rcv_SR_time.tv_sec)*1e6 ) + (now.tv_usec-stream->last_rcv_SR_time.tv_usec);
-		delay=(float) (delay*65536*1e-6);
+		delay= (now.tv_sec-stream->last_rcv_SR_time.tv_sec)+ ((now.tv_usec-stream->last_rcv_SR_time.tv_usec)*1e-6);
+		delay= (delay*65536);
 		delay_snc_last_sr=(uint32_t) delay;
 	}
 	
 	b->ssrc=htonl(session->rcv.ssrc);
 	fl_cnpl=((loss_fraction&0xFF)<<24) | (stream->stats.cum_packet_loss & 0xFFFFFF);
 	b->fl_cnpl=htonl(fl_cnpl);
-	b->interarrival_jitter=htonl((uint32_t) stream->jittctl.inter_jitter);
+	if ( session->flags & RTCP_OVERRIDE_JITTER ) {
+		/* If the test mode is enabled, replace the interarrival jitter field with the test vector value set by rtp_session_rtcp_set_jitter_value() */
+		b->interarrival_jitter = htonl( session->interarrival_jitter_test_vector );
+	}
+	else {
+		/* Normal mode */
+		b->interarrival_jitter = htonl( (uint32_t) stream->jittctl.inter_jitter );
+	}
 	b->ext_high_seq_num_rec=htonl(stream->hwrcv_extseq);
-	b->lsr=htonl(stream->last_rcv_SR_ts);
 	b->delay_snc_last_sr=htonl(delay_snc_last_sr);
+	if ( session->flags & RTCP_OVERRIDE_DELAY ) {
+		/* If the test mode is enabled, modifies the returned ts (LSR) so it matches the value of the delay test value */
+		/* refer to the rtp_session_rtcp_set_delay_value() documentation for further explanations */
+		double new_ts = ( (double)stream->last_rcv_SR_time.tv_sec + (double)stream->last_rcv_SR_time.tv_usec * 1e-6 ) - ( (double)session->delay_test_vector / 1000.0 );
+
+		/* Converting the time format in RFC3550 (par. 4) format */
+		new_ts += 2208988800.0; /* 2208988800 is the number of seconds from 1900 to 1970 (January 1, Oh TU) */
+		new_ts = round( 65536.0 * new_ts );
+		/* This non-elegant way of coding fits with the gcc and the icc compilers */
+		uint32_t new_ts2 = (uint32_t)( (uint64_t)new_ts & 0xffffffff );
+		b->lsr = htonl( new_ts2 );
+	}
+	else {
+		/* Normal mode */
+		b->lsr = htonl( stream->last_rcv_SR_ts );
+	}
 }
 
+static void extended_statistics( RtpSession *session, report_block_t * rb ) {
+	session->rtp.stats.sent_rtcp_packets ++;
+	/* the jitter raw value is kept in stream clock units */
+	uint32_t jitter = ntohl( rb->interarrival_jitter );
+	session->rtp.jitter_stats.sum_jitter += jitter;
+
+	/* stores the biggest jitter for that session and its date (in millisecond) since Epoch */
+	if ( jitter > session->rtp.jitter_stats.max_jitter ) {
+		session->rtp.jitter_stats.max_jitter = jitter ;
+
+		struct timeval now;
+		gettimeofday( &now, NULL );
+		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000 ) + ( now.tv_usec / 1000 );
+	}
+}
 
 
 static int rtcp_sr_init(RtpSession *session, uint8_t *buf, int size){
@@ -272,8 +327,10 @@ static int rtcp_sr_init(RtpSession *session, uint8_t *buf, int size){
 	sr->ssrc=htonl(session->snd.ssrc);
 	sender_info_init(&sr->si,session);
 	/*only include a report block if packets were received*/
-	if (rr)
-		report_block_init(&sr->rb[0],session);
+	if (rr) {
+		report_block_init( &sr->rb[0], session );
+		extended_statistics( session, &sr->rb[0] );
+	}
 	return sr_size;
 }
 
@@ -283,6 +340,7 @@ static int rtcp_rr_init(RtpSession *session, uint8_t *buf, int size){
 	rtcp_common_header_init(&rr->ch,session,RTCP_RR,1,sizeof(rtcp_rr_t));
 	rr->ssrc=htonl(session->snd.ssrc);
 	report_block_init(&rr->rb[0],session);
+	extended_statistics( session, &rr->rb[0] );
 	return sizeof(rtcp_rr_t);
 }
 

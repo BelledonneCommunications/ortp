@@ -89,4 +89,6 @@ typedef union{
 
 void ortp_ev_queue_put(OrtpEvQueue *q, OrtpEvent *ev);
 
+uint64_t ortp_timeval_to_ntp(const struct timeval *tv);
+
 #endif

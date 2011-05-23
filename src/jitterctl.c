@@ -59,14 +59,15 @@ void jitter_control_enable_adaptive(JitterControl *ctl, bool_t val){
 void jitter_control_set_payload(JitterControl *ctl, PayloadType *pt){
 	ctl->jitt_comp_ts =
 			(int) (((double) ctl->jitt_comp / 1000.0) * (pt->clock_rate));
-	ctl->corrective_step=(160 * 8000 )/pt->clock_rate; /* This formula got to me after some beers */
+	/*make correction by not less than 10ms */
+	ctl->corrective_step=(int) (0.01 * (float)pt->clock_rate);
 	ctl->adapt_jitt_comp_ts=ctl->jitt_comp_ts;
 }
 
 
 void jitter_control_dump_stats(JitterControl *ctl){
-	ortp_message("JitterControl:\n\tslide=%g,jitter=%g,count=%i",
-			(double)ctl->slide,ctl->jitter, ctl->count);
+	ortp_message("JitterControl:\n\tslide=%g,jitter=%g,adapt_jitt_comp_ts=%i,corrective_slide=%i, count=%i",
+			(double)ctl->slide,ctl->jitter, ctl->adapt_jitt_comp_ts, ctl->corrective_slide,ctl->count);
 }
 
 /*the goal of this method is to compute "corrective_slide": a timestamp unit'd value to be added
@@ -112,10 +113,9 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 	ctl->olddiff=diff;
 	ctl->count++;
 	if (ctl->adaptive){
-		
 		if (ctl->count%50==0) {
 			ctl->adapt_jitt_comp_ts=(int) MAX(ctl->jitt_comp_ts,2*ctl->jitter);
-			/*jitter_control_dump_stats(ctl);*/
+			//jitter_control_dump_stats(ctl);
 		}
 		
 		ctl->slide=slide;
