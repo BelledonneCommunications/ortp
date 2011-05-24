@@ -221,7 +221,7 @@ struct _RtpSession
 	unsigned int lost_packets_test_vector;
 	unsigned int interarrival_jitter_test_vector;
 	unsigned int delay_test_vector;
-	int rtt;/*last round trip delay calculated*/
+	float rtt;/*last round trip delay calculated*/
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -378,7 +378,7 @@ int rtp_session_get_last_recv_error_code(RtpSession *session);
 void rtp_session_clear_recv_error_code(RtpSession *session);
 
 
-int rtp_session_get_round_trip_propagation(RtpSession *session);
+float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const unsigned int value );
 void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );

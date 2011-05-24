@@ -1602,9 +1602,9 @@ void rtp_session_clear_recv_error_code(RtpSession *session){
  * This value might not be known: at the beginning when no RTCP packets have been exchanged yet, or simply because the
  * rtcp channel is broken due to firewall problematics, or because the remote implementation does not support RTCP.
  *
- * @returns the round trip propagation time in milliseconds if known, -1 if unknown. 
+ * @returns the round trip propagation time in seconds if known, -1 if unknown. 
 **/
-int rtp_session_get_round_trip_propagation(RtpSession *session){
+float rtp_session_get_round_trip_propagation(RtpSession *session){
 	return session->rtt;
 }
 

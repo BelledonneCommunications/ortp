@@ -1038,8 +1038,8 @@ static void compute_rtt(RtpSession *session, rtcp_sr_t *sr){
 		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
 		rtt_frac/=65536.0;
 		/*express the result in milliseconds*/
-		session->rtt=rtt_frac/1000.0;
-		/*ortp_message("rtt estimated to %i ms",session->rtt);*/
+		session->rtt=rtt_frac;
+		/*ortp_message("rtt estimated to %f ms",session->rtt);*/
 	}
 }
 

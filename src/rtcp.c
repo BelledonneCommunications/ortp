@@ -247,8 +247,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 				packet_loss = 0;
 			/* The test value is the definite cumulative one, no need to increment it each time a packet is sent */
 			stream->stats.cum_packet_loss = packet_loss;
-		}
-		else {
+		}else {
 			/* Normal mode */
 			packet_loss = ( stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR ) - stream->hwrcv_since_last_SR;
 			if ( packet_loss < 0 )
