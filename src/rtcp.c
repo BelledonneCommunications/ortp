@@ -239,7 +239,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		stream->hwrcv_seq_at_last_SR,
 		stream->hwrcv_since_last_SR
 		);*/
-	if (stream->hwrcv_seq_at_last_SR!=0){
+	if (stream->hwrcv_since_last_SR!=0){
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
 			packet_loss = session->lost_packets_test_vector;
@@ -366,7 +366,6 @@ static mblk_t * make_rr(RtpSession *session){
 	cm->b_cont=sdes;
 	return cm;
 }
-
 
 static mblk_t * make_sr(RtpSession *session){
 	mblk_t *cm=NULL;
