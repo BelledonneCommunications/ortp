@@ -1993,7 +1993,6 @@ stunSendTest( Socket myFd, StunAddress4 *dest,
 	
    bool_t changePort=FALSE;
    bool_t changeIP=FALSE;
-   bool_t discard=FALSE;
 
    StunMessage req;
    char buf[STUN_MAX_MESSAGE_SIZE];
@@ -2015,9 +2014,10 @@ stunSendTest( Socket myFd, StunAddress4 *dest,
       case 4:
          changeIP=TRUE;
          break;
-      case 5:
+     /* case 5:
          discard=TRUE;
          break;
+			*/
       default:
          ortp_error("stun: Test %i is unkown\n", testNum);
          return ; /* error */
@@ -2162,7 +2162,7 @@ stunNatType( StunAddress4 *dest,
 
    bool_t respTestI=FALSE;
    bool_t isNat=TRUE;
-   StunAddress4 testIchangedAddr;
+   /*StunAddress4 testIchangedAddr;*/
    StunAddress4 testImappedAddr;
    bool_t respTestI2=FALSE; 
    bool_t mappedIpSame = TRUE;
@@ -2345,8 +2345,8 @@ stunNatType( StunAddress4 *dest,
                         if ( !respTestI )
                         {
 									
-                           testIchangedAddr.addr = resp.changedAddress.ipv4.addr;
-                           testIchangedAddr.port = resp.changedAddress.ipv4.port;
+                           /*testIchangedAddr.addr = resp.changedAddress.ipv4.addr;
+                           testIchangedAddr.port = resp.changedAddress.ipv4.port;*/
                            testImappedAddr.addr = resp.mappedAddress.ipv4.addr;
                            testImappedAddr.port = resp.mappedAddress.ipv4.port;
 									

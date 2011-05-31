@@ -163,8 +163,12 @@ int main(int argc, char*argv[])
 			/* this is to avoid to write to disk some silence before the first RTP packet is returned*/	
 			if ((stream_received) && (err>0)) {
 				size_t ret = fwrite(buffer,1,err,outfile);
-				if (sound_fd>0)
+				if (sound_fd>0){
 					ret = write(sound_fd,buffer,err);
+					if (ret==-1){
+						fprintf(stderr,"write to sound card failed (%s)",strerror(errno));
+					}
+				}
 			}
 		}
 		ts+=160;
