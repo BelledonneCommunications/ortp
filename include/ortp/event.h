@@ -62,7 +62,8 @@ OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_STUN_PACKET_RECEIVED		1
 #define ORTP_EVENT_PAYLOAD_TYPE_CHANGED 	2
 #define ORTP_EVENT_TELEPHONE_EVENT		3
-#define ORTP_EVENT_RTCP_PACKET_RECEIVED		4
+#define ORTP_EVENT_RTCP_PACKET_RECEIVED		4 /**<when a RTCP packet is received from far end */
+#define ORTP_EVENT_RTCP_PACKET_EMITTED		5 /**<fired when oRTP decides to send an automatic RTCP SR or RR */
 OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 void ortp_event_destroy(OrtpEvent *ev);
 OrtpEvent *ortp_event_dup(OrtpEvent *ev);

@@ -67,7 +67,6 @@ typedef struct rtp_stats
 	uint64_t recv; 		/* bytes of payload received and delivered in time to the application */
 	uint64_t hw_recv;		/* bytes of payload received */
 	uint64_t packet_recv;	/* number of packets received */
-	uint64_t unavaillable;	/* totally useless*/
 	uint64_t outoftime;		/* number of packets that were received too late */
 	uint64_t cum_packet_loss; /* cumulative number of packet lost */
 	uint64_t bad;			/* packets that did not appear to be RTP */
@@ -77,8 +76,9 @@ typedef struct rtp_stats
 
 typedef struct jitter_stats
 {
+	uint32_t jitter;			/* interarrival jitter at last emitted sender report */
+	uint32_t max_jitter;		/* biggest interarrival jitter (value in stream clock unit) */
 	uint64_t sum_jitter;		/* sum of all interarrival jitter (value in stream clock unit) */
-	uint64_t max_jitter;		/* biggest interarrival jitter (value in stream clock unit) */
 	uint64_t max_jitter_ts;		/* date (in ms since Epoch) of the biggest interarrival jitter */
 } jitter_stats_t;
 

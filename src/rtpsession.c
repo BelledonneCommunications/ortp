@@ -1088,8 +1088,6 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	else
 	{
 		ortp_debug ("No mp for timestamp queried");
-		stream->stats.unavaillable++;
-		ortp_global_stats.unavaillable++;
 	}
 	rtp_session_rtcp_process_recv(session);
 	

@@ -228,17 +228,12 @@ static void sender_info_init(sender_info_t *info, RtpSession *session){
 
 static void report_block_init(report_block_t *b, RtpSession *session){
 	int packet_loss=0;
-	uint8_t loss_fraction=0;
+	int loss_fraction=0;
 	RtpStream *stream=&session->rtp;
 	uint32_t delay_snc_last_sr=0;
 	uint32_t fl_cnpl;
 	
 	/* compute the statistics */
-	/*printf("hwrcv_extseq.one=%u, hwrcv_seq_at_last_SR=%u hwrcv_since_last_SR=%u\n",
-		stream->hwrcv_extseq.one,
-		stream->hwrcv_seq_at_last_SR,
-		stream->hwrcv_since_last_SR
-		);*/
 	if (stream->hwrcv_since_last_SR!=0){
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
@@ -303,9 +298,9 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 	session->rtp.stats.sent_rtcp_packets ++;
 	/* the jitter raw value is kept in stream clock units */
-	uint32_t jitter = ntohl( rb->interarrival_jitter );
+	uint32_t jitter = session->rtp.jittctl.inter_jitter;
 	session->rtp.jitter_stats.sum_jitter += jitter;
-
+	session->rtp.jitter_stats.jitter=jitter;
 	/* stores the biggest jitter for that session and its date (in millisecond) since Epoch */
 	if ( jitter > session->rtp.jitter_stats.max_jitter ) {
 		session->rtp.jitter_stats.max_jitter = jitter ;
@@ -381,6 +376,17 @@ static mblk_t * make_sr(RtpSession *session){
 	return cm;
 }
 
+static void notify_sent_rtcp(RtpSession *session, mblk_t *rtcp){
+	if (session->eventqs!=NULL){
+		OrtpEvent *ev;
+		OrtpEventData *evd;
+		ev=ortp_event_new(ORTP_EVENT_RTCP_PACKET_EMITTED);
+		evd=ortp_event_get_data(ev);
+		evd->packet=dupmsg(rtcp);
+		rtp_session_dispatch_event(session,ev);
+	}
+}
+
 void rtp_session_rtcp_process_send(RtpSession *session){
 	RtpStream *st=&session->rtp;
 	mblk_t *m;
@@ -390,6 +396,7 @@ void rtp_session_rtcp_process_send(RtpSession *session){
 		st->last_rtcp_report_snt_s=st->snd_last_ts;
 		m=make_sr(session);
 		/* send the compound packet */
+		notify_sent_rtcp(session,m);
 		rtp_session_rtcp_send(session,m);
 		ortp_debug("Rtcp compound message sent.");
 	}
@@ -412,6 +419,7 @@ void rtp_session_rtcp_process_recv(RtpSession *session){
 		}
 		if (m!=NULL){
 			/* send the compound packet */
+			notify_sent_rtcp(session,m);
 			rtp_session_rtcp_send(session,m);
 			ortp_debug("Rtcp compound message sent.");
 		}

@@ -1027,12 +1027,11 @@ void rtp_session_notify_inc_rtcp(RtpSession *session, mblk_t *m){
 	else freemsg(m);  /* avoid memory leak */
 }
 
-static void compute_rtt(RtpSession *session, rtcp_sr_t *sr){
-	RtpStream * rtpstream = &session->rtp;
-	uint64_t curntp=ortp_timeval_to_ntp(&rtpstream->last_rcv_SR_time);
+static void compute_rtt(RtpSession *session, const struct timeval *now, const report_block_t *rb){
+	uint64_t curntp=ortp_timeval_to_ntp(now);
 	uint32_t approx_ntp=(curntp>>16) & 0xFFFFFFFF;
-	uint32_t last_sr_time=report_block_get_last_SR_time(&sr->rb[0]);
-	uint32_t sr_delay=report_block_get_last_SR_delay(&sr->rb[0]);
+	uint32_t last_sr_time=report_block_get_last_SR_time(rb);
+	uint32_t sr_delay=report_block_get_last_SR_delay(rb);
 	/*ortp_message("rtt curntp=%u, last_sr_time=%u, sr_delay=%u",approx_ntp,last_sr_time,sr_delay);*/
 	if (last_sr_time!=0 && sr_delay!=0){
 		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
@@ -1061,24 +1060,13 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 
 	rtcp = (rtcp_common_header_t *)block->b_rptr;
 	/* compound rtcp packet can be composed by more than one rtcp message */
-	while ( msgsize >= RTCP_COMMON_HEADER_SIZE ) {
-		if ( rtcp->version != 2 ) {
-			ortp_debug( "Receiving an illegal RTCP packet (version number <> 2)" );
-			return;
-		}
+	do{
+		struct timeval reception_date;
 
-		/* Convert header data from network order to host order */
-		rtcp->length = ntohs( rtcp->length );
+		/* Getting the reception date from the main clock */	
+		gettimeofday( &reception_date, NULL );
 
-		/* compute length */
-		int rtcp_pk_size = ( rtcp->length + 1 ) * 4;
-		/* Sanity check of simple RTCP packet length. */
-		if ( rtcp_pk_size > msgsize ) {
-			ortp_debug( "Receiving a RTCP packet shorter than the specified length" );
-			return;
-		}
-
-		if ( rtcp->packet_type == RTCP_SR ) {
+		if (rtcp_is_SR(block) ) {
 			rtcp_sr_t *sr = (rtcp_sr_t *) rtcp;
 			
 			/* The session descriptor values are reset in case there is an error in the SR block parsing */
@@ -1097,19 +1085,18 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 				return;
 			}
 
-			/* Getting the reception date from the main clock */
-			struct timeval reception_date;
-			gettimeofday( &reception_date, NULL );
-
 			/* Saving the data to fill LSR and DLSR field in next RTCP report to be transmitted */
 			/* This value will be the LSR field of the next RTCP report (only the central 32 bits are kept, as described in par.4 of RC3550) */
 			rtpstream->last_rcv_SR_ts = ( ntohl( sr->si.ntp_timestamp_msw ) << 16 ) | ( ntohl( sr->si.ntp_timestamp_lsw ) >> 16 );
 			/* This value will help in processing the DLSR of the next RTCP report ( see report_block_init() in rtcp.cc ) */
 			rtpstream->last_rcv_SR_time.tv_usec = reception_date.tv_usec;
 			rtpstream->last_rcv_SR_time.tv_sec = reception_date.tv_sec;
-			compute_rtt(session,sr);
+			compute_rtt(session,&reception_date,&sr->rb[0]);
+		}else if ( rtcp_is_RR(block)){
+			compute_rtt(session,&reception_date,rtcp_RR_get_report_block(block,0));
 		}
-	}
+	}while (rtcp_next_packet(block));
+	rtcp_rewind(block);
 }
 
 

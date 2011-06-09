@@ -181,12 +181,12 @@ struct _RtpSession
 {
 	RtpSession *next;	/* next RtpSession, when the session are enqueued by the scheduler */
 	int mask_pos;	/* the position in the scheduler mask of RtpSession : do not move this field: it is part of the ABI since the session_set macros use it*/
-        struct {
-	  RtpProfile *profile;
-	  int pt;
-	  unsigned int ssrc;
-	  WaitPoint wp;
-	  int telephone_events_pt;	/* the payload type used for telephony events */
+	struct {
+		RtpProfile *profile;
+		int pt;
+		unsigned int ssrc;
+		WaitPoint wp;
+		int telephone_events_pt;	/* the payload type used for telephony events */
 	} snd,rcv;
 	unsigned int inc_ssrc_candidate;
 	int inc_same_ssrc_count;
