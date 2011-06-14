@@ -23,7 +23,7 @@
 
 #include <ortp/port.h>
 
-#define RTCP_MAX_RECV_BUFSIZE 1024
+#define RTCP_MAX_RECV_BUFSIZE 1500
 
 #define RTCP_SENDER_INFO_SIZE 20
 #define RTCP_REPORT_BLOCK_SIZE 24
@@ -201,7 +201,7 @@ void rtp_session_rtcp_process_send(struct _RtpSession *s);
 void rtp_session_rtcp_process_recv(struct _RtpSession *s);
 
 
-#define RTCP_DEFAULT_REPORT_INTERVAL 5
+#define RTCP_DEFAULT_REPORT_INTERVAL 5000 /*ms*/
 
 
 /* packet parsing api */

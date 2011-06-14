@@ -389,11 +389,12 @@ static void notify_sent_rtcp(RtpSession *session, mblk_t *rtcp){
 
 void rtp_session_rtcp_process_send(RtpSession *session){
 	RtpStream *st=&session->rtp;
+	RtcpStream *rtcp_st=&session->rtcp;
 	mblk_t *m;
-	if (st->rcv_last_app_ts - st->last_rtcp_report_snt_r > st->rtcp_report_snt_interval 
-		|| st->snd_last_ts - st->last_rtcp_report_snt_s > st->rtcp_report_snt_interval){
-		st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
-		st->last_rtcp_report_snt_s=st->snd_last_ts;
+	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r 
+		|| st->snd_last_ts - rtcp_st->last_rtcp_report_snt_s > rtcp_st->rtcp_report_snt_interval_s){
+		rtcp_st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
+		rtcp_st->last_rtcp_report_snt_s=st->snd_last_ts;
 		m=make_sr(session);
 		/* send the compound packet */
 		notify_sent_rtcp(session,m);
@@ -404,11 +405,12 @@ void rtp_session_rtcp_process_send(RtpSession *session){
 
 void rtp_session_rtcp_process_recv(RtpSession *session){
 	RtpStream *st=&session->rtp;
+	RtcpStream *rtcp_st=&session->rtcp;
 	mblk_t *m=NULL;
-	if (st->rcv_last_app_ts - st->last_rtcp_report_snt_r > st->rtcp_report_snt_interval 
-		|| st->snd_last_ts - st->last_rtcp_report_snt_s > st->rtcp_report_snt_interval){
-		st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
-		st->last_rtcp_report_snt_s=st->snd_last_ts;
+	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r 
+		|| st->snd_last_ts - rtcp_st->last_rtcp_report_snt_s > rtcp_st->rtcp_report_snt_interval_s){
+		rtcp_st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
+		rtcp_st->last_rtcp_report_snt_s=st->snd_last_ts;
 
 		if (session->rtp.last_rtcp_packet_count<session->rtp.stats.packet_sent){
 			m=make_sr(session);

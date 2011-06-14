@@ -47,8 +47,8 @@ extern int rtcp_rr_init(RtpSession *session, char *buf, int size);
 /* this function initialize all session parameter's that depend on the payload type */
 static void payload_type_changed(RtpSession *session, PayloadType *pt){
 	jitter_control_set_payload(&session->rtp.jittctl,pt);
-	session->rtp.rtcp_report_snt_interval=RTCP_DEFAULT_REPORT_INTERVAL*pt->clock_rate;
 	rtp_session_set_time_jump_limit(session,session->rtp.time_jump);
+	rtp_session_set_rtcp_report_interval(session,session->rtcp.interval);
 	if (pt->type==PAYLOAD_VIDEO){
 		session->permissive=TRUE;
 		ortp_message("Using permissive algorithm");
@@ -284,6 +284,7 @@ rtp_session_init (RtpSession * session, int mode)
 	rtp_session_set_jitter_buffer_params(session,&jbp);
 	rtp_session_set_time_jump_limit(session,5000);
 	rtp_session_enable_rtcp(session,TRUE);
+	rtp_session_set_rtcp_report_interval(session,RTCP_DEFAULT_REPORT_INTERVAL);
 	session->recv_buf_size = UDP_MAX_SIZE;
 	session->symmetric_rtp = FALSE;
 	session->permissive=FALSE;
@@ -399,6 +400,28 @@ rtp_session_set_profile (RtpSession * session, RtpProfile * profile)
 **/
 void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno){
 	session->rtcp.enabled=yesno;
+}
+
+/**
+ * Sets the default interval in milliseconds for RTCP reports emitted by the session
+ *
+**/
+void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms){
+	int recvpt=rtp_session_get_recv_payload_type(session);
+	int sendpt=rtp_session_get_send_payload_type(session);
+	if (recvpt!=-1){
+		PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,recvpt);
+		if (pt!=NULL){
+			session->rtcp.rtcp_report_snt_interval_r=(value_ms*pt->clock_rate)/1000;
+		}
+	}
+	if (sendpt!=-1){
+		PayloadType *pt=rtp_profile_get_payload(session->snd.profile,sendpt);
+		if (pt!=NULL){
+			session->rtcp.rtcp_report_snt_interval_s=(value_ms*pt->clock_rate)/1000;
+		}
+	}
+	session->rtcp.interval=value_ms;
 }
 
 /**
