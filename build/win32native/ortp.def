@@ -53,6 +53,7 @@ EXPORTS
 	rtp_session_get_rtcp_socket
 
 	rtp_session_set_payload_type
+	rtp_session_get_send_profile
 	rtp_session_set_send_payload_type
 	rtp_session_get_send_payload_type
 	rtp_session_set_recv_payload_type
@@ -184,6 +185,8 @@ EXPORTS
 	rtp_session_set_rtp_socket_recv_buffer_size
 	rtp_session_set_rtp_socket_send_buffer_size
 	rtp_session_set_jitter_buffer_params
+	rtp_session_get_round_trip_propagation
+	rtp_session_set_rtcp_report_interval
 
 	rtp_get_payload
 
