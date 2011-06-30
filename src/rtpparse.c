@@ -184,6 +184,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			extseq->split.lo=rtp->seq_number;
 			extseq->split.hi++;
 		}
+		/* the first sequence number received should be initialized at the beginning, so that the first receiver reports contains valid loss rate*/
+		if (stats->packet_recv==1){
+			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
+		}
 	}
 	
 	/* check for possible telephone events */
