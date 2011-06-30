@@ -281,12 +281,13 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		/* If the test mode is enabled, modifies the returned ts (LSR) so it matches the value of the delay test value */
 		/* refer to the rtp_session_rtcp_set_delay_value() documentation for further explanations */
 		double new_ts = ( (double)stream->last_rcv_SR_time.tv_sec + (double)stream->last_rcv_SR_time.tv_usec * 1e-6 ) - ( (double)session->delay_test_vector / 1000.0 );
+		uint32_t new_ts2;
 
 		/* Converting the time format in RFC3550 (par. 4) format */
 		new_ts += 2208988800.0; /* 2208988800 is the number of seconds from 1900 to 1970 (January 1, Oh TU) */
-		new_ts = round( 65536.0 * new_ts );
+		new_ts = 65536.0 * new_ts;
 		/* This non-elegant way of coding fits with the gcc and the icc compilers */
-		uint32_t new_ts2 = (uint32_t)( (uint64_t)new_ts & 0xffffffff );
+		new_ts2 = (uint32_t)( (uint64_t)new_ts & 0xffffffff );
 		b->lsr = htonl( new_ts2 );
 	}
 	else {
@@ -296,16 +297,17 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 }
 
 static void extended_statistics( RtpSession *session, report_block_t * rb ) {
-	session->rtp.stats.sent_rtcp_packets ++;
 	/* the jitter raw value is kept in stream clock units */
 	uint32_t jitter = session->rtp.jittctl.inter_jitter;
+	session->rtp.stats.sent_rtcp_packets ++;
 	session->rtp.jitter_stats.sum_jitter += jitter;
 	session->rtp.jitter_stats.jitter=jitter;
 	/* stores the biggest jitter for that session and its date (in millisecond) since Epoch */
 	if ( jitter > session->rtp.jitter_stats.max_jitter ) {
+		struct timeval now;
+
 		session->rtp.jitter_stats.max_jitter = jitter ;
 
-		struct timeval now;
 		gettimeofday( &now, NULL );
 		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000 ) + ( now.tv_usec / 1000 );
 	}
