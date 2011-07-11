@@ -30,7 +30,8 @@ libortp_la_SOURCES=	str_utils.c 	\
 			event.c \
 			stun.c stun_udp.c \
 			srtp.c \
-			b64.c
+			b64.c \
+			zrtp.c  zrtp.h
 
 
 libortp_la_LIBADD= $(PTHREAD_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS)
