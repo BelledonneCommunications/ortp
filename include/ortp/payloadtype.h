@@ -199,6 +199,7 @@ VAR_DECLSPEC PayloadType payload_type_theora;
 VAR_DECLSPEC PayloadType payload_type_h264;
 VAR_DECLSPEC PayloadType payload_type_x_snow;
 VAR_DECLSPEC PayloadType payload_type_jpeg;
+VAR_DECLSPEC PayloadType payload_type_vp8;
 
 VAR_DECLSPEC PayloadType payload_type_t140;
 VAR_DECLSPEC PayloadType payload_type_g722;
