@@ -69,6 +69,7 @@ typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
+bool_t ortp_zrtp_available();
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
 

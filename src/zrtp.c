@@ -42,6 +42,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	return NULL;
 }
 
+bool_t ortp_zrtp_available(){return FALSE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}

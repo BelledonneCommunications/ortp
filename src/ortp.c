@@ -34,6 +34,10 @@ int ortp_allocations=0;
 
 
 #ifdef HAVE_SRTP
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
 #include <srtp/srtp.h>
 #endif
 
