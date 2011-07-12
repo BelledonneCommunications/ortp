@@ -49,7 +49,8 @@ LOCAL_SRC_FILES := \
 	src/stun.c \
 	src/stun_udp.c \
 	src/srtp.c \
-	src/b64.c 
+	src/b64.c \
+	src/zrtp.c
 
 LOCAL_CFLAGS += \
 	-DORTP_INET6 \

@@ -60,8 +60,8 @@ typedef struct _OrtpZrtpUiCb {
 
 
 typedef struct OrtpZrtpParams {
-	char *zid; // ZRTP identifier (96 bits)
-	char *zid_file; // File where to store secrets and other information
+	const char *zid; // ZRTP identifier (96 bits)
+	const char *zid_file; // File where to store secrets and other information
 	OrtpZrtpUiCb *ui_cbs; // User call back functions
 } OrtpZrtpParams;
 
