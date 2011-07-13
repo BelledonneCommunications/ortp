@@ -381,7 +381,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\zrtp.h"
+				RelativePath="..\..\include\ortp\zrtp.h"
 				>
 			</File>
 		</Filter>

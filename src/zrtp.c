@@ -42,6 +42,11 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	return NULL;
 }
 
+OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* o, RtpSession *s, OrtpZrtpParams *params){
+	ortp_message("ZRTP is disabled - not compiled");
+	return NULL;
+}
+
 bool_t ortp_zrtp_available(){return FALSE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
