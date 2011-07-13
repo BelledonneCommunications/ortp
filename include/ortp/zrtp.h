@@ -68,12 +68,12 @@ typedef struct OrtpZrtpParams {
 typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 
 
-OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
-bool_t ortp_zrtp_available();
-void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
-void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
+ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
+ORTP_PUBLIC bool_t ortp_zrtp_available();
+ORTP_PUBLIC void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
+ORTP_PUBLIC void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
 
-void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
+ORTP_PUBLIC void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
 
 
 #ifdef __cplusplus
