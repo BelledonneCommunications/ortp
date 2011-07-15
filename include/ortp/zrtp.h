@@ -38,13 +38,10 @@
 extern "C"{
 #endif
 
-typedef void (*OrtpZrtpSasReady)(const char *sas, bool_t verified);
-typedef void (*OrtpZrtpSecretsOff)();
-typedef void (*OrtpZrtpGoClear)();
-typedef void (*OrtpZrtpNegociationFailed)();
-typedef void (*OrtpZrtpNotSupportedByOther)();
-
-
+typedef void (*OrtpZrtpSasReady)(void *data, const char *sas, bool_t verified);
+typedef void (*OrtpZrtpSecretsOff)(void *data);
+typedef void (*OrtpZrtpGoClear)(void *data);
+typedef void (*OrtpZrtpEncryptionChanged)(void *data, bool_t encrypted);
 
 /**
  * This structure holds all callbacks that the UI should implement.
@@ -53,9 +50,9 @@ typedef void (*OrtpZrtpNotSupportedByOther)();
 typedef struct _OrtpZrtpUiCb {
 	OrtpZrtpSasReady sas_ready; /**<Notifies when the Short Authentication String is ready*/
 	OrtpZrtpSecretsOff secrets_off;
-	OrtpZrtpNegociationFailed failed;
-	OrtpZrtpNotSupportedByOther not_supported_by_other;
 	OrtpZrtpGoClear go_clear;
+	OrtpZrtpEncryptionChanged encryption_changed;
+	void *data;
 } OrtpZrtpUiCb;
 
 
@@ -67,14 +64,15 @@ typedef struct OrtpZrtpParams {
 
 typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 
+bool_t ortp_zrtp_available();
 
-ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
-ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* os, RtpSession *s, OrtpZrtpParams *params);
-ORTP_PUBLIC bool_t ortp_zrtp_available();
-ORTP_PUBLIC void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
-ORTP_PUBLIC void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
+OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
+OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params);
 
-ORTP_PUBLIC void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
+void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
+void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
+
+void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
 
 
 #ifdef __cplusplus

@@ -29,9 +29,7 @@
 
 #ifdef HAVE_zrtp
 
-
-// The ZRTP implementation/wrapper will come here
-
+// To implement
 
 #else
 
@@ -42,8 +40,8 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	return NULL;
 }
 
-OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* o, RtpSession *s, OrtpZrtpParams *params){
-	ortp_message("ZRTP is disabled - not compiled");
+OrtpZrtpContext* ortp_zrtp_multistream_add(RtpSession *s, OrtpZrtpContext* activeContext) {
+	ortp_message("ZRTP is disabled - not compiled - not adding stream");
 	return NULL;
 }
 
