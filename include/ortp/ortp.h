@@ -192,6 +192,12 @@ void ortp_global_stats_display(void);
 void rtp_stats_display(const rtp_stats_t *stats, const char *header);
 void rtp_stats_reset(rtp_stats_t *stats);
 
+#if defined(_MSC_VER)
+#define ORTP_PUBLIC	__declspec(dllexport)
+#else
+#define ORTP_PUBLIC
+#endif
+
 #ifdef __cplusplus
 }
 #endif

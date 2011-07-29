@@ -165,47 +165,77 @@ AC_DEFINE_UNQUOTED(ORTP_DEFAULT_THREAD_STACK_SIZE, $thread_stack_size, [Default 
 
 dnl check for libsrtp support (secure rtp)
 AC_ARG_WITH( srtp,
-      [  --with-srtp      Set prefix where libsrtp can be found (ex:/usr or /usr/local)[default=/usr] ],
+      [  --with-srtp      Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local)[default=/usr] ],
       [ srtp_prefix=${withval}],[ srtp_prefix=/usr ])
 
+if test "${srtp_prefix}" != "none"; then
+	if test "${srtp_prefix}" != "/usr" ; then
+		SRTP_CFLAGS="-I${srtp_prefix}/include"
+		SRTP_LIBS="-L${srtp_prefix}/lib"
+	fi
+	SRTP_LIBS="$SRTP_LIBS -lsrtp"
 
-if test "${srtp_prefix}" != "/usr" ; then
-	SRTP_CFLAGS="-I${srtp_prefix}/include"
-	SRTP_LIBS="-L${srtp_prefix}/lib"
-fi
-SRTP_LIBS="$SRTP_LIBS -lsrtp"
+	dnl check srtp headers
+	have_srtp=no
+	CPPFLAGS_save=$CPPFLAGS
+	CPPFLAGS=$SRTP_CFLAGS
+	AC_CHECK_HEADER([srtp/srtp.h],have_srtp_headers=yes)
+	CPPFLAGS=$CPPFLAGS_save
 
-dnl check srtp headers
-have_srtp=no
-CPPFLAGS_save=$CPPFLAGS
-CPPFLAGS=$SRTP_CFLAGS
-AC_CHECK_HEADER([srtp/srtp.h],have_srtp_headers=yes)
-CPPFLAGS=$CPPFLAGS_save
+	dnl check for srtp lib
+	LDFLAGS_save=$LDFLAGS
+	LDFLAGS=$SRTP_LIBS
+	LIBS_save=$LIBS
+	AC_CHECK_LIB(srtp,srtp_init,have_srtp_lib=yes)
+	LDFLAGS=$LDFLAGS_save
+	LIBS=$LIBS_save
 
-dnl check for srtp lib
-LDFLAGS_save=$LDFLAGS
-LDFLAGS=$SRTP_LIBS
-LIBS_save=$LIBS
-AC_CHECK_LIB(srtp,srtp_init,have_srtp_lib=yes)
-LDFLAGS=$LDFLAGS_save
-LIBS=$LIBS_save
+	if test "$have_srtp_headers$have_srtp_lib" = "yesyes" ; then
+		have_srtp=yes
+		AC_DEFINE(HAVE_SRTP, 1, [Defined when srtp support is compiled])
+	else
+		AC_MSG_NOTICE([Could not find libsrtp headers or lib, cryto transport disabled.])
+		SRTP_CFLAGS=
+		SRTP_LIBS=
+	fi
 
-if test "$have_srtp_headers$have_srtp_lib" = "yesyes" ; then
-	have_srtp=yes
-	AC_DEFINE(HAVE_SRTP, 1, [Defined when srtp support is compiled])
+	AC_SUBST(SRTP_CFLAGS)
+	AC_SUBST(SRTP_LIBS)
 else
-	AC_MSG_NOTICE([Could not find libsrtp headers or lib, cryto transport disabled.])
-	SRTP_CFLAGS=
-	SRTP_LIBS=
+        have_srtp=no
+        SRTP_CFLAGS=
+        SRTP_LIBS=
 fi
 
-AC_SUBST(SRTP_CFLAGS)
-AC_SUBST(SRTP_LIBS)
+
+
+dnl check for libzrtp support (RFC 6189: Media Path Key Agreement for Unicast Secure RTP)
+dnl zrtp is GPLv3+
+AC_ARG_ENABLE(zrtp,
+		      [  --enable-zrtp=[yes/no]    Turn on or off compilation of zrtp (GPLv3+ only) [default=no]],
+		      [case "${enableval}" in
+		        yes) zrtp=true ;;
+		        no)  zrtp=false ;;
+		        *) AC_MSG_ERROR(bad value ${enableval} for --enable-zrtp) ;;
+		      esac],[zrtp=false])
+
+if test "$zrtp" = "true" ; then
+        PKG_CHECK_MODULES(LIBZRTPCPP, libzrtpcpp >= 2.0.0)
+	if test "$have_srtp" = "no" ; then
+		AC_MSG_ERROR("ZRTP requires SRTP")
+	fi
+        AC_DEFINE(HAVE_zrtp, 1, [Defined when zrtp support is compiled])
+else
+        echo "ZRTP compilation is disabled."
+fi
+AM_CONDITIONAL(LIBZRTPCPP,test x$zrtp != xfalse)
+
 
 if test $debug_enabled = "yes"; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_DEBUG_MODE -g"
 	CFLAGS=`echo $CFLAGS | sed 's/-O.//'`
 fi
+
 
 AC_ARG_ENABLE(memcheck,
 				[  --enable-memcheck=[yes/no]   enables memory leak detection (HPUX only).],
@@ -385,5 +415,6 @@ ortp.spec
 ortp.doxygen
 )
 
-AC_MSG_WARN([ortp-0.15.0 breaks compatibility with older releases, because value returned by rtp_session_recvm_with_ts() has
-	changed. See the API documentation in doc/ for further readings.])
+if test "$zrtp" = "true" ; then
+	AC_MSG_WARN([Compiled with ZRTP support thus license is now GPLv3+])
+fi

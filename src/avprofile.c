@@ -490,6 +490,16 @@ PayloadType payload_type_jpeg={
 	CHANNELS(0)
 };
 
+PayloadType payload_type_vp8={
+	TYPE( PAYLOAD_VIDEO),
+	CLOCK_RATE(90000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(256000),
+	MIME_TYPE ("VP8-DRAFT-0-3-2"),
+	CHANNELS(0)
+};
 
 PayloadType	payload_type_t140={
 	PAYLOAD_AUDIO_PACKETIZED, /*type */
