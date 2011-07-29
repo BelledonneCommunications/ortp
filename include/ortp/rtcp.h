@@ -48,14 +48,14 @@ typedef enum {
 typedef struct rtcp_common_header
 {
 #ifdef ORTP_BIGENDIAN
-        uint16_t version:2;
-        uint16_t padbit:1;
-        uint16_t rc:5;
-        uint16_t packet_type:8;
+	uint16_t version:2;
+	uint16_t padbit:1;
+	uint16_t rc:5;
+	uint16_t packet_type:8;
 #else
-        uint16_t rc:5;
-        uint16_t padbit:1;
-        uint16_t version:2;
+	uint16_t rc:5;
+	uint16_t padbit:1;
+	uint16_t version:2;
 	uint16_t packet_type:8;
 #endif
         uint16_t length:16;

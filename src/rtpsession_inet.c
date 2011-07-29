@@ -1093,7 +1093,8 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 			rtpstream->last_rcv_SR_time.tv_sec = reception_date.tv_sec;
 			compute_rtt(session,&reception_date,&sr->rb[0]);
 		}else if ( rtcp_is_RR(block)){
-			compute_rtt(session,&reception_date,rtcp_RR_get_report_block(block,0));
+			const report_block_t *rb=rtcp_RR_get_report_block(block,0);
+			if (rb) compute_rtt(session,&reception_date,rb);
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);
