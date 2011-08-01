@@ -38,28 +38,9 @@
 extern "C"{
 #endif
 
-typedef void (*OrtpZrtpSasReady)(void *data, const char *sas, bool_t verified);
-typedef void (*OrtpZrtpSecretsOff)(void *data);
-typedef void (*OrtpZrtpGoClear)(void *data);
-typedef void (*OrtpZrtpEncryptionChanged)(void *data, bool_t encrypted);
-
-/**
- * This structure holds all callbacks that the UI should implement.
- * Mandatory ones are: sas_ready
- **/
-typedef struct _OrtpZrtpUiCb {
-	OrtpZrtpSasReady sas_ready; /**<Notifies when the Short Authentication String is ready*/
-	OrtpZrtpSecretsOff secrets_off;
-	OrtpZrtpGoClear go_clear;
-	OrtpZrtpEncryptionChanged encryption_changed;
-	void *data;
-} OrtpZrtpUiCb;
-
-
 typedef struct OrtpZrtpParams {
 	const char *zid; // ZRTP identifier (96 bits)
 	const char *zid_file; // File where to store secrets and other information
-	OrtpZrtpUiCb *ui_cbs; // User call back functions
 } OrtpZrtpParams;
 
 typedef struct _OrtpZrtpContext OrtpZrtpContext ;

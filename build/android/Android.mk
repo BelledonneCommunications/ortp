@@ -58,19 +58,25 @@ LOCAL_CFLAGS += \
 	-include $(LOCAL_PATH)/build/android/ortp_AndroidConfig.h
 
 
-ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
 ifeq ($(BUILD_GPLV3_ZRTP), 1)
-LOCAL_CFLAGS += -DHAVE_zrtp
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
 LOCAL_SHARED_LIBRARIES += libzrtpcpp
-LOCAL_C_INCLUDES += $(ZRTP_C_INCLUDE)
+else
+LOCAL_STATIC_LIBRARIES += libzrtpcpp-static
 endif
+LOCAL_CFLAGS += -DHAVE_zrtp
+LOCAL_C_INCLUDES += $(ZRTP_C_INCLUDE)
+endif #ZRTP
 
 ifeq ($(BUILD_SRTP), 1)
-LOCAL_CFLAGS += -DHAVE_SRTP
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
 LOCAL_SHARED_LIBRARIES += libsrtp
+else
+LOCAL_STATIC_LIBRARIES += libsrtp-static
+endif
 LOCAL_C_INCLUDES += $(SRTP_C_INCLUDE)
-endif
-endif
+LOCAL_CFLAGS += -DHAVE_SRTP
+endif #SRTP
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \

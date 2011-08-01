@@ -42,6 +42,11 @@ struct _OrtpEventData{
 	union {
 		int telephone_event;
 		int payload_type;
+		bool_t zrtp_stream_encrypted;
+		struct _ZrtpSas{
+			char sas[5]; // 4 characters
+			bool_t verified;
+		} zrtp_sas;
 	} info;
 };
 
@@ -64,6 +69,9 @@ OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_TELEPHONE_EVENT		3
 #define ORTP_EVENT_RTCP_PACKET_RECEIVED		4 /**<when a RTCP packet is received from far end */
 #define ORTP_EVENT_RTCP_PACKET_EMITTED		5 /**<fired when oRTP decides to send an automatic RTCP SR or RR */
+#define ORTP_EVENT_ZRTP_ENCRYPTION_CHANGED	6
+#define ORTP_EVENT_ZRTP_SAS_READY		7
+
 OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 void ortp_event_destroy(OrtpEvent *ev);
 OrtpEvent *ortp_event_dup(OrtpEvent *ev);
