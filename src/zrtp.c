@@ -41,7 +41,6 @@
 
 struct _OrtpZrtpContext{
 	ortp_mutex_t mutex;
-	OrtpZrtpUiCb ui_cbs;
 	RtpSession *session;
 	uint32_t timerWillTriggerAt;
 	uint16_t last_recv_zrtp_seq_number;
@@ -329,12 +328,14 @@ static void ozrtp_sendInfo (ZrtpContext* ctx, int32_t severity, int32_t subCode 
 			break;
 	}
 
-	OrtpZrtpContext *data=user_data(ctx);
-	if (data->ui_cbs.encryption_changed != NULL) {
-		if (subCode == zrtp_InfoSecureStateOn)
-			data->ui_cbs.encryption_changed(data->ui_cbs.data, TRUE);
-		if (subCode == zrtp_InfoSecureStateOff)
-			data->ui_cbs.encryption_changed(data->ui_cbs.data, FALSE);
+
+	if (subCode == zrtp_InfoSecureStateOn || subCode == zrtp_InfoSecureStateOff) {
+		OrtpEventData *eventData;
+		OrtpEvent *ev;
+		ev=ortp_event_new(ORTP_EVENT_ZRTP_ENCRYPTION_CHANGED);
+		eventData=ortp_event_get_data(ev);
+		eventData->info.zrtp_stream_encrypted=(subCode == zrtp_InfoSecureStateOn);
+		rtp_session_dispatch_event(user_data(ctx)->session, ev);
 	}
 }
 
@@ -454,11 +455,6 @@ static void ozrtp_srtpSecretsOff (ZrtpContext* ctx, int32_t part ) {
 		userData->srtpSend=NULL;
 	}
 
-	OrtpZrtpContext *data=user_data(ctx);
-	if (data->ui_cbs.secrets_off) {
-		data->ui_cbs.secrets_off(data->ui_cbs.data);
-	}
-
 	ortp_message("ZRTP secrets off");
 }
 
@@ -488,10 +484,14 @@ static void ozrtp_rtpSecretsOn (ZrtpContext* ctx, char* c, char* s, int32_t veri
 	// srtp processing is enabled in SecretsReady fuction when receiver secrets are ready
 	// Indeed, the secrets on is called before both parts are given to secretsReady.
 
-	OrtpZrtpContext *data=user_data(ctx);
-	if (data->ui_cbs.sas_ready) {
-		data->ui_cbs.sas_ready(data->ui_cbs.data, s, (verified != 0) ? TRUE : FALSE);
-	}
+	OrtpEventData *eventData;
+	OrtpEvent *ev;
+	ev=ortp_event_new(ORTP_EVENT_ZRTP_SAS_READY);
+	eventData=ortp_event_get_data(ev);
+	memcpy(eventData->info.zrtp_sas.sas,s,4);
+	eventData->info.zrtp_sas.sas[5]=0;
+	eventData->info.zrtp_sas.verified=(verified != 0) ? TRUE : FALSE;
+	rtp_session_dispatch_event(user_data(ctx)->session, ev);
 	ortp_message("ZRTP secrets on: SAS is %s previously verified %s - algo %s", s, verified == 0 ? "no" : "yes", c);
 }
 
@@ -508,10 +508,7 @@ static void ozrtp_rtpSecretsOn (ZrtpContext* ctx, char* c, char* s, int32_t veri
  *    Pointer to the opaque ZrtpContext structure.
  */
 static void ozrtp_handleGoClear(ZrtpContext* ctx) {
-	OrtpZrtpContext *data=user_data(ctx);
-	if (data->ui_cbs.go_clear) {
-		data->ui_cbs.go_clear(data->ui_cbs.data);
-	}
+	ortp_fatal("not implemented");
 }
 
 /**
@@ -529,12 +526,8 @@ static void ozrtp_handleGoClear(ZrtpContext* ctx) {
  * @see ZrtpCodes#MessageSeverity
  */
 static void ozrtp_zrtpNegotiationFailed (ZrtpContext* ctx, int32_t severity, int32_t subCode ){
-/*	OrtpZrtpContext *data=user_data(ctx);
-	if (data->ui_cbs.failed) {
-		data->ui_cbs.failed(data->ui_cbs.data);
-	}*/
-
 	ozrtp_sendInfo(ctx, severity, subCode);
+	// FIXME: necessary?
 }
 
 /**
@@ -547,11 +540,7 @@ static void ozrtp_zrtpNegotiationFailed (ZrtpContext* ctx, int32_t severity, int
  *
  */
 static void ozrtp_zrtpNotSuppOther(ZrtpContext* ctx) {
-/*	OrtpZrtpContext *data=user_data(ctx);
-	if (data->ui_cbs.not_supported_by_other) {
-		data->ui_cbs.not_supported_by_other(data->ui_cbs->data, data->ui_cbs->id);
-	}
-*/
+	// FIXME: do nothing
 }
 
 /**
@@ -750,12 +739,6 @@ static ortp_socket_t ozrtp_rtcp_getsocket(RtpTransport *t){
 static OrtpZrtpContext* ortp_zrtp_configure_context(ZrtpContext *context, RtpSession *s, OrtpZrtpParams *params) {
 	OrtpZrtpContext *userData=ortp_new(OrtpZrtpContext,1);
 	userData->zrtpContext=context;
-	if (params->ui_cbs == NULL) {
-		OrtpZrtpUiCb cbs={0};
-		userData->ui_cbs=cbs;
-	} else {
-		userData->ui_cbs=*params->ui_cbs;
-	}
 	userData->timerWillTriggerAt=0;
 	userData->last_recv_zrtp_seq_number=0;
 	userData->last_sent_zrtp_seq_number=rand()+1; // INT_MAX+1 (signed)
