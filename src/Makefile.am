@@ -31,7 +31,7 @@ libortp_la_SOURCES=	str_utils.c 	\
 			stun.c stun_udp.c \
 			srtp.c \
 			b64.c \
-			zrtp.c  zrtp.h
+			zrtp.c 
 
 if LIBZRTPCPP
 AM_CFLAGS+= $(LIBZRTPCPP_CFLAGS)
