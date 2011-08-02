@@ -24,6 +24,7 @@
 #endif
 
 #include "ortp/ortp.h"
+#include "rtpsession_priv.h"
 
 #include "ortp/zrtp.h"
 
@@ -489,7 +490,7 @@ static void ozrtp_rtpSecretsOn (ZrtpContext* ctx, char* c, char* s, int32_t veri
 	ev=ortp_event_new(ORTP_EVENT_ZRTP_SAS_READY);
 	eventData=ortp_event_get_data(ev);
 	memcpy(eventData->info.zrtp_sas.sas,s,4);
-	eventData->info.zrtp_sas.sas[5]=0;
+	eventData->info.zrtp_sas.sas[4]=0;
 	eventData->info.zrtp_sas.verified=(verified != 0) ? TRUE : FALSE;
 	rtp_session_dispatch_event(user_data(ctx)->session, ev);
 	ortp_message("ZRTP secrets on: SAS is %s previously verified %s - algo %s", s, verified == 0 ? "no" : "yes", c);
@@ -735,14 +736,12 @@ static ortp_socket_t ozrtp_rtcp_getsocket(RtpTransport *t){
   return t->session->rtcp.socket;
 }
 
-
-static OrtpZrtpContext* ortp_zrtp_configure_context(ZrtpContext *context, RtpSession *s, OrtpZrtpParams *params) {
+static OrtpZrtpContext* createUserData(ZrtpContext *context) {
 	OrtpZrtpContext *userData=ortp_new(OrtpZrtpContext,1);
 	userData->zrtpContext=context;
 	userData->timerWillTriggerAt=0;
 	userData->last_recv_zrtp_seq_number=0;
 	userData->last_sent_zrtp_seq_number=rand()+1; // INT_MAX+1 (signed)
-	userData->session=s;
 
 	userData->srtpRecv=NULL;
 	userData->srtpSend=NULL;
@@ -762,18 +761,21 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(ZrtpContext *context, RtpSes
 	userData->zrtp_cb.zrtp_zrtpNegotiationFailed=&ozrtp_zrtpNegotiationFailed;
 	userData->zrtp_cb.zrtp_zrtpNotSuppOther=&ozrtp_zrtpNotSuppOther;
 
+	return userData;
+}
+
+//static void initContext() {
 	// Configure algorithms
 	//zrtp_confClear(context);
 	/* FIXMe use default ones as these methods require some unknown char*
 	zrtp_addAlgo(context,zrtp_CipherAlgorithm,zrtp_Aes);
 	zrtp_addAlgo(context,zrtp_HashAlgorithm,zrtp_Sha1);*/
 	// CF zrtp_InitializeConfig
+//}
 
-	zrtp_InitializeConfig(context);
-	zrtp_setMandatoryOnly(context);
+static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, RtpSession *s, OrtpZrtpParams *params) {
+	ZrtpContext *context=userData->zrtpContext;
 
-	// FIXME make upstream use const char* instead
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, (char*)params->zid, params->zid_file, userData);
 
 	if (s->rtp.tr || s->rtcp.tr)
 		ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
@@ -799,27 +801,47 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(ZrtpContext *context, RtpSes
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	ortp_message("Initializing ZRTP context");
 	ZrtpContext *context = zrtp_CreateWrapper();
-	return ortp_zrtp_configure_context(context,s,params);
+	OrtpZrtpContext *userData=createUserData(context);
+	userData->session=s;
+	zrtp_InitializeConfig(context);
+	zrtp_setMandatoryOnly(context);
+	// FIXME make upstream use const char* instead
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, (char*)params->zid, params->zid_file, userData);
+	return ortp_zrtp_configure_context(userData,s,params);
 }
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
-	if (zrtp_isMultiStream(activeContext->zrtpContext)) {
-		ortp_fatal("Error: should derive multistream from DH or preshared modes only");
-	}
-
 	if (!zrtp_isMultiStreamAvailable(activeContext->zrtpContext)) {
 		ortp_warning("could't add stream: mutlistream not supported by peer");
 	}
 
+	if (zrtp_isMultiStream(activeContext->zrtpContext)) {
+		ortp_fatal("Error: should derive multistream from DH or preshared modes only");
+	}
+
 	int32_t length;
 	char *multiparams=zrtp_getMultiStrParams(activeContext->zrtpContext, &length);
+	int i=0;
+	ortp_warning("ZRTP multiparams length is %d", length);
+	for (;i<length;i++) {
+		ortp_warning("%d", multiparams[i]);
+	}
+
+
 
 	ortp_message("Initializing ZRTP context");
 	ZrtpContext *context = zrtp_CreateWrapper();
+	OrtpZrtpContext *userData=createUserData(context);
+	userData->session=s;
+	zrtp_InitializeConfig(context);
+	zrtp_setMandatoryOnly(context);
+	// FIXME make upstream use const char* instead
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, (char*)params->zid, params->zid_file, userData);
 
+	ortp_message("setting zrtp_setMultiStrParams");
 	zrtp_setMultiStrParams(context,multiparams,length);
 
-	return ortp_zrtp_configure_context(context,s,params);
+	return ortp_zrtp_configure_context(userData,s,params);
 }
 
 bool_t ortp_zrtp_available(){return TRUE;}
