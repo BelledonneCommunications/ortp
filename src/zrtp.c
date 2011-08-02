@@ -40,7 +40,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	return NULL;
 }
 
-OrtpZrtpContext* ortp_zrtp_multistream_add(RtpSession *s, OrtpZrtpContext* activeContext) {
+OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
 	ortp_message("ZRTP is disabled - not compiled - not adding stream");
 	return NULL;
 }
