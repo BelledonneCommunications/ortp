@@ -1181,7 +1181,7 @@ stunRand(void)
 #elif defined(__MACH__) 
 	   {
 			int fd=open("/dev/random",O_RDONLY);
-			int err=read(fd,&tick,sizeof(tick));
+			read(fd,&tick,sizeof(tick));
 			closesocket(fd);
 	   }
 #elif defined(__GNUC__) && ( defined(__i686__) || defined(__i386__) )
