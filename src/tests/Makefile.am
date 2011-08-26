@@ -1,6 +1,6 @@
 SUBDIRS=win_receiver win_sender
 
-if BUILD_TESTS
+if ENABLE_TESTS
 
 noinst_PROGRAMS= rtpsend rtprecv mrtpsend mrtprecv test_timer rtpmemtest tevrtpsend tevrtprecv tevmrtprecv rtpsend_stupid
 
