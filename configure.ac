@@ -102,13 +102,11 @@ case "$target_os" in
 	*mingw32ce)
 		CFLAGS="$CFLAGS -D_WIN32_WCE -D_WIN32_WINNT=0x0501 -DORTP_STATIC"
 		LIBS="$LIBS -lws2 -liphlpapi"
-		build_tests=no
 		mingw_found=yes
 		;;
 	*mingw*)
 		CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0501 -DORTP_STATIC"
 		LIBS="$LIBS -lws2_32 -liphlpapi -lwinmm"
-		build_tests=no
 		;;
 esac
 
@@ -170,7 +168,7 @@ AC_ARG_WITH( srtp,
 
 if test "${srtp_prefix}" != "none"; then
 	if test "${srtp_prefix}" != "/usr" ; then
-		SRTP_CFLAGS="-I${srtp_prefix}/include"
+		SRTP_CFLAGS="-I${srtp_prefix}/include -I${srtp_prefix}/include/srtp"
 		SRTP_LIBS="-L${srtp_prefix}/lib"
 	fi
 	SRTP_LIBS="$SRTP_LIBS -lsrtp"
@@ -178,13 +176,13 @@ if test "${srtp_prefix}" != "none"; then
 	dnl check srtp headers
 	have_srtp=no
 	CPPFLAGS_save=$CPPFLAGS
-	CPPFLAGS=$SRTP_CFLAGS
+	CPPFLAGS="$CPPFLAGS $SRTP_CFLAGS"
 	AC_CHECK_HEADER([srtp/srtp.h],have_srtp_headers=yes)
 	CPPFLAGS=$CPPFLAGS_save
 
 	dnl check for srtp lib
 	LDFLAGS_save=$LDFLAGS
-	LDFLAGS=$SRTP_LIBS
+	LDFLAGS="$LDFLAGS $SRTP_LIBS"
 	LIBS_save=$LIBS
 	AC_CHECK_LIB(srtp,srtp_init,have_srtp_lib=yes)
 	LDFLAGS=$LDFLAGS_save
@@ -326,6 +324,15 @@ CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs
 
 
+AC_ARG_ENABLE(tests_enabled,
+      [  --disable-tests    Disable compilation of tests],
+      [case "${enableval}" in
+        yes) tests_enabled=true ;;
+        no)  tests_enabled=false ;;
+        *) AC_MSG_ERROR(bad value ${enableval} for --disable-tests) ;;
+      esac],[tests_enabled=false])
+AM_CONDITIONAL(ENABLE_TESTS, test x$tests_enabled = xyes)
+
 dnl ##################################################
 dnl # Check for doxygen
 dnl ##################################################
@@ -342,7 +349,6 @@ AC_PATH_PROG(EPM,epm,false)
 AC_PATH_PROG(MKEPMLIST,mkepmlist,false)
 AC_PATH_PROG(EPMINSTALL,epminstall,false)
 AM_CONDITIONAL(WITH_EPM,test $EPM != false && test $MKEPMLIST != false && test $EPMINSTALL != false)
-AM_CONDITIONAL(BUILD_TESTS,test x$build_tests != xno)
 
 # Preferred packaging system, as per EPM terminology
 case $target in

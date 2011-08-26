@@ -1180,9 +1180,9 @@ stunRand(void)
       }
 #elif defined(__MACH__) 
 	   {
-		   int fd=open("/dev/random",O_RDONLY);
-		   read(fd,&tick,sizeof(tick));
-		   closesocket(fd);
+			int fd=open("/dev/random",O_RDONLY);
+			read(fd,&tick,sizeof(tick));
+			closesocket(fd);
 	   }
 #elif defined(__GNUC__) && ( defined(__i686__) || defined(__i386__) )
       asm("rdtsc" : "=A" (tick));
@@ -1218,7 +1218,7 @@ stunRand(void)
            closesocket(fd);
 	   return random();
 	}
-	read(fd,&tick,sizeof(tick));
+	e=read(fd,&tick,sizeof(tick));
 	closesocket(fd);
       }
 #else

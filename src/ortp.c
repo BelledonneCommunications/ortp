@@ -92,6 +92,7 @@ void ortp_init()
 	if (srtp_init() != err_status_ok) {
 		ortp_fatal("Couldn't initialize SRTP library.");
 	}
+	err_reporting_init("oRTP");
 #endif
 
 	ortp_message("oRTP-" ORTP_VERSION " initialized.");
