@@ -130,6 +130,7 @@ static inline uint32_t get_zrtp_packet_crc(const uint32_t *zrtp_packet, uint16_t
 	return ntohl(*(zrtp_packet + ZRTP_MESSAGE_OFFSET/4 + zrtp_message_length));
 }
 
+static const char *zrtpErrorType="Error   ";
 static void print_zrtp_packet(const char *info, const uint8_t *rtp) {
 	const uint8_t *zmessage=rtp+ZRTP_MESSAGE_OFFSET;
 	uint16_t zmessage_seq=get_rtp_seqnumber(rtp);
@@ -144,7 +145,13 @@ static void print_zrtp_packet(const char *info, const uint8_t *rtp) {
 			info, zmessage_seq, msgType, crc, zmessage_length);
 */
 
-	ortp_message("%s ZRTP seq=%u type=%s", info, zmessage_seq, msgType);
+    if (strcmp(zrtpErrorType, msgType) == 0) {
+        uint32_t *msg32=(uint32_t*)zmessage;
+        uint32_t errcode=ntohl(msg32[3]);
+        ortp_error("%s ZRTP %s 0x%x %u", info, msgType, errcode, zmessage_seq);
+    } else {
+        ortp_message("%s ZRTP %s %u", info, msgType, zmessage_seq);
+    }
 
 /*	uint32_t *msg32=(uint32_t*)zmessage;
 	int i=0;
@@ -390,6 +397,7 @@ static uint8_t *key_with_salt(C_SrtpSecret_t* s, int32_t role) {
  */
 static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets, int32_t part ) {
 	srtp_policy_t policy;
+	err_status_t srtpCreateStatus;
 	err_status_t addStreamStatus;
 	OrtpZrtpContext *userData = user_data(ctx);
 
@@ -416,12 +424,12 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 
 
 	if (part == ForSender) {
-		srtp_create(&userData->srtpSend, NULL);
+		srtpCreateStatus=srtp_create(&userData->srtpSend, NULL);
 		policy.ssrc.value=userData->session->snd.ssrc; // us
 		policy.key=key_with_salt(secrets, secrets->role);
 		addStreamStatus=srtp_add_stream(userData->srtpSend, &policy);
 	} else { //if (part == ForReceiver)
-		srtp_create(&userData->srtpRecv, NULL);
+		srtpCreateStatus=srtp_create(&userData->srtpRecv, NULL);
 		policy.ssrc.value=userData->session->rcv.ssrc; // peer
 		int32_t peerRole=secrets->role == Initiator ? Responder : Initiator;
 		policy.key=key_with_salt(secrets,peerRole);
@@ -429,7 +437,18 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 	}
 
 	free(policy.key);
-	return addStreamStatus == err_status_ok ? 1 : 0;
+
+	if (srtpCreateStatus != err_status_ok) {
+		ortp_error("ZRTP Error %u during creation of SRTP context for %s",
+			srtpCreateStatus, (part == ForSender) ? "sender" : "receiver");
+		return 0;
+	}
+	if (addStreamStatus != err_status_ok) {
+		ortp_error("ZRTP Error %u during addition of SRTP stream for %s",
+			addStreamStatus, (part == ForSender) ? "sender" : "receiver");
+		return 0;
+	}
+	return 1;
 }
 
 
@@ -805,8 +824,12 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	userData->session=s;
 	zrtp_InitializeConfig(context);
 	zrtp_setMandatoryOnly(context);
-	// FIXME make upstream use const char* instead
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, (char*)params->zid, params->zid_file, userData);
+	char zidstr[13]; // 96 bits + NULL
+	unsigned int *zidint=(unsigned int*)zidstr;
+	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
+	zidstr[12]=0;
+	ortp_message("Using ZRTP ID from %s",params->zid);
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData);
 	return ortp_zrtp_configure_context(userData,s,params);
 }
 
@@ -835,8 +858,12 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	userData->session=s;
 	zrtp_InitializeConfig(context);
 	zrtp_setMandatoryOnly(context);
-	// FIXME make upstream use const char* instead
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, (char*)params->zid, params->zid_file, userData);
+	char zidstr[13]; // 96 bits + NULL
+	unsigned int *zidint=(unsigned int*)zidstr;
+	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
+	zidstr[12]=0;
+	ortp_message("Using ZRTP ID from %s",params->zid);
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData);
 
 	ortp_message("setting zrtp_setMultiStrParams");
 	zrtp_setMultiStrParams(context,multiparams,length);
