@@ -214,6 +214,7 @@ int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *er
 		ortp_cond_wait(&sched->unblock_select_cond,&sched->lock);
 		remainingTime -= sched->timer_inc;
 	} while (remainingTime>0);
+	rtp_scheduler_unlock(sched);
 
 	return -1;
 }
