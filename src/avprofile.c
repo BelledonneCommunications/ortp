@@ -546,15 +546,25 @@ PayloadType payload_type_vp8={
 };
 
 PayloadType	payload_type_t140={
-	PAYLOAD_AUDIO_PACKETIZED, /*type */
-	1000,
-	0,
-	NULL,
-	0,
-	0,
-	"t140",
-	0,
-	0
+	TYPE( PAYLOAD_TEXT),
+	CLOCK_RATE(1000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(0),
+	MIME_TYPE ("t140"),
+	CHANNELS(0)
+};
+
+PayloadType payload_type_t140_red={
+	TYPE(PAYLOAD_TEXT),
+	CLOCK_RATE(1000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(0),
+	MIME_TYPE("red"),
+	CHANNELS(0)
 };
 
 PayloadType	payload_type_x_udpftp={

@@ -47,6 +47,7 @@ extern "C"{
 #define PAYLOAD_AUDIO_CONTINUOUS 0
 #define PAYLOAD_AUDIO_PACKETIZED 1
 #define PAYLOAD_VIDEO 2
+#define PAYLOAD_TEXT 4
 #define PAYLOAD_OTHER 3  /* ?? */
 
 struct _PayloadType
@@ -205,8 +206,11 @@ VAR_DECLSPEC PayloadType payload_type_x_snow;
 VAR_DECLSPEC PayloadType payload_type_jpeg;
 VAR_DECLSPEC PayloadType payload_type_vp8;
 
-VAR_DECLSPEC PayloadType payload_type_t140;
 VAR_DECLSPEC PayloadType payload_type_g722;
+
+/* text */
+VAR_DECLSPEC PayloadType payload_type_t140;
+VAR_DECLSPEC PayloadType payload_type_t140_red;
 
 /* non standard file transfer over UDP */
 VAR_DECLSPEC PayloadType payload_type_x_udpftp;
