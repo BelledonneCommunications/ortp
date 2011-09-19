@@ -215,7 +215,7 @@ bool_t rtcp_BYE_get_ssrc(const mblk_t *m, int idx, uint32_t *ssrc){
 			*ssrc=ntohl(bye->ssrc[idx]);
 			return TRUE;
 		}else{
-			ortp_warning("RTCP BYE should contain %i ssrc, but there is not enough room for it.");
+			ortp_warning("RTCP BYE should contain %i ssrc, but there is not enough room for it.",rc);
 		}
 	}
 	return FALSE;

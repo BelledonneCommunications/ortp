@@ -9,6 +9,8 @@ pkgconfig_DATA = ortp.pc
 
 SOURCES=$(top_srcdir)/include/ortp/*.h $(top_srcdir)/src/*.c $(top_srcdir)/src/*.h
 
+CLEANFILES=
+
 #html doc
 if HAVE_DOXYGEN
 
@@ -31,6 +33,7 @@ install-data-hook:
 
 uninstall-hook:
 	cd $(DESTDIR)$(doc_htmldir) && rm -f *
+
 
 endif
 
@@ -82,6 +85,7 @@ endif WITH_EPM
 
 distclean-local:
 	-rm -f ortp.defs
+	-rm -rf doc/html
 
 all-local: ortp.spec
 
