@@ -52,10 +52,10 @@
  * - rtprecv.c rtpsend.c show how to receive and send a single RTP stream.
  * - mrtprecv.c mrtpsend.c show how to receive and send multiple RTP streams
  *   simultaneously
- * 
+ *
  */
 
-/** 
+/**
  * \file ortp.h
  * \brief General purpose library functions.
  *
@@ -115,8 +115,15 @@ void ortp_logv(int level, const char *fmt, va_list args);
 
 void ortp_set_log_level_mask(int levelmask);
 
+#ifdef __GNUC__
+#define CHECK_FORMAT_ARGS(m,n) __attribute__((format(printf,m,n)))
+#else
+
+#endif
+
+
 #ifdef ORTP_DEBUG_MODE
-static inline void ortp_debug(const char *fmt,...)
+static inline void CHECK_FORMAT_ARGS(1,2) ortp_debug(const char *fmt,...)
 {
   va_list args;
   va_start (args, fmt);
@@ -137,14 +144,14 @@ static inline void ortp_debug(const char *fmt,...)
 
 #else
 
-static inline void ortp_log(OrtpLogLevel lev, const char *fmt,...){
+static inline void CHECK_FORMAT_ARGS(2,3) ortp_log(OrtpLogLevel lev, const char *fmt,...) {
 	va_list args;
 	va_start (args, fmt);
 	ortp_logv(lev, fmt, args);
  	va_end (args);
 }
 
-static inline void ortp_message(const char *fmt,...)
+static inline void CHECK_FORMAT_ARGS(1,2) ortp_message(const char *fmt,...)
 {
 	va_list args;
 	va_start (args, fmt);
@@ -152,7 +159,7 @@ static inline void ortp_message(const char *fmt,...)
 	va_end (args);
 }
 
-static inline void ortp_warning(const char *fmt,...)
+static inline void CHECK_FORMAT_ARGS(1,2) ortp_warning(const char *fmt,...)
 {
 	va_list args;
 	va_start (args, fmt);
@@ -162,7 +169,7 @@ static inline void ortp_warning(const char *fmt,...)
 
 #endif
 
-static inline void ortp_error(const char *fmt,...)
+static inline void CHECK_FORMAT_ARGS(1,2) ortp_error(const char *fmt,...)
 {
 	va_list args;
 	va_start (args, fmt);
@@ -170,7 +177,7 @@ static inline void ortp_error(const char *fmt,...)
 	va_end (args);
 }
 
-static inline void ortp_fatal(const char *fmt,...)
+static inline void CHECK_FORMAT_ARGS(1,2) ortp_fatal(const char *fmt,...)
 {
 	va_list args;
 	va_start (args, fmt);
