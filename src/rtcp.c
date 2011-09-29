@@ -309,7 +309,7 @@ static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 		session->rtp.jitter_stats.max_jitter = jitter ;
 
 		gettimeofday( &now, NULL );
-		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000 ) + ( now.tv_usec / 1000 );
+		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000LL ) + ( now.tv_usec / 1000LL );
 	}
 }
 
