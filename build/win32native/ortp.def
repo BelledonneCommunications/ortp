@@ -189,6 +189,7 @@ EXPORTS
 	rtp_session_set_rtcp_report_interval
 
 	rtp_get_payload
+	rtp_get_extheader
 
 	rtp_session_set_remote_addr_full
 	rtp_session_send_rtcp_APP

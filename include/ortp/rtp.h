@@ -116,6 +116,7 @@ void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
 #define rtp_get_csrc(mp, idx)		(((rtp_header_t*)((mp)->b_rptr))->csrc[idx])
 
 int rtp_get_payload(mblk_t *packet, unsigned char **start);
+int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext);
 
 #ifdef __cplusplus
 }
