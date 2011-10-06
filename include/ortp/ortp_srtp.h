@@ -20,7 +20,12 @@
 #ifndef ortp_srtp_h
 #define ortp_srtp_h
 
+#ifndef ANDROID
 #include <srtp/srtp.h>
+#else
+// Android doesn't use make install
+#include <srtp.h>
+#endif
 #include <ortp/rtpsession.h>
 
 #ifdef __cplusplus

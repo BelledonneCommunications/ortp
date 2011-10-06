@@ -26,13 +26,12 @@
 
 #ifdef HAVE_SRTP
 
-#include <srtp/srtp.h>
 #undef PACKAGE_NAME 
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME 
 #undef PACKAGE_VERSION
 
-#include "ortp/srtp.h"
+#include "ortp/ortp_srtp.h"
 #include "ortp/b64.h"
 
 #define SRTP_PAD_BYTES 64 /*?? */
