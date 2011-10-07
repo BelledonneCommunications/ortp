@@ -118,7 +118,7 @@ void ortp_set_log_level_mask(int levelmask);
 #ifdef __GNUC__
 #define CHECK_FORMAT_ARGS(m,n) __attribute__((format(printf,m,n)))
 #else
-
+#define CHECK_FORMAT_ARGS(m,n)
 #endif
 
 
