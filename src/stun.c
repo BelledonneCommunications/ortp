@@ -199,7 +199,7 @@ stunParseAtrError( char* body, unsigned int hdrLen,  StunAtrError *result )
 static bool_t 
 stunParseAtrUnknown( char* body, unsigned int hdrLen,  StunAtrUnknown *result )
 {
-   if ( hdrLen >= sizeof(result) )
+   if ( hdrLen >= sizeof(*result) )
    {
       ortp_error("stun: Incorrect size for SA_UNKNOWNATTRIBUTE");
       return FALSE;
@@ -254,7 +254,7 @@ stunParseAtrIntegrity( char* body, unsigned int hdrLen,  StunAtrIntegrity *resul
 static bool_t 
 turnParseAtrChannelNumber( char* body, unsigned int hdrLen,  TurnAtrChannelNumber *result )
 {
-   if ( hdrLen >= sizeof(result) )
+   if ( hdrLen >= sizeof(*result) )
    {
       ortp_error("stun: Incorrect size for TA_CHANNELNUMBER");
       return FALSE;
@@ -275,7 +275,7 @@ turnParseAtrChannelNumber( char* body, unsigned int hdrLen,  TurnAtrChannelNumbe
 static bool_t 
 turnParseAtrLifetime( char* body, unsigned int hdrLen,  TurnAtrLifetime *result )
 {
-   if ( hdrLen != sizeof(result) )
+   if ( hdrLen != sizeof(*result) )
    {
       ortp_error("stun: Incorrect size for TA_LIFETIME");
       return FALSE;
@@ -399,7 +399,7 @@ stunParseMessage( char* buf, unsigned int bufLen, StunMessage *msg)
    char* body;
    unsigned int size;
 	 ortp_debug("stun: Received stun message: %i bytes\n", bufLen);
-   memset(msg, 0, sizeof(msg));
+   memset(msg, 0, sizeof(*msg));
 	
    if (sizeof(StunMsgHdr) > bufLen)
    {

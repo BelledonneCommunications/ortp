@@ -1292,8 +1292,8 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
  * Closes the rtp and rtcp sockets.
 **/
 void rtp_session_release_sockets(RtpSession *session){
-	if (session->rtp.socket>=0) close_socket (session->rtp.socket);
-	if (session->rtcp.socket>=0) close_socket (session->rtcp.socket);
+	if (session->rtp.socket!=(ortp_socket_t)-1) close_socket (session->rtp.socket);
+	if (session->rtcp.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.socket);
 	session->rtp.socket=-1;
 	session->rtcp.socket=-1;
 	
