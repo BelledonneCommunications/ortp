@@ -28,11 +28,9 @@
 #include "ortp/zrtp.h"
 
 #ifdef HAVE_zrtp
-
 // To implement
 
 #else
-
 
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
