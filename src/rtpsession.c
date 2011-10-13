@@ -621,6 +621,13 @@ rtp_session_set_ssrc (RtpSession * session, uint32_t ssrc)
 }
 
 
+uint32_t
+rtp_session_get_send_ssrc (RtpSession* session)
+{
+	return session->snd.ssrc;
+}
+
+
 void rtp_session_update_payload_type(RtpSession *session, int paytype){
 	/* check if we support this payload type */
 	PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,paytype);

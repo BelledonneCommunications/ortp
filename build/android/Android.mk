@@ -48,7 +48,7 @@ LOCAL_SRC_FILES := \
 	src/event.c \
 	src/stun.c \
 	src/stun_udp.c \
-	src/srtp.c \
+	src/ortp_srtp.c \
 	src/b64.c \
 	src/zrtp.c
 

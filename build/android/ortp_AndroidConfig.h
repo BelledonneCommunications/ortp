@@ -32,7 +32,7 @@
 #define HAVE_SOCKET 1
 
 /* Defined when srtp support is compiled */
-/* #undef HAVE_SRTP */
+/*#define HAVE_SRTP 1*/
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1

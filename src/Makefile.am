@@ -29,7 +29,7 @@ libortp_la_SOURCES=	str_utils.c 	\
 			rtcpparse.c \
 			event.c \
 			stun.c stun_udp.c \
-			srtp.c \
+			ortp_srtp.c \
 			b64.c \
 			zrtp.c 
 
