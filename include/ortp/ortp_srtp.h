@@ -20,13 +20,24 @@
 #ifndef ortp_srtp_h
 #define ortp_srtp_h
 
+#ifndef ANDROID
 #include <srtp/srtp.h>
+#else
+// Android doesn't use make install
+#include <srtp.h>
+#endif
 #include <ortp/rtpsession.h>
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
+enum ortp_srtp_crypto_suite_t {
+	AES_128_SHA1_80 = 1,
+	AES_128_SHA1_32,
+	AES_128_NO_AUTH,
+	NO_CIPHER_SHA1_80
+};
 
 err_status_t ortp_srtp_init(void);
 err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy);
@@ -37,6 +48,7 @@ bool_t ortp_srtp_supported(void);
 
 int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
 
+srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
 #ifdef __cplusplus
 }
 #endif
