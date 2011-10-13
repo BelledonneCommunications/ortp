@@ -20,12 +20,21 @@
 #ifndef ortp_srtp_h
 #define ortp_srtp_h
 
+#ifdef HAVE_SRTP
 #ifndef ANDROID
 #include <srtp/srtp.h>
 #else
 // Android doesn't use make install
 #include <srtp.h>
 #endif
+#else
+
+typedef  void* srtp_t;
+typedef int err_status_t;
+typedef int srtp_policy_t;
+
+#endif
+
 #include <ortp/rtpsession.h>
 
 /*srtp defines all this stuff*/
@@ -50,7 +59,7 @@ err_status_t ortp_srtp_init(void);
 err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy);
 err_status_t ortp_srtp_dealloc(srtp_t session);
 err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy);
-
+void ortp_crypto_get_random(uint8_t *tmp, int size);
 bool_t ortp_srtp_supported(void);
 
 int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );

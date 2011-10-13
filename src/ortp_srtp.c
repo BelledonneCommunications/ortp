@@ -24,6 +24,8 @@
 #endif
 #include "ortp/ortp.h"
 
+#include "ortp/ortp_srtp.h"
+
 #ifdef HAVE_SRTP
 
 #undef PACKAGE_NAME 
@@ -31,7 +33,7 @@
 #undef PACKAGE_TARNAME 
 #undef PACKAGE_VERSION
 
-#include "ortp/ortp_srtp.h"
+
 #include "ortp/b64.h"
 
 #define SRTP_PAD_BYTES 64 /*?? */
@@ -233,6 +235,11 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 	return TRUE;
 }
 
+void ortp_crypto_get_random(uint8_t *tmp, int size)
+{
+	crypto_get_random(tmp, size);
+}
+
 srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key)
 {
 	err_status_t err;
@@ -278,6 +285,15 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 
 #else
 
+err_status_t ortp_srtp_init(void) {
+	return 0;
+}
+
+void ortp_crypto_get_random(uint8_t *tmp, int size)
+{
+
+}
+
 int srtp_transport_new(void *i, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	ortp_error("srtp_transport_new: oRTP has not been compiled with SRTP support.");
 	return -1;
@@ -287,22 +303,22 @@ bool_t ortp_srtp_supported(void){
 	return FALSE;
 }
 
-int ortp_srtp_create(void *i, const void *policy)
+err_status_t ortp_srtp_create(srtp_t *i, const srtp_policy_t *policy)
 {
 	return -1;
 }
 
-int ortp_srtp_dealloc(void *session)
+err_status_t ortp_srtp_dealloc(srtp_t session)
 {
 	return -1;
 }
 
-int ortp_srtp_add_stream(void *session, const void *policy)
+err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy)
 {
 	return -1;
 }
 
-srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, const char* snd_key, unsigned snd_key_length, uint32_t ssrc, const char* rcv_key, unsigned rcv_key_length)
+srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key)
 {
 	return NULL;
 }
