@@ -319,6 +319,13 @@ void ortp_shm_close(void *memory);
 #endif
 
 
+/*define __ios when we are compiling for ios.
+ The TARGET_OS_IPHONE macro is stupid, it is defined to 0 when compiling on mac os x.
+*/
+#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE==1
+#define __ios 1
+#endif
+
 #endif
 
 

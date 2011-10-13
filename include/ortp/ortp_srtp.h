@@ -28,6 +28,13 @@
 #endif
 #include <ortp/rtpsession.h>
 
+/*srtp defines all this stuff*/
+#undef PACKAGE_BUGREPORT
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+
 #ifdef __cplusplus
 extern "C"{
 #endif
