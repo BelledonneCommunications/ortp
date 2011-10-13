@@ -180,6 +180,7 @@ EXPORTS
     rtp_session_set_remote_addr_and_port
     rtp_session_set_time_jump_limit
 
+	rtp_session_enable_rtcp
 	rtp_session_enable_jitter_buffer
 
 	rtp_session_set_rtp_socket_recv_buffer_size
@@ -189,12 +190,14 @@ EXPORTS
 	rtp_session_set_rtcp_report_interval
 
 	rtp_get_payload
+	rtp_get_extheader
 
 	rtp_session_set_remote_addr_full
 	rtp_session_send_rtcp_APP
 	b64_decode
 	b64_encode
 	
+	payload_type_new
 	payload_type_set_recv_fmtp
 	rtp_session_get_local_port
 	rtp_session_get_jitter_buffer_params
@@ -208,3 +211,10 @@ EXPORTS
 	ortp_client_pipe_connect
 	ortp_client_pipe_close
 	ortp_file_exist
+
+	ortp_zrtp_available
+	ortp_zrtp_context_new
+	ortp_zrtp_multistream_new
+	ortp_zrtp_sas_verified
+	ortp_zrtp_sas_reset_verified
+	ortp_zrtp_context_destroy

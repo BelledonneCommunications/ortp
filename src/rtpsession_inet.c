@@ -252,7 +252,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
 	ortp_socket_t sock;
 	int sockfamily;
 	bool_t reuse_addr;
-	if (session->rtp.socket>=0){
+	if (session->rtp.socket!=(ortp_socket_t)-1){
 		/* don't rebind, but close before*/
 		rtp_session_release_sockets(session);
 	}
@@ -273,7 +273,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
 		session->rtp.loc_port=port;
 		/*try to bind rtcp port */
 		sock=create_and_bind(addr,port+1,&sockfamily,reuse_addr);
-		if (sock!=-1){
+		if (sock!=(ortp_socket_t)-1){
 			session->rtcp.sockfamily=sockfamily;
 			session->rtcp.socket=sock;
 		}else{
@@ -310,7 +310,7 @@ int rtp_session_set_multicast_ttl(RtpSession *session, int ttl)
     if (ttl>0) session->multicast_ttl = ttl;
     
     // Don't do anything if socket hasn't been created yet
-    if (session->rtp.socket < 0) return 0;
+    if (session->rtp.socket == (ortp_socket_t)-1) return 0;
 
     switch (session->rtp.sockfamily) {
         case AF_INET: {
@@ -386,7 +386,7 @@ int rtp_session_set_multicast_loopback(RtpSession *session, int yesno)
     }
      
     // Don't do anything if socket hasn't been created yet
-    if (session->rtp.socket < 0) return 0;
+    if (session->rtp.socket == (ortp_socket_t)-1) return 0;
 
     switch (session->rtp.sockfamily) {
         case AF_INET: {
@@ -458,7 +458,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (dscp>=0) session->dscp = dscp;
 	
 	// Don't do anything if socket hasn't been created yet
-	if (session->rtp.socket < 0) return 0;
+	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600)
 	memset(&ovi, 0, sizeof(ovi));
@@ -746,11 +746,11 @@ rtp_session_set_remote_addr_and_port(RtpSession * session, const char * addr, in
 
 void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd)
 {
-	if (rtpfd>=0) set_non_blocking_socket(rtpfd);
-	if (rtcpfd>=0) set_non_blocking_socket(rtcpfd);
+	if (rtpfd!=-1) set_non_blocking_socket(rtpfd);
+	if (rtcpfd!=-1) set_non_blocking_socket(rtcpfd);
 	session->rtp.socket=rtpfd;
 	session->rtcp.socket=rtcpfd;
-	if (rtpfd>=0 || rtcpfd>=0 )
+	if (rtpfd!=-1 || rtcpfd!=-1 )
 		session->flags|=(RTP_SESSION_USING_EXT_SOCKETS|RTP_SOCKET_CONNECTED|RTCP_SOCKET_CONNECTED);
 	else session->flags&=~(RTP_SESSION_USING_EXT_SOCKETS|RTP_SOCKET_CONNECTED|RTCP_SOCKET_CONNECTED);
 }
@@ -801,10 +801,10 @@ void rtp_session_flush_sockets(RtpSession *session){
 	    return;
 	  }
 
-	if (session->rtp.socket>=0){
+	if (session->rtp.socket!=(ortp_socket_t)-1){
 		while (recvfrom(session->rtp.socket,(char*)trash,sizeof(trash),0,(struct sockaddr *)&from,&fromlen)>0){};
 	}
-	if (session->rtcp.socket>=0){
+	if (session->rtcp.socket!=(ortp_socket_t)-1){
 		while (recvfrom(session->rtcp.socket,(char*)trash,sizeof(trash),0,(struct sockaddr*)&from,&fromlen)>0){};
 	}
 }
@@ -914,7 +914,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 	}
 
 	if (session->rtcp.enabled &&
-		( (sockfd>=0 && (session->rtcp.rem_addrlen>0 ||using_connected_socket))
+		( (sockfd!=(ortp_socket_t)-1 && (session->rtcp.rem_addrlen>0 ||using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) ){
 		if (rtp_session_using_transport(session, rtcp)){
 			error = (session->rtcp.tr->t_sendto) (session->rtcp.tr, m, 0,
@@ -956,7 +956,7 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 	socklen_t addrlen = sizeof (remaddr);
 	mblk_t *mp;
 	
-	if ((sockfd<0) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
+	if ((sockfd==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
 
 	while (1)
 	{
@@ -1113,7 +1113,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 	socklen_t addrlen=0;
 	mblk_t *mp;
 
-	if (session->rtcp.socket<0 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no rtcp sockets for the moment*/
+	if (session->rtcp.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no rtcp sockets for the moment*/
 	
 
 	while (1)

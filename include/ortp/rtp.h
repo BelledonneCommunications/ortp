@@ -106,7 +106,8 @@ extern "C"{
 void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
 #define rtp_set_payload_type(mp,pt)	((rtp_header_t*)((mp)->b_rptr))->paytype=(pt)
 
-#define rtp_get_markbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->markbit)	
+#define rtp_get_markbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->markbit)
+#define rtp_get_extbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->extbit)
 #define rtp_get_timestamp(mp)	(((rtp_header_t*)((mp)->b_rptr))->timestamp)	
 #define rtp_get_seqnumber(mp)	(((rtp_header_t*)((mp)->b_rptr))->seq_number)
 #define rtp_get_payload_type(mp)	(((rtp_header_t*)((mp)->b_rptr))->paytype)
@@ -115,6 +116,7 @@ void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
 #define rtp_get_csrc(mp, idx)		(((rtp_header_t*)((mp)->b_rptr))->csrc[idx])
 
 int rtp_get_payload(mblk_t *packet, unsigned char **start);
+int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext);
 
 #ifdef __cplusplus
 }

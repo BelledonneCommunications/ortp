@@ -55,7 +55,7 @@ LOCAL_SRC_FILES := \
 LOCAL_CFLAGS += \
 	-DORTP_INET6 \
 	-UHAVE_CONFIG_H \
-	-include $(LOCAL_PATH)/build/android/ortp_AndroidConfig.h
+	-include ortp_AndroidConfig.h
 
 
 ifeq ($(BUILD_GPLV3_ZRTP), 1)
@@ -80,7 +80,8 @@ endif #SRTP
 
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
-	$(LOCAL_PATH)/include
+	$(LOCAL_PATH)/include \
+	$(LOCAL_PATH)/build/android
 
 LOCAL_LDLIBS += -lpthread
 

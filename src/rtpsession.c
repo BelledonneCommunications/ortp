@@ -1292,8 +1292,8 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
  * Closes the rtp and rtcp sockets.
 **/
 void rtp_session_release_sockets(RtpSession *session){
-	if (session->rtp.socket>=0) close_socket (session->rtp.socket);
-	if (session->rtcp.socket>=0) close_socket (session->rtcp.socket);
+	if (session->rtp.socket!=(ortp_socket_t)-1) close_socket (session->rtp.socket);
+	if (session->rtcp.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.socket);
 	session->rtp.socket=-1;
 	session->rtcp.socket=-1;
 	
@@ -1677,8 +1677,45 @@ int rtp_get_payload(mblk_t *packet, unsigned char **start){
 		ortp_warning("Invalid RTP packet");
 		return -1;
 	}
+	if (rtp_get_extbit(packet)){
+		int extsize=rtp_get_extheader(packet,NULL,NULL);
+		if (extsize>=0){
+			tmp+=4+extsize;
+		}
+	}
 	*start=tmp;
 	return packet->b_wptr-tmp;
+}
+
+/**
+ * Obtain the extension header if any.
+ * @param packet the RTP packet.
+ * @param profile the profile field of the extension header
+ * @param start_ext_header pointer that will be set to the beginning of the payload of the extension header.
+ * @return the size of the extension in bytes (the payload size, it can be 0), -1 if parsing of the extension header failed or if no extension is present.
+**/
+int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext){
+	int size=0;
+	uint8_t *ext_header;
+	if (rtp_get_extbit(packet)){
+		ext_header=packet->b_rptr+RTP_FIXED_HEADER_SIZE+(rtp_get_cc(packet)*4);
+		if (ext_header+4 <= packet->b_wptr){
+			uint32_t h=ntohl(*(uint32_t*)ext_header);
+			size=(int)(h & 0xFFFF);
+			if (profile) *profile=(h>>16);
+			size=(size*4); /*the size is given in the packet as multiple of 32 bit words, excluding the 4 byte header*/
+			if ((ext_header+4+size)> packet->b_wptr){
+				ortp_warning("Inconsistent size for rtp extension header");
+				return -1;
+			}
+			if (start_ext) *start_ext=ext_header+4;
+			return size;
+		}else{
+			ortp_warning("Insufficient size for rtp extension header.");
+			return -1;
+		}
+	}
+	return -1;
 }
 
 

@@ -829,7 +829,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
 	zidstr[12]=0;
 	ortp_message("Using ZRTP ID from %s",params->zid);
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData);
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData, 0);
 	return ortp_zrtp_configure_context(userData,s,params);
 }
 
@@ -863,7 +863,7 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
 	zidstr[12]=0;
 	ortp_message("Using ZRTP ID from %s",params->zid);
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData);
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData, 0);
 
 	ortp_message("setting zrtp_setMultiStrParams");
 	zrtp_setMultiStrParams(context,multiparams,length);
@@ -902,7 +902,6 @@ void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx) {
 
 
 #else
-
 
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
