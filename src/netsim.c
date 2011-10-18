@@ -89,6 +89,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 		if (output){
 			bits=(msgdsize(output)+overhead)*8;
 			sim->qsize-=bits;
+			freemsg(output);
 		}
 	}
 	

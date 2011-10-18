@@ -1055,7 +1055,11 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 	if (last_sr_time!=0 && sr_delay!=0){
 		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
 		rtt_frac/=65536.0;
-		/*express the result in milliseconds*/
+		/*take into account the network simulator */
+		if (session->net_sim_ctx && session->net_sim_ctx->params.max_bandwidth>0){
+			double sim_delay=(double)session->net_sim_ctx->qsize/(double)session->net_sim_ctx->params.max_bandwidth;
+			rtt_frac+=sim_delay;
+		}
 		session->rtt=rtt_frac;
 		/*ortp_message("rtt estimated to %f ms",session->rtt);*/
 	}
