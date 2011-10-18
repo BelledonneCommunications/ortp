@@ -1368,6 +1368,9 @@ void rtp_session_uninit (RtpSession * session)
 	session->signal_tables = o_list_free(session->signal_tables);
 	msgb_allocator_uninit(&session->allocator);
 
+	if (session->net_sim_ctx)
+		ortp_network_simulator_destroy(session->net_sim_ctx);
+
 #if (_WIN32_WINNT >= 0x0600)
 	if (session->rtp.QoSFlowID != 0)
     {

@@ -58,6 +58,8 @@ EXPORTS
 	rtp_session_get_send_payload_type
 	rtp_session_set_recv_payload_type
 	rtp_session_get_recv_payload_type
+	
+	rtp_session_enable_network_simulation
 
 	rtp_session_recv_with_ts
 	rtp_session_recvm_with_ts
