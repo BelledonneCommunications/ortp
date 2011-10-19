@@ -68,13 +68,11 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	
 	if (sim->last_check.tv_sec==0){
 		sim->last_check=current;
-		sim->bit_budget=sim->params.max_bandwidth;
+		sim->bit_budget=0;
 	}
 	/*update the budget */
 	elapsed=elapsed_us(&sim->last_check,&current);
 	sim->bit_budget+=(elapsed*(int64_t)sim->params.max_bandwidth)/1000000LL;
-	if (sim->bit_budget>=sim->params.max_bandwidth)
-		sim->bit_budget=sim->params.max_bandwidth;
 	sim->last_check=current;
 	/* queue the packet for sending*/
 	if (input){
@@ -103,6 +101,10 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 			sim->bit_budget-=bits;
 			sim->qsize-=bits;
 		}
+	}
+	if (output==NULL && input==NULL && sim->bit_budget>=0){
+		/* unused budget is lost...*/
+		sim->last_check.tv_sec=0;
 	}
 	return output;
 }
