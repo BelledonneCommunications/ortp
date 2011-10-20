@@ -50,6 +50,7 @@ LOCAL_SRC_FILES := \
 	src/stun_udp.c \
 	src/ortp_srtp.c \
 	src/b64.c \
+	src/netsim.c \
 	src/zrtp.c
 
 LOCAL_CFLAGS += \
