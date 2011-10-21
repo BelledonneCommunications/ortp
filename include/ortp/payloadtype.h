@@ -192,8 +192,12 @@ VAR_DECLSPEC PayloadType payload_type_amrwb;
 VAR_DECLSPEC PayloadType payload_type_truespeech;
 VAR_DECLSPEC PayloadType payload_type_evrc0;
 VAR_DECLSPEC PayloadType payload_type_evrcb0;
+VAR_DECLSPEC PayloadType payload_type_silk_nb;	
+VAR_DECLSPEC PayloadType payload_type_silk_mb;
+VAR_DECLSPEC PayloadType payload_type_silk_wb;
+VAR_DECLSPEC PayloadType payload_type_silk_swb;
 
-/* video */
+	/* video */
 VAR_DECLSPEC PayloadType payload_type_mpv;
 VAR_DECLSPEC PayloadType payload_type_h261;
 VAR_DECLSPEC PayloadType payload_type_h263;
