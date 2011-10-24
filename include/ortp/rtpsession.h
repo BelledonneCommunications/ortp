@@ -94,8 +94,20 @@ typedef struct _RtpTransport
 	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
 }  RtpTransport;
 
+typedef struct _OrtpNetworkSimulatorParams{
+	int enabled;
+	float max_bandwidth; /*IP bandwidth, in bit/s*/
+	float loss_rate;
+}OrtpNetworkSimulatorParams;
 
-	
+typedef struct _OrtpNetworkSimulatorCtx{
+	OrtpNetworkSimulatorParams params;
+	int bit_budget;
+	int qsize;
+	queue_t q;
+	struct timeval last_check;
+}OrtpNetworkSimulatorCtx;
+
 typedef struct _RtpStream
 {
 	ortp_socket_t socket;
@@ -224,6 +236,7 @@ struct _RtpSession
 	unsigned int interarrival_jitter_test_vector;
 	unsigned int delay_test_vector;
 	float rtt;/*last round trip delay calculated*/
+	OrtpNetworkSimulatorCtx *net_sim_ctx;
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -385,10 +398,12 @@ void rtp_session_clear_recv_error_code(RtpSession *session);
 
 float rtp_session_get_round_trip_propagation(RtpSession *session);
 
+
+void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
 void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const unsigned int value );
 void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
 void rtp_session_rtcp_set_delay_value(RtpSession *session, const unsigned int value );
-
+mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number);
 /*private */
 void rtp_session_init(RtpSession *session, int mode);
 #define rtp_session_set_flag(session,flag) (session)->flags|=(flag)

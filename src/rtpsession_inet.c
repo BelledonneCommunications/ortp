@@ -837,19 +837,30 @@ static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_l
 #endif	
 
 #define IP_UDP_OVERHEAD (20+8)
+#define IP6_UDP_OVERHEAD (40+8)
 
 static void update_sent_bytes(RtpSession*s, int nbytes){
+#ifdef ORTP_INET6
+	int overhead=(s->rtp.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+#else
+	int overhead=IP_UDP_OVERHEAD;
+#endif
 	if (s->rtp.sent_bytes==0){
 		gettimeofday(&s->rtp.send_bw_start,NULL);
 	}
-	s->rtp.sent_bytes+=nbytes+IP_UDP_OVERHEAD;
+	s->rtp.sent_bytes+=nbytes+overhead;
 }
 
 static void update_recv_bytes(RtpSession*s, int nbytes){
+#ifdef ORTP_INET6
+	int overhead=(s->rtp.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+#else
+	int overhead=IP_UDP_OVERHEAD;
+#endif
 	if (s->rtp.recv_bytes==0){
 		gettimeofday(&s->rtp.recv_bw_start,NULL);
 	}
-	s->rtp.recv_bytes+=nbytes+IP_UDP_OVERHEAD;
+	s->rtp.recv_bytes+=nbytes+overhead;
 }
 
 int
@@ -987,31 +998,39 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 						session->flags|=RTP_SOCKET_CONNECTED;
 				}
 			}
-			/* then parse the message and put on queue */
 			mp->b_wptr+=error;
-			rtp_session_rtp_parse (session, mp, user_ts, (struct sockaddr*)&remaddr,addrlen);
+			if (session->net_sim_ctx)
+				mp=rtp_session_network_simulate(session,mp);
+			/* then parse the message and put on jitter buffer queue */
+			if (mp){
+				rtp_session_rtp_parse(session, mp, user_ts, (struct sockaddr*)&remaddr,addrlen);
+				update_recv_bytes(session,mp->b_wptr-mp->b_rptr);
+			}
 			session->rtp.cached_mp=NULL;
 			/*for bandwidth measurements:*/
-			update_recv_bytes(session,error);
 		}
 		else
 		{
-		 	int errnum=getSocketErrorCode();
-			if (error == 0 || (error == -1 && errnum==0)){
-				/*0 can be returned by RtpTransport functions in case of EWOULDBLOCK*/
-				/*we ignore it*/
-				/*ortp_warning
-					("rtp_recv: strange... recv() returned zero.");*/
-				/*(error == -1 && errnum==0) for buggy drivers*/
-			}
-			else if (!is_would_block_error(errnum))
+			int errnum;
+			if (error==-1 && !is_would_block_error((errnum=getSocketErrorCode())) )
 			{
 				if (session->on_network_error.count>0){
 					rtp_signal_table_emit3(&session->on_network_error,(long)"Error receiving RTP packet",INT_TO_POINTER(getSocketErrorCode()));
 				}else ortp_warning("Error receiving RTP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
+			}else{
+				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
+				if (session->net_sim_ctx){
+					/*drain possible packets queued in the network simulator*/
+					mp=rtp_session_network_simulate(session,NULL);
+					if (mp){
+						/* then parse the message and put on jitter buffer queue */
+						rtp_session_rtp_parse(session, mp, user_ts, (struct sockaddr*)&session->rtp.rem_addr,session->rtp.rem_addrlen);
+						update_recv_bytes(session,msgdsize(mp));
+					}
+				}
 			}
 			/* don't free the cached_mp, it will be reused next time */
-			return -1;	/* avoids an infinite loop ! */
+			return -1;
 		}
 	}
 	return error;
@@ -1036,7 +1055,11 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 	if (last_sr_time!=0 && sr_delay!=0){
 		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
 		rtt_frac/=65536.0;
-		/*express the result in milliseconds*/
+		/*take into account the network simulator */
+		if (session->net_sim_ctx && session->net_sim_ctx->params.max_bandwidth>0){
+			double sim_delay=(double)session->net_sim_ctx->qsize/(double)session->net_sim_ctx->params.max_bandwidth;
+			rtt_frac+=sim_delay;
+		}
 		session->rtt=rtt_frac;
 		/*ortp_message("rtt estimated to %f ms",session->rtt);*/
 	}

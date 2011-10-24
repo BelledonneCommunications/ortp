@@ -963,7 +963,30 @@ static void payload_type_changed_notify(RtpSession *session, int paytype){
 		rtp_signal_table_emit (&session->on_payload_type_changed);
 	}
 }
+/**
+ *	Try to get an rtp packet presented as a mblk_t structure from the rtp session at a given sequence number.
+ *	This function is very usefull for codec with Forward error correction capabilities
+ *
+ *	This function returns the entire packet (with header).
+ *
+ *	 *
+ * @param session a rtp session.
+ * @param sequence_number a sequence number.
+ *
+ * @return a rtp packet presented as a mblk_t, or NULL if not found.
+ **/
 
+mblk_t *
+rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number) {
+	queue_t* q= &session->rtp.rq;
+	mblk_t* mb;
+	for (mb=qbegin(q); !qend(q,mb); mb=qnext(q,mb)){
+		if (rtp_get_seqnumber(mb)==sequence_number) {
+			return mb;
+		}
+	}
+	return NULL;
+}
 
 /**
  *	Try to get a rtp packet presented as a mblk_t structure from the rtp session.
@@ -1367,6 +1390,9 @@ void rtp_session_uninit (RtpSession * session)
 
 	session->signal_tables = o_list_free(session->signal_tables);
 	msgb_allocator_uninit(&session->allocator);
+
+	if (session->net_sim_ctx)
+		ortp_network_simulator_destroy(session->net_sim_ctx);
 
 #if (_WIN32_WINNT >= 0x0600)
 	if (session->rtp.QoSFlowID != 0)
