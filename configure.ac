@@ -36,6 +36,10 @@ AC_DEFINE_UNQUOTED(ORTP_MINOR_VERSION,$ORTP_MINOR_VERSION, [minor version])
 AC_DEFINE_UNQUOTED(ORTP_MICRO_VERSION,$ORTP_MICRO_VERSION, [micro version])
 AC_DEFINE_UNQUOTED(ORTP_VERSION,"$ORTP_VERSION",[ortp version number])
 
+dnl Checks for programs.
+AC_PROG_CC
+LT_INIT([win32-dll shared disable-static])
+
 AC_SUBST([mkdir_p])
 
 AC_MSG_CHECKING([warning make an error on compilation])
@@ -119,13 +123,6 @@ if test "$mingw_found" = "yes" ; then
         rm -f ./libtool.tmp
 fi
 ],[mingw_found=$mingw_found])
-
-dnl Checks for programs.
-AC_PROG_CC
-AC_LIBTOOL_WIN32_DLL
-AC_PROG_LIBTOOL
-AC_ENABLE_SHARED(yes)
-AC_ENABLE_STATIC(no)
 
 if test "$GCC" != "yes" ; then
 	if test "$hpux_host" = "yes" ; then
