@@ -24,8 +24,6 @@
 #endif
 #include "ortp/ortp.h"
 
-#include "ortp/ortp_srtp.h"
-
 #ifdef HAVE_SRTP
 
 #undef PACKAGE_NAME 
@@ -33,6 +31,7 @@
 #undef PACKAGE_TARNAME 
 #undef PACKAGE_VERSION
 
+#include "ortp/ortp_srtp.h"
 
 #include "ortp/b64.h"
 
@@ -47,7 +46,7 @@ static int  srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sock
 	slen=m->b_wptr-m->b_rptr;
 	err=srtp_protect(srtp,m->b_rptr,&slen);
 	if (err==err_status_ok){
-		return sendto(t->session->rtp.socket,m->b_rptr,slen,flags,to,tolen);
+		return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
 	}
 	ortp_error("srtp_protect() failed (%d)", err);
 	return -1;
@@ -57,7 +56,7 @@ static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr 
 	srtp_t srtp=(srtp_t)t->data;
 	int err;
 	int slen;
-	err=recvfrom(t->session->rtp.socket,m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	err=recvfrom(t->session->rtp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		/* keep NON-RTP data unencrypted */
@@ -92,7 +91,7 @@ static int  srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct soc
 	slen=m->b_wptr-m->b_rptr;
 	srtp_err=srtp_protect_rtcp(srtp,m->b_rptr,&slen);
 	if (srtp_err==err_status_ok){
-		return sendto(t->session->rtcp.socket,m->b_rptr,slen,flags,to,tolen);
+		return sendto(t->session->rtcp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
 	}
 	ortp_error("srtp_protect_rtcp() failed (%d)", srtp_err);
 	return -1;
@@ -102,7 +101,7 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 	srtp_t srtp=(srtp_t)t->data;
 	int err;
 	int slen;
-	err=recvfrom(t->session->rtcp.socket,m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	err=recvfrom(t->session->rtcp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		slen=err;
