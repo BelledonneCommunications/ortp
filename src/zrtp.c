@@ -28,6 +28,10 @@
 
 #include "ortp/zrtp.h"
 
+#ifdef WIN32
+#include <malloc.h>
+#endif
+
 #ifdef HAVE_zrtp
 
 
@@ -66,8 +70,8 @@ static inline OrtpZrtpContext* user_data(ZrtpContext *c) {
 	return (OrtpZrtpContext*) c->userData;
 }
 
-static inline uint32_t convert_timeval_to_millis(struct timeval *t) {
-	uint32_t ret=1000*t->tv_sec+t->tv_usec/1000;
+static inline uint64_t convert_timeval_to_millis(struct timeval *t) {
+	uint32_t ret=(1000LL*t->tv_sec)+(t->tv_usec/1000LL);
 	return ret;
 }
 
@@ -75,7 +79,7 @@ static void check_timer(ZrtpContext *zrtpContext, OrtpZrtpContext *c) {
 	if (c->timerWillTriggerAt != 0) {
 		struct timeval t;
 		gettimeofday(&t,NULL);
-		uint32_t now=convert_timeval_to_millis(&t);
+		uint64_t now=convert_timeval_to_millis(&t);
 		if (now > c->timerWillTriggerAt) {
 			c->timerWillTriggerAt=0;
 			zrtp_processTimeout(zrtpContext);
@@ -206,7 +210,7 @@ static int32_t ozrtp_sendDataZRTP (ZrtpContext* ctx, const uint8_t* data, const 
 	print_zrtp_packet("sent", buffer8);
 
 	// Send packet
-	ssize_t bytesSent = sendto(sockfd, buffer8, newlength,0,destaddr,destlen);
+	ssize_t bytesSent = sendto(sockfd, (void*)buffer8, newlength,0,destaddr,destlen);
 	if (bytesSent == -1 || bytesSent < length) {
 		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d", bytesSent, length);
 		return 0;
@@ -614,7 +618,7 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 		int size;
 		msgpullup(m,-1);
 		size=msgdsize(m);
-		return sendto(socket,m->b_rptr,size,flags,to,tolen);
+		return sendto(socket,(void*)m->b_rptr,size,flags,to,tolen);
 	}
 
 	// Protect with srtp
@@ -627,7 +631,7 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 		err=srtp_protect_rtcp(userData->srtpSend,m->b_rptr,&slen);
 	}
 	if (err==err_status_ok){
-		return sendto(socket,m->b_rptr,slen,flags,to,tolen);
+		return sendto(socket,(void*)m->b_rptr,slen,flags,to,tolen);
 	} else {
 		ortp_error("srtp_protect() failed with status %d", err);
 	}
@@ -655,7 +659,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 
 
 	// Check if something to receive
-	rlen=recvfrom(t->session->rtp.socket,m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	rlen=recvfrom(t->session->rtp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
 	if (rlen<=0) {
 		// nothing was received or error: pass the information to caller
 		return rlen;
@@ -728,7 +732,7 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 	ZrtpContext *zrtpContext = (ZrtpContext*) t->data;
 	OrtpZrtpContext *userData = (OrtpZrtpContext*) zrtpContext->userData;
 
-	int rlen = recvfrom(t->session->rtcp.socket,m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	int rlen = recvfrom(t->session->rtcp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
 	if (rlen<=0) {
 		// nothing was received or error: pass the information to caller
 		return rlen;
