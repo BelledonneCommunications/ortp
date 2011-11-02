@@ -107,6 +107,7 @@ case "$target_os" in
 	*mingw*)
 		CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0501 -DORTP_STATIC"
 		LIBS="$LIBS -lws2_32 -liphlpapi -lwinmm"
+		mingw_found=yes
 		;;
 esac
 
@@ -166,8 +167,8 @@ AC_ARG_WITH( srtp,
       [  --with-srtp      Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local)[default=/usr] ],
       [ srtp_prefix=${withval}],[ srtp_prefix=/usr ])
 
-if test "${srtp_prefix}" != "none"; then
-	if test "${srtp_prefix}" != "/usr" ; then
+if test "${srtp_prefix}" != "none" ; then
+	if test "${srtp_prefix}" != "/usr" || test "$mingw_found" = "yes" ; then
 		SRTP_CFLAGS="-I${srtp_prefix}/include -I${srtp_prefix}/include/srtp"
 		SRTP_LIBS="-L${srtp_prefix}/lib"
 	fi
