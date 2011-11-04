@@ -24,6 +24,7 @@
 #endif
 #include "ortp/ortp.h"
 
+#include "ortp/ortp_srtp.h"
 #ifdef HAVE_SRTP
 
 #undef PACKAGE_NAME 
@@ -31,7 +32,6 @@
 #undef PACKAGE_TARNAME 
 #undef PACKAGE_VERSION
 
-#include "ortp/ortp_srtp.h"
 
 #include "ortp/b64.h"
 
