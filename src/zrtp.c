@@ -355,12 +355,13 @@ static void ozrtp_sendInfo (ZrtpContext* ctx, int32_t severity, int32_t subCode 
 /** returned key need to be fred.*/
 static uint8_t *key_with_salt(C_SrtpSecret_t* s, int32_t role) {
 	uint8_t *saltedKey;
+	const int pad=128;
 	if (role == Initiator) {
-		saltedKey=malloc((s->initKeyLen + s->initSaltLen)/8);
+		saltedKey=ortp_malloc0((s->initKeyLen + s->initSaltLen + pad)/8);
 		memcpy(saltedKey, s->keyInitiator, s->initKeyLen/8);
 		memcpy(saltedKey + s->initKeyLen/8, s->saltInitiator, s->initSaltLen/8);
 	} else {
-		saltedKey=malloc((s->respKeyLen + s->respSaltLen)/8);
+		saltedKey=malloc((s->respKeyLen + s->respSaltLen + pad)/8);
 		memcpy(saltedKey, s->keyResponder, s->respKeyLen/8);
 		memcpy(saltedKey + s->respKeyLen/8, s->saltResponder, s->respSaltLen/8);
 	}
@@ -440,7 +441,7 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 		addStreamStatus=srtp_add_stream(userData->srtpRecv, &policy);
 	}
 
-	free(policy.key);
+	ortp_free(policy.key);
 
 	if (srtpCreateStatus != err_status_ok) {
 		ortp_error("ZRTP Error %u during creation of SRTP context for %s",
@@ -794,6 +795,13 @@ static OrtpZrtpContext* createUserData(ZrtpContext *context) {
 	// CF zrtp_InitializeConfig
 //}
 
+static void ortp_zrtp_configure(ZrtpContext *context){
+	zrtp_InitializeConfig(context);
+	zrtp_setMandatoryOnly(context);
+	zrtp_setTrustedMitM(context,FALSE);//because it is uninitialized in zrtpcpp.
+	zrtp_setSasSignature(context,FALSE);//because it is uninitialized in zrtpcpp.
+}
+
 static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, RtpSession *s, OrtpZrtpParams *params) {
 	ZrtpContext *context=userData->zrtpContext;
 
@@ -814,6 +822,8 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, R
 	rtp_session_set_transports(s, &userData->rtpt, &userData->rtcpt);
 
 	ortp_message("Starting ZRTP engine");
+	zrtp_setEnrollmentMode(context,FALSE);//because it is uninitialized in zrtpcpp.
+	
 	zrtp_startZrtpEngine(context);
 
 	return userData;
@@ -823,8 +833,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	ZrtpContext *context = zrtp_CreateWrapper();
 	OrtpZrtpContext *userData=createUserData(context);
 	userData->session=s;
-	zrtp_InitializeConfig(context);
-	zrtp_setMandatoryOnly(context);
+	ortp_zrtp_configure(context);
 	char zidstr[13]; // 96 bits + NULL
 	unsigned int *zidint=(unsigned int*)zidstr;
 	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
@@ -861,8 +870,7 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	ZrtpContext *context = zrtp_CreateWrapper();
 	OrtpZrtpContext *userData=createUserData(context);
 	userData->session=s;
-	zrtp_InitializeConfig(context);
-	zrtp_setMandatoryOnly(context);
+	ortp_zrtp_configure(context);
 	
 	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
 	zidstr[12]=0;
