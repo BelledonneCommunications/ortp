@@ -361,7 +361,7 @@ static uint8_t *key_with_salt(C_SrtpSecret_t* s, int32_t role) {
 		memcpy(saltedKey, s->keyInitiator, s->initKeyLen/8);
 		memcpy(saltedKey + s->initKeyLen/8, s->saltInitiator, s->initSaltLen/8);
 	} else {
-		saltedKey=malloc((s->respKeyLen + s->respSaltLen + pad)/8);
+		saltedKey=ortp_malloc0((s->respKeyLen + s->respSaltLen + pad)/8);
 		memcpy(saltedKey, s->keyResponder, s->respKeyLen/8);
 		memcpy(saltedKey + s->respKeyLen/8, s->saltResponder, s->respSaltLen/8);
 	}
