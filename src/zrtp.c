@@ -212,7 +212,7 @@ static int32_t ozrtp_sendDataZRTP (ZrtpContext* ctx, const uint8_t* data, const 
 	// Send packet
 	ssize_t bytesSent = sendto(sockfd, (void*)buffer8, newlength,0,destaddr,destlen);
 	if (bytesSent == -1 || bytesSent < length) {
-		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d", bytesSent, length);
+		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d", (int)bytesSent, length);
 		return 0;
 	} else {
 		return 1;
@@ -415,7 +415,7 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 	if (secrets->symEncAlgorithm != zrtp_Aes) {
 		ortp_fatal("unsupported cipher algorithm by srtp");
 	}
-
+	memset(&policy,0,sizeof(policy));
 	policy.ssrc.type=ssrc_specific;
 
 	crypto_policy_t cryptoPolicyRtp;
@@ -611,7 +611,6 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 		socket= t->session->rtp.socket;
 	} else {
 		socket= t->session->rtcp.socket;
-		ortp_message("Sending RTCP packet to ssrc %u (expected %u)", get_rtcp_ssrc(m->b_rptr), t->session->snd.ssrc);
 	}
 
 	if (userData->srtpSend == NULL || !zrtp_inState(zrtpContext, SecureState)) {
@@ -737,7 +736,6 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 		// nothing was received or error: pass the information to caller
 		return rlen;
 	}
-	ortp_message("Receiving RTCP packet from ssrc %u (expected %u)", get_rtcp_ssrc(m->b_wptr), t->session->rcv.ssrc);
 
 	if (userData->srtpRecv != NULL && zrtp_inState(zrtpContext, SecureState)) {
 		err_status_t err = srtp_unprotect_rtcp(userData->srtpRecv,m->b_wptr,&rlen);
@@ -770,7 +768,7 @@ static OrtpZrtpContext* createUserData(ZrtpContext *context) {
 	userData->srtpSend=NULL;
 	ortp_mutex_init(&userData->mutex,NULL);
 
-
+	memset(&userData->zrtp_cb,0,sizeof(userData->zrtp_cb));
 	userData->zrtp_cb.zrtp_activateTimer=&ozrtp_activateTimer;
 	userData->zrtp_cb.zrtp_cancelTimer=&ozrtp_cancelTimer;
 	userData->zrtp_cb.zrtp_handleGoClear=&ozrtp_handleGoClear;
@@ -822,7 +820,6 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, R
 }
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
-	ortp_message("Initializing ZRTP context");
 	ZrtpContext *context = zrtp_CreateWrapper();
 	OrtpZrtpContext *userData=createUserData(context);
 	userData->session=s;
@@ -832,12 +829,19 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	unsigned int *zidint=(unsigned int*)zidstr;
 	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
 	zidstr[12]=0;
+	ortp_message("Initialized ZRTP context");
 	ortp_message("Using ZRTP ID from %s",params->zid);
 	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData, 0);
 	return ortp_zrtp_configure_context(userData,s,params);
 }
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
+	int32_t length;
+	char *multiparams=NULL;
+	int i=0;
+	char zidstr[13]; // 96 bits + NULL
+	unsigned int *zidint=(unsigned int*)zidstr;
+	
 	if (!zrtp_isMultiStreamAvailable(activeContext->zrtpContext)) {
 		ortp_warning("could't add stream: mutlistream not supported by peer");
 	}
@@ -846,15 +850,12 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 		ortp_fatal("Error: should derive multistream from DH or preshared modes only");
 	}
 
-	int32_t length;
-	char *multiparams=zrtp_getMultiStrParams(activeContext->zrtpContext, &length);
-	int i=0;
-	ortp_warning("ZRTP multiparams length is %d", length);
+	multiparams=zrtp_getMultiStrParams(activeContext->zrtpContext, &length);
+	
+	ortp_message("ZRTP multiparams length is %d", length);
 	for (;i<length;i++) {
-		ortp_warning("%d", multiparams[i]);
+		ortp_message("%d", multiparams[i]);
 	}
-
-
 
 	ortp_message("Initializing ZRTP context");
 	ZrtpContext *context = zrtp_CreateWrapper();
@@ -862,8 +863,7 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	userData->session=s;
 	zrtp_InitializeConfig(context);
 	zrtp_setMandatoryOnly(context);
-	char zidstr[13]; // 96 bits + NULL
-	unsigned int *zidint=(unsigned int*)zidstr;
+	
 	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
 	zidstr[12]=0;
 	ortp_message("Using ZRTP ID from %s",params->zid);
@@ -882,6 +882,7 @@ bool_t ortp_zrtp_available(){return TRUE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){
 	zrtp_SASVerified(ctx->zrtpContext);
 }
+
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){
 	zrtp_resetSASVerified(ctx->zrtpContext);
 }
