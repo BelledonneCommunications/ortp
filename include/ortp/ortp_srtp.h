@@ -59,7 +59,7 @@ err_status_t ortp_srtp_init(void);
 err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy);
 err_status_t ortp_srtp_dealloc(srtp_t session);
 err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy);
-void ortp_crypto_get_random(uint8_t *tmp, int size);
+err_status_t ortp_crypto_get_random(uint8_t *tmp, int size);
 bool_t ortp_srtp_supported(void);
 
 int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );

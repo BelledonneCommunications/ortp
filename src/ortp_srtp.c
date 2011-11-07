@@ -24,6 +24,7 @@
 #endif
 #include "ortp/ortp.h"
 
+#include "ortp/ortp_srtp.h"
 #ifdef HAVE_SRTP
 
 #undef PACKAGE_NAME 
@@ -31,7 +32,6 @@
 #undef PACKAGE_TARNAME 
 #undef PACKAGE_VERSION
 
-#include "ortp/ortp_srtp.h"
 
 #include "ortp/b64.h"
 
@@ -234,9 +234,9 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 	return TRUE;
 }
 
-void ortp_crypto_get_random(uint8_t *tmp, int size)
+err_status_t ortp_crypto_get_random(uint8_t *tmp, int size)
 {
-	crypto_get_random(tmp, size);
+	return crypto_get_random(tmp, size);
 }
 
 srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key)
@@ -288,9 +288,9 @@ err_status_t ortp_srtp_init(void) {
 	return 0;
 }
 
-void ortp_crypto_get_random(uint8_t *tmp, int size)
+err_status_t ortp_crypto_get_random(uint8_t *tmp, int size)
 {
-
+	return -1;
 }
 
 int srtp_transport_new(void *i, RtpTransport **rtpt, RtpTransport **rtcpt ){
