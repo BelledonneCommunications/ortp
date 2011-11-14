@@ -435,6 +435,7 @@ void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype, const char 
 	mblk_t *d;
 	h->b_wptr+=rtcp_app_init(session,h->b_wptr,subtype,name,datalen+sizeof(rtcp_app_t));
 	d=esballoc((uint8_t*)data,datalen,0,NULL);
+	d->b_wptr+=datalen;
 	h->b_cont=d;
 	rtp_session_rtcp_send(session,h);
 }
