@@ -21,19 +21,7 @@ for lt in glibtoolize libtoolize15 libtoolize14 libtoolize13 ; do
                 libtoolize=$lt ; break
         fi
 done
-AUTOMAKE_FLAGS=""
-case $libtoolize in
-*glibtoolize)
-	AUTOMAKE_FLAGS="-i"
-	;;
-esac
 
-if test -d /opt/local/share/aclocal ; then
-        ACLOCAL_ARGS="-I /opt/local/share/aclocal"
-fi
-if test -d /opt/local/share/aclocal ; then
-	ACLOCAL_ARGS="-I /opt/local/share/aclocal"
-fi
 if test -d /usr/local/share/aclocal ; then
 	ACLOCAL_ARGS="$ACLOCAL_ARGS -I /usr/local/share/aclocal"
 fi
@@ -48,6 +36,6 @@ rm -rf config.cache autom4te.cache
 $libtoolize --copy --force
 $ACLOCAL $ACLOCAL_ARGS
 autoheader
-$AUTOMAKE --add-missing --copy  ${AUTOMAKE_FLAGS}
+$AUTOMAKE --force-missing --add-missing --copy  
 autoconf
 
