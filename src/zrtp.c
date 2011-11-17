@@ -27,19 +27,14 @@
 
 #include "ortp/zrtp.h"
 
-#ifdef HAVE_zrtp
-// To implement
-
-#else
-
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
-	ortp_message("ZRTP is disabled - not compiled");
+	ortp_message("ZRTP is disabled - not implemented yet");
 	return NULL;
 }
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
-	ortp_message("ZRTP is disabled - not compiled - not adding stream");
+	ortp_message("ZRTP is disabled - not implemented yet - not adding stream");
 	return NULL;
 }
 
@@ -48,5 +43,4 @@ void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
 
-#endif
 
