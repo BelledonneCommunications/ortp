@@ -42,7 +42,8 @@
 #define ZRTP_MESSAGE_OFFSET 12
 
 #define SRTP_PAD_BYTES 64 /*?? */
-
+//                                  1234567890123456
+static const char userAgentStr[] = "LINPHONE-ZRTPCPP"; // 16 chars max.
 
 struct _OrtpZrtpContext{
 	ortp_mutex_t mutex;
@@ -834,13 +835,8 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	OrtpZrtpContext *userData=createUserData(context);
 	userData->session=s;
 	ortp_zrtp_configure(context);
-	char zidstr[13]; // 96 bits + NULL
-	unsigned int *zidint=(unsigned int*)zidstr;
-	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
-	zidstr[12]=0;
 	ortp_message("Initialized ZRTP context");
-	ortp_message("Using ZRTP ID from %s",params->zid);
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData, 0);
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, userAgentStr, params->zid_file, userData, 0);
 	return ortp_zrtp_configure_context(userData,s,params);
 }
 
@@ -848,8 +844,6 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	int32_t length;
 	char *multiparams=NULL;
 	int i=0;
-	char zidstr[13]; // 96 bits + NULL
-	unsigned int *zidint=(unsigned int*)zidstr;
 	
 	if (!zrtp_isMultiStreamAvailable(activeContext->zrtpContext)) {
 		ortp_warning("could't add stream: mutlistream not supported by peer");
@@ -872,10 +866,7 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	userData->session=s;
 	ortp_zrtp_configure(context);
 	
-	sscanf(params->zid, "%x-%x-%x",zidint,zidint+1,zidint+2);
-	zidstr[12]=0;
-	ortp_message("Using ZRTP ID from %s",params->zid);
-	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, zidstr, params->zid_file, userData, 0);
+	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, userAgentStr, params->zid_file, userData, 0);
 
 	ortp_message("setting zrtp_setMultiStrParams");
 	zrtp_setMultiStrParams(context,multiparams,length);
