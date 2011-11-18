@@ -21,14 +21,17 @@
 #include "ortp/ortp.h"
 #include "utils.h"
 
+static int rtcp_get_size(const mblk_t *m){
+	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
+	if (ch==NULL) return -1;
+	return (1+rtcp_common_header_get_length(ch))*4;
+}
 
 /*in case of coumpound packet, set read pointer of m to the beginning of the next RTCP
 packet */
 bool_t rtcp_next_packet(mblk_t *m){
-	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
-	if (ch){
-		int nextlen=sizeof(rtcp_common_header_t)+
-			(rtcp_common_header_get_length(ch)*4);
+	int nextlen=rtcp_get_size(m);
+	if (nextlen>=0){
 		if (m->b_rptr+nextlen<m->b_wptr){
 			m->b_rptr+=nextlen;
 			return TRUE;
@@ -83,7 +86,7 @@ const sender_info_t * rtcp_SR_get_sender_info(const mblk_t *m){
 const report_block_t * rtcp_SR_get_report_block(const mblk_t *m, int idx){
 	rtcp_sr_t *sr=(rtcp_sr_t*)m->b_rptr;
 	report_block_t *rb=&sr->rb[idx];
-	int size=sizeof(rtcp_common_header_t)+(4*rtcp_common_header_get_length(&sr->ch));
+	int size=rtcp_get_size(m);
 	if ( ( (uint8_t*)rb)+sizeof(report_block_t) <= m->b_rptr + size ) {
 		return rb;
 	}else{
@@ -115,7 +118,7 @@ uint32_t rtcp_RR_get_ssrc(const mblk_t *m){
 const report_block_t * rtcp_RR_get_report_block(const mblk_t *m,int idx){
 	rtcp_rr_t *rr=(rtcp_rr_t*)m->b_rptr;
 	report_block_t *rb=&rr->rb[idx];
-	int size=sizeof(rtcp_common_header_t)+(4*rtcp_common_header_get_length(&rr->ch));
+	int size=rtcp_get_size(m);
 	if ( ( (uint8_t*)rb)+sizeof(report_block_t) <= (m->b_rptr + size ) ){
 		return rb;
 	}else{
@@ -130,8 +133,7 @@ const report_block_t * rtcp_RR_get_report_block(const mblk_t *m,int idx){
 bool_t rtcp_is_SDES(const mblk_t *m){
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
 	if (ch && rtcp_common_header_get_packet_type(ch)==RTCP_SDES){
-		if (msgdsize(m)<sizeof(rtcp_common_header_t)+
-			(4*rtcp_common_header_get_length(ch))){
+		if (msgdsize(m)<rtcp_get_size(m)){
 			ortp_warning("Too short RTCP SDES packet.");
 			return FALSE;
 		}
@@ -143,8 +145,7 @@ bool_t rtcp_is_SDES(const mblk_t *m){
 void rtcp_sdes_parse(const mblk_t *m, SdesItemFoundCallback cb, void *user_data){
 	uint8_t *rptr=(uint8_t*)m->b_rptr+sizeof(rtcp_common_header_t);
 	const rtcp_common_header_t *ch=(rtcp_common_header_t*)m->b_rptr;
-	uint8_t *end=rptr+sizeof(rtcp_common_header_t)+
-			(4*rtcp_common_header_get_length(ch));
+	uint8_t *end=rptr+(4*(rtcp_common_header_get_length(ch)+1));
 	uint32_t ssrc=0;
 	int nchunk=0;
 	bool_t chunk_start=TRUE;
@@ -195,8 +196,7 @@ void rtcp_sdes_parse(const mblk_t *m, SdesItemFoundCallback cb, void *user_data)
 bool_t rtcp_is_BYE(const mblk_t *m){
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
 	if (ch && rtcp_common_header_get_packet_type(ch)==RTCP_BYE){
-		if (msgdsize(m)<sizeof(rtcp_common_header_t)+
-			rtcp_common_header_get_length(ch)){
+		if (msgdsize(m)<rtcp_get_size(m)){
 			ortp_warning("Too short RTCP BYE packet.");
 			return FALSE;
 		}
@@ -224,9 +224,8 @@ bool_t rtcp_BYE_get_ssrc(const mblk_t *m, int idx, uint32_t *ssrc){
 bool_t rtcp_BYE_get_reason(const mblk_t *m, const char **reason, int *reason_len){
 	rtcp_bye_t *bye=(rtcp_bye_t*)m->b_rptr;
 	int rc=rtcp_common_header_get_rc(&bye->ch);
-	int len=rtcp_common_header_get_length(&bye->ch);
 	uint8_t *rptr=(uint8_t*)m->b_rptr+sizeof(rtcp_common_header_t)+rc*4;
-	uint8_t *end=(uint8_t*)(m->b_rptr+sizeof(rtcp_common_header_t)+len);
+	uint8_t *end=(uint8_t*)(m->b_rptr+rtcp_get_size(m));
 	if (rptr<end){
 		uint8_t content_len=rptr[0];
 		if (rptr+1+content_len<=end){
@@ -244,14 +243,13 @@ bool_t rtcp_BYE_get_reason(const mblk_t *m, const char **reason, int *reason_len
 /*APP accessors */
 bool_t rtcp_is_APP(const mblk_t *m){
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
+	int size=rtcp_get_size(m);
 	if (ch!=NULL && rtcp_common_header_get_packet_type(ch)==RTCP_APP){
-		if (msgdsize(m)<sizeof(rtcp_common_header_t)+
-			rtcp_common_header_get_length(ch)){
+		if (msgdsize(m)<size){
 			ortp_warning("Too short RTCP APP packet.");
 			return FALSE;
 		}
-		if (sizeof(rtcp_common_header_t)+rtcp_common_header_get_length(ch)
-			< sizeof(rtcp_app_t)){
+		if (size < sizeof(rtcp_app_t)){
 			ortp_warning("Bad RTCP APP packet.");
 			return FALSE;
 		}
@@ -276,8 +274,7 @@ void rtcp_APP_get_name(const mblk_t *m, char *name){
 }
 /* retrieve the data. when returning, data points directly into the mblk_t */
 void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len){
-	rtcp_app_t *app=(rtcp_app_t*)m->b_rptr;
-	int datalen=sizeof(rtcp_common_header_t)+rtcp_common_header_get_length(&app->ch)-8;
+	int datalen=rtcp_get_size(m)-sizeof(rtcp_app_t);
 	if (datalen>0){
 		*data=(uint8_t*)m->b_rptr+sizeof(rtcp_app_t);
 		*len=datalen;

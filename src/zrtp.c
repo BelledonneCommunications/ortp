@@ -909,18 +909,18 @@ void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx) {
 
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
-	ortp_message("ZRTP is disabled - not compiled");
+	ortp_message("ZRTP is disabled - not implemented yet");
 	return NULL;
 }
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
-	ortp_message("ZRTP is disabled - not compiled - not adding stream");
+	ortp_message("ZRTP is disabled - not implemented yet - not adding stream");
 	return NULL;
 }
 
-bool_t ortp_zrtp_available(){return FALSE;}
+bool_t ortp_zrtp_availSable(){return FALSE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
-void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
+void ortp_zrtSp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
 
 #endif
