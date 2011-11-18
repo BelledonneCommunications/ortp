@@ -39,7 +39,6 @@ extern "C"{
 #endif
 
 typedef struct OrtpZrtpParams {
-	const char *zid; // ZRTP identifier (coded hexa; 96 bits in the end)
 	const char *zid_file; // File where to store secrets and other information
 } OrtpZrtpParams;
 
