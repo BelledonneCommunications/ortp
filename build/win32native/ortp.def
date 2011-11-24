@@ -58,8 +58,6 @@ EXPORTS
 	rtp_session_get_send_payload_type
 	rtp_session_set_recv_payload_type
 	rtp_session_get_recv_payload_type
-	
-	rtp_session_enable_network_simulation
 
 	rtp_session_recv_with_ts
 	rtp_session_recvm_with_ts
@@ -220,3 +218,13 @@ EXPORTS
 	ortp_zrtp_sas_verified
 	ortp_zrtp_sas_reset_verified
 	ortp_zrtp_context_destroy
+
+	srtp_transport_new
+	ortp_srtp_init
+	rtp_session_get_send_ssrc
+	ortp_srtp_create_configure_session
+	rtp_session_get_send_ssrc
+	ortp_srtp_supported
+	rtp_session_pick_with_cseq
+	rtp_session_enable_network_simulation
+	ortp_crypto_get_random
