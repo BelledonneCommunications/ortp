@@ -918,9 +918,9 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	return NULL;
 }
 
-bool_t ortp_zrtp_availSable(){return FALSE;}
+bool_t ortp_zrtp_available(){return FALSE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
-void ortp_zrtSp_sas_reset_verified(OrtpZrtpContext* ctx){}
+void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
 
 #endif
