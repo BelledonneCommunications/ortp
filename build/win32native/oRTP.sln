@@ -1,7 +1,7 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 10.00
-# Visual Studio 2008
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oRTP", "oRTP.vcproj", "{4A07BB2B-F56E-4F1B-A719-D28B782AC128}"
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual C++ Express 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "oRTP", "oRTP.vcxproj", "{4A07BB2B-F56E-4F1B-A719-D28B782AC128}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

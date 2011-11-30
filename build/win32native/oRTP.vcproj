@@ -321,6 +321,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\ortp\ortp_srtp.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\ortp\payloadtype.h"
 				>
 			</File>
@@ -362,10 +366,6 @@
 			</File>
 			<File
 				RelativePath="..\..\include\ortp\sessionset.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\include\ortp\srtp.h"
 				>
 			</File>
 			<File
