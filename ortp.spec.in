@@ -12,7 +12,7 @@
 Summary:	Real-time Transport Protocol Stack
 Name:		ortp
 Version:	@ORTP_PKGCONFIG_VERSION@
-Release:	1
+Release:	2
 License:	LGPL
 Group:		Applications/Communications
 URL:		http://linphone.org/ortp/
