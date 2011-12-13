@@ -92,6 +92,8 @@ typedef struct _RtpTransport
 	int  (*t_sendto)(struct _RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
 	int  (*t_recvfrom)(struct _RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
+        void  (*close_fn)(void *userData, struct _RtpTransport *transport);
+        void *close_data;
 }  RtpTransport;
 
 typedef struct _OrtpNetworkSimulatorParams{
