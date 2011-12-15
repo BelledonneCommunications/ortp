@@ -193,14 +193,17 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy->rtp);
 			// srtp doc says: not adapted to rtcp...
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy->rtcp);
+			break;
 		case AES_128_NO_AUTH:
 			crypto_policy_set_aes_cm_128_null_auth(&policy->rtp);
 			// srtp doc says: not adapted to rtcp...
 			crypto_policy_set_aes_cm_128_null_auth(&policy->rtcp);
+			break;
 		case NO_CIPHER_SHA1_80:
 			crypto_policy_set_null_cipher_hmac_sha1_80(&policy->rtp);
 			crypto_policy_set_null_cipher_hmac_sha1_80(&policy->rtcp);
-		case AES_128_SHA1_80:
+			break;
+		case AES_128_SHA1_80: /*default mode*/
 		default:
 			crypto_policy_set_rtp_default(&policy->rtp);
 			crypto_policy_set_rtcp_default(&policy->rtcp);
