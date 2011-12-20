@@ -1327,12 +1327,12 @@ void rtp_session_release_sockets(RtpSession *session){
 	session->rtp.socket=-1;
 	session->rtcp.socket=-1;
 
-	if (session->rtp.tr && session->rtp.tr->close_fn)
-		session->rtp.tr->close_fn(session->rtp.tr->close_data, session->rtp.tr);
+	if (session->rtp.tr && session->rtp.tr->t_close)
+		session->rtp.tr->t_close(session->rtp.tr, session->rtp.tr->data);
 	session->rtp.tr = 0;
 
-	if (session->rtcp.tr && session->rtcp.tr->close_fn)
-		session->rtcp.tr->close_fn(session->rtcp.tr->close_data, session->rtcp.tr);
+	if (session->rtcp.tr && session->rtcp.tr->t_close)
+		session->rtcp.tr->t_close(session->rtcp.tr, session->rtcp.tr->data);
 	session->rtcp.tr = 0;
 
 	/* don't discard remote addresses, then can be preserved for next use.
