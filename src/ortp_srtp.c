@@ -137,14 +137,14 @@ srtcp_getsocket(RtpTransport *t)
 **/
 int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	if (rtpt) {
-		(*rtpt)=ortp_new(RtpTransport,1);
+		(*rtpt)=ortp_new0(RtpTransport,1);
 		(*rtpt)->data=srtp;
 		(*rtpt)->t_getsocket=srtp_getsocket;
 		(*rtpt)->t_sendto=srtp_sendto;
 		(*rtpt)->t_recvfrom=srtp_recvfrom;
 	}
 	if (rtcpt) {
-		(*rtcpt)=ortp_new(RtpTransport,1);
+		(*rtcpt)=ortp_new0(RtpTransport,1);
 		(*rtcpt)->data=srtp;
 		(*rtcpt)->t_getsocket=srtcp_getsocket;
 		(*rtcpt)->t_sendto=srtcp_sendto;
