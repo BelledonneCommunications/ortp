@@ -1085,7 +1085,8 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 	/* compound rtcp packet can be composed by more than one rtcp message */
 	do{
 		struct timeval reception_date;
-
+		const report_block_t *rb;
+		
 		/* Getting the reception date from the main clock */	
 		gettimeofday( &reception_date, NULL );
 
@@ -1114,9 +1115,10 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 			/* This value will help in processing the DLSR of the next RTCP report ( see report_block_init() in rtcp.cc ) */
 			rtpstream->last_rcv_SR_time.tv_usec = reception_date.tv_usec;
 			rtpstream->last_rcv_SR_time.tv_sec = reception_date.tv_sec;
-			compute_rtt(session,&reception_date,&sr->rb[0]);
+			rb=rtcp_SR_get_report_block(block,0);
+			compute_rtt(session,&reception_date,rb);
 		}else if ( rtcp_is_RR(block)){
-			const report_block_t *rb=rtcp_RR_get_report_block(block,0);
+			rb=rtcp_RR_get_report_block(block,0);
 			if (rb) compute_rtt(session,&reception_date,rb);
 		}
 	}while (rtcp_next_packet(block));

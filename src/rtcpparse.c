@@ -63,7 +63,7 @@ const rtcp_common_header_t * rtcp_get_common_header(const mblk_t *m){
 bool_t rtcp_is_SR(const mblk_t *m){
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
 	if (ch!=NULL && rtcp_common_header_get_packet_type(ch)==RTCP_SR){
-		if (msgdsize(m)<sizeof(rtcp_sr_t)){
+		if (msgdsize(m)<(sizeof(rtcp_sr_t)-sizeof(report_block_t))){
 			ortp_warning("Too short RTCP SR packet.");
 			return FALSE;
 		}
