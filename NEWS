@@ -1,7 +1,9 @@
+December 22th, 2011: ortp-0.18.0
+	- SRTP media encryption
+
 May XXth, 2011: ortp-0.17.0
 	- RTCP support fixes
 	- add rtp_session_get_round_trip_propagation()
-
 
 March 28th, 2011: ortp-0.16.5
 	- optimisations in session-set intersection computation
