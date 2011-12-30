@@ -760,7 +760,7 @@ static ortp_socket_t ozrtp_rtcp_getsocket(RtpTransport *t){
 }
 
 static OrtpZrtpContext* createUserData(ZrtpContext *context) {
-	OrtpZrtpContext *userData=ortp_new(OrtpZrtpContext,1);
+	OrtpZrtpContext *userData=ortp_new0(OrtpZrtpContext,1);
 	userData->zrtpContext=context;
 	userData->timerWillTriggerAt=0;
 	userData->last_recv_zrtp_seq_number=0;
