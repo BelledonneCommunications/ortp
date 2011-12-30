@@ -30,7 +30,6 @@
 #undef PACKAGE_VERSION
 
 #include "ortp/ortp_srtp.h"
-
 #ifdef HAVE_SRTP
 
 #include "ortp/b64.h"
@@ -138,14 +137,14 @@ srtcp_getsocket(RtpTransport *t)
 **/
 int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	if (rtpt) {
-		(*rtpt)=ortp_new(RtpTransport,1);
+		(*rtpt)=ortp_new0(RtpTransport,1);
 		(*rtpt)->data=srtp;
 		(*rtpt)->t_getsocket=srtp_getsocket;
 		(*rtpt)->t_sendto=srtp_sendto;
 		(*rtpt)->t_recvfrom=srtp_recvfrom;
 	}
 	if (rtcpt) {
-		(*rtcpt)=ortp_new(RtpTransport,1);
+		(*rtcpt)=ortp_new0(RtpTransport,1);
 		(*rtcpt)->data=srtp;
 		(*rtcpt)->t_getsocket=srtcp_getsocket;
 		(*rtcpt)->t_sendto=srtcp_sendto;
@@ -193,14 +192,17 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy->rtp);
 			// srtp doc says: not adapted to rtcp...
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy->rtcp);
+			break;
 		case AES_128_NO_AUTH:
 			crypto_policy_set_aes_cm_128_null_auth(&policy->rtp);
 			// srtp doc says: not adapted to rtcp...
 			crypto_policy_set_aes_cm_128_null_auth(&policy->rtcp);
+			break;
 		case NO_CIPHER_SHA1_80:
 			crypto_policy_set_null_cipher_hmac_sha1_80(&policy->rtp);
 			crypto_policy_set_null_cipher_hmac_sha1_80(&policy->rtcp);
-		case AES_128_SHA1_80:
+			break;
+		case AES_128_SHA1_80: /*default mode*/
 		default:
 			crypto_policy_set_rtp_default(&policy->rtp);
 			crypto_policy_set_rtcp_default(&policy->rtcp);

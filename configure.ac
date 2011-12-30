@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([ortp],[0.17.0])
+AC_INIT([ortp],[0.18.0])
 AC_CANONICAL_SYSTEM
 
 dnl Source packaging numbers
@@ -302,7 +302,7 @@ AC_ARG_ENABLE(ssl-hmac,
 					no) ssl_hmac_enabled=no;;
 					*) AC_MSG_ERROR("Bad value for --enable-ssl-hmac");;
 				esac],
-				[ssl_hmac_enabled=yes])
+				[ssl_hmac_enabled=no])
 				
 if test "$ssl_hmac_enabled" = "yes" ; then
 	AC_CHECK_HEADERS(openssl/hmac.h openssl/md5.h)

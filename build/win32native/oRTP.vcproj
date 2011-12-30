@@ -211,7 +211,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\netsim.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\ortp.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\ortp_srtp.c"
 				>
 			</File>
 			<File
@@ -313,6 +321,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\ortp\ortp_srtp.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\include\ortp\payloadtype.h"
 				>
 			</File>
@@ -354,10 +366,6 @@
 			</File>
 			<File
 				RelativePath="..\..\include\ortp\sessionset.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\include\ortp\srtp.h"
 				>
 			</File>
 			<File
