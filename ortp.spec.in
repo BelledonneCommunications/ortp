@@ -41,7 +41,7 @@ This package contains header files and development libraries needed to
 develop programs using the oRTP library.
 
 %ifarch %ix86
-%define	ortp_arch_cflags -malign-double -march=i686 -mcpu=%{ortp_cpu}
+%define	ortp_arch_cflags -malign-double -march=i686 -mtune=%{ortp_cpu}
 %else
 # Must be non-empty
 %define ortp_arch_cflags -Wall
@@ -54,7 +54,8 @@ develop programs using the oRTP library.
 %build
 %configure \
 	--enable-shared \
-	--enable-static
+	--enable-static \
+	--docdir=%{_docdir}
 %{__make} -j$RPM_BUILD_NCPUS CFLAGS="%ortp_cflags" CXXFLAGS="%ortp_cflags"
 
 %install
@@ -71,7 +72,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files devel
 %defattr(-,root,root,-)
-%doc doc/html
+%doc doc/html/*
 %{_libdir}/*.la
 %{_libdir}/*.a
 %{_libdir}/*.so
