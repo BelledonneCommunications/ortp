@@ -226,11 +226,17 @@ struct timeval {
 };
 #endif
 
+
+#ifdef __cplusplus
+extern "C"{
+#endif
 int gettimeofday (struct timeval *tv, void* tz);
 #ifdef _WORKAROUND_MINGW32_BUGS
 char * WSAAPI gai_strerror(int errnum);
 #endif
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
