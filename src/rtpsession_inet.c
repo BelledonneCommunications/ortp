@@ -1003,8 +1003,8 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 				mp=rtp_session_network_simulate(session,mp);
 			/* then parse the message and put on jitter buffer queue */
 			if (mp){
-				rtp_session_rtp_parse(session, mp, user_ts, (struct sockaddr*)&remaddr,addrlen);
 				update_recv_bytes(session,mp->b_wptr-mp->b_rptr);
+				rtp_session_rtp_parse(session, mp, user_ts, (struct sockaddr*)&remaddr,addrlen);	
 			}
 			session->rtp.cached_mp=NULL;
 			/*for bandwidth measurements:*/
@@ -1024,8 +1024,8 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 					mp=rtp_session_network_simulate(session,NULL);
 					if (mp){
 						/* then parse the message and put on jitter buffer queue */
-						rtp_session_rtp_parse(session, mp, user_ts, (struct sockaddr*)&session->rtp.rem_addr,session->rtp.rem_addrlen);
 						update_recv_bytes(session,msgdsize(mp));
+						rtp_session_rtp_parse(session, mp, user_ts, (struct sockaddr*)&session->rtp.rem_addr,session->rtp.rem_addrlen);						
 					}
 				}
 			}
