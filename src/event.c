@@ -49,17 +49,12 @@ OrtpEvent * ortp_event_new(unsigned long type){
 }
 
 OrtpEvent *ortp_event_dup(OrtpEvent *ev){
-#if 0
-	OrtpEvent *nev=dupb(ev);
-#else
 	OrtpEvent *nev = ortp_event_new(ortp_event_get_type(ev));
 	OrtpEventData * ed = ortp_event_get_data(ev);
 	OrtpEventData * edv = ortp_event_get_data(nev);
-
+	memcpy(edv,ed,sizeof(OrtpEventData));
 	if (ed->ep) edv->ep = rtp_endpoint_dup(ed->ep);
 	if (ed->packet) edv->packet = copymsg(ed->packet);
-	edv->info.telephone_event = ed->info.telephone_event;
-#endif
 	return nev;
 }
 
