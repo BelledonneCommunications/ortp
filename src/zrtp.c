@@ -436,6 +436,7 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 		addStreamStatus=srtp_add_stream(userData->srtpSend, &policy);
 	} else { //if (part == ForReceiver)
 		srtpCreateStatus=srtp_create(&userData->srtpRecv, NULL);
+		policy.ssrc.type = ssrc_any_inbound; /*we don't know the incoming ssrc will be */
 		policy.ssrc.value=userData->session->rcv.ssrc; // peer
 		int32_t peerRole=secrets->role == Initiator ? Responder : Initiator;
 		policy.key=key_with_salt(secrets,peerRole);
