@@ -1,3 +1,9 @@
+February 22th, 2012: ortp-0.20.0
+	- fix an issue on video call with ZRTP
+
+February 17th, 2012: ortp-0.19.0
+	- ZRTP media encryption
+
 December 22th, 2011: ortp-0.18.0
 	- SRTP media encryption
 
