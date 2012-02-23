@@ -1,5 +1,7 @@
 # linphone/oRTP/Makefile.am -- 
 
+ACLOCAL_AMFLAGS = -I m4
+
 EXTRA_DIST = oRTP.prj ortp-config.h.in TODO pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen
 
 SUBDIRS=src build include
