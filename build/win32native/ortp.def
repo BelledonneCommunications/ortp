@@ -37,6 +37,8 @@ EXPORTS
 	rtp_session_signal_connect
 	rtp_session_signal_disconnect_by_callback
 	rtp_session_set_ssrc
+	rtp_session_get_send_ssrc
+	rtp_session_get_recv_ssrc
 	rtp_session_set_seq_number
 	rtp_session_get_seq_number
 	rtp_session_set_jitter_compensation
@@ -221,9 +223,7 @@ EXPORTS
 
 	srtp_transport_new
 	ortp_srtp_init
-	rtp_session_get_send_ssrc
 	ortp_srtp_create_configure_session
-	rtp_session_get_send_ssrc
 	ortp_srtp_supported
 	rtp_session_pick_with_cseq
 	rtp_session_enable_network_simulation

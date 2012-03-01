@@ -620,11 +620,24 @@ rtp_session_set_ssrc (RtpSession * session, uint32_t ssrc)
 	session->snd.ssrc = ssrc;
 }
 
-
+/**
+ *	Get the SSRC for the outgoing stream.
+ *
+ * @param session a rtp session.
+**/
 uint32_t
 rtp_session_get_send_ssrc (RtpSession* session)
 {
 	return session->snd.ssrc;
+}
+
+/**
+ * Get the SSRC for the incoming stream.
+ * 
+ * If no packets have been received yet, 0 is returned.
+**/
+uint32_t rtp_session_get_recv_ssrc(RtpSession *session){
+	return session->rcv.ssrc;
 }
 
 

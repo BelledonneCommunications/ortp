@@ -266,6 +266,7 @@ int rtp_session_signal_connect(RtpSession *session,const char *signal_name, RtpC
 int rtp_session_signal_disconnect_by_callback(RtpSession *session,const char *signal_name, RtpCallback cb);
 void rtp_session_set_ssrc(RtpSession *session, uint32_t ssrc);
 uint32_t rtp_session_get_send_ssrc(RtpSession* session);
+uint32_t rtp_session_get_recv_ssrc(RtpSession *session);
 void rtp_session_set_seq_number(RtpSession *session, uint16_t seq);
 uint16_t rtp_session_get_seq_number(RtpSession *session);
 
