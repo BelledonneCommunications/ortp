@@ -80,6 +80,11 @@
 #if defined(WIN32) || defined(_WIN32_WCE)
 #include <winsock2.h>
 #include <stdlib.h>
+
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
+
 /* #include <io.h> */
 #include <time.h>
 #include <ctype.h> /*for isdigit() */
