@@ -40,12 +40,13 @@ typedef int socklen_t;
 
 #include <ortp/port.h>
 
+#if defined(WIN32) || defined(_WIN32_WCE)
+
 #if !defined(_WIN32_WCE)
 #include <errno.h>
 #endif
 
-#if defined(WIN32) || defined(_WIN32_WCE)
-#define snprintf _snprintf
+
 
 #include <winsock2.h>
 /* #include <io.h> */
