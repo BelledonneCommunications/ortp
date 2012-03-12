@@ -18,4 +18,11 @@ depcomp
 autom4te.cache/
 install-sh
 ortp-config.h.in
-
+ortp-config.h
+ortp.spec
+ortp.pc
+ortp.doxygen
+m4
+doc
+ortp.defs
+stamp-h1

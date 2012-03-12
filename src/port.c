@@ -411,6 +411,14 @@ int ortp_server_pipe_close_client(ortp_socket_t client){
 }
 
 int ortp_server_pipe_close(ortp_socket_t spipe){
+	struct sockaddr_un sa;
+	socklen_t len=sizeof(sa);
+	int err;
+	/*this is to retrieve the name of the pipe, in order to unlink the file*/
+	err=getsockname(spipe,(struct sockaddr*)&sa,&len);
+	if (err==0){
+		unlink(sa.sun_path);
+	}else ortp_error("getsockname(): %s",strerror(errno));
 	return close(spipe);
 }
 
