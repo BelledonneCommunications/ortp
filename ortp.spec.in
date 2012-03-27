@@ -12,7 +12,7 @@
 Summary:	Real-time Transport Protocol Stack
 Name:		ortp
 Version:	@ORTP_PKGCONFIG_VERSION@
-Release:	2
+Release:	%(git describe --tags --abbrev=40 | sed -rn 's/^.*-([0-9]+)-g[a-z0-9]{40}$/\1/p' || echo '1')%{?dist}
 License:	LGPL
 Group:		Applications/Communications
 URL:		http://linphone.org/ortp/
