@@ -41,7 +41,7 @@
 // ZRTP message is prefixed by RTP header
 #define ZRTP_MESSAGE_OFFSET 12
 
-#define SRTP_PAD_BYTES 64 /*?? */
+#define SRTP_PAD_BYTES (SRTP_MAX_TRAILER_LEN + 4)
 //                                  1234567890123456
 static const char userAgentStr[] = "LINPHONE-ZRTPCPP"; // 16 chars max.
 
@@ -407,7 +407,8 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 	err_status_t addStreamStatus;
 	OrtpZrtpContext *userData = user_data(ctx);
 
-	ortp_message("ZRTP secrets for %s are ready", (part == ForSender) ? "sender" : "receiver");
+	ortp_message("ZRTP secrets for %s are ready; auth tag len is %i",
+	             (part == ForSender) ? "sender" : "receiver",secrets->srtpAuthTagLen);
 
 	// Get authentication and cipher algorithms in srtp format
 	if (secrets->authAlgorithm != zrtp_Sha1) {
@@ -417,27 +418,31 @@ static int32_t ozrtp_srtpSecretsReady (ZrtpContext* ctx, C_SrtpSecret_t* secrets
 	if (secrets->symEncAlgorithm != zrtp_Aes) {
 		ortp_fatal("unsupported cipher algorithm by srtp");
 	}
+
+	/*
+	 * Don't use crypto_policy_set_from_profile_for_rtp(), it is totally buggy.
+	 */
 	memset(&policy,0,sizeof(policy));
-	policy.ssrc.type=ssrc_specific;
 
-	crypto_policy_t cryptoPolicyRtp;
-	crypto_policy_set_from_profile_for_rtp(&cryptoPolicyRtp, srtp_profile_aes128_cm_sha1_32);
-	policy.rtp=cryptoPolicyRtp;
-
-	crypto_policy_t cryptoPolicyRtcp;
-	crypto_policy_set_from_profile_for_rtcp(&cryptoPolicyRtcp, srtp_profile_aes128_cm_sha1_32);
-	policy.rtcp=cryptoPolicyRtcp;
-
+	if (secrets->srtpAuthTagLen == 32){
+		crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtp);
+		crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy.rtcp);
+	}else if (secrets->srtpAuthTagLen == 80){
+		crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);
+		crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtcp);
+	}else{
+		ortp_fatal("unsupported auth tag len");
+	}
 
 	if (part == ForSender) {
 		srtpCreateStatus=srtp_create(&userData->srtpSend, NULL);
+		policy.ssrc.type=ssrc_specific;
 		policy.ssrc.value=userData->session->snd.ssrc; // us
 		policy.key=key_with_salt(secrets, secrets->role);
 		addStreamStatus=srtp_add_stream(userData->srtpSend, &policy);
 	} else { //if (part == ForReceiver)
 		srtpCreateStatus=srtp_create(&userData->srtpRecv, NULL);
 		policy.ssrc.type = ssrc_any_inbound; /*we don't know the incoming ssrc will be */
-		policy.ssrc.value=userData->session->rcv.ssrc; // peer
 		int32_t peerRole=secrets->role == Initiator ? Responder : Initiator;
 		policy.key=key_with_salt(secrets,peerRole);
 		addStreamStatus=srtp_add_stream(userData->srtpRecv, &policy);
@@ -622,11 +627,10 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 		size=msgdsize(m);
 		return sendto(socket,(void*)m->b_rptr,size,flags,to,tolen);
 	}
-
+	slen=msgdsize(m);
 	// Protect with srtp
 	/* enlarge the buffer for srtp to write its data */
 	msgpullup(m,msgdsize(m)+SRTP_PAD_BYTES);
-	slen=m->b_wptr-m->b_rptr;
 	if (stream == rtp_stream) {
 		err=srtp_protect(userData->srtpSend,m->b_rptr,&slen);
 	} else {

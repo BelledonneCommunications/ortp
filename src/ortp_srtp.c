@@ -34,15 +34,15 @@
 
 #include "ortp/b64.h"
 
-#define SRTP_PAD_BYTES 64 /*?? */
+#define SRTP_PAD_BYTES (SRTP_MAX_TRAILER_LEN + 4)
 
 static int  srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	srtp_t srtp=(srtp_t)t->data;
 	int slen;
 	err_status_t err;
 	/* enlarge the buffer for srtp to write its data */
-	msgpullup(m,msgdsize(m)+SRTP_PAD_BYTES);
-	slen=m->b_wptr-m->b_rptr;
+	slen=msgdsize(m);
+	msgpullup(m,slen+SRTP_PAD_BYTES);
 	err=srtp_protect(srtp,m->b_rptr,&slen);
 	if (err==err_status_ok){
 		return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
@@ -85,9 +85,9 @@ static int  srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct soc
 	srtp_t srtp=(srtp_t)t->data;
 	int slen;
 	err_status_t srtp_err;
+	slen=msgdsize(m);
 	/* enlarge the buffer for srtp to write its data */
-	msgpullup(m,msgdsize(m)+SRTP_PAD_BYTES);
-	slen=m->b_wptr-m->b_rptr;
+	msgpullup(m,slen+SRTP_PAD_BYTES);
 	srtp_err=srtp_protect_rtcp(srtp,m->b_rptr,&slen);
 	if (srtp_err==err_status_ok){
 		return sendto(t->session->rtcp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
@@ -214,10 +214,10 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 			policy->rtp.cipher_key_len);
 			return FALSE;
 	}
-	key = (uint8_t*) malloc(key_size);
-	if (b64_decode((const char*)b64_key, b64_key_length, key, key_size) != key_size) {
+	key = (uint8_t*) ortp_malloc0(key_size+2); /*srtp uses padding*/
+	if (b64_decode(b64_key, b64_key_length, key, key_size) != key_size) {
 		ortp_error("Error decoding key");
-		free(key);
+		ortp_free(key);
 		return FALSE;
 	}
 		
@@ -228,11 +228,11 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 	err = ortp_srtp_add_stream(srtp, policy);
 	if (err != err_status_ok) {
 		ortp_error("Failed to add incoming stream to srtp session (%d)", err);
-		free(key);
+		ortp_free(key);
 		return FALSE;
 	}
 		
-	free(key);
+	ortp_free(key);
 	return TRUE;
 }
 
