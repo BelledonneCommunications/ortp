@@ -1017,6 +1017,13 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 				if (session->on_network_error.count>0){
 					rtp_signal_table_emit3(&session->on_network_error,(long)"Error receiving RTP packet",INT_TO_POINTER(getSocketErrorCode()));
 				}else ortp_warning("Error receiving RTP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
+#ifdef __ios
+				/*hack for iOS and non-working socket because of background mode*/
+				if (errnum==ENOTCONN){
+					/*re-create new sockets */
+					rtp_session_set_local_addr(session,session->rtp.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtp.loc_port);
+				}
+#endif
 			}else{
 				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
 				if (session->net_sim_ctx){
