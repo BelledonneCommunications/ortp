@@ -184,6 +184,7 @@ if test "${srtp_prefix}" != "none" ; then
 	LDFLAGS="$LDFLAGS $SRTP_LIBS"
 	LIBS_save=$LIBS
 	AC_CHECK_LIB(srtp,srtp_init,have_srtp_lib=yes)
+	AC_CHECK_LIB(srtp,srtp_shutdown,[AC_DEFINE([HAVE_SRTP_SHUTDOWN],1,[Defined when srtp_shutdown() exists.])])
 	LDFLAGS=$LDFLAGS_save
 	LIBS=$LIBS_save
 
