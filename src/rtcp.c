@@ -32,6 +32,7 @@
 #include "ortp/rtcp.h"
 #include "utils.h"
 #include "rtpsession_priv.h"
+#include "jitterctl.h"
 
 #define rtcp_bye_set_ssrc(b,pos,ssrc)	(b)->ssrc[pos]=htonl(ssrc)
 #define rtcp_bye_get_ssrc(b,pos)		ntohl((b)->ssrc[pos])
@@ -311,6 +312,8 @@ static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 		gettimeofday( &now, NULL );
 		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000LL ) + ( now.tv_usec / 1000LL );
 	}
+	/* compute mean jitter buffer size */
+	session->rtp.jitter_stats.jitter_buffer_size_ms=jitter_control_compute_mean_size(&session->rtp.jittctl);
 }
 
 

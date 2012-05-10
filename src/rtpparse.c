@@ -23,7 +23,7 @@
 #include "utils.h"
 #include "rtpsession_priv.h"
 
-static void queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded)
+static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded)
 {
 	mblk_t *tmp;
 	int header_size;
@@ -33,7 +33,7 @@ static void queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp,
 		ortp_debug("Rtp packet contains no data.");
 		(*discarded)++;
 		freemsg(mp);
-		return;
+		return FALSE;
 	}
 	/* and then add the packet to the queue */
 	
@@ -50,6 +50,7 @@ static void queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp,
 			(*discarded)++;
 		}
 	}
+	return TRUE;
 }
 
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen)
@@ -231,7 +232,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		}
 	}
 	
-	queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&i);
+	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&i))
+		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
 	stats->discarded+=i;
 	ortp_global_stats.discarded+=i;
 }

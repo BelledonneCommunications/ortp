@@ -62,7 +62,7 @@ typedef struct _JBParameters{
 
 typedef struct _JitterControl
 {
-	int count;
+	unsigned int count;
 	int jitt_comp;   /* the user jitt_comp in miliseconds*/
 	int jitt_comp_ts; /* the jitt_comp converted in rtp time (same unit as timestamp) */
 	int adapt_jitt_comp_ts;
@@ -73,6 +73,9 @@ typedef struct _JitterControl
 	float inter_jitter;	/* interarrival jitter as defined in the RFC */
 	int corrective_step;
 	int corrective_slide;
+	uint64_t cum_jitter_buffer_size; /*in timestamp units*/
+	unsigned int cum_jitter_buffer_count; /*used for computation of jitter buffer size*/
+	int clock_rate;
 	bool_t adaptive;
 	bool_t enabled;
 } JitterControl;

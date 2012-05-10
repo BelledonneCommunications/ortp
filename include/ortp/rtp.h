@@ -80,6 +80,7 @@ typedef struct jitter_stats
 	uint32_t max_jitter;		/* biggest interarrival jitter (value in stream clock unit) */
 	uint64_t sum_jitter;		/* sum of all interarrival jitter (value in stream clock unit) */
 	uint64_t max_jitter_ts;		/* date (in ms since Epoch) of the biggest interarrival jitter */
+	float jitter_buffer_size_ms;	/* mean jitter buffer size in milliseconds.*/
 } jitter_stats_t;
 
 #define RTP_TIMESTAMP_IS_NEWER_THAN(ts1,ts2) \

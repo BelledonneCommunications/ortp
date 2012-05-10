@@ -34,6 +34,8 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 #define jitter_control_adaptive_enabled(ctl) ((ctl)->adaptive)
 void jitter_control_set_payload(JitterControl *ctl, PayloadType *pt);
 void jitter_control_update_corrective_slide(JitterControl *ctl);
+void jitter_control_update_size(JitterControl *ctl, queue_t *q);
+float jitter_control_compute_mean_size(JitterControl *ctl);
 
 static inline uint32_t jitter_control_get_compensated_timestamp(JitterControl *obj , uint32_t user_ts){
 	return (uint32_t)( (int64_t)user_ts+obj->slide-(int64_t)obj->adapt_jitt_comp_ts);
