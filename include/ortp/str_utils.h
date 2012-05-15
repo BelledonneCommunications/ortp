@@ -22,7 +22,9 @@
 
 
 #include <ortp/port.h>
-
+#if defined(ORTP_TIMESTAMP)
+#include <time.h>
+#endif
 
 typedef struct msgb
 {
@@ -34,7 +36,12 @@ typedef struct msgb
 	unsigned char *b_wptr;
 	uint32_t reserved1;
 	uint32_t reserved2;
+#if defined(ORTP_TIMESTAMP)
+	struct timeval timestamp;
+#endif
 } mblk_t;
+
+
 
 typedef struct datab
 {
@@ -71,6 +78,8 @@ mblk_t * peekq(queue_t *q);
 void flushq(queue_t *q, int how);
 
 void mblk_init(mblk_t *mp);
+
+void mblk_meta_copy(const mblk_t *source, mblk_t *dest);
 	
 /* allocates a mblk_t, that points to a datab_t, that points to a buffer of size size. */
 mblk_t *allocb(int size, int unused);

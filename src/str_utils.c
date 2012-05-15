@@ -37,6 +37,14 @@ void mblk_init(mblk_t *mp)
 	mp->reserved2=0;
 }
 
+void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
+	dest->reserved1 = source->reserved1;
+	dest->reserved2 = source->reserved2;
+#if defined(ORTP_TIMESTAMP)
+	dest->timestamp = source->timestamp;
+#endif
+}
+
 dblk_t *datab_alloc(int size){
 	dblk_t *db;
 	int total_size=sizeof(dblk_t)+size;

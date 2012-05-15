@@ -41,6 +41,8 @@ typedef enum {
 
 #define rtp_session_using_transport(s, stream) (((s)->flags & RTP_SESSION_USING_TRANSPORT) && (s->stream.tr != 0))
 
+int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
+
 void rtp_session_update_payload_type(RtpSession * session, int pt);
 void rtp_putq(queue_t *q, mblk_t *mp);
 mblk_t * rtp_getq(queue_t *q, uint32_t ts, int *rejected);

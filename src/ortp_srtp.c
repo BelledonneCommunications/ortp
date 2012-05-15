@@ -30,6 +30,7 @@
 #undef PACKAGE_VERSION
 
 #include "ortp/ortp_srtp.h"
+#include "rtpsession_priv.h"
 #ifdef HAVE_SRTP
 
 #include "ortp/b64.h"
@@ -55,7 +56,7 @@ static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr 
 	srtp_t srtp=(srtp_t)t->data;
 	int err;
 	int slen;
-	err=recvfrom(t->session->rtp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	err=rtp_session_rtp_recv_abstract(t->session->rtp.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		/* keep NON-RTP data unencrypted */
@@ -100,7 +101,7 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 	srtp_t srtp=(srtp_t)t->data;
 	int err;
 	int slen;
-	err=recvfrom(t->session->rtcp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	err=rtp_session_rtp_recv_abstract(t->session->rtcp.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		slen=err;

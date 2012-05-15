@@ -70,6 +70,18 @@ if test x$ipv6 = xtrue ; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_INET6"
 fi
 
+dnl enable timestamp support
+AC_ARG_ENABLE(rtp-timestamp,
+      [  --enable-rtp-timestamp Turn on RTP packet timestamp],
+      [case "${enableval}" in
+        yes)  rtptimestamp=true;;
+        no)   rtptimestamp=false;;
+        *) AC_MSG_ERROR(bad value ${enableval} for --enable-rtp-timestamp) ;;
+      esac],[rtptimestamp=false])
+if test x$rtptimestamp = xtrue ; then
+	ORTP_DEFS="$ORTP_DEFS -DORTP_TIMESTAMP"
+fi
+
 AC_ARG_ENABLE(mode64bit,
 			[  --enable-mode64bit=[yes/no]   produce a 64-bit library. [default=no]],
 			[case "${enableval}" in
@@ -157,14 +169,13 @@ fi
 AC_ARG_WITH(thread-stack-size,
 	AC_HELP_STRING([--with-thread-stack-size=SIZE-IN-BYTES],[Set thread stack size [[default=os-default]]]),
 	[thread_stack_size=$withval], [thread_stack_size=0])
-AC_DEFINE_UNQUOTED(ORTP_DEFAULT_THREAD_STACK_SIZE, $thread_stack_size, [Default thread stack size (0 = let operating system decide)])
+AC_DEFINE_UNQUOTED(ORTP_DEFAULT_THREAD_STACK_SIZE, $thread_stack_size, [Default thread stack size (0 = let uperating system decide)])
 
 
 dnl check for libsrtp support (secure rtp)
-AC_ARG_WITH( srtp,
-      [  --with-srtp      Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local)[default=/usr] ],
-      [ srtp_prefix=${withval}],[ srtp_prefix=/usr ])
-
+AC_ARG_WITH(srtp,
+        AC_HELP_STRING([--with-srtp],[Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local) [[default=/usr]]]),
+        [srtp_prefix=$withval], [srtp_prefix=/usr])
 if test "${srtp_prefix}" != "none" ; then
 	if test "${srtp_prefix}" != "/usr" || test "$mingw_found" = "yes" ; then
 		SRTP_CFLAGS="-I${srtp_prefix}/include -I${srtp_prefix}/include/srtp"

@@ -665,7 +665,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 
 
 	// Check if something to receive
-	rlen=recvfrom(t->session->rtp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	rlen=rtp_session_rtp_recv_abstract(t->session->rtp.socket,m,flags,from,fromlen);
 	if (rlen<=0) {
 		// nothing was received or error: pass the information to caller
 		return rlen;
@@ -738,7 +738,7 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 	ZrtpContext *zrtpContext = (ZrtpContext*) t->data;
 	OrtpZrtpContext *userData = (OrtpZrtpContext*) zrtpContext->userData;
 
-	int rlen = recvfrom(t->session->rtcp.socket,(void*)m->b_wptr,m->b_datap->db_lim-m->b_datap->db_base,flags,from,fromlen);
+	int rlen = rtp_session_rtp_recv_abstract(t->session->rtcp.socket,m,flags,from,fromlen);
 	if (rlen<=0) {
 		// nothing was received or error: pass the information to caller
 		return rlen;

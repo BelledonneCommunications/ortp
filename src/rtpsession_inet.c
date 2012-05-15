@@ -86,6 +86,14 @@ static ortp_socket_t create_and_bind(const char *addr, int port, int *sock_famil
 				ortp_warning ("Fail to set rtp address reusable: %s.", getSocketError());
 			}
 		}
+#if defined(ORTP_TIMESTAMP)
+		err = setsockopt (sock, SOL_SOCKET, SO_TIMESTAMP,
+			(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
+		if (err < 0)
+		{
+			ortp_warning ("Fail to set rtp timestamp: %s.",getSocketError());
+		}
+#endif
 
 		*sock_family=res->ai_family;
 		err = bind (sock, res->ai_addr, res->ai_addrlen);
@@ -156,6 +164,14 @@ static ortp_socket_t create_and_bind(const char *addr, int port, int *sock_famil
 			ortp_warning ("Fail to set rtp address reusable: %s.",getSocketError());
 		}
 	}
+#if defined(ORTP_TIMESTAMP)
+	err = setsockopt (sock, SOL_SOCKET, SO_TIMESTAMP,
+			(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
+	if (err < 0)
+	{
+		ortp_warning ("Fail to set rtp timestamp: %s.",getSocketError());
+	}
+#endif
 
 	err = bind (sock,
 		    (struct sockaddr *) &saddr,
@@ -954,8 +970,50 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 	return error;
 }
 
-int
-rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
+int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
+	int bufsz = (int) (msg->b_datap->db_lim - msg->b_datap->db_base);
+	struct iovec   iov;
+	struct msghdr  msghdr;
+#if defined(ORTP_TIMESTAMP)
+	struct cmsghdr *cmsghdr;
+	struct {
+			struct cmsghdr cm;
+			char control[512];
+		} control;
+#endif
+	memset(&msghdr, 0, sizeof(msghdr));
+	memset(&iov, 0, sizeof(iov));
+	iov.iov_base = msg->b_wptr;
+	iov.iov_len  = bufsz;
+	if(from != NULL && fromlen != NULL) {
+		msghdr.msg_name = from;
+		msghdr.msg_namelen = *fromlen;
+	}
+	msghdr.msg_iov     = &iov;
+	msghdr.msg_iovlen  = 1;
+#if defined(ORTP_TIMESTAMP)
+	msghdr.msg_control = &control;
+	msghdr.msg_controllen = sizeof(control);
+#endif
+
+	int ret = recvmsg(socket, &msghdr, flags);
+	if(fromlen != NULL)
+		*fromlen = msghdr.msg_namelen;
+#if defined(ORTP_TIMESTAMP)
+	memset(&msg->timestamp, 0, sizeof(struct timeval));
+	if(ret >= 0) {
+		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
+			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SO_TIMESTAMP) {
+				memcpy(&msg->timestamp, (struct timeval *)CMSG_DATA(cmsghdr), sizeof(struct timeval));
+			}
+		}
+	}
+#endif
+
+	return ret;
+}
+
+int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 {
 	int error;
 	ortp_socket_t sockfd=session->rtp.socket;
@@ -971,23 +1029,21 @@ rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 
 	while (1)
 	{
-		int bufsz;
 		bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 
 		if (session->rtp.cached_mp==NULL)
 			 session->rtp.cached_mp = msgb_allocator_alloc(&session->allocator,session->recv_buf_size);
 		mp=session->rtp.cached_mp;
-		bufsz=(int) (mp->b_datap->db_lim - mp->b_datap->db_base);
 		if (sock_connected){
-			error=recv(sockfd,(char*)mp->b_wptr,bufsz,0);
-		}else if (rtp_session_using_transport(session, rtp)) 
+			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
+		}else if (rtp_session_using_transport(session, rtp)) {
 			error = (session->rtp.tr->t_recvfrom)(session->rtp.tr, mp, 0,
 				  (struct sockaddr *) &remaddr,
 				  &addrlen);
-		else error = recvfrom(sockfd, (char*)mp->b_wptr,
-				  bufsz, 0,
+		} else { error = rtp_session_rtp_recv_abstract(sockfd, mp, 0,
 				  (struct sockaddr *) &remaddr,
 				  &addrlen);
+		}
 		if (error > 0){
 			if (session->symmetric_rtp && !sock_connected){
 				if (session->use_connect){
@@ -1156,7 +1212,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 		
 		mp=session->rtcp.cached_mp;
 		if (sock_connected){
-			error=recv(session->rtcp.socket,(char*)mp->b_wptr,RTCP_MAX_RECV_BUFSIZE,0);
+			error=rtp_session_rtp_recv_abstract(session->rtcp.socket, mp, 0, NULL, NULL);
 		}else {
 			addrlen=sizeof (remaddr);
 
@@ -1165,8 +1221,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 				  (struct sockaddr *) &remaddr,
 				  &addrlen);
 			else
-			  error=recvfrom (session->rtcp.socket,(char*) mp->b_wptr,
-				  RTCP_MAX_RECV_BUFSIZE, 0,
+			  error=rtp_session_rtp_recv_abstract (session->rtcp.socket,mp, 0,
 				  (struct sockaddr *) &remaddr,
 				  &addrlen);
 		}
