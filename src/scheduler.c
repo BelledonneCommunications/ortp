@@ -116,7 +116,7 @@ void * rtp_scheduler_schedule(void * psched)
 		/* processing all scheduled rtp sessions */
 		while (current!=NULL)
 		{
-			ortp_debug("scheduler: processing session=0x%x.\n",current);
+			ortp_debug("scheduler: processing session=0x%p.\n",current);
 			rtp_session_process(current,sched->time_,sched);
 			current=current->next;
 		}
