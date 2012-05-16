@@ -71,14 +71,14 @@ if test x$ipv6 = xtrue ; then
 fi
 
 dnl enable timestamp support
-AC_ARG_ENABLE(rtp-timestamp,
-      [  --enable-rtp-timestamp Turn on RTP packet timestamp],
+AC_ARG_ENABLE(ntp-timestamp,
+      [  --enable-ntp-timestamp Turn on NTP timestamping on received packet],
       [case "${enableval}" in
-        yes)  rtptimestamp=true;;
-        no)   rtptimestamp=false;;
-        *) AC_MSG_ERROR(bad value ${enableval} for --enable-rtp-timestamp) ;;
-      esac],[rtptimestamp=false])
-if test x$rtptimestamp = xtrue ; then
+        yes)  ntptimestamp=true;;
+        no)   ntptimestamp=false;;
+        *) AC_MSG_ERROR(bad value ${enableval} for --enable-ntp-timestamp) ;;
+      esac],[ntptimestamp=false])
+if test x$ntptimestamp = xtrue ; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_TIMESTAMP"
 fi
 
