@@ -140,7 +140,7 @@ mblk_t *dupb(mblk_t *mp)
 	datab_ref(mp->b_datap);
 	newm=(mblk_t *) ortp_malloc(sizeof(mblk_t));
 	mblk_init(newm);
-	mblk_meta_copy(np, newm);
+	mblk_meta_copy(mp, newm);
 	newm->b_datap=mp->b_datap;
 	newm->b_rptr=mp->b_rptr;
 	newm->b_wptr=mp->b_wptr;
