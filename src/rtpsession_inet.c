@@ -1000,7 +1000,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	if(fromlen != NULL)
 		*fromlen = msghdr.msg_namelen;
 #if defined(ORTP_TIMESTAMP)
-	memset(&msg->timestamp, 0, sizeof(struct timeval));
 	if(ret >= 0) {
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
 			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SO_TIMESTAMP) {

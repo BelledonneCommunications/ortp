@@ -35,6 +35,9 @@ void mblk_init(mblk_t *mp)
 	mp->b_rptr=mp->b_wptr=NULL;
 	mp->reserved1=0;
 	mp->reserved2=0;
+#if defined(ORTP_TIMESTAMP)
+	memset(&(mp->timestamp), 0, sizeof(struct timeval));
+#endif
 }
 
 void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
