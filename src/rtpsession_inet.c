@@ -1011,7 +1011,7 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 #endif
 	return ret;
 #else
-	return recvfrom(socket, msg->b_wptr, bufsize, flags, from, fromlen);
+	return recvfrom(socket, msg->b_wptr, bufsz, flags, from, fromlen);
 #endif
 
 
