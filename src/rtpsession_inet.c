@@ -972,6 +972,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int bufsz = (int) (msg->b_datap->db_lim - msg->b_datap->db_base);
+#ifndef _WIN32
 	struct iovec   iov;
 	struct msghdr  msghdr;
 #if defined(ORTP_TIMESTAMP)
@@ -1008,8 +1009,12 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		}
 	}
 #endif
-
 	return ret;
+#else
+	return recvfrom(socket, msg->b_wptr, bufsize, flags, from, fromlen);
+#endif
+
+
 }
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
