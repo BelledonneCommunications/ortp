@@ -1136,19 +1136,41 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
  * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
  * @param session : the current session descriptor.
  * @param block : the block descriptor that may contain a SR RTCP message.
+ * @return -1 if we detect that the packet is in fact a STUN packet, otherwise 0.
  * @note a basic parsing is done on the block structure. However, if it fails, no error is returned, and the session descriptor is left as is, so it does not induce any change in the caller procedure behaviour.
  */
-static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
+static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct sockaddr *addr, socklen_t addrlen ) {
 	rtcp_common_header_t *rtcp;
 	RtpStream * rtpstream = &session->rtp;
 
 	int msgsize = (int) ( block->b_wptr - block->b_rptr );
 	if ( msgsize < RTCP_COMMON_HEADER_SIZE ) {
 		ortp_debug( "Receiving a too short RTCP packet" );
-		return;
+		return 0;
 	}
 
 	rtcp = (rtcp_common_header_t *)block->b_rptr;
+
+	if (rtcp->version != 2)
+	{
+		/* try to see if it is a STUN packet */
+		uint16_t stunlen = *((uint16_t *)(block->b_rptr + sizeof(uint16_t)));
+		stunlen = ntohs(stunlen);
+		if (stunlen + 20 == block->b_wptr - block->b_rptr) {
+			/* this looks like a stun packet */
+			if (session->eventqs != NULL) {
+				OrtpEvent *ev = ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
+				OrtpEventData *ed = ortp_event_get_data(ev);
+				ed->packet = block;
+				ed->ep = rtp_endpoint_new(addr, addrlen);
+				rtp_session_dispatch_event(session, ev);
+				return -1;
+			}
+		}
+		/* discard in two case: the packet is not stun OR nobody is interested by STUN (no eventqs) */
+		ortp_debug("Receiving rtcp packet with version number !=2...discarded");
+		return 0;
+	}
 	/* compound rtcp packet can be composed by more than one rtcp message */
 	do{
 		struct timeval reception_date;
@@ -1168,12 +1190,12 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 			
 			if ( ntohl( sr->ssrc ) != session->rcv.ssrc ) {
 				ortp_debug( "Receiving a RTCP SR packet from an unknown ssrc" );
-				return;
+				return 0;
 			}
 
 			if ( msgsize < RTCP_COMMON_HEADER_SIZE + RTCP_SSRC_FIELD_SIZE + RTCP_SENDER_INFO_SIZE + ( RTCP_REPORT_BLOCK_SIZE * sr->ch.rc ) ) {
 				ortp_debug( "Receiving a too short RTCP SR packet" );
-				return;
+				return 0;
 			}
 
 			/* Saving the data to fill LSR and DLSR field in next RTCP report to be transmitted */
@@ -1190,6 +1212,7 @@ static void process_rtcp_packet( RtpSession *session, mblk_t *block ) {
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);
+	return 0;
 }
 
 
@@ -1232,7 +1255,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 		if (error > 0)
 		{
 			mp->b_wptr += error;
-			process_rtcp_packet( session, mp );
+			if (process_rtcp_packet( session, mp, (struct sockaddr*)&remaddr, addrlen) >= 0)
 			/* post an event to notify the application*/
 			{
 				rtp_session_notify_inc_rtcp(session,mp);
