@@ -1163,6 +1163,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 				OrtpEventData *ed = ortp_event_get_data(ev);
 				ed->packet = block;
 				ed->ep = rtp_endpoint_new(addr, addrlen);
+				ed->info.socket_type = OrtpRTCPSocket;
 				rtp_session_dispatch_event(session, ev);
 				return -1;
 			}

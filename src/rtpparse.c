@@ -83,6 +83,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 				OrtpEventData *ed=ortp_event_get_data(ev);
 				ed->packet=mp;
 				ed->ep=rtp_endpoint_new(addr,addrlen);
+				ed->info.socket_type = OrtpRTPSocket;
 				rtp_session_dispatch_event(session,ev);
 				return;
 			}

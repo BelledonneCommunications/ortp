@@ -26,6 +26,11 @@ typedef mblk_t OrtpEvent;
 
 typedef unsigned long OrtpEventType;
 
+typedef enum {
+	OrtpRTPSocket,
+	OrtpRTCPSocket
+} OrtpSocketType;
+
 typedef struct RtpEndpoint{
 #ifdef ORTP_INET6
 	struct sockaddr_storage addr;
@@ -47,6 +52,7 @@ struct _OrtpEventData{
 			char sas[5]; // 4 characters
 			bool_t verified;
 		} zrtp_sas;
+		OrtpSocketType socket_type;
 	} info;
 };
 
