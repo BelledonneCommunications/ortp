@@ -39,6 +39,7 @@ typedef struct msgb
 #if defined(ORTP_TIMESTAMP)
 	struct timeval timestamp;
 #endif
+	struct in_addr ipi_addr;
 } mblk_t;
 
 

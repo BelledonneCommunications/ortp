@@ -309,6 +309,46 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
 
 
 /**
+ *rtp_session_set_pktinfo:
+ *@session: a rtp session
+ *@activate: activation flag (0 to deactivate, other value to activate)
+ *
+ * (De)activates packet info for incoming and outgoing packets.
+ *
+ * Returns: 0 on success.
+ *
+**/
+int rtp_session_set_pktinfo(RtpSession *session, int activate)
+{
+	int retval;
+
+	// Dont't do anything if socket hasn't been created yet
+	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
+
+	switch (session->rtp.sockfamily) {
+		case AF_INET:
+			retval = setsockopt(session->rtp.socket, IPPROTO_IP, IP_PKTINFO, &activate, sizeof(activate));
+			if (retval < 0) break;
+			retval = setsockopt(session->rtcp.socket, IPPROTO_IP, IP_PKTINFO, &activate, sizeof(activate));
+			break;
+#ifdef ORTP_INET6
+		case AF_INET6:
+			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_PKTINFO, &activate, sizeof(activate));
+			if (retval < 0) break;
+			retval = setsockopt(session->rtcp.socket, IPPROTO_IPV6, IPV6_PKTINFO, &activate, sizeof(activate));
+			break;
+#endif
+		default:
+			retval = -1;
+			break;
+	}
+
+	if (retval < 0) ortp_warning("Failed to set packet info on socket.");
+	return retval;
+}
+
+
+/**
  *rtp_session_set_multicast_ttl:
  *@session: a rtp session
  *@ttl: desired Multicast Time-To-Live
@@ -975,13 +1015,11 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 #ifndef _WIN32
 	struct iovec   iov;
 	struct msghdr  msghdr;
-#if defined(ORTP_TIMESTAMP)
 	struct cmsghdr *cmsghdr;
 	struct {
 			struct cmsghdr cm;
 			char control[512];
 		} control;
-#endif
 	memset(&msghdr, 0, sizeof(msghdr));
 	memset(&iov, 0, sizeof(iov));
 	iov.iov_base = msg->b_wptr;
@@ -992,10 +1030,8 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	}
 	msghdr.msg_iov     = &iov;
 	msghdr.msg_iovlen  = 1;
-#if defined(ORTP_TIMESTAMP)
 	msghdr.msg_control = &control;
 	msghdr.msg_controllen = sizeof(control);
-#endif
 
 	int ret = recvmsg(socket, &msghdr, flags);
 	if(fromlen != NULL)
@@ -1009,6 +1045,14 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		}
 	}
 #endif
+	if(ret >= 0) {
+		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
+			if (((cmsghdr->cmsg_level == IPPROTO_IP) || (cmsghdr->cmsg_level == IPPROTO_IPV6)) && (cmsghdr->cmsg_type == IP_PKTINFO)) {
+				struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsghdr);
+				memcpy(&msg->ipi_addr, &pi->ipi_addr, sizeof(msg->ipi_addr));
+			}
+		}
+	}
 	return ret;
 #else
 	return recvfrom(socket, (char *)msg->b_wptr, bufsz, flags, from, fromlen);

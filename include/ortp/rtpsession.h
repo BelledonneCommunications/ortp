@@ -307,6 +307,9 @@ int rtp_session_set_dscp(RtpSession *session, int dscp);
 int rtp_session_get_dscp(const RtpSession *session);
 
 
+/* Packet info */
+int rtp_session_set_pktinfo(RtpSession *session, int activate);
+
 /* Multicast methods */
 int rtp_session_set_multicast_ttl(RtpSession *session, int ttl);
 int rtp_session_get_multicast_ttl(RtpSession *session);
