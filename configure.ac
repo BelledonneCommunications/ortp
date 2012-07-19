@@ -68,6 +68,8 @@ AC_ARG_ENABLE(ipv6,
       esac],[ipv6=true])
 if test x$ipv6 = xtrue ; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_INET6"
+	AC_DEFINE(__APPLE_USE_RFC_2292, 1, [ Apple wants you to declare what behavior you want by
+defining either __APPLE_USE_RFC_2292])
 fi
 
 dnl enable timestamp support

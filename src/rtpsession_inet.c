@@ -17,16 +17,16 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "ortp/ortp.h"
-#include "utils.h"
-#include "ortp/rtpsession.h"
-#include "rtpsession_priv.h"
 
 #if defined(WIN32) || defined(_WIN32_WCE)
 #include "ortp-config-win32.h"
 #elif HAVE_CONFIG_H
 #include "ortp-config.h" /*needed for HAVE_SYS_UIO_H */
 #endif
+#include "ortp/ortp.h"
+#include "utils.h"
+#include "ortp/rtpsession.h"
+#include "rtpsession_priv.h"
 
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
