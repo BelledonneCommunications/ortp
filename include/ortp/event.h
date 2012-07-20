@@ -53,6 +53,7 @@ struct _OrtpEventData{
 			bool_t verified;
 		} zrtp_sas;
 		OrtpSocketType socket_type;
+		bool_t ice_processing_successful;
 	} info;
 };
 
@@ -77,6 +78,7 @@ OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_RTCP_PACKET_EMITTED		5 /**<fired when oRTP decides to send an automatic RTCP SR or RR */
 #define ORTP_EVENT_ZRTP_ENCRYPTION_CHANGED	6
 #define ORTP_EVENT_ZRTP_SAS_READY		7
+#define ORTP_EVENT_ICE_CHECK_LIST_PROCESSING_FINISHED	8
 
 OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 void ortp_event_destroy(OrtpEvent *ev);
