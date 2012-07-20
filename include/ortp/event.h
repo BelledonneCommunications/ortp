@@ -79,6 +79,7 @@ OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ZRTP_ENCRYPTION_CHANGED	6
 #define ORTP_EVENT_ZRTP_SAS_READY		7
 #define ORTP_EVENT_ICE_CHECK_LIST_PROCESSING_FINISHED	8
+#define ORTP_EVENT_ICE_SESSION_PROCESSING_FINISHED	9
 
 OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 void ortp_event_destroy(OrtpEvent *ev);
