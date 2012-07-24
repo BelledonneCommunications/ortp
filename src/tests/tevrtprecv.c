@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	
 	rtp_session_set_scheduling_mode(session,1);
 	rtp_session_set_blocking_mode(session,1);
-	rtp_session_set_local_addr(session,"0.0.0.0",atoi(argv[2]));
+	rtp_session_set_local_addr(session,"0.0.0.0",atoi(argv[2]),-1);
 	rtp_session_set_payload_type(session,0);
 	
 	/* register for telephony events */

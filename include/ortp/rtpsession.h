@@ -170,6 +170,7 @@ typedef struct _RtcpStream
 	int sockfamily;
 	struct _RtpTransport *tr; 
 	mblk_t *cached_mp;
+	int loc_port;
 #ifdef ORTP_INET6
 	struct sockaddr_storage rem_addr;
 #else
@@ -284,11 +285,11 @@ void rtp_session_enable_adaptive_jitter_compensation(RtpSession *session, bool_t
 bool_t rtp_session_adaptive_jitter_compensation_enabled(RtpSession *session);
 
 void rtp_session_set_time_jump_limit(RtpSession *session, int miliseconds);
-int rtp_session_set_local_addr(RtpSession *session,const char *addr, int port);
+int rtp_session_set_local_addr(RtpSession *session,const char *addr, int rtp_port, int rtcp_port);
 int rtp_session_get_local_port(const RtpSession *session);
 
 int
-rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int rtp_port, int rtcp_port);
+rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port);
 /*same as previous function, old name:*/
 int rtp_session_set_remote_addr_and_port (RtpSession * session, const char * addr, int rtp_port, int rtcp_port);
 int rtp_session_set_remote_addr(RtpSession *session,const char *addr, int port);

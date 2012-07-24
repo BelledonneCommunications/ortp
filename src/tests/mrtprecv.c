@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 		session[i]=rtp_session_new(RTP_SESSION_RECVONLY);	
 		rtp_session_set_scheduling_mode(session[i],1);
 		rtp_session_set_blocking_mode(session[i],0);
-		rtp_session_set_local_addr(session[i],"0.0.0.0",port);
+		rtp_session_set_local_addr(session[i],"0.0.0.0",port,port+1);
 		rtp_session_set_payload_type(session[i],0);
 		rtp_session_enable_adaptive_jitter_compensation(session[i], TRUE);
 		rtp_session_set_recv_buf_size(session[i],256);

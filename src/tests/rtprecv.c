@@ -145,7 +145,7 @@ int main(int argc, char*argv[])
 	session=rtp_session_new(RTP_SESSION_RECVONLY);	
 	rtp_session_set_scheduling_mode(session,1);
 	rtp_session_set_blocking_mode(session,1);
-	rtp_session_set_local_addr(session,"0.0.0.0",atoi(argv[2]));
+	rtp_session_set_local_addr(session,"0.0.0.0",atoi(argv[2]),-1);
 	rtp_session_set_connected_mode(session,TRUE);
 	rtp_session_set_symmetric_rtp(session,TRUE);
 	rtp_session_enable_adaptive_jitter_compensation(session,adapt);

@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 		rtp_session_set_scheduling_mode(session[i],1);
 		rtp_session_set_blocking_mode(session[i],0);
 
-		rtp_session_set_local_addr(session[i],"0.0.0.0",port);
+		rtp_session_set_local_addr(session[i],"0.0.0.0",port,port+1);
 		rtp_session_set_recv_payload_type(session[i],0);
 		rtp_session_set_recv_buf_size(session[i],256);
 

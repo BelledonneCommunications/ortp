@@ -251,7 +251,8 @@ static ortp_socket_t create_and_bind_random(const char *localip, int *sock_famil
  *rtp_session_set_local_addr:
  *@session:		a rtp session freshly created.
  *@addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@port:		a local port or -1 to let oRTP choose the port randomly
+ *@rtp_port:		a local port or -1 to let oRTP choose the port randomly
+ *@rtcp_port:		a local port or -1 to let oRTP choose the port randomly
  *
  *	Specify the local addr to be use to listen for rtp packets or to send rtp packet from.
  *	In case where the rtp session is send-only, then it is not required to call this function:
@@ -263,7 +264,7 @@ static ortp_socket_t create_and_bind_random(const char *localip, int *sock_famil
 **/
 
 int
-rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
+rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_port, int rtcp_port)
 {
 	ortp_socket_t sock;
 	int sockfamily;
@@ -278,17 +279,18 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
 	reuse_addr=FALSE;
 #endif
 	/* try to bind the rtp port */
-	if (port>0)
-		sock=create_and_bind(addr,port,&sockfamily,reuse_addr);
+	if (rtp_port>0)
+		sock=create_and_bind(addr,rtp_port,&sockfamily,reuse_addr);
 	else
-		sock=create_and_bind_random(addr,&sockfamily,&port);
+		sock=create_and_bind_random(addr,&sockfamily,&rtp_port);
 	if (sock!=-1){
 		set_socket_sizes(sock,session->rtp.snd_socket_size,session->rtp.rcv_socket_size);
 		session->rtp.sockfamily=sockfamily;
 		session->rtp.socket=sock;
-		session->rtp.loc_port=port;
+		session->rtp.loc_port=rtp_port;
 		/*try to bind rtcp port */
-		sock=create_and_bind(addr,port+1,&sockfamily,reuse_addr);
+		if (rtcp_port<0) rtcp_port=rtp_port+1;
+		sock=create_and_bind(addr,rtcp_port,&sockfamily,reuse_addr);
 		if (sock!=(ortp_socket_t)-1){
 			session->rtcp.sockfamily=sockfamily;
 			session->rtcp.socket=sock;
@@ -303,7 +305,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int port)
 
 		return 0;
 	}
-	ortp_error("Could not bind RTP socket on port to %s port %i",addr,port);
+	ortp_error("Could not bind RTP socket on port to %s port %i",addr,rtp_port);
 	return -1;
 }
 
@@ -665,14 +667,15 @@ static char * ortp_inet_ntoa(struct sockaddr *addr, int addrlen, char *dest, int
 **/
 int
 rtp_session_set_remote_addr (RtpSession * session, const char * addr, int port){
-	return rtp_session_set_remote_addr_full (session, addr, port, port+1);
+	return rtp_session_set_remote_addr_full (session, addr, port, addr, port+1);
 }
 
 /**
  *rtp_session_set_remote_addr_full:
  *@session:		a rtp session freshly created.
- *@addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@rtp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
  *@rtp_port:		a local rtp port.
+ *@rtcp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
  *@rtcp_port:		a local rtcp port.
  *
  *	Sets the remote address of the rtp session, ie the destination address where rtp packet
@@ -683,7 +686,7 @@ rtp_session_set_remote_addr (RtpSession * session, const char * addr, int port){
 **/
 
 int
-rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int rtp_port, int rtcp_port)
+rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port)
 {
 	int err;
 #ifdef ORTP_INET6
@@ -693,7 +696,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	snprintf(num, sizeof(num), "%d", rtp_port);
-	err = getaddrinfo(addr, num, &hints, &res0);
+	err = getaddrinfo(rtp_addr, num, &hints, &res0);
 	if (err) {
 		ortp_warning ("Error in socket address: %s", gai_strerror(err));
 		return -1;
@@ -705,10 +708,10 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 #ifdef ORTP_INET6
 		/* bind to an address type that matches the destination address */
 		if (res0->ai_addr->sa_family==AF_INET6)
-			err = rtp_session_set_local_addr (session, "::", -1);
-		else err=rtp_session_set_local_addr (session, "0.0.0.0", -1);
+			err = rtp_session_set_local_addr (session, "::", -1, -1);
+		else err=rtp_session_set_local_addr (session, "0.0.0.0", -1, -1);
 #else
-		err = rtp_session_set_local_addr (session, "0.0.0.0", -1);
+		err = rtp_session_set_local_addr (session, "0.0.0.0", -1, -1);
 #endif
 		if (err<0) return -1;
 	}
@@ -726,7 +729,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 	}
 	freeaddrinfo(res0);
 	if (err) {
-		ortp_warning("Could not set destination for RTP socket to %s:%i.",addr,rtp_port);
+		ortp_warning("Could not set destination for RTP socket to %s:%i.",rtp_addr,rtp_port);
 		return -1;
 	}
 	
@@ -734,7 +737,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 	snprintf(num, sizeof(num), "%d", rtcp_port);
-	err = getaddrinfo(addr, num, &hints, &res0);
+	err = getaddrinfo(rtcp_addr, num, &hints, &res0);
 	if (err) {
 		ortp_warning ("Error: %s", gai_strerror(err));
 		return err;
@@ -751,14 +754,13 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 	}
 	freeaddrinfo(res0);
 	if (err) {
-		ortp_warning("Could not set destination for RCTP socket to %s:%i.",addr,rtcp_port);
+		ortp_warning("Could not set destination for RCTP socket to %s:%i.",rtcp_addr,rtcp_port);
 		return -1;
 	}
 #else
 	session->rtp.rem_addrlen=sizeof(session->rtp.rem_addr);
 	session->rtp.rem_addr.sin_family = AF_INET;
-
-	err = inet_aton (addr, &session->rtp.rem_addr.sin_addr);
+	err = inet_aton (rtp_addr, &session->rtp.rem_addr.sin_addr);
 	if (err < 0)
 	{
 		ortp_warning ("Error in socket address:%s.", getSocketError());
@@ -766,10 +768,15 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 	}
 	session->rtp.rem_addr.sin_port = htons (rtp_port);
 
-	memcpy (&session->rtcp.rem_addr, &session->rtp.rem_addr,
-		sizeof (struct sockaddr_in));
-	session->rtcp.rem_addr.sin_port = htons (rtcp_port);
 	session->rtcp.rem_addrlen=sizeof(session->rtcp.rem_addr);
+	session->rtcp.rem_addr.sin_family = AF_INET;
+	err = inet_aton (rtcp_addr, &session->rtcp.rem_addr.sin_addr);
+	if (err < 0)
+	{
+		ortp_warning ("Error in socket address:%s.", getSocketError());
+		return err;
+	}
+	session->rtcp.rem_addr.sin_port = htons (rtcp_port);
 #endif
 	if (can_connect(session)){
 		if (try_connect(session->rtp.socket,(struct sockaddr*)&session->rtp.rem_addr,session->rtp.rem_addrlen))
@@ -797,7 +804,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * addr, int r
 
 int
 rtp_session_set_remote_addr_and_port(RtpSession * session, const char * addr, int rtp_port, int rtcp_port){
-	return rtp_session_set_remote_addr_full(session,addr,rtp_port,rtcp_port);
+	return rtp_session_set_remote_addr_full(session,addr,rtp_port,addr,rtcp_port);
 }
 
 void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd)
@@ -1125,7 +1132,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 				/*hack for iOS and non-working socket because of background mode*/
 				if (errnum==ENOTCONN){
 					/*re-create new sockets */
-					rtp_session_set_local_addr(session,session->rtp.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtp.loc_port);
+					rtp_session_set_local_addr(session,session->rtp.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtp.loc_port,session->rtcp.loc_port);
 				}
 #endif
 			}else{
