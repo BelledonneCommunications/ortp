@@ -88,7 +88,7 @@ extern "C"
 /* if you change this version, change in makefile too  */
 #define STUN_VERSION "0.99"
 
-#define STUN_MAX_STRING 256
+#define STUN_MAX_STRING 514
 #define STUN_MAX_UNKNOWN_ATTRIBUTES 8
 #define STUN_MAX_MESSAGE_SIZE 2048
 
