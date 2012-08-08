@@ -82,6 +82,7 @@ OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ICE_SESSION_PROCESSING_FINISHED	9
 #define ORTP_EVENT_ICE_GATHERING_FINISHED		10
 #define ORTP_EVENT_ICE_LOSING_PAIRS_COMPLETED		11
+#define ORTP_EVENT_ICE_RESTART_NEEDED			12
 
 OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 void ortp_event_destroy(OrtpEvent *ev);
