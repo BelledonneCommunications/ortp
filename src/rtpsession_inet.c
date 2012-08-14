@@ -1100,8 +1100,9 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
 				  &addrlen);
 		}
 		if (error > 0){
-			if (session->symmetric_rtp && !sock_connected){
-				if (session->use_connect){
+			if (session->use_connect){
+				/* In the case where use_connect is false, symmetric RTP is handled in rtp_session_rtp_parse() */
+				if (session->symmetric_rtp && !sock_connected){
 					/* store the sender rtp address to do symmetric RTP */
 					memcpy(&session->rtp.rem_addr,&remaddr,addrlen);
 					session->rtp.rem_addrlen=addrlen;
