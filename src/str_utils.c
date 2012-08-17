@@ -273,7 +273,7 @@ mblk_t *copyb(mblk_t *mp)
 	newm=allocb(len,BPRI_MED);
 	memcpy(newm->b_wptr,mp->b_rptr,len);
 	newm->b_wptr+=len;
-	newm->ipi_addr=mp->ipi_addr;
+	memcpy(&newm->recv_addr,&mp->recv_addr,sizeof(newm->recv_addr));
 	return newm;
 }
 

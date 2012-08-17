@@ -26,6 +26,14 @@
 #include <time.h>
 #endif
 
+typedef struct ortp_recv_addr {
+	int family;
+	union {
+		struct in_addr ipi_addr;
+		struct in6_addr ipi6_addr;
+	};
+} ortp_recv_addr_t;
+
 typedef struct msgb
 {
 	struct msgb *b_prev;
@@ -39,7 +47,7 @@ typedef struct msgb
 #if defined(ORTP_TIMESTAMP)
 	struct timeval timestamp;
 #endif
-	struct in_addr ipi_addr;
+	ortp_recv_addr_t recv_addr;
 } mblk_t;
 
 

@@ -18,6 +18,8 @@
 */
 
 
+#define _GNU_SOURCE
+
 #if defined(WIN32) || defined(_WIN32_WCE)
 #include "ortp-config-win32.h"
 #elif HAVE_CONFIG_H
@@ -323,21 +325,32 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 int rtp_session_set_pktinfo(RtpSession *session, int activate)
 {
 	int retval;
+	int optname;
 
 	// Dont't do anything if socket hasn't been created yet
 	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
 
 	switch (session->rtp.sockfamily) {
 		case AF_INET:
-			retval = setsockopt(session->rtp.socket, IPPROTO_IP, IP_PKTINFO, &activate, sizeof(activate));
+#ifdef IP_PKTINFO
+			optname = IP_PKTINFO;
+#else
+			optname = IP_RECVDSTADDR;
+#endif
+			retval = setsockopt(session->rtp.socket, IPPROTO_IP, optname, &activate, sizeof(activate));
 			if (retval < 0) break;
-			retval = setsockopt(session->rtcp.socket, IPPROTO_IP, IP_PKTINFO, &activate, sizeof(activate));
+			retval = setsockopt(session->rtcp.socket, IPPROTO_IP, optname, &activate, sizeof(activate));
 			break;
 #ifdef ORTP_INET6
 		case AF_INET6:
-			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_PKTINFO, &activate, sizeof(activate));
+#ifdef IPV6_PKTINFO
+			optname = IPV6_PKTINFO;
+#else
+			optname = IPV6_RECVDSTADDR;
+#endif
+			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, optname, &activate, sizeof(activate));
 			if (retval < 0) break;
-			retval = setsockopt(session->rtcp.socket, IPPROTO_IPV6, IPV6_PKTINFO, &activate, sizeof(activate));
+			retval = setsockopt(session->rtcp.socket, IPPROTO_IPV6, optname, &activate, sizeof(activate));
 			break;
 #endif
 		default:
@@ -1054,10 +1067,34 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 #endif
 	if(ret >= 0) {
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
-			if (((cmsghdr->cmsg_level == IPPROTO_IP) || (cmsghdr->cmsg_level == IPPROTO_IPV6)) && (cmsghdr->cmsg_type == IP_PKTINFO)) {
+#ifdef IP_PKTINFO
+			if ((cmsghdr->cmsg_level == IPPROTO_IP) && (cmsghdr->cmsg_type == IP_PKTINFO)) {
 				struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsghdr);
-				memcpy(&msg->ipi_addr, &pi->ipi_addr, sizeof(msg->ipi_addr));
+				memcpy(&msg->recv_addr.ipi_addr, &pi->ipi_addr, sizeof(msg->recv_addr.ipi_addr));
+				msg->recv_addr.family = AF_INET;
 			}
+#endif
+#ifdef IPV6_PKTINFO
+			if ((cmsghdr->cmsg_level == IPPROTO_IPV6) && (cmsghdr->cmsg_type == IPV6_PKTINFO)) {
+				struct in6_pktinfo *pi = (struct in6_pktinfo *)CMSG_DATA(cmsghdr);
+				memcpy(&msg->recv_addr.ipi6_addr, &pi->ipi6_addr, sizeof(msg->recv_addr.ipi6_addr));
+				msg->recv_addr.family = AF_INET6;
+			}
+#endif
+#ifdef IP_RECVDSTADDR
+			if ((cmsghdr->cmsg_level == IPPROTO_IP) && (cmsghdr->cmsg_type == IP_RECVDSTADDR)) {
+				struct in_addr *ia = (struct in_addr *)CMSG_DATA(cmsghdr);
+				memcpy(&msg->recv_addr.ipi_addr, ia, sizeof(msg->recv_addr.ipi_addr));
+				msg->recv_addr.family = AF_INET;
+			}
+#endif
+#ifdef IPV6_RECVDSTADDR
+			if ((cmsghdr->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_RECVDSTADDR)) {
+				struct in6_addr *ia = (struct in6_addr *)CMSG_DATA(cmsghdr);
+				memcpy(&msg->recv_addr.ipi6_addr, ia, sizeof(msg->recv_addr.ipi6_addr));
+				msg->recv_addr.family = AF_INET6;
+			}
+#endif
 		}
 	}
 	return ret;
