@@ -31,7 +31,7 @@ typedef struct ortp_recv_addr {
 	union {
 		struct in_addr ipi_addr;
 		struct in6_addr ipi6_addr;
-	};
+	} addr;
 } ortp_recv_addr_t;
 
 typedef struct msgb
