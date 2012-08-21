@@ -93,3 +93,8 @@ all-local: ortp.spec
 
 ortp.spec: ortp.spec.in
 
+
+deb:
+	$(MAKE) dist
+	mv $(distdir).tar.gz ../$(PACKAGE)_$(VERSION).orig.tar.gz
+	dpkg-buildpackage -us -uc
