@@ -36,12 +36,39 @@
 #include <QOS2.h>
 #endif
 
+#if defined(WIN32) || defined(_WIN32_WCE)
+#include <Mswsock.h>
+#endif
+
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
 #define USE_SENDMSG 1
 #endif
 
 #define can_connect(s)	( (s)->use_connect && !(s)->symmetric_rtp)
+
+#if defined(WIN32) || defined(_WIN32_WCE)
+#ifndef WSAID_WSARECVMSG
+/* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
+#define WSAID_WSARECVMSG {0xf689d7c8,0x6f1f,0x436b,{0x8a,0x53,0xe5,0x4f,0xe3,0x51,0xc3,0x22}}
+#define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
+#define TYPE_ALIGNMENT(t) FIELD_OFFSET(struct { char x; t test; },test)
+typedef WSACMSGHDR *LPWSACMSGHDR;
+#define WSA_CMSGHDR_ALIGN(length) (((length) + TYPE_ALIGNMENT(WSACMSGHDR)-1) & (~(TYPE_ALIGNMENT(WSACMSGHDR)-1)))
+#define WSA_CMSGDATA_ALIGN(length) (((length) + MAX_NATURAL_ALIGNMENT-1) & (~(MAX_NATURAL_ALIGNMENT-1)))
+#define WSA_CMSG_FIRSTHDR(msg) (((msg)->Control.len >= sizeof(WSACMSGHDR)) ? (LPWSACMSGHDR)(msg)->Control.buf : (LPWSACMSGHDR)NULL)
+#define WSA_CMSG_NXTHDR(msg,cmsg) ((!(cmsg)) ? WSA_CMSG_FIRSTHDR(msg) : ((((u_char *)(cmsg) + WSA_CMSGHDR_ALIGN((cmsg)->cmsg_len) + sizeof(WSACMSGHDR)) > (u_char *)((msg)->Control.buf) + (msg)->Control.len) ? (LPWSACMSGHDR)NULL : (LPWSACMSGHDR)((u_char *)(cmsg) + WSA_CMSGHDR_ALIGN((cmsg)->cmsg_len))))
+#define WSA_CMSG_DATA(cmsg) ((u_char *)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)))
+#undef CMSG_FIRSTHDR
+#define CMSG_FIRSTHDR WSA_CMSG_FIRSTHDR
+#undef CMSG_NXTHDR
+#define CMSG_NXTHDR WSA_CMSG_NXTHDR
+#undef CMSG_DATA
+#define CMSG_DATA WSA_CMSG_DATA
+typedef INT  (WINAPI * LPFN_WSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
+static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
+#endif
+#endif
 
 static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen){
 	if (connect(fd,dest,addrlen)<0){
@@ -186,6 +213,16 @@ static ortp_socket_t create_and_bind(const char *addr, int port, int *sock_famil
 		return -1;
 	}
 #endif
+#if defined(WIN32) || defined(_WIN32_WCE)
+	if (ortp_WSARecvMsg == NULL) {
+		GUID guid = WSAID_WSARECVMSG;
+		DWORD bytes_returned;
+		if (WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
+			&ortp_WSARecvMsg, sizeof(ortp_WSARecvMsg), &bytes_returned, NULL, NULL) == SOCKET_ERROR) {
+			ortp_warning("WSARecvMsg function not found.");
+		}
+	}
+#endif
 	if (sock!=-1){
 		set_non_blocking_socket (sock);
 	}
@@ -326,9 +363,20 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 {
 	int retval;
 	int optname;
+#if defined(WIN32) || defined(_WIN32_WCE)
+	char optval[sizeof(DWORD)];
+	int optlen = sizeof(optval);
+#else
+	int *optval = &activate;
+	int optlen = sizeof(activate);
+#endif
 
 	// Dont't do anything if socket hasn't been created yet
 	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
+
+#if defined(WIN32) || defined(_WIN32_WCE)
+	memset(optval, activate, sizeof(optval));
+#endif
 
 	switch (session->rtp.sockfamily) {
 		case AF_INET:
@@ -337,9 +385,9 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 #else
 			optname = IP_RECVDSTADDR;
 #endif
-			retval = setsockopt(session->rtp.socket, IPPROTO_IP, optname, &activate, sizeof(activate));
+			retval = setsockopt(session->rtp.socket, IPPROTO_IP, optname, optval, optlen);
 			if (retval < 0) break;
-			retval = setsockopt(session->rtcp.socket, IPPROTO_IP, optname, &activate, sizeof(activate));
+			retval = setsockopt(session->rtcp.socket, IPPROTO_IP, optname, optval, optlen);
 			break;
 #ifdef ORTP_INET6
 		case AF_INET6:
@@ -348,9 +396,9 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 #else
 			optname = IPV6_RECVDSTADDR;
 #endif
-			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, optname, &activate, sizeof(activate));
+			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, optname, optval, optlen);
 			if (retval < 0) break;
-			retval = setsockopt(session->rtcp.socket, IPPROTO_IPV6, optname, &activate, sizeof(activate));
+			retval = setsockopt(session->rtcp.socket, IPPROTO_IPV6, optname, optval, optlen);
 			break;
 #endif
 		default:
@@ -1031,6 +1079,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 }
 
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
+	int ret;
 	int bufsz = (int) (msg->b_datap->db_lim - msg->b_datap->db_base);
 #ifndef _WIN32
 	struct iovec   iov;
@@ -1053,20 +1102,46 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	msghdr.msg_control = &control;
 	msghdr.msg_controllen = sizeof(control);
 
-	int ret = recvmsg(socket, &msghdr, flags);
+	ret = recvmsg(socket, &msghdr, flags);
 	if(fromlen != NULL)
 		*fromlen = msghdr.msg_namelen;
-#if defined(ORTP_TIMESTAMP)
 	if(ret >= 0) {
+#else
+	char control[512];
+	WSAMSG msghdr;
+	WSACMSGHDR *cmsghdr;
+	WSABUF data_buf;
+	DWORD bytes_received;
+
+	if (ortp_WSARecvMsg == NULL) {
+		return recvfrom(socket, (char *)msg->b_wptr, bufsz, flags, from, fromlen);
+	}
+
+	memset(&msghdr, 0, sizeof(msghdr));
+	memset(control, 0, sizeof(control));
+	if(from != NULL && fromlen != NULL) {
+		msghdr.name = from;
+		msghdr.namelen = *fromlen;
+	}
+	data_buf.buf = (char *)msg->b_wptr;
+	data_buf.len = bufsz;
+	msghdr.lpBuffers = &data_buf;
+	msghdr.dwBufferCount = 1;
+	msghdr.Control.buf = control;
+	msghdr.Control.len = sizeof(control);
+	msghdr.dwFlags = flags;
+	ret = ortp_WSARecvMsg(socket, &msghdr, &bytes_received, NULL, NULL);
+	if(fromlen != NULL)
+		*fromlen = msghdr.namelen;
+	if(ret >= 0) {
+		ret = bytes_received;
+#endif
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
+#if defined(ORTP_TIMESTAMP)
 			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SO_TIMESTAMP) {
 				memcpy(&msg->timestamp, (struct timeval *)CMSG_DATA(cmsghdr), sizeof(struct timeval));
 			}
-		}
-	}
 #endif
-	if(ret >= 0) {
-		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
 #ifdef IP_PKTINFO
 			if ((cmsghdr->cmsg_level == IPPROTO_IP) && (cmsghdr->cmsg_type == IP_PKTINFO)) {
 				struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsghdr);
@@ -1098,11 +1173,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		}
 	}
 	return ret;
-#else
-	return recvfrom(socket, (char *)msg->b_wptr, bufsz, flags, from, fromlen);
-#endif
-
-
 }
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts)
