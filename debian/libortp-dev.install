@@ -1,0 +1,4 @@
+usr/include/ortp/*.h
+usr/lib/libortp.so
+usr/lib/pkgconfig/ortp.pc
+usr/share/doc/ortp/ortp-*/html usr/share/doc/libortp8-dev

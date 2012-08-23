@@ -2,7 +2,7 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
-EXTRA_DIST = oRTP.prj ortp-config.h.in TODO pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen
+EXTRA_DIST = oRTP.prj ortp-config.h.in TODO pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen oRTP.pws
 
 SUBDIRS=src build include
 

@@ -1,5 +1,5 @@
 
-EXTRA_DIST=ortp-config-win32.h dll_entry.c
+EXTRA_DIST=ortp-config-win32.h dll_entry.c master system
 
 AM_CFLAGS=  $(PTHREAD_CFLAGS)  -I$(top_srcdir) $(TRUESPEECH_CFLAGS) $(SRTP_CFLAGS)
 AM_LDFLAGS= $(PTHREAD_LDFLAGS)

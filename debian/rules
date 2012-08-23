@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@ --parallel --with autotools_dev
+
+#override_dh_auto_configure:
+#	./configure
+
+override_dh_makeshlibs:
+	dh_makeshlibs -V
+
+override_dh_installchangelogs:
+	dh_installchangelogs NEWS
+
+override_dh_strip:
+	dh_strip --dbg-package=libortp8-dbg
