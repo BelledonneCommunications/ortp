@@ -104,6 +104,17 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 	err=rtp_session_rtp_recv_abstract(t->session->rtcp.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
+		/* keep NON-RTP data unencrypted */
+		rtcp_common_header_t *rtcp;
+		if (err>=RTCP_COMMON_HEADER_SIZE)
+		{
+			rtcp = (rtcp_common_header_t*)m->b_wptr;
+			if (rtcp->version!=2)
+			{
+				return err;
+			}
+		}
+
 		slen=err;
 		srtp_err=srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
 		if (srtp_err==err_status_ok)
