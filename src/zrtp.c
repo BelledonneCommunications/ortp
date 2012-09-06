@@ -744,7 +744,9 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 		return rlen;
 	}
 
-	if (userData->srtpRecv != NULL && zrtp_inState(zrtpContext, SecureState)) {
+	uint8_t *rtcp = m->b_wptr;
+	int version = ((rtcp_common_header_t *)rtcp)->version;
+	if (version == 2 && userData->srtpRecv != NULL && zrtp_inState(zrtpContext, SecureState)) {
 		err_status_t err = srtp_unprotect_rtcp(userData->srtpRecv,m->b_wptr,&rlen);
 		if (err != err_status_ok) {
 			ortp_error("srtp_unprotect failed %d ; packet discarded (may be plain RTCP)", err);
