@@ -17,10 +17,8 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "ortp/ortp.h"
-#include "ortp/rtp.h"
 #include "ortp/str_utils.h"
-#include "utils.h"
+
 
 void qinit(queue_t *q){
 	mblk_init(&q->_q_stopper);
