@@ -44,6 +44,7 @@ typedef struct RtpEndpoint{
 struct _OrtpEventData{
 	mblk_t *packet;	/* most events are associated to a received packet */
 	RtpEndpoint *ep;
+	ortpTimeSpec ts;
 	union {
 		int telephone_event;
 		int payload_type;

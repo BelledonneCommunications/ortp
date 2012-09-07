@@ -41,10 +41,13 @@ RtpEndpoint *rtp_endpoint_dup(const RtpEndpoint *ep){
 }
 
 OrtpEvent * ortp_event_new(unsigned long type){
+	OrtpEventData *ed;
 	const int size=sizeof(OrtpEventType)+sizeof(OrtpEventData);
 	mblk_t *m=allocb(size,0);
 	memset(m->b_wptr,0,size);
 	*((OrtpEventType*)m->b_wptr)=type;
+	ed = ortp_event_get_data(m);
+	ortp_get_cur_time(&ed->ts);
 	return m;
 }
 
