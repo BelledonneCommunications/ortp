@@ -174,6 +174,14 @@ AC_ARG_WITH(thread-stack-size,
 AC_DEFINE_UNQUOTED(ORTP_DEFAULT_THREAD_STACK_SIZE, $thread_stack_size, [Default thread stack size (0 = let uperating system decide)])
 
 
+dnl check if we can use the rt library
+AC_CHECK_LIB(rt, clock_gettime, [rt_enabled=yes])
+if test $rt_enabled = "yes" ; then
+	RT_LIBS="-lrt"
+	AC_SUBST(RT_LIBS)
+fi
+
+
 dnl check for libsrtp support (secure rtp)
 AC_ARG_WITH(srtp,
         AC_HELP_STRING([--with-srtp],[Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local) [[default=/usr]]]),
@@ -331,7 +339,7 @@ fi
 
 AC_SUBST(SSL_LIBS)
 
-ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $SRTP_LIBS $SSL_LIBS"
+ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SRTP_LIBS $SSL_LIBS"
 ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $SRTP_CFLAGS"
 CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs

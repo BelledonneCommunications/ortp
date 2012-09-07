@@ -219,13 +219,6 @@ const char *getWinSocketError(int error);
 #define snprintf _snprintf
 #define strcasecmp _stricmp
 
-#if 0
-struct timeval {
-        long    tv_sec;         /* seconds */
-        long    tv_usec;        /* and microseconds */
-};
-#endif
-
 
 #ifdef __cplusplus
 extern "C"{
@@ -245,6 +238,11 @@ typedef unsigned char bool_t;
 #undef FALSE
 #define TRUE 1
 #define FALSE 0
+
+typedef struct ortpTimeSpec{
+	int64_t tv_sec;
+	int64_t tv_nsec;
+}ortpTimeSpec;
 
 #ifdef __cplusplus
 extern "C"{
@@ -276,6 +274,8 @@ char *ortp_strdup_printf(const char *fmt,...);
 char *ortp_strdup_vprintf(const char *fmt, va_list ap);
 
 int ortp_file_exist(const char *pathname);
+
+void ortp_get_cur_time(ortpTimeSpec *ret);
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)

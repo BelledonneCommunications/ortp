@@ -629,3 +629,40 @@ void ortp_shm_close(void *mem){
 
 
 #endif
+
+
+#ifdef __MACH__
+#include <sys/types.h>
+#include <sys/timeb.h>
+#endif
+
+void ortp_get_cur_time(ortpTimeSpec *ret){
+#if defined(_WIN32_WCE) || defined(WIN32)
+	DWORD timemillis;
+#	if defined(_WIN32_WCE)
+	timemillis=GetTickCount();
+#	else
+	timemillis=timeGetTime();
+#	endif
+	ret->tv_sec=timemillis/1000;
+	ret->tv_nsec=(timemillis%1000)*1000000LL;
+#elif defined(__MACH__) && defined(__GNUC__) && (__GNUC__ >= 3)
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	ret->tv_sec=tv.tv_sec;
+	ret->tv_nsec=tv.tv_usec*1000LL;
+#elif defined(__MACH__)
+	struct timeb time_val;
+
+	ftime (&time_val);
+	ret->tv_sec = time_val.time;
+	ret->tv_nsec = time_val.millitm * 1000000LL;
+#else
+	struct timespec ts;
+	if (clock_gettime(CLOCK_MONOTONIC,&ts)<0){
+		ortp_fatal("clock_gettime() doesn't work: %s",strerror(errno));
+	}
+	ret->tv_sec=ts.tv_sec;
+	ret->tv_nsec=ts.tv_nsec;
+#endif
+}
