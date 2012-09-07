@@ -10,6 +10,7 @@ lib_LTLIBRARIES = libortp.la
 
 libortp_la_SOURCES=	str_utils.c 	\
 			port.c \
+			logging.c logging.h \
 			rtpparse.c  \
 			rtpsession.c \
 			rtpsession_inet.c \
