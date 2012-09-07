@@ -19,6 +19,7 @@
 
 
 #include <ortp/payloadtype.h>
+#include <ortp/rtpprofile.h>
 
 char offset127=127; 
 char offset0xD5=(char)0xD5; 

@@ -25,6 +25,7 @@ libortp_la_SOURCES=	str_utils.c 	\
 			sessionset.c  \
 			telephonyevents.c  \
 			payloadtype.c \
+			rtpprofile.c \
 			rtcp.c  \
 			utils.c utils.h \
 			rtcpparse.c \

@@ -19,7 +19,7 @@
 
 /** 
  * \file payloadtype.h
- * \brief Using and creating standart and custom RTP profiles
+ * \brief Definition of payload types
  *
 **/
 
@@ -76,21 +76,6 @@ typedef struct _PayloadType PayloadType;
 #define payload_type_unset_flag(pt,flag) (pt)->flags&=(~(int)flag)
 #define payload_type_get_flags(pt)	(pt)->flags
 
-#define RTP_PROFILE_MAX_PAYLOADS 128
-
-/**
- * The RTP profile is a table RTP_PROFILE_MAX_PAYLOADS entries to make the matching
- * between RTP payload type number and the PayloadType that defines the type of
- * media.
-**/
-struct _RtpProfile
-{
-	char *name;
-	PayloadType *payload[RTP_PROFILE_MAX_PAYLOADS];
-};
-
-
-typedef struct _RtpProfile RtpProfile;
 
 PayloadType *payload_type_new(void);
 PayloadType *payload_type_clone(PayloadType *payload);
@@ -107,58 +92,8 @@ void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp);
 
 bool_t fmtp_get_value(const char *fmtp, const char *param_name, char *result, size_t result_len);
 
-VAR_DECLSPEC RtpProfile av_profile;
-
 #define payload_type_set_user_data(pt,p)	(pt)->user_data=(p)
 #define payload_type_get_user_data(pt)		((pt)->user_data)
-
-#define rtp_profile_get_name(profile) 	(const char*)((profile)->name)
-
-void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType *pt);
-
-/**
- *	Set payload type number @index unassigned in the profile.
- *
- *@param profile an RTP profile
- *@param index	the payload type number
-**/
-#define rtp_profile_clear_payload(profile,index) \
-	rtp_profile_set_payload(profile,index,NULL)	
-
-/* I prefer have this function inlined because it is very often called in the code */
-/**
- *
- *	Gets the payload description of the payload type @index in the profile.
- *
- *@param profile an RTP profile (a #RtpProfile object)
- *@param index	the payload type number
- *@return the payload description (a PayloadType object)
-**/
-static inline PayloadType * rtp_profile_get_payload(RtpProfile *prof, int idx){
-	if (idx<0 || idx>=RTP_PROFILE_MAX_PAYLOADS) {
-		return NULL;
-	}
-	return prof->payload[idx];
-}
-void rtp_profile_clear_all(RtpProfile *prof);
-void rtp_profile_set_name(RtpProfile *prof, const char *name);
-PayloadType * rtp_profile_get_payload_from_mime(RtpProfile *profile,const char *mime);
-PayloadType * rtp_profile_get_payload_from_rtpmap(RtpProfile *profile, const char *rtpmap);
-int rtp_profile_get_payload_number_from_mime(RtpProfile *profile,const char *mime);
-int rtp_profile_get_payload_number_from_rtpmap(RtpProfile *profile, const char *rtpmap);
-int rtp_profile_find_payload_number(RtpProfile *prof,const char *mime,int rate, int channels);
-PayloadType * rtp_profile_find_payload(RtpProfile *prof,const char *mime,int rate, int channels);
-int rtp_profile_move_payload(RtpProfile *prof,int oldpos,int newpos);
-
-RtpProfile * rtp_profile_new(const char *name);
-/* clone a profile, payload are not cloned */
-RtpProfile * rtp_profile_clone(RtpProfile *prof);
-
-
-/*clone a profile and its payloads (ie payload type are newly allocated, not reusing payload types of the reference profile) */
-RtpProfile * rtp_profile_clone_full(RtpProfile *prof);
-/* frees the profile and all its PayloadTypes*/
-void rtp_profile_destroy(RtpProfile *prof);
 
 
 /* some payload types */

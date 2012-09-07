@@ -34,6 +34,7 @@
 #include <ortp/port.h>
 #include <ortp/rtp.h>
 #include <ortp/payloadtype.h>
+#include <ortp/rtpprofile.h>
 #include <ortp/sessionset.h>
 #include <ortp/rtcp.h>
 #include <ortp/str_utils.h>
