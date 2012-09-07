@@ -45,16 +45,6 @@ OList * o_list_remove(OList *list, void *data);
 OList * o_list_free(OList *elem);
 OList *o_list_remove_link(OList *list, OList *elem);
 
-#ifndef MIN
-#define MIN(a,b) (((a)>(b)) ? (b) : (a))
-#endif
-#ifndef MAX
-#define MAX(a,b) (((a)>(b)) ? (a) : (b))
-#endif
-
-#define return_if_fail(expr) if (!(expr)) {printf("%s:%i- assertion"#expr "failed\n",__FILE__,__LINE__); return;}
-#define return_val_if_fail(expr,ret) if (!(expr)) {printf("%s:%i- assertion" #expr "failed\n",__FILE__,__LINE__); return (ret);}
-
 
 #define INT_TO_POINTER(truc)	((long)(long)(truc))
 #define POINTER_TO_INT(truc)	((int)(long)(truc))
