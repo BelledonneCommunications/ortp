@@ -17,7 +17,9 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "ortp/ortp.h"
+#include "ortp/logging.h"
+#include "ortp/payloadtype.h"
+#include "ortp/str_utils.h"
 
 
 char *payload_type_get_rtpmap(PayloadType *pt)
