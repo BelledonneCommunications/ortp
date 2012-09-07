@@ -24,9 +24,9 @@
 #elif HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
+#include "ortp/logging.h"
 #include "ortp/port.h"
-#include "ortp/ortp.h"
-#include "utils.h"
+#include "ortp/str_utils.h"
 
 #if	defined(_WIN32) && !defined(_WIN32_WCE)
 #include <process.h>
