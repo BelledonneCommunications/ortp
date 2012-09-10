@@ -45,13 +45,13 @@ AC_SUBST([mkdir_p])
 
 AC_MSG_CHECKING([warning make an error on compilation])
 AC_ARG_ENABLE(strict,
-[  --enable-strict       Enable error on compilation warning [default=yes]],
+[AS_HELP_STRING([--enable-strict], [Enable error on compilation warning (default=yes)])],
 [wall_werror=$enableval],
 [wall_werror=yes]
 )
 
 AC_ARG_ENABLE(perf,
-[  --enable-perf       Disable costly features to reduce cpu consumtion [default=no]],
+[AS_HELP_STRING([--enable-perf], [Disable costly features to reduce cpu consumtion (default=no)])],
 [perf=$enableval],
 [perf=no]
 )
@@ -60,7 +60,7 @@ ORTP_DEFS=
 
 dnl enable ipv6 support
 AC_ARG_ENABLE(ipv6,
-      [  --enable-ipv6    Turn on ipv6 support],
+      [AS_HELP_STRING([--enable-ipv6], [Turn on ipv6 support (default=yes)])],
       [case "${enableval}" in
         yes)  ipv6=true;;
         no)   ipv6=false;;
@@ -74,7 +74,7 @@ fi
 
 dnl enable timestamp support
 AC_ARG_ENABLE(ntp-timestamp,
-      [  --enable-ntp-timestamp Turn on NTP timestamping on received packet],
+      [AS_HELP_STRING([--enable-ntp-timestamp], [Turn on NTP timestamping on received packet (default=no)])],
       [case "${enableval}" in
         yes)  ntptimestamp=true;;
         no)   ntptimestamp=false;;
@@ -85,7 +85,7 @@ if test x$ntptimestamp = xtrue ; then
 fi
 
 AC_ARG_ENABLE(mode64bit,
-			[  --enable-mode64bit=[yes/no]   produce a 64-bit library. [default=no]],
+			[AS_HELP_STRING([--enable-mode64bit], [Produce a 64-bit library (default=no)])],
 			[case "${enableval}" in
 				yes) mode64bit_enabled=yes;;
 				no) mode64bit_enabled=no;;
@@ -94,7 +94,7 @@ AC_ARG_ENABLE(mode64bit,
 			[mode64bit_enabled=no])
 
 AC_ARG_ENABLE(debug,
-			[  --enable-debug=[yes/no]   enables the display of traces showing the execution of the library. [default=yes]],
+			[AS_HELP_STRING([--enable-debug], [Enable the display of traces showing the execution of the library (default=yes)])],
 			[case "${enableval}" in
 				yes) debug_enabled=yes;;
 				no) debug_enabled=no;;
@@ -231,7 +231,7 @@ fi
 dnl check for libzrtp support (RFC 6189: Media Path Key Agreement for Unicast Secure RTP)
 dnl zrtp is GPLv3+
 AC_ARG_ENABLE(zrtp,
-		      [  --enable-zrtp=[yes/no]    Turn on or off compilation of zrtp (GPLv3+ only) [default=no]],
+		      [AS_HELP_STRING([--enable-zrtp], [Turn on or off compilation of zrtp (GPLv3+ only) (default=no)])],
 		      [case "${enableval}" in
 		        yes) zrtp=true ;;
 		        no)  zrtp=false ;;
@@ -257,7 +257,7 @@ fi
 
 
 AC_ARG_ENABLE(memcheck,
-				[  --enable-memcheck=[yes/no]   enables memory leak detection (HPUX only).],
+				[AS_HELP_STRING([--enable-memcheck], [Enable memory leak detection (HPUX only)])],
 				[case "${enableval}" in
 				yes) memcheck_enabled=yes;;
 				no) memcheck_enabled=no;;
@@ -274,7 +274,7 @@ if test "$memcheck_enabled" = "yes" ; then
 fi
 
 AC_ARG_ENABLE(so-reuseaddr,
-				[  --enable-so-reuseaddr=[yes/no]   enables SO_REUSEADDR socket option in the rtp_session_set_local_addr() function.],
+				[AS_HELP_STRING([--enable-so-reuseaddr], [Enable SO_REUSEADDR socket option in the rtp_session_set_local_addr() function (default=yes)])],
 				[case "${enableval}" in
 					yes) so_reuseaddr_enabled=yes;;
 					no) so_reuseaddr_enabled=no;;
@@ -319,7 +319,7 @@ if test $GCC = yes && test $wall_werror = yes;  then
 fi
 
 AC_ARG_ENABLE(ssl-hmac,
-				[  --enable-ssl-hmac=[yes/no]   enables use of ssl/hmac for stun],
+				[AS_HELP_STRING([--enable-ssl-hmac], [Enable use of ssl/hmac for stun (default=no)])],
 				[case "${enableval}" in
 					yes) ssl_hmac_enabled=yes;;
 					no) ssl_hmac_enabled=no;;
@@ -346,7 +346,7 @@ echo "$ORTPDEPS_CFLAGS" > ortp.defs
 
 
 AC_ARG_ENABLE(tests_enabled,
-      [  --disable-tests    Disable compilation of tests],
+      [AS_HELP_STRING([--disable-tests], [Disable compilation of tests])],
       [case "${enableval}" in
         yes) tests_enabled=true ;;
         no)  tests_enabled=false ;;
