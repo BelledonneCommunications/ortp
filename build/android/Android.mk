@@ -29,6 +29,7 @@ LOCAL_MODULE := libortp
 LOCAL_SRC_FILES := \
 	src/str_utils.c	\
 	src/port.c \
+	src/logging.c \
 	src/rtpparse.c \
 	src/rtpsession.c \
 	src/rtpsession_inet.c \
@@ -42,6 +43,7 @@ LOCAL_SRC_FILES := \
 	src/sessionset.c \
 	src/telephonyevents.c \
 	src/payloadtype.c \
+	src/rtpprofile.c \
 	src/rtcp.c \
 	src/utils.c \
 	src/rtcpparse.c \
