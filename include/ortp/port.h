@@ -119,7 +119,6 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #include <stdarg.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <io.h>
 
 #ifdef _MSC_VER
 #pragma push_macro("_WINSOCKAPI_")
@@ -136,6 +135,7 @@ typedef  unsigned char uint8_t;
 typedef __int16 int16_t;
 #else
 #include <stdint.h> /*provided by mingw32*/
+#include <io.h>
 #endif
 
 #define vsnprintf	_vsnprintf
