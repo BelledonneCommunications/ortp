@@ -27,6 +27,7 @@
 #include "ortp/logging.h"
 #include "ortp/port.h"
 #include "ortp/str_utils.h"
+#include "utils.h"
 
 #if	defined(_WIN32) && !defined(_WIN32_WCE)
 #include <process.h>

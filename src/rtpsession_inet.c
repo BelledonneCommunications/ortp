@@ -59,6 +59,7 @@ typedef WSACMSGHDR *LPWSACMSGHDR;
 #define WSA_CMSG_FIRSTHDR(msg) (((msg)->Control.len >= sizeof(WSACMSGHDR)) ? (LPWSACMSGHDR)(msg)->Control.buf : (LPWSACMSGHDR)NULL)
 #define WSA_CMSG_NXTHDR(msg,cmsg) ((!(cmsg)) ? WSA_CMSG_FIRSTHDR(msg) : ((((u_char *)(cmsg) + WSA_CMSGHDR_ALIGN((cmsg)->cmsg_len) + sizeof(WSACMSGHDR)) > (u_char *)((msg)->Control.buf) + (msg)->Control.len) ? (LPWSACMSGHDR)NULL : (LPWSACMSGHDR)((u_char *)(cmsg) + WSA_CMSGHDR_ALIGN((cmsg)->cmsg_len))))
 #define WSA_CMSG_DATA(cmsg) ((u_char *)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)))
+#endif
 #undef CMSG_FIRSTHDR
 #define CMSG_FIRSTHDR WSA_CMSG_FIRSTHDR
 #undef CMSG_NXTHDR
@@ -67,7 +68,6 @@ typedef WSACMSGHDR *LPWSACMSGHDR;
 #define CMSG_DATA WSA_CMSG_DATA
 typedef INT  (WINAPI * LPFN_WSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
 static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
-#endif
 #endif
 
 static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen){
@@ -1164,7 +1164,7 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 			}
 #endif
 #ifdef IPV6_RECVDSTADDR
-			if ((cmsghdr->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_RECVDSTADDR)) {
+			if ((cmsghdr->cmsg_level == IPPROTO_IPV6) && (cmsghdr->cmsg_type == IPV6_RECVDSTADDR)) {
 				struct in6_addr *ia = (struct in6_addr *)CMSG_DATA(cmsghdr);
 				memcpy(&msg->recv_addr.addr.ipi6_addr, ia, sizeof(msg->recv_addr.addr.ipi6_addr));
 				msg->recv_addr.family = AF_INET6;

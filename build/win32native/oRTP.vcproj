@@ -211,6 +211,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\logging.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\netsim.c"
 				>
 			</File>
@@ -244,6 +248,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\rtpparse.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\rtpprofile.c"
 				>
 			</File>
 			<File
@@ -313,6 +321,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\include\ortp\logging.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\ortp-config-win32.h"
 				>
 			</File>
@@ -342,6 +354,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\rtpmod.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\ortp\rtpprofile.h"
 				>
 			</File>
 			<File
