@@ -49,7 +49,7 @@ typedef void (*OrtpLogFunc)(OrtpLogLevel lev, const char *fmt, va_list args);
 ORTP_PUBLIC void ortp_set_log_file(FILE *file);
 ORTP_PUBLIC void ortp_set_log_handler(OrtpLogFunc func);
 
-ORTP_PUBLIC OrtpLogFunc ortp_logv_out;
+VAR_DECLSPEC OrtpLogFunc ortp_logv_out;
 
 ORTP_PUBLIC extern unsigned int __ortp_log_mask;
 
