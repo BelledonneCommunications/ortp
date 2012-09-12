@@ -75,6 +75,8 @@ typedef pthread_cond_t ortp_cond_t;
 #pragma warning(disable : 1469)		// "cc" clobber ignored
 #endif
 
+#define ORTP_PUBLIC
+
 #ifdef __cplusplus
 extern "C"
 {
