@@ -57,23 +57,23 @@ extern "C" {
 	must be present in the rtp profile used by the session */
 	
 /* low level functions */	
-int rtp_session_telephone_events_supported(RtpSession *session);
-int rtp_session_send_telephone_events_supported(RtpSession *session);
-int rtp_session_recv_telephone_events_supported(RtpSession *session);
+ORTP_PUBLIC int rtp_session_telephone_events_supported(RtpSession *session);
+ORTP_PUBLIC int rtp_session_send_telephone_events_supported(RtpSession *session);
+ORTP_PUBLIC int rtp_session_recv_telephone_events_supported(RtpSession *session);
 
-mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start);
+ORTP_PUBLIC mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start);
 
-int rtp_session_add_telephone_event(RtpSession *session,
+ORTP_PUBLIC int rtp_session_add_telephone_event(RtpSession *session,
 			mblk_t *packet, uint8_t event, int end, uint8_t volume, uint16_t duration);
 			
-int rtp_session_read_telephone_event(RtpSession *session,
+ORTP_PUBLIC int rtp_session_read_telephone_event(RtpSession *session,
 		mblk_t *packet,telephone_event_t **tab);
 
 /* high level functions*/
-int rtp_session_send_dtmf(RtpSession *session, char dtmf, uint32_t userts);
-int rtp_session_send_dtmf2(RtpSession *session, char dtmf, uint32_t userts, int duration);
+ORTP_PUBLIC int rtp_session_send_dtmf(RtpSession *session, char dtmf, uint32_t userts);
+ORTP_PUBLIC int rtp_session_send_dtmf2(RtpSession *session, char dtmf, uint32_t userts, int duration);
 /* for high level telephony event callback */
-void rtp_session_check_telephone_events(RtpSession *session, mblk_t *m0);
+ORTP_PUBLIC void rtp_session_check_telephone_events(RtpSession *session, mblk_t *m0);
 
 #ifdef __cplusplus
 }

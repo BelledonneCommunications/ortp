@@ -181,29 +181,29 @@ typedef int Socket;
 extern "C"{
 #endif
 
-int getErrno(void);
+ORTP_PUBLIC int getErrno(void);
 
 /* Open a UDP socket to receive on the given port - if port is 0, pick a a
    port, if interfaceIp!=0 then use ONLY the interface specified instead of
    all of them  */
-Socket
+ORTP_PUBLIC Socket
 openPort( unsigned short port, unsigned int interfaceIp);
 
 
 /* recive a UDP message */
-bool_t 
+ORTP_PUBLIC bool_t
 getMessage( Socket fd, char* buf, int* len,
             unsigned int* srcIp, unsigned short* srcPort);
 
 
 /* send a UDP message */
-bool_t 
+ORTP_PUBLIC bool_t
 sendMessage( Socket fd, char* msg, int len, 
              unsigned int dstIp, unsigned short dstPort);
 
 
 /* set up network - does nothing in unix but needed for windows */
-void
+ORTP_PUBLIC void
 initNetwork(void);
 
 #ifdef __cplusplus

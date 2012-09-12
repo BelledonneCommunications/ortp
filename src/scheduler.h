@@ -65,5 +65,5 @@ void * rtp_scheduler_schedule(void * sched);
 
 /* void rtp_scheduler_add_set(RtpScheduler *sched, SessionSet *set); */
 
-RtpScheduler * ortp_get_scheduler(void);
+ORTP_PUBLIC RtpScheduler * ortp_get_scheduler(void);
 #endif

@@ -82,62 +82,62 @@ typedef struct _queue
 extern "C" {
 #endif
 
-void qinit(queue_t *q);
+ORTP_PUBLIC void qinit(queue_t *q);
 	
-void putq(queue_t *q, mblk_t *m);
+ORTP_PUBLIC void putq(queue_t *q, mblk_t *m);
 
-mblk_t * getq(queue_t *q);
+ORTP_PUBLIC mblk_t * getq(queue_t *q);
 
-void insq(queue_t *q,mblk_t *emp, mblk_t *mp);
+ORTP_PUBLIC void insq(queue_t *q,mblk_t *emp, mblk_t *mp);
 	
-void remq(queue_t *q, mblk_t *mp);
+ORTP_PUBLIC void remq(queue_t *q, mblk_t *mp);
 
-mblk_t * peekq(queue_t *q);
+ORTP_PUBLIC mblk_t * peekq(queue_t *q);
 
 /* remove and free all messages in the q */
 #define FLUSHALL 0
-void flushq(queue_t *q, int how);
+ORTP_PUBLIC void flushq(queue_t *q, int how);
 
-void mblk_init(mblk_t *mp);
+ORTP_PUBLIC void mblk_init(mblk_t *mp);
 
-void mblk_meta_copy(const mblk_t *source, mblk_t *dest);
+ORTP_PUBLIC void mblk_meta_copy(const mblk_t *source, mblk_t *dest);
 	
 /* allocates a mblk_t, that points to a datab_t, that points to a buffer of size size. */
-mblk_t *allocb(int size, int unused);
+ORTP_PUBLIC mblk_t *allocb(int size, int unused);
 #define BPRI_MED 0
 
 /* allocates a mblk_t, that points to a datab_t, that points to buf; buf will be freed using freefn */
-mblk_t *esballoc(uint8_t *buf, int size, int pri, void (*freefn)(void*) );
+ORTP_PUBLIC mblk_t *esballoc(uint8_t *buf, int size, int pri, void (*freefn)(void*) );
 
 /* frees a mblk_t, and if the datab ref_count is 0, frees it and the buffer too */
-void freeb(mblk_t *m);
+ORTP_PUBLIC void freeb(mblk_t *m);
 
 /* frees recursively (follow b_cont) a mblk_t, and if the datab
 ref_count is 0, frees it and the buffer too */
-void freemsg(mblk_t *mp);
+ORTP_PUBLIC void freemsg(mblk_t *mp);
 
 /* duplicates a mblk_t , buffer is not duplicated*/
-mblk_t *dupb(mblk_t *m);
+ORTP_PUBLIC mblk_t *dupb(mblk_t *m);
 
 /* duplicates a complex mblk_t, buffer is not duplicated */
-mblk_t	*dupmsg(mblk_t* m);
+ORTP_PUBLIC mblk_t	*dupmsg(mblk_t* m);
 
 /* returns the size of data of a message */
-int msgdsize(const mblk_t *mp);
+ORTP_PUBLIC int msgdsize(const mblk_t *mp);
 
 /* concatenates all fragment of a complex message*/
-void msgpullup(mblk_t *mp,int len);
+ORTP_PUBLIC void msgpullup(mblk_t *mp,int len);
 
 /* duplicates a single message, but with buffer included */
-mblk_t *copyb(mblk_t *mp);
+ORTP_PUBLIC mblk_t *copyb(mblk_t *mp);
 
 /* duplicates a complex message with buffer included */
-mblk_t *copymsg(mblk_t *mp);
+ORTP_PUBLIC mblk_t *copymsg(mblk_t *mp);
 
-mblk_t * appendb(mblk_t *mp, const char *data, int size, bool_t pad);
-void msgappend(mblk_t *mp, const char *data, int size, bool_t pad);
+ORTP_PUBLIC mblk_t * appendb(mblk_t *mp, const char *data, int size, bool_t pad);
+ORTP_PUBLIC void msgappend(mblk_t *mp, const char *data, int size, bool_t pad);
 
-mblk_t *concatb(mblk_t *mp, mblk_t *newm);
+ORTP_PUBLIC mblk_t *concatb(mblk_t *mp, mblk_t *newm);
 
 #define qempty(q) (&(q)->_q_stopper==(q)->_q_stopper.b_next)
 #define qfirst(q) ((q)->_q_stopper.b_next!=&(q)->_q_stopper ? (q)->_q_stopper.b_next : NULL)
@@ -150,9 +150,9 @@ typedef struct _msgb_allocator{
 	queue_t q;
 }msgb_allocator_t;
 
-void msgb_allocator_init(msgb_allocator_t *pa);
-mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, int size);
-void msgb_allocator_uninit(msgb_allocator_t *pa);
+ORTP_PUBLIC void msgb_allocator_init(msgb_allocator_t *pa);
+ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, int size);
+ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 
 #ifdef __cplusplus
 }

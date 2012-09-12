@@ -56,11 +56,11 @@
  * Includes
  */
 
+#include "ortp/port.h"
 #include "ortp/b64.h"
 
 #include <assert.h>
 #include <string.h>
-#include "ortp/port.h"
 /* /////////////////////////////////////////////////////////////////////////////
  * Constants and definitions
  */

@@ -67,7 +67,7 @@
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
 				IgnoreAllDefaultLibraries="false"
-				ModuleDefinitionFile="oRTP.def"
+				ModuleDefinitionFile=""
 				DelayLoadDLLs="Qwave.dll"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile="$(OutDir)/oRTP.pdb"
@@ -414,10 +414,6 @@
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
-			<File
-				RelativePath=".\ortp.def"
-				>
-			</File>
 		</Filter>
 	</Files>
 	<Globals>

@@ -121,6 +121,7 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #include <ws2tcpip.h>
 
 #ifdef _MSC_VER
+#define ORTP_PUBLIC	__declspec(dllexport)
 #pragma push_macro("_WINSOCKAPI_")
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -136,6 +137,7 @@ typedef __int16 int16_t;
 #else
 #include <stdint.h> /*provided by mingw32*/
 #include <io.h>
+#define ORTP_PUBLIC
 #endif
 
 #define vsnprintf	_vsnprintf
@@ -167,17 +169,17 @@ extern "C"
 {
 #endif
 
-int WIN_mutex_init(ortp_mutex_t *m, void *attr_unused);
-int WIN_mutex_lock(ortp_mutex_t *mutex);
-int WIN_mutex_unlock(ortp_mutex_t *mutex);
-int WIN_mutex_destroy(ortp_mutex_t *mutex);
-int WIN_thread_create(ortp_thread_t *t, void *attr_unused, void *(*func)(void*), void *arg);
-int WIN_thread_join(ortp_thread_t thread, void **unused);
-int WIN_cond_init(ortp_cond_t *cond, void *attr_unused);
-int WIN_cond_wait(ortp_cond_t * cond, ortp_mutex_t * mutex);
-int WIN_cond_signal(ortp_cond_t * cond);
-int WIN_cond_broadcast(ortp_cond_t * cond);
-int WIN_cond_destroy(ortp_cond_t * cond);
+ORTP_PUBLIC int WIN_mutex_init(ortp_mutex_t *m, void *attr_unused);
+ORTP_PUBLIC int WIN_mutex_lock(ortp_mutex_t *mutex);
+ORTP_PUBLIC int WIN_mutex_unlock(ortp_mutex_t *mutex);
+ORTP_PUBLIC int WIN_mutex_destroy(ortp_mutex_t *mutex);
+ORTP_PUBLIC int WIN_thread_create(ortp_thread_t *t, void *attr_unused, void *(*func)(void*), void *arg);
+ORTP_PUBLIC int WIN_thread_join(ortp_thread_t thread, void **unused);
+ORTP_PUBLIC int WIN_cond_init(ortp_cond_t *cond, void *attr_unused);
+ORTP_PUBLIC int WIN_cond_wait(ortp_cond_t * cond, ortp_mutex_t * mutex);
+ORTP_PUBLIC int WIN_cond_signal(ortp_cond_t * cond);
+ORTP_PUBLIC int WIN_cond_broadcast(ortp_cond_t * cond);
+ORTP_PUBLIC int WIN_cond_destroy(ortp_cond_t * cond);
 
 #ifdef __cplusplus
 }
@@ -212,7 +214,7 @@ const char * ortp_strerror(DWORD value);
 
 #endif
 
-const char *getWinSocketError(int error);
+ORTP_PUBLIC const char *getWinSocketError(int error);
 #define getSocketErrorCode() WSAGetLastError()
 #define getSocketError() getWinSocketError(WSAGetLastError())
 
@@ -248,11 +250,11 @@ typedef struct ortpTimeSpec{
 extern "C"{
 #endif
 
-void* ortp_malloc(size_t sz);
-void ortp_free(void *ptr);
-void* ortp_realloc(void *ptr, size_t sz);
-void* ortp_malloc0(size_t sz);
-char * ortp_strdup(const char *tmp);
+ORTP_PUBLIC void* ortp_malloc(size_t sz);
+ORTP_PUBLIC void ortp_free(void *ptr);
+ORTP_PUBLIC void* ortp_realloc(void *ptr, size_t sz);
+ORTP_PUBLIC void* ortp_malloc0(size_t sz);
+ORTP_PUBLIC char * ortp_strdup(const char *tmp);
 
 /*override the allocator with this method, to be called BEFORE ortp_init()*/
 typedef struct _OrtpMemoryFunctions{
@@ -266,16 +268,16 @@ void ortp_set_memory_functions(OrtpMemoryFunctions *functions);
 #define ortp_new(type,count)	(type*)ortp_malloc(sizeof(type)*(count))
 #define ortp_new0(type,count)	(type*)ortp_malloc0(sizeof(type)*(count))
 
-int close_socket(ortp_socket_t sock);
-int set_non_blocking_socket(ortp_socket_t sock);
+ORTP_PUBLIC int close_socket(ortp_socket_t sock);
+ORTP_PUBLIC int set_non_blocking_socket(ortp_socket_t sock);
 
-char *ortp_strndup(const char *str,int n);
-char *ortp_strdup_printf(const char *fmt,...);
-char *ortp_strdup_vprintf(const char *fmt, va_list ap);
+ORTP_PUBLIC char *ortp_strndup(const char *str,int n);
+ORTP_PUBLIC char *ortp_strdup_printf(const char *fmt,...);
+ORTP_PUBLIC char *ortp_strdup_vprintf(const char *fmt, va_list ap);
 
-int ortp_file_exist(const char *pathname);
+ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
-void ortp_get_cur_time(ortpTimeSpec *ret);
+ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)
@@ -287,24 +289,24 @@ typedef int ortp_pipe_t;
 #define ORTP_PIPE_INVALID (-1)
 #endif
 
-ortp_pipe_t ortp_server_pipe_create(const char *name);
+ORTP_PUBLIC ortp_pipe_t ortp_server_pipe_create(const char *name);
 /*
  * warning: on win32 ortp_server_pipe_accept_client() might return INVALID_HANDLE_VALUE without
  * any specific error, this happens when ortp_server_pipe_close() is called on another pipe.
  * This pipe api is not thread-safe.
 */
-ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server);
-int ortp_server_pipe_close(ortp_pipe_t spipe);
-int ortp_server_pipe_close_client(ortp_pipe_t client);
+ORTP_PUBLIC ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server);
+ORTP_PUBLIC int ortp_server_pipe_close(ortp_pipe_t spipe);
+ORTP_PUBLIC int ortp_server_pipe_close_client(ortp_pipe_t client);
 
-ortp_pipe_t ortp_client_pipe_connect(const char *name);
-int ortp_client_pipe_close(ortp_pipe_t sock);
+ORTP_PUBLIC ortp_pipe_t ortp_client_pipe_connect(const char *name);
+ORTP_PUBLIC int ortp_client_pipe_close(ortp_pipe_t sock);
 
-int ortp_pipe_read(ortp_pipe_t p, uint8_t *buf, int len);
-int ortp_pipe_write(ortp_pipe_t p, const uint8_t *buf, int len);
+ORTP_PUBLIC int ortp_pipe_read(ortp_pipe_t p, uint8_t *buf, int len);
+ORTP_PUBLIC int ortp_pipe_write(ortp_pipe_t p, const uint8_t *buf, int len);
 
-void *ortp_shm_open(unsigned int keyid, int size, int create);
-void ortp_shm_close(void *memory);
+ORTP_PUBLIC void *ortp_shm_open(unsigned int keyid, int size, int create);
+ORTP_PUBLIC void ortp_shm_close(void *memory);
 
 #endif
 

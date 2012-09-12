@@ -55,16 +55,16 @@ enum ortp_srtp_crypto_suite_t {
 	NO_CIPHER_SHA1_80
 };
 
-err_status_t ortp_srtp_init(void);
-err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy);
-err_status_t ortp_srtp_dealloc(srtp_t session);
-err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy);
-err_status_t ortp_crypto_get_random(uint8_t *tmp, int size);
-bool_t ortp_srtp_supported(void);
+ORTP_PUBLIC err_status_t ortp_srtp_init(void);
+ORTP_PUBLIC err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy);
+ORTP_PUBLIC err_status_t ortp_srtp_dealloc(srtp_t session);
+ORTP_PUBLIC err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy);
+ORTP_PUBLIC err_status_t ortp_crypto_get_random(uint8_t *tmp, int size);
+ORTP_PUBLIC bool_t ortp_srtp_supported(void);
 
-int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
+ORTP_PUBLIC int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
 
-srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
+ORTP_PUBLIC srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
 #ifdef __cplusplus
 }
 #endif

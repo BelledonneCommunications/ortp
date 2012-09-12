@@ -46,12 +46,12 @@ typedef enum {
 
 typedef void (*OrtpLogFunc)(OrtpLogLevel lev, const char *fmt, va_list args);
 
-void ortp_set_log_file(FILE *file);
-void ortp_set_log_handler(OrtpLogFunc func);
+ORTP_PUBLIC void ortp_set_log_file(FILE *file);
+ORTP_PUBLIC void ortp_set_log_handler(OrtpLogFunc func);
 
-VAR_DECLSPEC OrtpLogFunc ortp_logv_out;
+ORTP_PUBLIC OrtpLogFunc ortp_logv_out;
 
-extern unsigned int __ortp_log_mask;
+ORTP_PUBLIC extern unsigned int __ortp_log_mask;
 
 #define ortp_log_level_enabled(level)	(__ortp_log_mask & (level))
 
@@ -63,10 +63,10 @@ extern unsigned int __ortp_log_mask;
 	if ((level)==ORTP_FATAL) abort();\
 }while(0)
 #else
-void ortp_logv(int level, const char *fmt, va_list args);
+ORTP_PUBLIC void ortp_logv(int level, const char *fmt, va_list args);
 #endif
 
-void ortp_set_log_level_mask(int levelmask);
+ORTP_PUBLIC void ortp_set_log_level_mask(int levelmask);
 
 #ifdef __GNUC__
 #define CHECK_FORMAT_ARGS(m,n) __attribute__((format(printf,m,n)))

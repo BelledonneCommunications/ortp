@@ -66,11 +66,11 @@ typedef struct _OrtpEventData OrtpEventData;
 extern "C"{
 #endif
 
-RtpEndpoint *rtp_endpoint_new(struct sockaddr *addr, socklen_t addrlen);
-RtpEndpoint *rtp_endpoint_dup(const RtpEndpoint *ep);
+ORTP_PUBLIC RtpEndpoint *rtp_endpoint_new(struct sockaddr *addr, socklen_t addrlen);
+ORTP_PUBLIC RtpEndpoint *rtp_endpoint_dup(const RtpEndpoint *ep);
 
-OrtpEvent * ortp_event_new(OrtpEventType tp);
-OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
+ORTP_PUBLIC OrtpEvent * ortp_event_new(OrtpEventType tp);
+ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 /* type is one of the following*/
 #define ORTP_EVENT_STUN_PACKET_RECEIVED		1
 #define ORTP_EVENT_PAYLOAD_TYPE_CHANGED 	2
@@ -85,19 +85,19 @@ OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ICE_LOSING_PAIRS_COMPLETED		11
 #define ORTP_EVENT_ICE_RESTART_NEEDED			12
 
-OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
-void ortp_event_destroy(OrtpEvent *ev);
-OrtpEvent *ortp_event_dup(OrtpEvent *ev);
+ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
+ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
+ORTP_PUBLIC OrtpEvent *ortp_event_dup(OrtpEvent *ev);
 
 typedef struct OrtpEvQueue{
 	queue_t q;
 	ortp_mutex_t mutex;
 } OrtpEvQueue;
 
-OrtpEvQueue * ortp_ev_queue_new(void);
-void ortp_ev_queue_destroy(OrtpEvQueue *q);
-OrtpEvent * ortp_ev_queue_get(OrtpEvQueue *q);
-void ortp_ev_queue_flush(OrtpEvQueue * qp);
+ORTP_PUBLIC OrtpEvQueue * ortp_ev_queue_new(void);
+ORTP_PUBLIC void ortp_ev_queue_destroy(OrtpEvQueue *q);
+ORTP_PUBLIC OrtpEvent * ortp_ev_queue_get(OrtpEvQueue *q);
+ORTP_PUBLIC void ortp_ev_queue_flush(OrtpEvQueue * qp);
 
 #ifdef __cplusplus
 }

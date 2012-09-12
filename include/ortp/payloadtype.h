@@ -77,20 +77,20 @@ typedef struct _PayloadType PayloadType;
 #define payload_type_get_flags(pt)	(pt)->flags
 
 
-PayloadType *payload_type_new(void);
-PayloadType *payload_type_clone(PayloadType *payload);
-char *payload_type_get_rtpmap(PayloadType *pt);
-void payload_type_destroy(PayloadType *pt);
-void payload_type_set_recv_fmtp(PayloadType *pt, const char *fmtp);
-void payload_type_set_send_fmtp(PayloadType *pt, const char *fmtp);
-void payload_type_append_recv_fmtp(PayloadType *pt, const char *fmtp);
-void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp);
+ORTP_PUBLIC PayloadType *payload_type_new(void);
+ORTP_PUBLIC PayloadType *payload_type_clone(PayloadType *payload);
+ORTP_PUBLIC char *payload_type_get_rtpmap(PayloadType *pt);
+ORTP_PUBLIC void payload_type_destroy(PayloadType *pt);
+ORTP_PUBLIC void payload_type_set_recv_fmtp(PayloadType *pt, const char *fmtp);
+ORTP_PUBLIC void payload_type_set_send_fmtp(PayloadType *pt, const char *fmtp);
+ORTP_PUBLIC void payload_type_append_recv_fmtp(PayloadType *pt, const char *fmtp);
+ORTP_PUBLIC void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp);
 
 #define payload_type_get_bitrate(pt)	((pt)->normal_bitrate)
 #define payload_type_get_rate(pt)		((pt)->clock_rate)
 #define payload_type_get_mime(pt)		((pt)->mime_type)
 
-bool_t fmtp_get_value(const char *fmtp, const char *param_name, char *result, size_t result_len);
+ORTP_PUBLIC bool_t fmtp_get_value(const char *fmtp, const char *param_name, char *result, size_t result_len);
 
 #define payload_type_set_user_data(pt,p)	(pt)->user_data=(p)
 #define payload_type_get_user_data(pt)		((pt)->user_data)

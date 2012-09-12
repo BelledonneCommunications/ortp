@@ -433,52 +433,52 @@ typedef struct
       StunMediaRelay relays[MAX_MEDIA_RELAYS];
 } StunServerInfo;
 
-void
+ORTP_PUBLIC void
 stunCalculateIntegrity_longterm(char* hmac, const char* input, int length,
                      const char *username, const char *realm, const char *password);
-void
+ORTP_PUBLIC void
 stunCalculateIntegrity_shortterm(char* hmac, const char* input, int length, const char* key);
-uint32_t
+ORTP_PUBLIC uint32_t
 stunCalculateFingerprint(const char* input, int length);
 
-bool_t
+ORTP_PUBLIC bool_t
 stunParseMessage( char* buf, 
                   unsigned int bufLen, 
                   StunMessage *message);
 
-void
+ORTP_PUBLIC void
 stunBuildReqSimple( StunMessage* msg,
                     const StunAtrString *username,
                     bool_t changePort, bool_t changeIp, unsigned int id );
 
-unsigned int
+ORTP_PUBLIC unsigned int
 stunEncodeMessage( const StunMessage *message, 
                    char* buf, 
                    unsigned int bufLen, 
                    const StunAtrString *password);
 
-void
+ORTP_PUBLIC void
 stunCreateUserName(const StunAddress4 *addr, StunAtrString* username);
 
-void 
+ORTP_PUBLIC void
 stunGetUserNameAndPassword(  const StunAddress4 *dest, 
                              StunAtrString* username,
                              StunAtrString* password);
 
-void
+ORTP_PUBLIC void
 stunCreatePassword(const StunAtrString *username, StunAtrString* password);
 
-int 
+ORTP_PUBLIC int 
 stunRand(void);
 
-uint64_t
+ORTP_PUBLIC uint64_t
 stunGetSystemTimeSecs(void);
 
 /* find the IP address of a the specified stun server - return false is fails parse  */
-bool_t  
+ORTP_PUBLIC bool_t  
 stunParseServerName( const char* serverName, StunAddress4 *stunServerAddr);
 
-bool_t 
+ORTP_PUBLIC bool_t 
 stunParseHostName( const char* peerName,
                    uint32_t *ip,
                    uint16_t *portVal,
@@ -486,23 +486,23 @@ stunParseHostName( const char* peerName,
 
 /* return true if all is OK 
    Create a media relay and do the STERN thing if startMediaPort is non-zero */
-bool_t
+ORTP_PUBLIC bool_t
 stunInitServer(StunServerInfo *info, 
                const StunAddress4 *myAddr, 
                const StunAddress4 *altAddr,
                int startMediaPort);
 
-void
+ORTP_PUBLIC void
 stunStopServer(StunServerInfo *info);
 
 /* returns number of address found - take array or addres */
-int 
+ORTP_PUBLIC int
 stunFindLocalInterfaces(uint32_t* addresses, int maxSize );
 
-int 
+ORTP_PUBLIC int 
 stunTest( StunAddress4 *dest, int testNum, StunAddress4* srcAddr, StunAddress4 *sMappedAddr, StunAddress4* sChangedAddr);
 
-NatType
+ORTP_PUBLIC NatType
 stunNatType( StunAddress4 *dest, 
              bool_t* preservePort, /* if set, is return for if NAT preservers ports or not */
              bool_t* hairpin ,  /* if set, is the return for if NAT will hairpin packets */
@@ -510,7 +510,7 @@ stunNatType( StunAddress4 *dest,
              StunAddress4* sAddr /* NIC to use */
    );
 
-bool_t
+ORTP_PUBLIC bool_t
 stunServerProcessMsg( char* buf,
                       unsigned int bufLen,
                       StunAddress4 *from, 
@@ -522,20 +522,20 @@ stunServerProcessMsg( char* buf,
                       bool_t* changePort,
                       bool_t* changeIp);
 
-int
+ORTP_PUBLIC int
 stunOpenSocket( StunAddress4 *dest, 
                 StunAddress4* mappedAddr, 
                 int port, 
                 StunAddress4* srcAddr);
 
-bool_t
+ORTP_PUBLIC bool_t
 stunOpenSocketPair(StunAddress4 *dest,
                    StunAddress4* mapAddr_rtp, 
                    StunAddress4* mapAddr_rtcp, 
                    int* fd1, int* fd2, 
                    int srcPort,  StunAddress4* srcAddr);
 
-bool_t
+ORTP_PUBLIC bool_t
 turnAllocateSocketPair(StunAddress4 *dest,
                    StunAddress4* mapAddr_rtp, 
                    StunAddress4* mapAddr_rtcp, 

@@ -95,7 +95,7 @@ typedef struct _SessionSet SessionSet;
 
 #define session_set_init(ss)		ORTP_FD_ZERO(&(ss)->rtpset)
 
-SessionSet * session_set_new(void);
+ORTP_PUBLIC SessionSet * session_set_new(void);
 /**
  * This macro adds the rtp session to the set.
  * @param ss a set (SessionSet object)
@@ -126,11 +126,11 @@ SessionSet * session_set_new(void);
 /**
  * Frees a SessionSet.
 **/
-void session_set_destroy(SessionSet *set);
+ORTP_PUBLIC void session_set_destroy(SessionSet *set);
 
 	
-int session_set_select(SessionSet *recvs, SessionSet *sends, SessionSet *errors);
-int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *errors,  struct timeval *timeout);
+ORTP_PUBLIC int session_set_select(SessionSet *recvs, SessionSet *sends, SessionSet *errors);
+ORTP_PUBLIC int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *errors,  struct timeval *timeout);
 
 #ifdef __cplusplus
 }

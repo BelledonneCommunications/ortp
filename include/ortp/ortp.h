@@ -73,10 +73,10 @@ extern "C"
 {
 #endif
 
-bool_t ortp_min_version_required(int major, int minor, int micro);
-void ortp_init(void);
-void ortp_scheduler_init(void);
-void ortp_exit(void);
+ORTP_PUBLIC bool_t ortp_min_version_required(int major, int minor, int micro);
+ORTP_PUBLIC void ortp_init(void);
+ORTP_PUBLIC void ortp_scheduler_init(void);
+ORTP_PUBLIC void ortp_exit(void);
 
 /****************/
 /*statistics api*/
@@ -84,12 +84,12 @@ void ortp_exit(void);
 
 extern rtp_stats_t ortp_global_stats;
 
-void ortp_global_stats_reset(void);
-rtp_stats_t *ortp_get_global_stats(void);
+ORTP_PUBLIC void ortp_global_stats_reset(void);
+ORTP_PUBLIC rtp_stats_t *ortp_get_global_stats(void);
 
-void ortp_global_stats_display(void);
-void rtp_stats_display(const rtp_stats_t *stats, const char *header);
-void rtp_stats_reset(rtp_stats_t *stats);
+ORTP_PUBLIC void ortp_global_stats_display(void);
+ORTP_PUBLIC void rtp_stats_display(const rtp_stats_t *stats, const char *header);
+ORTP_PUBLIC void rtp_stats_reset(rtp_stats_t *stats);
 
 #if defined(_MSC_VER)
 #define ORTP_PUBLIC	__declspec(dllexport)

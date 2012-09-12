@@ -51,7 +51,7 @@ VAR_DECLSPEC RtpProfile av_profile;
 
 #define rtp_profile_get_name(profile) 	(const char*)((profile)->name)
 
-void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType *pt);
+ORTP_PUBLIC void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType *pt);
 
 /**
  *	Set payload type number @index unassigned in the profile.
@@ -77,25 +77,25 @@ static inline PayloadType * rtp_profile_get_payload(RtpProfile *prof, int idx){
 	}
 	return prof->payload[idx];
 }
-void rtp_profile_clear_all(RtpProfile *prof);
-void rtp_profile_set_name(RtpProfile *prof, const char *name);
-PayloadType * rtp_profile_get_payload_from_mime(RtpProfile *profile,const char *mime);
-PayloadType * rtp_profile_get_payload_from_rtpmap(RtpProfile *profile, const char *rtpmap);
-int rtp_profile_get_payload_number_from_mime(RtpProfile *profile,const char *mime);
-int rtp_profile_get_payload_number_from_rtpmap(RtpProfile *profile, const char *rtpmap);
-int rtp_profile_find_payload_number(RtpProfile *prof,const char *mime,int rate, int channels);
-PayloadType * rtp_profile_find_payload(RtpProfile *prof,const char *mime,int rate, int channels);
-int rtp_profile_move_payload(RtpProfile *prof,int oldpos,int newpos);
+ORTP_PUBLIC void rtp_profile_clear_all(RtpProfile *prof);
+ORTP_PUBLIC void rtp_profile_set_name(RtpProfile *prof, const char *name);
+ORTP_PUBLIC PayloadType * rtp_profile_get_payload_from_mime(RtpProfile *profile,const char *mime);
+ORTP_PUBLIC PayloadType * rtp_profile_get_payload_from_rtpmap(RtpProfile *profile, const char *rtpmap);
+ORTP_PUBLIC int rtp_profile_get_payload_number_from_mime(RtpProfile *profile,const char *mime);
+ORTP_PUBLIC int rtp_profile_get_payload_number_from_rtpmap(RtpProfile *profile, const char *rtpmap);
+ORTP_PUBLIC int rtp_profile_find_payload_number(RtpProfile *prof,const char *mime,int rate, int channels);
+ORTP_PUBLIC PayloadType * rtp_profile_find_payload(RtpProfile *prof,const char *mime,int rate, int channels);
+ORTP_PUBLIC int rtp_profile_move_payload(RtpProfile *prof,int oldpos,int newpos);
 
-RtpProfile * rtp_profile_new(const char *name);
+ORTP_PUBLIC RtpProfile * rtp_profile_new(const char *name);
 /* clone a profile, payload are not cloned */
-RtpProfile * rtp_profile_clone(RtpProfile *prof);
+ORTP_PUBLIC RtpProfile * rtp_profile_clone(RtpProfile *prof);
 
 
 /*clone a profile and its payloads (ie payload type are newly allocated, not reusing payload types of the reference profile) */
-RtpProfile * rtp_profile_clone_full(RtpProfile *prof);
+ORTP_PUBLIC RtpProfile * rtp_profile_clone_full(RtpProfile *prof);
 /* frees the profile and all its PayloadTypes*/
-void rtp_profile_destroy(RtpProfile *prof);
+ORTP_PUBLIC void rtp_profile_destroy(RtpProfile *prof);
 
 #ifdef __cplusplus
 }
