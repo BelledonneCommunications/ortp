@@ -1,2 +1,2 @@
-EXTRA_DIST=oRTP.vcproj ortp.def oRTP.sln
+EXTRA_DIST=oRTP.vcproj oRTP.sln
 
