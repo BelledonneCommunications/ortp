@@ -239,7 +239,7 @@ rtp_session_init (RtpSession * session, int mode)
 		session->snd.ssrc=uint32_t_random();
 		/* set default source description */
 		rtp_session_set_source_description(session,"unknown@unknown",NULL,NULL,
-				NULL,NULL,"oRTP-" ORTP_VERSION,"This is free sofware (LGPL) !");
+				NULL,NULL,"oRTP-" ORTP_VERSION,NULL);
 	}
 	session->snd.telephone_events_pt=-1;	/* not defined a priori */
 	session->rcv.telephone_events_pt=-1;	/* not defined a priori */
