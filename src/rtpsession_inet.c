@@ -638,34 +638,40 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 		}
 	} else {
 #endif
+		int proto;
+		int value_type;
 		// DSCP value is in the upper six bits of the TOS field
 		tos = (session->dscp << 2) & 0xFC;
 		switch (session->rtp.sockfamily) {
 			case AF_INET:
-			retval = setsockopt(session->rtp.socket, IPPROTO_IP, IP_TOS, (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+				proto=IPPROTO_IP;
+				value_type=IP_TOS;
 			break;
 #ifdef ORTP_INET6
 		case AF_INET6:
+			proto=IPPROTO_IPV6;
 #	ifdef IPV6_TCLASS /*seems not defined by my libc*/
-			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_TCLASS,
-			 (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+			value_type=IPV6_TCLASS;
 #	else
-			/*in case that works:*/
-			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, IP_TOS,
-			 (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+			value_type=IP_TOS;
 #	endif
 			break;
 #endif
 		default:
-			retval=-1;
+			ortp_error("Cannot set DSCP because socket family is unspecified.");
+			return -1;
+		}
+		retval = setsockopt(session->rtp.socket, proto, value_type, (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+		if (retval==-1)
+			ortp_error("Fail to set DSCP value on rtp socket: %s",getSocketError());
+		if (session->rtcp.socket != (ortp_socket_t)-1){
+			if (setsockopt(session->rtcp.socket, proto, value_type, (SOCKET_OPTION_VALUE)&tos, sizeof(tos))==-1){
+				ortp_error("Fail to set DSCP value on rtcp socket: %s",getSocketError());
+			}
 		}
 #if (_WIN32_WINNT >= 0x0600)
 	}
 #endif
-
-	if (retval<0)
-		ortp_warning("Failed to set DSCP value on socket.");
-
 	return retval;
 }
 
