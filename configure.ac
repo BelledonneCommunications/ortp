@@ -176,7 +176,7 @@ AC_DEFINE_UNQUOTED(ORTP_DEFAULT_THREAD_STACK_SIZE, $thread_stack_size, [Default 
 
 dnl check if we can use the rt library
 AC_CHECK_LIB(rt, clock_gettime, [rt_enabled=yes])
-if test $rt_enabled = "yes" ; then
+if test "$rt_enabled" = "yes" ; then
 	RT_LIBS="-lrt"
 	AC_SUBST(RT_LIBS)
 fi
