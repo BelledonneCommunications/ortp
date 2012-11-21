@@ -307,19 +307,13 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 {
 	ortp_socket_t sock;
 	int sockfamily;
-	bool_t reuse_addr;
 	if (session->rtp.socket!=(ortp_socket_t)-1){
 		/* don't rebind, but close before*/
 		rtp_session_release_sockets(session);
 	}
-#ifdef SO_REUSE_ADDR
-	reuse_addr=TRUE;
-#else
-	reuse_addr=FALSE;
-#endif
 	/* try to bind the rtp port */
 	if (rtp_port>0)
-		sock=create_and_bind(addr,rtp_port,&sockfamily,reuse_addr);
+		sock=create_and_bind(addr,rtp_port,&sockfamily,session->reuseaddr);
 	else
 		sock=create_and_bind_random(addr,&sockfamily,&rtp_port);
 	if (sock!=-1){
@@ -329,7 +323,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		session->rtp.loc_port=rtp_port;
 		/*try to bind rtcp port */
 		if (rtcp_port<0) rtcp_port=rtp_port+1;
-		sock=create_and_bind(addr,rtcp_port,&sockfamily,reuse_addr);
+		sock=create_and_bind(addr,rtcp_port,&sockfamily,session->reuseaddr);
 		if (sock!=(ortp_socket_t)-1){
 			session->rtcp.sockfamily=sockfamily;
 			session->rtcp.socket=sock;

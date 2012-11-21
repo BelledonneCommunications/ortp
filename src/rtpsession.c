@@ -288,6 +288,7 @@ rtp_session_init (RtpSession * session, int mode)
 	session->recv_buf_size = UDP_MAX_SIZE;
 	session->symmetric_rtp = FALSE;
 	session->permissive=FALSE;
+	session->reuseaddr=TRUE;
 	msgb_allocator_init(&session->allocator);
 }
 
@@ -1841,3 +1842,6 @@ void rtp_session_process (RtpSession * session, uint32_t time, RtpScheduler *sch
 	wait_point_unlock(&session->rcv.wp);
 }
 
+void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes) {
+	session->reuseaddr=yes;
+}

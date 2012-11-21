@@ -273,19 +273,6 @@ if test "$memcheck_enabled" = "yes" ; then
 	fi
 fi
 
-AC_ARG_ENABLE(so-reuseaddr,
-				[AS_HELP_STRING([--enable-so-reuseaddr], [Enable SO_REUSEADDR socket option in the rtp_session_set_local_addr() function (default=yes)])],
-				[case "${enableval}" in
-					yes) so_reuseaddr_enabled=yes;;
-					no) so_reuseaddr_enabled=no;;
-					*) AC_MSG_ERROR("Bad value for --enable-so-reuseaddr");;
-				esac],
-				[so_reuseaddr_enabled=yes])
-				
-if test "$so_reuseaddr_enabled" = "yes" ; then
-	AC_DEFINE(SO_REUSE_ADDR,1,[Defined when SO_REUSEADDR socket option in the rtp_session_set_local_addr() function is enabled])
-fi
-
 
 dnl Checks for header files.
 AC_HEADER_STDC

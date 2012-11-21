@@ -247,6 +247,7 @@ struct _RtpSession
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
 	bool_t ssrc_set;
+	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
 };
 	
 
@@ -420,6 +421,8 @@ ORTP_PUBLIC void rtp_session_init(RtpSession *session, int mode);
 #define rtp_session_unset_flag(session,flag) (session)->flags&=~(flag)
 ORTP_PUBLIC void rtp_session_uninit(RtpSession *session);
 ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
+
+ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
 #ifdef __cplusplus
 }
