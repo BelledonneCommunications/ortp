@@ -144,11 +144,12 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="Qwave.lib delayimp.lib Ws2_32.lib  Winmm.lib "
+				AdditionalDependencies="Ws2_32.lib delayimp.lib Winmm.lib qwave.lib"
+				OutputFile="$(IntDir)/ortp.dll"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories=""
+				AdditionalLibraryDirectories="&quot;..\..\..\win32-bin\lib&quot;"
 				IgnoreAllDefaultLibraries="false"
-				ModuleDefinitionFile="oRTP.def"
+				ModuleDefinitionFile=""
 				DelayLoadDLLs="Qwave.dll"
 				AssemblyLinkResource=""
 				GenerateDebugInformation="false"
