@@ -1,10 +1,16 @@
 
 EXTRA_DIST=ortp-config-win32.h dll_entry.c master system
 
-AM_CFLAGS=  $(PTHREAD_CFLAGS)  -I$(top_srcdir) $(TRUESPEECH_CFLAGS) $(SRTP_CFLAGS)
-AM_LDFLAGS= $(PTHREAD_LDFLAGS)
+AM_CPPFLAGS=\
+	-I$(top_srcdir)/include/ \
+	-I$(top_srcdir) 
 
-INCLUDES=-I$(top_srcdir)/include/
+AM_CFLAGS=\
+	$(PTHREAD_CFLAGS) \
+	$(TRUESPEECH_CFLAGS) \
+	$(SRTP_CFLAGS)
+
+AM_LDFLAGS=$(PTHREAD_LDFLAGS)
 
 lib_LTLIBRARIES = libortp.la
 

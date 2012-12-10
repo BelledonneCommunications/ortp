@@ -30,6 +30,7 @@ PACKAGE=ortp
 
 AM_INIT_AUTOMAKE([tar-ustar])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])],)
+AC_SUBST([docdir], [${datadir}/doc])
 AC_CONFIG_HEADERS(ortp-config.h)
 AC_CONFIG_MACRO_DIR([m4])
 AC_DEFINE_UNQUOTED(ORTP_MAJOR_VERSION,$ORTP_MAJOR_VERSION, [major version])
@@ -40,8 +41,6 @@ AC_DEFINE_UNQUOTED(ORTP_VERSION,"$ORTP_VERSION",[ortp version number])
 dnl Checks for programs.
 AC_PROG_CC
 LT_INIT([win32-dll shared disable-static])
-
-AC_SUBST([mkdir_p])
 
 AC_MSG_CHECKING([warning make an error on compilation])
 AC_ARG_ENABLE(strict,

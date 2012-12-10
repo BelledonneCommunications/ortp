@@ -16,15 +16,14 @@ CLEANFILES=
 #html doc
 if HAVE_DOXYGEN
 
-# doxdir & pkgdocdir are not always defined by automake
-docdir=$(datadir)/doc
+# docdir & pkgdocdir are not always defined by automake
 pkgdocdir=$(docdir)/$(PACKAGE)-$(VERSION)
 doc_htmldir=$(pkgdocdir)/html
 
 doc_html_DATA = $(top_builddir)/doc/html/html.tar
 
 $(doc_html_DATA): $(top_builddir)/doc/html/index.html
-	cd $(<D) && tar cf html.tar *
+	cd $(top_builddir)/doc/html/ && tar cf html.tar *
 
 $(top_builddir)/doc/html/index.html: $(SOURCES) ortp.doxygen Makefile.am
 	rm -rf doc
@@ -56,8 +55,8 @@ if WITH_EPM
 
 .PHONY: package
 
-PKG_NAME = $(PACKAGE)-$(VERSION)-$(RELEASE)
-BUILDROOT = $(shell pwd)/epm-install
+PKG_NAME=$(PACKAGE)-$(VERSION)-$(RELEASE)
+BUILDROOT=`pwd`/epm-install
 
 package: $(srcdir)/pkg.list $(srcdir)/configure
 	-rm -rf pkg $(BUILDROOT) $(PKG_NAME).*

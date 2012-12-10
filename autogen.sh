@@ -34,7 +34,7 @@ fi
 set -x
 rm -rf config.cache autom4te.cache
 $libtoolize --copy --force
-$ACLOCAL $ACLOCAL_ARGS
+$ACLOCAL -I m4 $ACLOCAL_ARGS
 autoheader
 $AUTOMAKE --force-missing --add-missing --copy  
 autoconf
