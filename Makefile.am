@@ -1,10 +1,12 @@
 # linphone/oRTP/Makefile.am -- 
 
-ACLOCAL_AMFLAGS = -I m4
+ACLOCAL_AMFLAGS = -I m4 $(ACLOCAL_MACOS_FLAGS)
 
 EXTRA_DIST = oRTP.prj ortp-config.h.in TODO pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen oRTP.pws
 
-SUBDIRS=src build include
+SUBDIRS=src build m4 include
+
+ACLOCAL_FLAGS=-I$(top_srcdir)/m4
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = ortp.pc

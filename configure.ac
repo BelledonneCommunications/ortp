@@ -415,6 +415,7 @@ AC_OUTPUT(
 Makefile
 include/Makefile
 include/ortp/Makefile
+m4/Makefile
 src/Makefile
 src/tests/Makefile
 src/tests/win_receiver/Makefile
