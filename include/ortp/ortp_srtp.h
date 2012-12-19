@@ -65,6 +65,9 @@ ORTP_PUBLIC bool_t ortp_srtp_supported(void);
 ORTP_PUBLIC int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
 
 ORTP_PUBLIC srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
+
+ORTP_PUBLIC void ortp_srtp_shutdown(void);
+
 #ifdef __cplusplus
 }
 #endif

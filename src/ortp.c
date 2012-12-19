@@ -38,7 +38,7 @@ int ortp_allocations=0;
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
-#include <srtp/srtp.h>
+#include "ortp/ortp_srtp.h"
 #endif
 
 RtpScheduler *__ortp_scheduler;
@@ -90,12 +90,8 @@ void ortp_init()
 	init_random_number_generator();
 
 #ifdef HAVE_SRTP
-	if (srtp_init() != err_status_ok) {
-		ortp_fatal("Couldn't initialize SRTP library.");
-	}
-	err_reporting_init("oRTP");
+	ortp_srtp_init();
 #endif
-
 	ortp_message("oRTP-" ORTP_VERSION " initialized.");
 }
 
@@ -139,9 +135,7 @@ void ortp_exit()
 			rtp_scheduler_destroy(__ortp_scheduler);
 			__ortp_scheduler=NULL;
 		}
-#ifdef HAVE_SRTP_SHUTDOWN
-		srtp_shutdown();
-#endif
+		ortp_srtp_shutdown();
 	}
 }
 

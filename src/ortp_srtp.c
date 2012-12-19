@@ -165,10 +165,32 @@ int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	return 0;
 }
 
+static int srtp_init_done=0;
+
 err_status_t ortp_srtp_init(void)
 {
+	
+	err_status_t st=0;
 	ortp_message("srtp init");
-	return srtp_init();
+	if (!srtp_init_done) {
+		st=srtp_init();
+		if (st==0) {
+			srtp_init_done++;
+		}else{
+			ortp_fatal("Couldn't initialize SRTP library.");
+			err_reporting_init("oRTP");
+		}
+	}else srtp_init_done++;
+	return st;
+}
+
+void ortp_srtp_shutdown(void){
+	srtp_init_done--;
+	if (srtp_init_done==0){
+#ifdef HAVE_SRTP_SHUTDOWN
+		srtp_shutdown();
+#endif
+	}
 }
 
 err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy)
@@ -299,7 +321,7 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 #else
 
 err_status_t ortp_srtp_init(void) {
-	return 0;
+	return -1;
 }
 
 err_status_t ortp_crypto_get_random(uint8_t *tmp, int size)
