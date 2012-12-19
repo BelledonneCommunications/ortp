@@ -358,5 +358,8 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 	return NULL;
 }
 
+void ortp_srtp_shutdown(void){
+}
+
 #endif
 
