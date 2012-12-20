@@ -135,7 +135,9 @@ void ortp_exit()
 			rtp_scheduler_destroy(__ortp_scheduler);
 			__ortp_scheduler=NULL;
 		}
+#ifdef HAVE_SRTP
 		ortp_srtp_shutdown();
+#endif
 	}
 }
 
