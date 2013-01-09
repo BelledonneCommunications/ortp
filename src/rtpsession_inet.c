@@ -998,12 +998,16 @@ rtp_session_rtp_send (RtpSession * session, mblk_t * m)
 	ortp_socket_t sockfd=session->rtp.socket;
 
 	hdr = (rtp_header_t *) m->b_rptr;
-	/* perform host to network conversions */
-	hdr->ssrc = htonl (hdr->ssrc);
-	hdr->timestamp = htonl (hdr->timestamp);
-	hdr->seq_number = htons (hdr->seq_number);
-	for (i = 0; i < hdr->cc; i++)
-		hdr->csrc[i] = htonl (hdr->csrc[i]);
+	if (hdr->version == 0) {
+		/* We are probably trying to send a STUN packet so don't change its content. */
+	} else {
+		/* perform host to network conversions */
+		hdr->ssrc = htonl (hdr->ssrc);
+		hdr->timestamp = htonl (hdr->timestamp);
+		hdr->seq_number = htons (hdr->seq_number);
+		for (i = 0; i < hdr->cc; i++)
+			hdr->csrc[i] = htonl (hdr->csrc[i]);
+	}
 
 	if (session->flags & RTP_SOCKET_CONNECTED) {
 		destaddr=NULL;

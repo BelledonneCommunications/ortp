@@ -891,23 +891,26 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 	rtp=(rtp_header_t*)mp->b_rptr;
 	
 	packsize = msgdsize(mp) ;
-	
-	rtp->timestamp=packet_ts;
-	if (session->snd.telephone_events_pt==rtp->paytype)
-	{
-		rtp->seq_number = session->rtp.snd_seq;
-		session->rtp.snd_seq++;
+
+	if (rtp->version == 0) {
+		/* We are probably trying to send a STUN packet so don't change its content. */
+	} else {
+		rtp->timestamp=packet_ts;
+		if (session->snd.telephone_events_pt==rtp->paytype)
+		{
+			rtp->seq_number = session->rtp.snd_seq;
+			session->rtp.snd_seq++;
+		}
+		else
+			session->rtp.snd_seq=rtp->seq_number+1;
+		session->rtp.snd_last_ts = packet_ts;
+
+		ortp_global_stats.sent += packsize;
+		stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
+		stream->stats.sent += packsize;
+		ortp_global_stats.packet_sent++;
+		stream->stats.packet_sent++;
 	}
-	else
-		session->rtp.snd_seq=rtp->seq_number+1;
-	session->rtp.snd_last_ts = packet_ts;
-
-
-	ortp_global_stats.sent += packsize;
-	stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
-	stream->stats.sent += packsize;
-	ortp_global_stats.packet_sent++;
-	stream->stats.packet_sent++;
 
 	error = rtp_session_rtp_send (session, mp);
 	/*send RTCP packet if needed */
