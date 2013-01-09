@@ -24,6 +24,7 @@
 #include "ortp-config.h"
 #endif
 #include "ortp/ortp.h"
+#include <inttypes.h>
 #include "scheduler.h"
 
 rtp_stats_t ortp_global_stats;
@@ -163,71 +164,20 @@ void ortp_global_stats_display()
 /**
  * Print RTP statistics.
 **/
-void rtp_stats_display(const rtp_stats_t *stats, const char *header)
-{
-#ifndef WIN32
-  ortp_log(ORTP_MESSAGE,
-	   "oRTP-stats:\n   %s :",
-	   header);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packet sent=%lld",
-	   (long long)stats->packet_sent);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp bytes sent=%lld bytes",
-	   (long long)stats->sent);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packet received=%lld",
-	   (long long)stats->packet_recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp bytes received=%lld bytes",
-	   (long long)stats->hw_recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of incoming rtp bytes successfully delivered to the application=%lld ",
-	   (long long)stats->recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packet lost=%lld",
-	   (long long) stats->cum_packet_loss);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packets received too late=%lld",
-	   (long long)stats->outoftime);
-  ortp_log(ORTP_MESSAGE,
-	   " number of bad formatted rtp packets=%lld",
-	   (long long)stats->bad);
-  ortp_log(ORTP_MESSAGE,
-	   " number of packet discarded because of queue overflow=%lld",
-	   (long long)stats->discarded);
-#else
-  ortp_log(ORTP_MESSAGE,
-	   "oRTP-stats:\n   %s :",
-	   header);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packet sent=%I64d",
-	   (uint64_t)stats->packet_sent);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp bytes sent=%I64d bytes",
-	   (uint64_t)stats->sent);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packet received=%I64d",
-	   (uint64_t)stats->packet_recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp bytes received=%I64d bytes",
-	   (uint64_t)stats->hw_recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of incoming rtp bytes successfully delivered to the application=%I64d ",
-	   (uint64_t)stats->recv);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packet lost=%I64d",
-	   (uint64_t) stats->cum_packet_loss);
-  ortp_log(ORTP_MESSAGE,
-	   " number of rtp packets received too late=%I64d",
-	   (uint64_t)stats->outoftime);
-  ortp_log(ORTP_MESSAGE,
-		 " number of bad formatted rtp packets=%I64d",
-	   (uint64_t)stats->bad);
-  ortp_log(ORTP_MESSAGE,
-	   " number of packet discarded because of queue overflow=%I64d",
-	   (uint64_t)stats->discarded);
-#endif
+void rtp_stats_display(const rtp_stats_t *stats, const char *header) { 
+	ortp_log(ORTP_MESSAGE, "===========================================================");
+	ortp_log(ORTP_MESSAGE, "%s", header);                
+	ortp_log(ORTP_MESSAGE, "-----------------------------------------------------------");
+	ortp_log(ORTP_MESSAGE, "sent                          %20"PRId64" packets", stats->packet_sent);
+	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->sent);
+	ortp_log(ORTP_MESSAGE, "received                      %20"PRId64" packets", stats->packet_recv);
+	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->hw_recv);
+	ortp_log(ORTP_MESSAGE, "incoming delivered to the app %20"PRId64" bytes  ", stats->recv);
+	ortp_log(ORTP_MESSAGE, "lost                          %20"PRId64" packets", stats->cum_packet_loss);
+	ortp_log(ORTP_MESSAGE, "received too late             %20"PRId64" packets", stats->outoftime);        
+	ortp_log(ORTP_MESSAGE, "bad formatted                 %20"PRId64" packets", stats->bad);
+	ortp_log(ORTP_MESSAGE, "discarded (queue overflow)    %20"PRId64" packets", stats->discarded);       
+	ortp_log(ORTP_MESSAGE, "===========================================================");
 }
 
 void ortp_global_stats_reset(){
