@@ -44,63 +44,67 @@ LT_INIT([win32-dll shared disable-static])
 
 AC_MSG_CHECKING([warning make an error on compilation])
 AC_ARG_ENABLE(strict,
-[AS_HELP_STRING([--enable-strict], [Enable error on compilation warning (default=yes)])],
-[wall_werror=$enableval],
-[wall_werror=yes]
+	[AS_HELP_STRING([--enable-strict], [Enable error on compilation warning (default=yes)])],
+	[wall_werror=$enableval],
+	[wall_werror=yes]
 )
 
 AC_ARG_ENABLE(perf,
-[AS_HELP_STRING([--enable-perf], [Disable costly features to reduce cpu consumtion (default=no)])],
-[perf=$enableval],
-[perf=no]
+	[AS_HELP_STRING([--enable-perf], [Disable costly features to reduce cpu consumtion (default=no)])],
+	[perf=$enableval],
+	[perf=no]
 )
 
 ORTP_DEFS=
 
 dnl enable ipv6 support
 AC_ARG_ENABLE(ipv6,
-      [AS_HELP_STRING([--enable-ipv6], [Turn on ipv6 support (default=yes)])],
-      [case "${enableval}" in
-        yes)  ipv6=true;;
-        no)   ipv6=false;;
-        *) AC_MSG_ERROR(bad value ${enableval} for --enable-ipv6) ;;
-      esac],[ipv6=true])
+	[AS_HELP_STRING([--enable-ipv6], [Turn on ipv6 support (default=yes)])],
+	[case "${enableval}" in
+		yes)	ipv6=true;;
+		no)	ipv6=false;;
+		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-ipv6) ;;
+	esac],
+	[ipv6=true]
+)
 if test x$ipv6 = xtrue ; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_INET6"
-	AC_DEFINE(__APPLE_USE_RFC_2292, 1, [ Apple wants you to declare what behavior you want by
-defining either __APPLE_USE_RFC_2292])
+	AC_DEFINE(__APPLE_USE_RFC_2292, 1, [ Apple wants you to declare what behavior you want by defining either __APPLE_USE_RFC_2292])
 fi
 
 dnl enable timestamp support
 AC_ARG_ENABLE(ntp-timestamp,
-      [AS_HELP_STRING([--enable-ntp-timestamp], [Turn on NTP timestamping on received packet (default=no)])],
-      [case "${enableval}" in
-        yes)  ntptimestamp=true;;
-        no)   ntptimestamp=false;;
-        *) AC_MSG_ERROR(bad value ${enableval} for --enable-ntp-timestamp) ;;
-      esac],[ntptimestamp=false])
+	[AS_HELP_STRING([--enable-ntp-timestamp], [Turn on NTP timestamping on received packet (default=no)])],
+	[case "${enableval}" in
+		yes)	ntptimestamp=true;;
+		no)	ntptimestamp=false;;
+		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-ntp-timestamp) ;;
+	esac],
+	[ntptimestamp=false]
+)
 if test x$ntptimestamp = xtrue ; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_TIMESTAMP"
 fi
 
 AC_ARG_ENABLE(mode64bit,
-			[AS_HELP_STRING([--enable-mode64bit], [Produce a 64-bit library (default=no)])],
-			[case "${enableval}" in
-				yes) mode64bit_enabled=yes;;
-				no) mode64bit_enabled=no;;
-				*) AC_MSG_ERROR("Bad value for --enable-mode64bit");;
-			esac],
-			[mode64bit_enabled=no])
+	[AS_HELP_STRING([--enable-mode64bit], [Produce a 64-bit library (default=no)])],
+	[case "${enableval}" in
+		yes)	mode64bit_enabled=yes;;
+		no)	mode64bit_enabled=no;;
+		*)	AC_MSG_ERROR("Bad value for --enable-mode64bit");;
+	esac],
+	[mode64bit_enabled=no]
+)
 
 AC_ARG_ENABLE(debug,
-			[AS_HELP_STRING([--enable-debug], [Enable the display of traces showing the execution of the library (default=yes)])],
-			[case "${enableval}" in
-				yes) debug_enabled=yes;;
-				no) debug_enabled=no;;
-				*) AC_MSG_ERROR("Bad value for --enable-debug");;
-			esac],
-			[debug_enabled=no])
-
+	[AS_HELP_STRING([--enable-debug], [Enable the display of traces showing the execution of the library (default=yes)])],
+	[case "${enableval}" in
+		yes)	debug_enabled=yes;;
+		no)	debug_enabled=no;;
+		*)	AC_MSG_ERROR("Bad value for --enable-debug");;
+	esac],
+	[debug_enabled=no]
+)
 
 hpux_host=no
 posixtimer_interval=10000
@@ -112,31 +116,32 @@ case "$target_os" in
 		AC_DEFINE(NOCONNECT,1,[Defined if we should not use connect() on udp sockets])
 		CFLAGS="$CFLAGS -D_HPUX_SOURCE -D_XOPEN_SOURCE_EXTENDED -D_XOPEN_SOURCE=500 -D_POSIX_C_SOURCE=199506L"
 		LIBS="$LIBS -lxnet"
-		;;
+	;;
 	*freebsd*)
 		AC_DEFINE(NOCONNECT,1,[Defined if we should not use connect() on udp sockets])
 		PTHREAD_LDFLAGS="-pthread"
-		;;
+	;;
 	*mingw32ce)
 		CFLAGS="$CFLAGS -D_WIN32_WCE -D_WIN32_WINNT=0x0501 -DORTP_STATIC"
 		LIBS="$LIBS -lws2 -liphlpapi"
 		mingw_found=yes
-		;;
+	;;
 	*mingw*)
 		CFLAGS="$CFLAGS -D_WIN32_WINNT=0x0501 -DORTP_STATIC"
 		LIBS="$LIBS -lws2_32 -liphlpapi -lwinmm"
 		mingw_found=yes
-		;;
+	;;
 esac
 
-AC_CONFIG_COMMANDS([libtool-hacking],[
-if test "$mingw_found" = "yes" ; then
-        echo "Hacking libtool to work with mingw..."
-        sed -e 's/\*\" \$a_deplib \"\*/\*/' < ./libtool > libtool.tmp
-        cp -f ./libtool.tmp ./libtool
-        rm -f ./libtool.tmp
-fi
-],[mingw_found=$mingw_found])
+AC_CONFIG_COMMANDS([libtool-hacking],
+	[if test "$mingw_found" = "yes" ; then
+		echo "Hacking libtool to work with mingw..."
+		sed -e 's/\*\" \$a_deplib \"\*/\*/' < ./libtool > libtool.tmp
+		cp -f ./libtool.tmp ./libtool
+		rm -f ./libtool.tmp
+	fi],
+	[mingw_found=$mingw_found]
+)
 
 if test "$GCC" != "yes" ; then
 	if test "$hpux_host" = "yes" ; then
@@ -169,7 +174,9 @@ else
 fi
 AC_ARG_WITH(thread-stack-size,
 	AC_HELP_STRING([--with-thread-stack-size=SIZE-IN-BYTES],[Set thread stack size [[default=os-default]]]),
-	[thread_stack_size=$withval], [thread_stack_size=0])
+	[thread_stack_size=$withval],
+	[thread_stack_size=0]
+)
 AC_DEFINE_UNQUOTED(ORTP_DEFAULT_THREAD_STACK_SIZE, $thread_stack_size, [Default thread stack size (0 = let uperating system decide)])
 
 
@@ -183,8 +190,10 @@ fi
 
 dnl check for libsrtp support (secure rtp)
 AC_ARG_WITH(srtp,
-        AC_HELP_STRING([--with-srtp],[Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local) [[default=/usr]]]),
-        [srtp_prefix=$withval], [srtp_prefix=/usr])
+	AC_HELP_STRING([--with-srtp], [Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local) [[default=/usr]]]),
+	[srtp_prefix=$withval],
+	[srtp_prefix=/usr]
+)
 if test "${srtp_prefix}" != "none" ; then
 	if test "${srtp_prefix}" != "/usr" || test "$mingw_found" = "yes" ; then
 		SRTP_CFLAGS="-I${srtp_prefix}/include -I${srtp_prefix}/include/srtp"
@@ -220,9 +229,9 @@ if test "${srtp_prefix}" != "none" ; then
 	AC_SUBST(SRTP_CFLAGS)
 	AC_SUBST(SRTP_LIBS)
 else
-        have_srtp=no
-        SRTP_CFLAGS=
-        SRTP_LIBS=
+	have_srtp=no
+	SRTP_CFLAGS=
+	SRTP_LIBS=
 fi
 
 
@@ -230,21 +239,23 @@ fi
 dnl check for libzrtp support (RFC 6189: Media Path Key Agreement for Unicast Secure RTP)
 dnl zrtp is GPLv3+
 AC_ARG_ENABLE(zrtp,
-		      [AS_HELP_STRING([--enable-zrtp], [Turn on or off compilation of zrtp (GPLv3+ only) (default=no)])],
-		      [case "${enableval}" in
-		        yes) zrtp=true ;;
-		        no)  zrtp=false ;;
-		        *) AC_MSG_ERROR(bad value ${enableval} for --enable-zrtp) ;;
-		      esac],[zrtp=false])
+	[AS_HELP_STRING([--enable-zrtp], [Turn on or off compilation of zrtp (GPLv3+ only) (default=no)])],
+	[case "${enableval}" in
+		yes)	zrtp=true ;;
+		no)	zrtp=false ;;
+		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-zrtp) ;;
+	esac],
+	[zrtp=false]
+)
 
 if test "$zrtp" = "true" ; then
-        PKG_CHECK_MODULES(LIBZRTPCPP, libzrtpcpp >= 2.0.0)
+	PKG_CHECK_MODULES(LIBZRTPCPP, libzrtpcpp >= 2.0.0)
 	if test "$have_srtp" = "no" ; then
 		AC_MSG_ERROR("ZRTP requires SRTP")
 	fi
-        AC_DEFINE(HAVE_zrtp, 1, [Defined when zrtp support is compiled])
+	AC_DEFINE(HAVE_zrtp, 1, [Defined when zrtp support is compiled])
 else
-        echo "ZRTP compilation is disabled."
+	echo "ZRTP compilation is disabled."
 fi
 AM_CONDITIONAL(LIBZRTPCPP,test x$zrtp != xfalse)
 
@@ -256,13 +267,14 @@ fi
 
 
 AC_ARG_ENABLE(memcheck,
-				[AS_HELP_STRING([--enable-memcheck], [Enable memory leak detection (HPUX only)])],
-				[case "${enableval}" in
-				yes) memcheck_enabled=yes;;
-				no) memcheck_enabled=no;;
-				*) AC_MSG_ERROR("Bad value for --enable-memcheck");;
-			esac],
-				[memcheck_enabled=no])
+	[AS_HELP_STRING([--enable-memcheck], [Enable memory leak detection (HPUX only)])],
+	[case "${enableval}" in
+		yes)	memcheck_enabled=yes;;
+		no)	memcheck_enabled=no;;
+		*)	AC_MSG_ERROR("Bad value for --enable-memcheck");;
+	esac],
+	[memcheck_enabled=no]
+)
 				
 if test "$memcheck_enabled" = "yes" ; then
 	if test "$hpux_host" = "yes" ; then
@@ -305,21 +317,20 @@ if test $GCC = yes && test $wall_werror = yes;  then
 fi
 
 AC_ARG_ENABLE(ssl-hmac,
-				[AS_HELP_STRING([--enable-ssl-hmac], [Enable use of ssl/hmac for stun (default=no)])],
-				[case "${enableval}" in
-					yes) ssl_hmac_enabled=yes;;
-					no) ssl_hmac_enabled=no;;
-					*) AC_MSG_ERROR("Bad value for --enable-ssl-hmac");;
-				esac],
-				[ssl_hmac_enabled=no])
+	[AS_HELP_STRING([--enable-ssl-hmac], [Enable use of ssl/hmac for stun (default=no)])],
+	[case "${enableval}" in
+		yes)	ssl_hmac_enabled=yes;;
+		no)	ssl_hmac_enabled=no;;
+		*)	AC_MSG_ERROR("Bad value for --enable-ssl-hmac");;
+	esac],
+	[ssl_hmac_enabled=no]
+)
 				
 if test "$ssl_hmac_enabled" = "yes" ; then
 	AC_CHECK_HEADERS(openssl/hmac.h openssl/md5.h)
 	AC_CHECK_LIB(ssl,SSL_CTX_new,[SSL_LIBS="-lssl"])
 	AC_CHECK_LIB(crypto,MD5,[SSL_LIBS="$SSL_LIBS -lcrypto"])
 fi
-
-
 
 
 
@@ -332,12 +343,14 @@ echo "$ORTPDEPS_CFLAGS" > ortp.defs
 
 
 AC_ARG_ENABLE(tests_enabled,
-      [AS_HELP_STRING([--disable-tests], [Disable compilation of tests])],
-      [case "${enableval}" in
-        yes) tests_enabled=true ;;
-        no)  tests_enabled=false ;;
-        *) AC_MSG_ERROR(bad value ${enableval} for --disable-tests) ;;
-      esac],[tests_enabled=false])
+	[AS_HELP_STRING([--disable-tests], [Disable compilation of tests])],
+	[case "${enableval}" in
+		yes)	tests_enabled=true ;;
+		no)	tests_enabled=false ;;
+		*)	AC_MSG_ERROR(bad value ${enableval} for --disable-tests) ;;
+	esac],
+	[tests_enabled=false]
+)
 AM_CONDITIONAL(ENABLE_TESTS, test x$tests_enabled = xyes)
 
 dnl ##################################################
@@ -359,29 +372,31 @@ AM_CONDITIONAL(WITH_EPM,test $EPM != false && test $MKEPMLIST != false && test $
 
 # Preferred packaging system, as per EPM terminology
 case $target in
-*-*-linux*)
-	if test -f /etc/debian_version ; then
-		EPM_PKG_EXT=deb
-	else
-     		EPM_PKG_EXT=rpm
-     	fi
-     	;;
-*-hp-hpux*)
-     	EPM_PKG_EXT=depot.gz;;
-*-dec-osf*)
-	EPM_PKG_EXT=setld;;
+	*-*-linux*)
+		if test -f /etc/debian_version ; then
+			EPM_PKG_EXT=deb
+		else
+			EPM_PKG_EXT=rpm
+		fi
+	;;
+	*-hp-hpux*)
+		EPM_PKG_EXT=depot.gz
+	;;
+	*-dec-osf*)
+		EPM_PKG_EXT=setld
+	;;
 esac
 AC_SUBST(EPM_PKG_EXT)
 
 # System software User & Group names
 case $target in
-*-*-linux*)
-	SYS_USER=root
-	SYS_GROUP=root
+	*-*-linux*)
+		SYS_USER=root
+		SYS_GROUP=root
 	;;
-*-*-hpux*|*-dec-osf*)
-	SYS_USER=bin
-	SYS_GROUP=bin
+	*-*-hpux*|*-dec-osf*)
+		SYS_USER=bin
+		SYS_GROUP=bin
 	;;
 esac
 AC_SUBST(SYS_USER)
@@ -389,8 +404,11 @@ AC_SUBST(SYS_GROUP)
 
 # CPU Architecture
 case $target_cpu in
-i?86)		ARCH=i386;;
-*)		ARCH=$target_cpu;;
+	i?86)
+		ARCH=i386
+	;;
+	*)	ARCH=$target_cpu
+	;;
 esac
 AC_SUBST(ARCH)
 
@@ -412,21 +430,21 @@ AC_SUBST(ORTPDEPS_LIBS)
 AC_SUBST(ORTPDEPS_LDFLAGS)
 
 AC_OUTPUT(
-Makefile
-include/Makefile
-include/ortp/Makefile
-m4/Makefile
-src/Makefile
-src/tests/Makefile
-src/tests/win_receiver/Makefile
-src/tests/win_sender/Makefile
-build/Makefile
-build/win32native/Makefile
-build/wince/Makefile
-build/winmob/Makefile
-ortp.pc
-ortp.spec
-ortp.doxygen
+	Makefile
+	include/Makefile
+	include/ortp/Makefile
+	m4/Makefile
+	src/Makefile
+	src/tests/Makefile
+	src/tests/win_receiver/Makefile
+	src/tests/win_sender/Makefile
+	build/Makefile
+	build/win32native/Makefile
+	build/wince/Makefile
+	build/winmob/Makefile
+	ortp.pc
+	ortp.spec
+	ortp.doxygen
 )
 
 if test "$zrtp" = "true" ; then
