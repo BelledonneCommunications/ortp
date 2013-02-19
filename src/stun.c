@@ -1170,6 +1170,8 @@ stunRand(void)
 
 #if defined(_WIN32_WCE)
       tick = GetTickCount ();
+#elif WINAPI_FAMILY_APP
+	  tick = GetTickCount64();
 #elif defined(_MSC_VER)
       {
       volatile unsigned int lowtick=0,hightick=0;

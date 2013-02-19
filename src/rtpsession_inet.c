@@ -33,10 +33,12 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC
+#if !WINAPI_FAMILY_APP
 #include <QOS2.h>
 #endif
+#endif
 
-#if defined(WIN32) || defined(_WIN32_WCE)
+#if (defined(WIN32) || defined(_WIN32_WCE)) && !WINAPI_FAMILY_APP
 #include <Mswsock.h>
 #endif
 
@@ -563,6 +565,8 @@ int rtp_session_get_multicast_loopback(RtpSession *session)
 int rtp_session_set_dscp(RtpSession *session, int dscp){
 	int retval=0;
 	int tos;
+	int proto;
+	int value_type;
 #if (_WIN32_WINNT >= 0x0600)
 	OSVERSIONINFOEX ovi;
 #endif
@@ -573,7 +577,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	// Don't do anything if socket hasn't been created yet
 	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
 
-#if (_WIN32_WINNT >= 0x0600)
+#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
 	memset(&ovi, 0, sizeof(ovi));
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
 	GetVersionEx((LPOSVERSIONINFO) & ovi);
@@ -632,8 +636,6 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 		}
 	} else {
 #endif
-		int proto;
-		int value_type;
 		// DSCP value is in the upper six bits of the TOS field
 		tos = (session->dscp << 2) & 0xFC;
 		switch (session->rtp.sockfamily) {
@@ -663,7 +665,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				ortp_error("Fail to set DSCP value on rtcp socket: %s",getSocketError());
 			}
 		}
-#if (_WIN32_WINNT >= 0x0600)
+#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
 	}
 #endif
 	return retval;

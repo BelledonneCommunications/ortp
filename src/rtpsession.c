@@ -35,7 +35,9 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC /* avoid redefinition... */
+#if !WINAPI_FAMILY_APP
 #include <QOS2.h>
+#endif
 #endif
 
 extern mblk_t *rtcp_create_simple_bye_packet(uint32_t ssrc, const char *reason);
@@ -1416,7 +1418,7 @@ void rtp_session_uninit (RtpSession * session)
 	if (session->net_sim_ctx)
 		ortp_network_simulator_destroy(session->net_sim_ctx);
 
-#if (_WIN32_WINNT >= 0x0600)
+#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
 	if (session->rtp.QoSFlowID != 0)
     {
 		OSVERSIONINFOEX ovi;

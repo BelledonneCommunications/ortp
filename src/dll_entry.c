@@ -9,7 +9,11 @@
 typedef struct __STRUCT_SHARED_DATA__
 {
 	DWORD				m_nReference;
+#if WINAPI_FAMILY_APP
+	ULONGLONG			m_ullStartTime;
+#else
 	DWORD				m_dwStartTime;
+#endif
 	BOOL				m_bInitialize;
 
 } SHARED_DATA, * LPSHARED_DATA;
@@ -25,6 +29,9 @@ extern DWORD dwoRTPLogLevel;
 
 #define	SHMEMSIZE	sizeof(SHARED_DATA)
 
+#if WINAPI_FAMILY_APP
+static SHARED_DATA		sharedData;
+#endif
 static	LPSHARED_DATA	lpSharedData;
 static  HANDLE			hMapObject	 = NULL;  // handle to file mapping
 
@@ -52,6 +59,10 @@ BOOL WINAPI DllMain(
 				return FALSE;
 			}
 
+#if WINAPI_FAMILY_APP
+			fInit = TRUE;
+			lpSharedData = &sharedData;
+#else
             // Create a named file mapping object. 
             hMapObject = CreateFileMapping( INVALID_HANDLE_VALUE,	// use paging file
 											NULL,					// default security attributes
@@ -75,6 +86,7 @@ BOOL WINAPI DllMain(
 															0);             // default: map entire file
             if (lpSharedData == NULL) 
                 return FALSE; 
+#endif
  
             // Initialize memory if this is the first process.
  
@@ -82,7 +94,11 @@ BOOL WINAPI DllMain(
 			{
 				OutputDebugString("--> dll_entry.c - oRTP.dll - Initializing module\n");
 
+#if WINAPI_FAMILY_APP
+				lpSharedData->m_ullStartTime = GetTickCount64();
+#else
 				lpSharedData->m_dwStartTime	= GetTickCount();
+#endif
 				lpSharedData->m_nReference	= 1;
 				lpSharedData->m_bInitialize = FALSE;
 
@@ -130,7 +146,7 @@ BOOL WINAPI DllMain(
 					ortp_exit();
 					UnregisterLog(&dwoRTPLogLevel, "LOG_ORTP");
 
-
+#if !WINAPI_FAMILY_APP
 					// Unmap shared memory from the process's address space. 
 					UnmapViewOfFile(lpSharedData);
 					lpSharedData = NULL;
@@ -138,6 +154,7 @@ BOOL WINAPI DllMain(
 					// Close the process's handle to the file-mapping object.
 					CloseHandle(hMapObject); 
 					hMapObject = INVALID_HANDLE_VALUE;
+#endif
 				}
 			}
             break;

@@ -148,8 +148,13 @@ typedef __int16 int16_t;
 
 
 typedef SOCKET ortp_socket_t;
+#if WINAPI_FAMILY_APP
+typedef CONDITION_VARIABLE ortp_cond_t;
+typedef SRWLOCK ortp_mutex_t;
+#else
 typedef HANDLE ortp_cond_t;
 typedef HANDLE ortp_mutex_t;
+#endif
 typedef HANDLE ortp_thread_t;
 
 #define ortp_thread_create	WIN_thread_create
@@ -320,7 +325,7 @@ ORTP_PUBLIC void ortp_shm_close(void *memory);
 
 #if (defined(WIN32) || defined(_WIN32_WCE)) && !defined(ORTP_STATIC)
 #ifdef ORTP_EXPORTS
-   #define VAR_DECLSPEC    __declspec(dllexport)
+   #define VAR_DECLSPEC    extern __declspec(dllexport)
 #else
    #define VAR_DECLSPEC    __declspec(dllimport)
 #endif

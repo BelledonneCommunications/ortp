@@ -202,25 +202,39 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 
 int WIN_mutex_init(ortp_mutex_t *mutex, void *attr)
 {
+#if WINAPI_FAMILY_APP
+	InitializeSRWLock(mutex);
+#else
 	*mutex=CreateMutex(NULL, FALSE, NULL);
+#endif
 	return 0;
 }
 
 int WIN_mutex_lock(ortp_mutex_t * hMutex)
 {
+#if WINAPI_FAMILY_APP
+	AcquireSRWLockExclusive(hMutex);
+#else
 	WaitForSingleObject(*hMutex, INFINITE); /* == WAIT_TIMEOUT; */
+#endif
 	return 0;
 }
 
 int WIN_mutex_unlock(ortp_mutex_t * hMutex)
 {
+#if WINAPI_FAMILY_APP
+	ReleaseSRWLockExclusive(hMutex);
+#else
 	ReleaseMutex(*hMutex);
+#endif
 	return 0;
 }
 
 int WIN_mutex_destroy(ortp_mutex_t * hMutex)
 {
+#if !WINAPI_FAMILY_APP
 	CloseHandle(*hMutex);
+#endif
 	return 0;
 }
 
@@ -262,22 +276,34 @@ int WIN_thread_join(ortp_thread_t thread_h, void **unused)
 
 int WIN_cond_init(ortp_cond_t *cond, void *attr)
 {
+#if WINAPI_FAMILY_APP
+	InitializeConditionVariable(cond);
+#else
 	*cond=CreateEvent(NULL, FALSE, FALSE, NULL);
+#endif
 	return 0;
 }
 
 int WIN_cond_wait(ortp_cond_t* hCond, ortp_mutex_t * hMutex)
 {
+#if WINAPI_FAMILY_APP
+	SleepConditionVariableSRW(hCond, hMutex, INFINITE, 0);
+#else
 	//gulp: this is not very atomic ! bug here ?
 	WIN_mutex_unlock(hMutex);
 	WaitForSingleObject(*hCond, INFINITE);
 	WIN_mutex_lock(hMutex);
+#endif
 	return 0;
 }
 
 int WIN_cond_signal(ortp_cond_t * hCond)
 {
+#if WINAPI_FAMILY_APP
+	WakeConditionVariable(hCond);
+#else
 	SetEvent(*hCond);
+#endif
 	return 0;
 }
 
@@ -289,7 +315,9 @@ int WIN_cond_broadcast(ortp_cond_t * hCond)
 
 int WIN_cond_destroy(ortp_cond_t * hCond)
 {
+#if !WINAPI_FAMILY_APP
 	CloseHandle(*hCond);
+#endif
 	return 0;
 }
 
@@ -483,6 +511,10 @@ static HANDLE event=NULL;
 
 /* portable named pipes */
 ortp_pipe_t ortp_server_pipe_create(const char *name){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+	return INVALID_HANDLE_VALUE;
+#else
 	ortp_pipe_t h;
 	char *pipename=make_pipe_name(name);
 	h=CreateNamedPipe(pipename,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
@@ -493,6 +525,7 @@ ortp_pipe_t ortp_server_pipe_create(const char *name){
 	}
 	if (event==NULL) event=CreateEvent(NULL,TRUE,FALSE,NULL);
 	return h;
+#endif
 }
 
 
@@ -501,6 +534,10 @@ even if nobody connects to the pipe.
 ortp_server_pipe_close() makes this function to exit.
 */
 ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+	return INVALID_HANDLE_VALUE;
+#else
 	OVERLAPPED ol;
 	DWORD undef;
 	HANDLE handles[2];
@@ -516,19 +553,34 @@ ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
 	}
 	CloseHandle(ol.hEvent);
 	return INVALID_HANDLE_VALUE;
+#endif
 }
 
 int ortp_server_pipe_close_client(ortp_pipe_t server){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+	return -1;
+#else
 	return DisconnectNamedPipe(server)==TRUE ? 0 : -1;
+#endif
 }
 
 int ortp_server_pipe_close(ortp_pipe_t spipe){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+	return -1;
+#else
 	SetEvent(event);
 	//CancelIoEx(spipe,NULL); /*vista only*/
 	return CloseHandle(spipe);
+#endif
 }
 
 ortp_pipe_t ortp_client_pipe_connect(const char *name){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+	return INVALID_HANDLE_VALUE;
+#else
 	char *pipename=make_pipe_name(name);
 	ortp_pipe_t hpipe = CreateFile(
          pipename,   // pipe name
@@ -541,6 +593,7 @@ ortp_pipe_t ortp_client_pipe_connect(const char *name){
          NULL);          // no template file
 	ortp_free(pipename);
 	return hpipe;
+#endif
 }
 
 int ortp_pipe_read(ortp_pipe_t p, uint8_t *buf, int len){
@@ -573,6 +626,10 @@ typedef struct MapInfo{
 static OList *maplist=NULL;
 
 void *ortp_shm_open(unsigned int keyid, int size, int create){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+	return NULL;
+#else
 	HANDLE h;
 	char name[64];
 	void *buf;
@@ -611,9 +668,13 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 		ortp_error("MapViewOfFile failed");
 	}
 	return buf;
+#endif
 }
 
 void ortp_shm_close(void *mem){
+#if WINAPI_FAMILY_APP
+	ortp_error("%s not supported!", __FUNCTION__);
+#else
 	OList *elem;
 	for(elem=maplist;elem!=NULL;elem=elem->next){
 		MapInfo *i=(MapInfo*)elem->data;
@@ -626,6 +687,7 @@ void ortp_shm_close(void *mem){
 		}
 	}
 	ortp_error("No shared memory at %p was found.",mem);
+#endif
 }
 
 
@@ -639,6 +701,11 @@ void ortp_shm_close(void *mem){
 
 void ortp_get_cur_time(ortpTimeSpec *ret){
 #if defined(_WIN32_WCE) || defined(WIN32)
+#if WINAPI_FAMILY_APP
+	ULONGLONG timemillis = GetTickCount64();
+	ret->tv_sec = timemillis / 1000;
+	ret->tv_nsec = (timemillis % 1000) * 1000000LL;
+#else
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();
@@ -647,6 +714,7 @@ void ortp_get_cur_time(ortpTimeSpec *ret){
 #	endif
 	ret->tv_sec=timemillis/1000;
 	ret->tv_nsec=(timemillis%1000)*1000000LL;
+#endif
 #elif defined(__MACH__) && defined(__GNUC__) && (__GNUC__ >= 3)
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
