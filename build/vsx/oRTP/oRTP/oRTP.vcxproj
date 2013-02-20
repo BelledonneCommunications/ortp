@@ -67,7 +67,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_DEBUG;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -83,11 +83,14 @@
       <ImportLibrary>$(TargetDir)$(TargetName)_dll.lib</ImportLibrary>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Outputs>$(TargetDir)$(TargetName)_dll.lib;%(Outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;NDEBUG;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions>_USRDLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -101,17 +104,20 @@
       <SubSystem>Console</SubSystem>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>ws2_32.lib;delayimp.lib;Winmm.lib;qwave.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>$(TargetDir)$(TargetName)_dll.lib</ImportLibrary>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Outputs>$(TargetDir)$(TargetName)_dll.lib;%(Outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_DEBUG;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -127,12 +133,15 @@
       <ImportLibrary>$(TargetDir)$(TargetName)_dll.lib</ImportLibrary>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Outputs>$(TargetDir)$(TargetName)_dll.lib;%(Outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;NDEBUG;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions>_USRDLL;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -146,11 +155,14 @@
       <SubSystem>Console</SubSystem>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <GenerateWindowsMetadata>false</GenerateWindowsMetadata>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ImportLibrary>$(TargetDir)$(TargetName)_dll.lib</ImportLibrary>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Outputs>$(TargetDir)$(TargetName)_dll.lib;%(Outputs)</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\..\include\ortp\b64.h" />
