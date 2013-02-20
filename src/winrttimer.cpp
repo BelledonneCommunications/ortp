@@ -7,6 +7,7 @@
 using namespace Windows::Foundation;
 using namespace Windows::System::Threading;
 
+#if WINAPI_FAMILY_APP
 
 class WinRTTimer
 {
@@ -79,3 +80,5 @@ void winrt_timer_close(void)
 {
 	delete timer;
 }
+
+#endif
