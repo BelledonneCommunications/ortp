@@ -9,7 +9,7 @@
 typedef struct __STRUCT_SHARED_DATA__
 {
 	DWORD				m_nReference;
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ULONGLONG			m_ullStartTime;
 #else
 	DWORD				m_dwStartTime;
@@ -29,7 +29,7 @@ extern DWORD dwoRTPLogLevel;
 
 #define	SHMEMSIZE	sizeof(SHARED_DATA)
 
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 static SHARED_DATA		sharedData;
 #endif
 static	LPSHARED_DATA	lpSharedData;
@@ -59,7 +59,7 @@ BOOL WINAPI DllMain(
 				return FALSE;
 			}
 
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 			fInit = TRUE;
 			lpSharedData = &sharedData;
 #else
@@ -94,7 +94,7 @@ BOOL WINAPI DllMain(
 			{
 				OutputDebugString("--> dll_entry.c - oRTP.dll - Initializing module\n");
 
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 				lpSharedData->m_ullStartTime = GetTickCount64();
 #else
 				lpSharedData->m_dwStartTime	= GetTickCount();
@@ -146,7 +146,7 @@ BOOL WINAPI DllMain(
 					ortp_exit();
 					UnregisterLog(&dwoRTPLogLevel, "LOG_ORTP");
 
-#if !WINAPI_FAMILY_APP
+#ifndef WINAPI_FAMILY_PHONE_APP
 					// Unmap shared memory from the process's address space. 
 					UnmapViewOfFile(lpSharedData);
 					lpSharedData = NULL;

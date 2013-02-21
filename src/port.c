@@ -202,7 +202,7 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 
 int WIN_mutex_init(ortp_mutex_t *mutex, void *attr)
 {
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	InitializeSRWLock(mutex);
 #else
 	*mutex=CreateMutex(NULL, FALSE, NULL);
@@ -212,7 +212,7 @@ int WIN_mutex_init(ortp_mutex_t *mutex, void *attr)
 
 int WIN_mutex_lock(ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	AcquireSRWLockExclusive(hMutex);
 #else
 	WaitForSingleObject(*hMutex, INFINITE); /* == WAIT_TIMEOUT; */
@@ -222,7 +222,7 @@ int WIN_mutex_lock(ortp_mutex_t * hMutex)
 
 int WIN_mutex_unlock(ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ReleaseSRWLockExclusive(hMutex);
 #else
 	ReleaseMutex(*hMutex);
@@ -232,7 +232,7 @@ int WIN_mutex_unlock(ortp_mutex_t * hMutex)
 
 int WIN_mutex_destroy(ortp_mutex_t * hMutex)
 {
-#if !WINAPI_FAMILY_APP
+#ifndef WINAPI_FAMILY_PHONE_APP
 	CloseHandle(*hMutex);
 #endif
 	return 0;
@@ -268,7 +268,7 @@ int WIN_thread_join(ortp_thread_t thread_h, void **unused)
 {
 	if (thread_h!=NULL)
 	{
-		WaitForSingleObject(thread_h, INFINITE);
+		WaitForSingleObjectEx(thread_h, INFINITE, FALSE);
 		CloseHandle(thread_h);
 	}
 	return 0;
@@ -276,7 +276,7 @@ int WIN_thread_join(ortp_thread_t thread_h, void **unused)
 
 int WIN_cond_init(ortp_cond_t *cond, void *attr)
 {
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	InitializeConditionVariable(cond);
 #else
 	*cond=CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -286,7 +286,7 @@ int WIN_cond_init(ortp_cond_t *cond, void *attr)
 
 int WIN_cond_wait(ortp_cond_t* hCond, ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	SleepConditionVariableSRW(hCond, hMutex, INFINITE, 0);
 #else
 	//gulp: this is not very atomic ! bug here ?
@@ -299,7 +299,7 @@ int WIN_cond_wait(ortp_cond_t* hCond, ortp_mutex_t * hMutex)
 
 int WIN_cond_signal(ortp_cond_t * hCond)
 {
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	WakeConditionVariable(hCond);
 #else
 	SetEvent(*hCond);
@@ -315,7 +315,7 @@ int WIN_cond_broadcast(ortp_cond_t * hCond)
 
 int WIN_cond_destroy(ortp_cond_t * hCond)
 {
-#if !WINAPI_FAMILY_APP
+#ifndef WINAPI_FAMILY_PHONE_APP
 	CloseHandle(*hCond);
 #endif
 	return 0;
@@ -511,7 +511,7 @@ static HANDLE event=NULL;
 
 /* portable named pipes */
 ortp_pipe_t ortp_server_pipe_create(const char *name){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 	return INVALID_HANDLE_VALUE;
 #else
@@ -534,7 +534,7 @@ even if nobody connects to the pipe.
 ortp_server_pipe_close() makes this function to exit.
 */
 ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 	return INVALID_HANDLE_VALUE;
 #else
@@ -557,7 +557,7 @@ ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
 }
 
 int ortp_server_pipe_close_client(ortp_pipe_t server){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 	return -1;
 #else
@@ -566,7 +566,7 @@ int ortp_server_pipe_close_client(ortp_pipe_t server){
 }
 
 int ortp_server_pipe_close(ortp_pipe_t spipe){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 	return -1;
 #else
@@ -577,7 +577,7 @@ int ortp_server_pipe_close(ortp_pipe_t spipe){
 }
 
 ortp_pipe_t ortp_client_pipe_connect(const char *name){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 	return INVALID_HANDLE_VALUE;
 #else
@@ -626,7 +626,7 @@ typedef struct MapInfo{
 static OList *maplist=NULL;
 
 void *ortp_shm_open(unsigned int keyid, int size, int create){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 	return NULL;
 #else
@@ -672,7 +672,7 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 }
 
 void ortp_shm_close(void *mem){
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ortp_error("%s not supported!", __FUNCTION__);
 #else
 	OList *elem;
@@ -701,7 +701,7 @@ void ortp_shm_close(void *mem){
 
 void ortp_get_cur_time(ortpTimeSpec *ret){
 #if defined(_WIN32_WCE) || defined(WIN32)
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 	ULONGLONG timemillis = GetTickCount64();
 	ret->tv_sec = timemillis / 1000;
 	ret->tv_nsec = (timemillis % 1000) * 1000000LL;

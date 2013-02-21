@@ -33,12 +33,12 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC
-#if !WINAPI_FAMILY_APP
+#ifndef WINAPI_FAMILY_PHONE_APP
 #include <QOS2.h>
 #endif
 #endif
 
-#if (defined(WIN32) || defined(_WIN32_WCE)) && !WINAPI_FAMILY_APP
+#if (defined(WIN32) || defined(_WIN32_WCE)) && !defined(WINAPI_FAMILY_PHONE_APP)
 #include <Mswsock.h>
 #endif
 
@@ -577,7 +577,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	// Don't do anything if socket hasn't been created yet
 	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
 
-#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
+#if (_WIN32_WINNT >= 0x0600) && !defined(WINAPI_FAMILY_PHONE_APP)
 	memset(&ovi, 0, sizeof(ovi));
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
 	GetVersionEx((LPOSVERSIONINFO) & ovi);
@@ -665,7 +665,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				ortp_error("Fail to set DSCP value on rtcp socket: %s",getSocketError());
 			}
 		}
-#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
+#if (_WIN32_WINNT >= 0x0600) && !defined(WINAPI_FAMILY_PHONE_APP)
 	}
 #endif
 	return retval;

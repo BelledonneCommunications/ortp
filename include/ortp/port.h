@@ -148,7 +148,7 @@ typedef __int16 int16_t;
 
 
 typedef SOCKET ortp_socket_t;
-#if WINAPI_FAMILY_APP
+#ifdef WINAPI_FAMILY_PHONE_APP
 typedef CONDITION_VARIABLE ortp_cond_t;
 typedef SRWLOCK ortp_mutex_t;
 #else

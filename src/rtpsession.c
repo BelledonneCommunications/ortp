@@ -35,7 +35,7 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC /* avoid redefinition... */
-#if !WINAPI_FAMILY_APP
+#ifndef WINAPI_FAMILY_PHONE_APP
 #include <QOS2.h>
 #endif
 #endif

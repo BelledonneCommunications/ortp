@@ -1,4 +1,7 @@
 #include <windows.h>
+
+#ifdef WINAPI_FAMILY_PHONE_APP
+
 #using <Windows.winmd>
 
 #include "winrttimer.h"
@@ -6,8 +9,6 @@
 
 using namespace Windows::Foundation;
 using namespace Windows::System::Threading;
-
-#if WINAPI_FAMILY_APP
 
 class WinRTTimer
 {

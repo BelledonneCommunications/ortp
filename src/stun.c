@@ -1170,7 +1170,7 @@ stunRand(void)
 
 #if defined(_WIN32_WCE)
       tick = GetTickCount ();
-#elif WINAPI_FAMILY_APP
+#elif defined(WINAPI_FAMILY_PHONE_APP)
 	  tick = GetTickCount64();
 #elif defined(_MSC_VER)
       {
