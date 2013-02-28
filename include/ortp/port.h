@@ -123,7 +123,11 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #include <ws2tcpip.h>
 
 #ifdef _MSC_VER
+#ifdef ORTP_EXPORTS
 #define ORTP_PUBLIC	__declspec(dllexport)
+#else 
+#define ORTP_PUBLIC	__declspec(dllimport)
+#endif
 #pragma push_macro("_WINSOCKAPI_")
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -232,7 +236,7 @@ ORTP_PUBLIC const char *getWinSocketError(int error);
 #ifdef __cplusplus
 extern "C"{
 #endif
-int gettimeofday (struct timeval *tv, void* tz);
+ORTP_PUBLIC int gettimeofday (struct timeval *tv, void* tz);
 #ifdef _WORKAROUND_MINGW32_BUGS
 char * WSAAPI gai_strerror(int errnum);
 #endif
