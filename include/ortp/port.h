@@ -329,12 +329,12 @@ ORTP_PUBLIC void ortp_shm_close(void *memory);
 
 #if (defined(WIN32) || defined(_WIN32_WCE)) && !defined(ORTP_STATIC)
 #ifdef ORTP_EXPORTS
-   #define VAR_DECLSPEC    extern __declspec(dllexport)
+   #define ORTP_VAR_PUBLIC    extern __declspec(dllexport)
 #else
-   #define VAR_DECLSPEC    __declspec(dllimport)
+   #define ORTP_VAR_PUBLIC    __declspec(dllimport)
 #endif
 #else
-   #define VAR_DECLSPEC    extern
+   #define ORTP_VAR_PUBLIC    extern
 #endif
 
 

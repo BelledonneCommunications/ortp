@@ -98,64 +98,64 @@ ORTP_PUBLIC bool_t fmtp_get_value(const char *fmtp, const char *param_name, char
 
 /* some payload types */
 /* audio */
-VAR_DECLSPEC PayloadType payload_type_pcmu8000;
-VAR_DECLSPEC PayloadType payload_type_pcma8000;
-VAR_DECLSPEC PayloadType payload_type_pcm8000;
-VAR_DECLSPEC PayloadType payload_type_l16_mono;
-VAR_DECLSPEC PayloadType payload_type_l16_stereo;
-VAR_DECLSPEC PayloadType payload_type_lpc1016;
-VAR_DECLSPEC PayloadType payload_type_g729;
-VAR_DECLSPEC PayloadType payload_type_g7231;
-VAR_DECLSPEC PayloadType payload_type_g7221;
-VAR_DECLSPEC PayloadType payload_type_g726_40;
-VAR_DECLSPEC PayloadType payload_type_g726_32;
-VAR_DECLSPEC PayloadType payload_type_g726_24;
-VAR_DECLSPEC PayloadType payload_type_g726_16;
-VAR_DECLSPEC PayloadType payload_type_aal2_g726_40;
-VAR_DECLSPEC PayloadType payload_type_aal2_g726_32;
-VAR_DECLSPEC PayloadType payload_type_aal2_g726_24;
-VAR_DECLSPEC PayloadType payload_type_aal2_g726_16;
-VAR_DECLSPEC PayloadType payload_type_gsm;
-VAR_DECLSPEC PayloadType payload_type_lpc;
-VAR_DECLSPEC PayloadType payload_type_lpc1015;
-VAR_DECLSPEC PayloadType payload_type_speex_nb;
-VAR_DECLSPEC PayloadType payload_type_speex_wb;
-VAR_DECLSPEC PayloadType payload_type_speex_uwb;
-VAR_DECLSPEC PayloadType payload_type_ilbc;
-VAR_DECLSPEC PayloadType payload_type_amr;
-VAR_DECLSPEC PayloadType payload_type_amrwb;
-VAR_DECLSPEC PayloadType payload_type_truespeech;
-VAR_DECLSPEC PayloadType payload_type_evrc0;
-VAR_DECLSPEC PayloadType payload_type_evrcb0;
-VAR_DECLSPEC PayloadType payload_type_silk_nb;	
-VAR_DECLSPEC PayloadType payload_type_silk_mb;
-VAR_DECLSPEC PayloadType payload_type_silk_wb;
-VAR_DECLSPEC PayloadType payload_type_silk_swb;
+ORTP_VAR_PUBLIC PayloadType payload_type_pcmu8000;
+ORTP_VAR_PUBLIC PayloadType payload_type_pcma8000;
+ORTP_VAR_PUBLIC PayloadType payload_type_pcm8000;
+ORTP_VAR_PUBLIC PayloadType payload_type_l16_mono;
+ORTP_VAR_PUBLIC PayloadType payload_type_l16_stereo;
+ORTP_VAR_PUBLIC PayloadType payload_type_lpc1016;
+ORTP_VAR_PUBLIC PayloadType payload_type_g729;
+ORTP_VAR_PUBLIC PayloadType payload_type_g7231;
+ORTP_VAR_PUBLIC PayloadType payload_type_g7221;
+ORTP_VAR_PUBLIC PayloadType payload_type_g726_40;
+ORTP_VAR_PUBLIC PayloadType payload_type_g726_32;
+ORTP_VAR_PUBLIC PayloadType payload_type_g726_24;
+ORTP_VAR_PUBLIC PayloadType payload_type_g726_16;
+ORTP_VAR_PUBLIC PayloadType payload_type_aal2_g726_40;
+ORTP_VAR_PUBLIC PayloadType payload_type_aal2_g726_32;
+ORTP_VAR_PUBLIC PayloadType payload_type_aal2_g726_24;
+ORTP_VAR_PUBLIC PayloadType payload_type_aal2_g726_16;
+ORTP_VAR_PUBLIC PayloadType payload_type_gsm;
+ORTP_VAR_PUBLIC PayloadType payload_type_lpc;
+ORTP_VAR_PUBLIC PayloadType payload_type_lpc1015;
+ORTP_VAR_PUBLIC PayloadType payload_type_speex_nb;
+ORTP_VAR_PUBLIC PayloadType payload_type_speex_wb;
+ORTP_VAR_PUBLIC PayloadType payload_type_speex_uwb;
+ORTP_VAR_PUBLIC PayloadType payload_type_ilbc;
+ORTP_VAR_PUBLIC PayloadType payload_type_amr;
+ORTP_VAR_PUBLIC PayloadType payload_type_amrwb;
+ORTP_VAR_PUBLIC PayloadType payload_type_truespeech;
+ORTP_VAR_PUBLIC PayloadType payload_type_evrc0;
+ORTP_VAR_PUBLIC PayloadType payload_type_evrcb0;
+ORTP_VAR_PUBLIC PayloadType payload_type_silk_nb;
+ORTP_VAR_PUBLIC PayloadType payload_type_silk_mb;
+ORTP_VAR_PUBLIC PayloadType payload_type_silk_wb;
+ORTP_VAR_PUBLIC PayloadType payload_type_silk_swb;
 
 	/* video */
-VAR_DECLSPEC PayloadType payload_type_mpv;
-VAR_DECLSPEC PayloadType payload_type_h261;
-VAR_DECLSPEC PayloadType payload_type_h263;
-VAR_DECLSPEC PayloadType payload_type_h263_1998;
-VAR_DECLSPEC PayloadType payload_type_h263_2000;
-VAR_DECLSPEC PayloadType payload_type_mp4v;
-VAR_DECLSPEC PayloadType payload_type_theora;
-VAR_DECLSPEC PayloadType payload_type_h264;
-VAR_DECLSPEC PayloadType payload_type_x_snow;
-VAR_DECLSPEC PayloadType payload_type_jpeg;
-VAR_DECLSPEC PayloadType payload_type_vp8;
+ORTP_VAR_PUBLIC PayloadType payload_type_mpv;
+ORTP_VAR_PUBLIC PayloadType payload_type_h261;
+ORTP_VAR_PUBLIC PayloadType payload_type_h263;
+ORTP_VAR_PUBLIC PayloadType payload_type_h263_1998;
+ORTP_VAR_PUBLIC PayloadType payload_type_h263_2000;
+ORTP_VAR_PUBLIC PayloadType payload_type_mp4v;
+ORTP_VAR_PUBLIC PayloadType payload_type_theora;
+ORTP_VAR_PUBLIC PayloadType payload_type_h264;
+ORTP_VAR_PUBLIC PayloadType payload_type_x_snow;
+ORTP_VAR_PUBLIC PayloadType payload_type_jpeg;
+ORTP_VAR_PUBLIC PayloadType payload_type_vp8;
 
-VAR_DECLSPEC PayloadType payload_type_g722;
+ORTP_VAR_PUBLIC PayloadType payload_type_g722;
 
 /* text */
-VAR_DECLSPEC PayloadType payload_type_t140;
-VAR_DECLSPEC PayloadType payload_type_t140_red;
+ORTP_VAR_PUBLIC PayloadType payload_type_t140;
+ORTP_VAR_PUBLIC PayloadType payload_type_t140_red;
 
 /* non standard file transfer over UDP */
-VAR_DECLSPEC PayloadType payload_type_x_udpftp;
+ORTP_VAR_PUBLIC PayloadType payload_type_x_udpftp;
 
 /* telephone-event */
-VAR_DECLSPEC PayloadType payload_type_telephone_event;
+ORTP_VAR_PUBLIC PayloadType payload_type_telephone_event;
 
 #ifdef __cplusplus
 }

@@ -47,7 +47,7 @@ struct _RtpProfile
 
 typedef struct _RtpProfile RtpProfile;
 
-VAR_DECLSPEC RtpProfile av_profile;
+ORTP_VAR_PUBLIC RtpProfile av_profile;
 
 #define rtp_profile_get_name(profile) 	(const char*)((profile)->name)
 
