@@ -324,13 +324,21 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		session->rtp.socket=sock;
 		session->rtp.loc_port=rtp_port;
 		/*try to bind rtcp port */
-		if (rtcp_port<0) rtcp_port=rtp_port+1;
-		sock=create_and_bind(addr,rtcp_port,&sockfamily,session->reuseaddr);
+		if (rtcp_port<0) {
+			rtcp_port=rtp_port+1;
+			sock=create_and_bind(addr,rtcp_port,&sockfamily,session->reuseaddr);
+			if (sock==(ortp_socket_t)-1) {
+				sock=create_and_bind_random(addr,&sockfamily,&rtcp_port);
+			}
+		} else {
+			sock=create_and_bind(addr,rtcp_port,&sockfamily,session->reuseaddr);
+		}
 		if (sock!=(ortp_socket_t)-1){
 			session->rtcp.sockfamily=sockfamily;
 			session->rtcp.socket=sock;
-		}else{
-			ortp_warning("Could not create and bind rtcp socket.");
+		}else {
+			ortp_debug("Could not create and bind rtcp socket.");
+			return -1;
 		}
 		
 		/* set socket options (but don't change chosen states) */
