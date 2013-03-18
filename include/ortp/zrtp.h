@@ -47,10 +47,12 @@ typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 ORTP_PUBLIC bool_t ortp_zrtp_available();
 
 ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
+ORTP_PUBLIC void ortp_zrtp_start_engine(OrtpZrtpContext *activeContext, RtpSession *s);
 ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params);
 
 ORTP_PUBLIC void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
 ORTP_PUBLIC void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
+ORTP_PUBLIC void ortp_zrtp_get_hello_hash(OrtpZrtpContext* ctx, char* hello_hash, int hello_hash_len);
 
 ORTP_PUBLIC void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
 
