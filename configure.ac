@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([ortp],[0.21.2])
+AC_INIT([ortp],[0.21.1])
 AC_CANONICAL_SYSTEM
 
 dnl Source packaging numbers
@@ -10,7 +10,7 @@ ORTP_EXTRA_VERSION=$(echo $PACKAGE_VERSION | cut -d. -f4)
 
 LIBORTP_SO_CURRENT=9 dnl increment this number when you add/change/remove an interface
 LIBORTP_SO_REVISION=0 dnl increment this number when you change source code, without changing interfaces; set to 0 when incrementing CURRENT
-LIBORTP_SO_AGE=1 dnl increment this number when you add an interface, set to 0 if you remove an interface
+LIBORTP_SO_AGE=0 dnl increment this number when you add an interface, set to 0 if you remove an interface
 
 LIBORTP_SO_VERSION=$LIBORTP_SO_CURRENT:$LIBORTP_SO_REVISION:$LIBORTP_SO_AGE
 ORTP_VERSION=${ORTP_MAJOR_VERSION}.${ORTP_MINOR_VERSION}.${ORTP_MICRO_VERSION}

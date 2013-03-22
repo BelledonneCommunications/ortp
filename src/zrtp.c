@@ -213,7 +213,7 @@ static int32_t ozrtp_sendDataZRTP (ZrtpContext* ctx, const uint8_t* data, const 
 	// Send packet
 	ssize_t bytesSent = sendto(sockfd, (void*)buffer8, newlength,0,destaddr,destlen);
 	if (bytesSent == -1 || bytesSent < length) {
-		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d. errno=%d", (int)bytesSent, length, errno);
+		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d", (int)bytesSent, length);
 		return 0;
 	} else {
 		return 1;
@@ -558,7 +558,6 @@ static void ozrtp_handleGoClear(ZrtpContext* ctx) {
  * @see ZrtpCodes#MessageSeverity
  */
 static void ozrtp_zrtpNegotiationFailed (ZrtpContext* ctx, int32_t severity, int32_t subCode ){
-	ortp_message("ozrtp_zrtpNegotiationFailed: severity %d, subCode %d", severity, subCode);
 	ozrtp_sendInfo(ctx, severity, subCode);
 	// FIXME: necessary?
 }
@@ -573,7 +572,6 @@ static void ozrtp_zrtpNegotiationFailed (ZrtpContext* ctx, int32_t severity, int
  *
  */
 static void ozrtp_zrtpNotSuppOther(ZrtpContext* ctx) {
-	ortp_message("ozrtp_zrtpNotSuppOther");
 	// FIXME: do nothing
 }
 
@@ -812,13 +810,13 @@ static void ortp_zrtp_configure(ZrtpContext *context){
 	zrtp_setSasSignature(context,FALSE);//because it is uninitialized in zrtpcpp.
 }
 
-void ortp_zrtp_start_engine(OrtpZrtpContext *userData, RtpSession *s) {
+static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, RtpSession *s, OrtpZrtpParams *params) {
 	ZrtpContext *context=userData->zrtpContext;
+
 
 	if (s->rtp.tr || s->rtcp.tr)
 		ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
 
-	userData->session = s;
 	userData->rtpt.data=context;
 	userData->rtpt.t_getsocket=ozrtp_rtp_getsocket;
 	userData->rtpt.t_sendto=ozrtp_rtp_sendto;
@@ -833,8 +831,10 @@ void ortp_zrtp_start_engine(OrtpZrtpContext *userData, RtpSession *s) {
 
 	ortp_message("Starting ZRTP engine");
 	zrtp_setEnrollmentMode(context,FALSE);//because it is uninitialized in zrtpcpp.
-
+	
 	zrtp_startZrtpEngine(context);
+
+	return userData;
 }
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
@@ -844,8 +844,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	ortp_zrtp_configure(context);
 	ortp_message("Initialized ZRTP context");
 	zrtp_initializeZrtpEngine(context, &userData->zrtp_cb, userAgentStr, params->zid_file, userData, 0);
-	// ZRTP engine is no longer automatically started here. Make sure you call ortp_zrtp_start_engine
-	return userData;
+	return ortp_zrtp_configure_context(userData,s,params);
 }
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
@@ -879,8 +878,7 @@ OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSe
 	ortp_message("setting zrtp_setMultiStrParams");
 	zrtp_setMultiStrParams(context,multiparams,length);
 
-	ortp_zrtp_start_engine(userData,s);
-	return userData;
+	return ortp_zrtp_configure_context(userData,s,params);
 }
 
 bool_t ortp_zrtp_available(){return TRUE;}
@@ -893,16 +891,6 @@ void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){
 
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){
 	zrtp_resetSASVerified(ctx->zrtpContext);
-}
-
-void ortp_zrtp_get_hello_hash(OrtpZrtpContext* ctx, char* hello_hash, int hello_hash_len) {
-	char * zi = zrtp_getHelloHash(ctx->zrtpContext);
-	if (zi != NULL) {
-		strncpy(hello_hash, zi, hello_hash_len);
-		free(zi);
-	} else {
-		ortp_message("ORTP-ZRTP unable to get hello hash for zrtp context");
-	}
 }
 
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx) {
@@ -926,24 +914,20 @@ void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx) {
 
 #else
 
+
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
-	ortp_message("ZRTP is disabled - not compiled");
+	ortp_message("ZRTP is disabled - not implemented yet");
 	return NULL;
 }
 
-void ortp_zrtp_start_engine(OrtpZrtpContext *activeContext, RtpSession *s) {
-	ortp_message("ZRTP is disabled - not compiled");
-}
-
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
-	ortp_message("ZRTP is disabled - not compiled");
+	ortp_message("ZRTP is disabled - not implemented yet - not adding stream");
 	return NULL;
 }
 
 bool_t ortp_zrtp_available(){return FALSE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
-void ortp_zrtp_get_hello_hash(OrtpZrtpContext* ctx, char* hello_hash, int hello_hash_len) {}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
 
 #endif
