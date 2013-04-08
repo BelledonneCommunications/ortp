@@ -275,6 +275,7 @@ ORTP_PUBLIC uint32_t rtp_session_get_send_ssrc(RtpSession* session);
 ORTP_PUBLIC uint32_t rtp_session_get_recv_ssrc(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_seq_number(RtpSession *session, uint16_t seq);
 ORTP_PUBLIC uint16_t rtp_session_get_seq_number(RtpSession *session);
+ORTP_PUBLIC uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_enable_jitter_buffer(RtpSession *session , bool_t enabled);
 ORTP_PUBLIC bool_t rtp_session_jitter_buffer_enabled(const RtpSession *session);

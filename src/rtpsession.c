@@ -595,7 +595,7 @@ rtp_session_signal_disconnect_by_callback (RtpSession * session, const char *sig
 
 
 /**
- * sets the initial sequence number of a sending session.
+ * Set the initial sequence number for outgoing stream..
  * @param session		a rtp session freshly created.
  * @param addr			a 16 bit unsigned number.
  *
@@ -605,8 +605,18 @@ void rtp_session_set_seq_number(RtpSession *session, uint16_t seq){
 }
 
 
+/**
+ * Get the current sequence number for outgoing stream.
+**/
 uint16_t rtp_session_get_seq_number(RtpSession *session){
 	return session->rtp.snd_seq;
+}
+
+/**
+ * Returns the highest extended sequence number received.
+**/
+uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session){
+	return session->rtp.hwrcv_extseq;
 }
 
 
