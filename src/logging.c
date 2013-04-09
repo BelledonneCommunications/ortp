@@ -45,7 +45,7 @@ void ortp_set_log_handler(OrtpLogFunc func){
 }
 
 
-unsigned int __ortp_log_mask=ORTP_WARNING|ORTP_ERROR|ORTP_FATAL;
+static unsigned int __ortp_log_mask=ORTP_WARNING|ORTP_ERROR|ORTP_FATAL;
 
 /**
  * @ param levelmask a mask of ORTP_DEBUG, ORTP_MESSAGE, ORTP_WARNING, ORTP_ERROR
@@ -53,6 +53,10 @@ unsigned int __ortp_log_mask=ORTP_WARNING|ORTP_ERROR|ORTP_FATAL;
 **/
 void ortp_set_log_level_mask(int levelmask){
 	__ortp_log_mask=levelmask;
+}
+
+int ortp_get_log_level_mask(void) {
+	return __ortp_log_mask;
 }
 
 char * ortp_strdup_vprintf(const char *fmt, va_list ap)

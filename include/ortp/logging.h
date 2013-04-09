@@ -51,9 +51,7 @@ ORTP_PUBLIC void ortp_set_log_handler(OrtpLogFunc func);
 
 ORTP_VAR_PUBLIC OrtpLogFunc ortp_logv_out;
 
-ORTP_PUBLIC extern unsigned int __ortp_log_mask;
-
-#define ortp_log_level_enabled(level)	(__ortp_log_mask & (level))
+#define ortp_log_level_enabled(level)	(ortp_get_log_level_mask() & (level))
 
 #if !defined(WIN32) && !defined(_WIN32_WCE)
 #define ortp_logv(level,fmt,args) \
@@ -67,6 +65,7 @@ ORTP_PUBLIC void ortp_logv(int level, const char *fmt, va_list args);
 #endif
 
 ORTP_PUBLIC void ortp_set_log_level_mask(int levelmask);
+ORTP_PUBLIC int ortp_get_log_level_mask(void);
 
 #ifdef __GNUC__
 #define CHECK_FORMAT_ARGS(m,n) __attribute__((format(printf,m,n)))
