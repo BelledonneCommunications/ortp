@@ -635,3 +635,24 @@ PayloadType payload_type_silk_swb={
 	CHANNELS(1)
 };
 
+PayloadType payload_type_aaceld_nb={
+	TYPE( PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(22050),
+	BITS_PER_SAMPLE( 0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH( 0),
+	NORMAL_BITRATE(32000),
+	MIME_TYPE ("mpeg4-generic"),
+	CHANNELS(1)
+};
+
+PayloadType payload_type_aaceld_wb={
+	TYPE( PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(44100),
+	BITS_PER_SAMPLE( 0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH( 0),
+	NORMAL_BITRATE(64000),
+	MIME_TYPE ("mpeg4-generic"),
+	CHANNELS(1)
+};

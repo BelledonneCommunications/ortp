@@ -131,6 +131,8 @@ ORTP_VAR_PUBLIC PayloadType payload_type_silk_nb;
 ORTP_VAR_PUBLIC PayloadType payload_type_silk_mb;
 ORTP_VAR_PUBLIC PayloadType payload_type_silk_wb;
 ORTP_VAR_PUBLIC PayloadType payload_type_silk_swb;
+ORTP_VAR_PUBLIC PayloadType payload_type_aaceld_nb;
+ORTP_VAR_PUBLIC PayloadType payload_type_aaceld_wb;
 
 	/* video */
 ORTP_VAR_PUBLIC PayloadType payload_type_mpv;
