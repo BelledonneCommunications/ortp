@@ -646,7 +646,7 @@ PayloadType payload_type_aaceld_22k={
 	CHANNELS(1)
 };
 
-PayloadType payload_type_aaceld_44K={
+PayloadType payload_type_aaceld_44k={
 	TYPE( PAYLOAD_AUDIO_PACKETIZED),
 	CLOCK_RATE(44100),
 	BITS_PER_SAMPLE( 0),
