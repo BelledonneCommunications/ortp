@@ -635,7 +635,7 @@ PayloadType payload_type_silk_swb={
 	CHANNELS(1)
 };
 
-PayloadType payload_type_aaceld_nb={
+PayloadType payload_type_aaceld_22k={
 	TYPE( PAYLOAD_AUDIO_PACKETIZED),
 	CLOCK_RATE(22050),
 	BITS_PER_SAMPLE( 0),
@@ -646,7 +646,7 @@ PayloadType payload_type_aaceld_nb={
 	CHANNELS(1)
 };
 
-PayloadType payload_type_aaceld_wb={
+PayloadType payload_type_aaceld_44K={
 	TYPE( PAYLOAD_AUDIO_PACKETIZED),
 	CLOCK_RATE(44100),
 	BITS_PER_SAMPLE( 0),
