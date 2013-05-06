@@ -231,6 +231,7 @@ ORTP_PUBLIC const char *getWinSocketError(int error);
 
 #define snprintf _snprintf
 #define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 
 
 #ifdef __cplusplus
