@@ -79,8 +79,7 @@ static int ortp_initialized=0;
 **/
 void ortp_init()
 {
-	if (ortp_initialized) return;
-	ortp_initialized++;
+	if (ortp_initialized++) return;
 
 #ifdef WIN32
 	win32_init_sockets();
