@@ -656,3 +656,14 @@ PayloadType payload_type_aaceld_44k={
 	MIME_TYPE ("mpeg4-generic"),
 	CHANNELS(1)
 };
+
+PayloadType payload_type_opus = {
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(48000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(20000),
+	MIME_TYPE("opus"),
+	CHANNELS(1)
+};
