@@ -1,3 +1,7 @@
+May 27, 2012: ortp-0.22.0
+	- network simulator improvements for simulating random lost packets
+	- srtp initialization bugfix
+
 February 22th, 2012: ortp-0.20.0
 	- fix an issue on video call with ZRTP
 
