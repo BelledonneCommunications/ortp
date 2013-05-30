@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian VoIP Team <pkg-voip-maintainers@lists.alioth.debian.org>
 Uploaders: Samuel Mimram <smimram@debian.org>, Kilian Krause <kilian@debian.org>, Faidon Liambotis <paravoid@debian.org>, Mark Purcell <msp@debian.org>, Lionel Elie Mamane <lmamane@debian.org>, Tzafrir Cohen <tzafrir@debian.org>
 Build-Depends: debhelper (>= 8),
- autoconf, automake1.9, autotools-dev, libtool, pkg-config, intltool,
+ autoconf, automake, autotools-dev, libtool, pkg-config, intltool,
  libglib2.0-dev, 
  libsrtp-dev [!hurd-any !sparc],
  doxygen
@@ -14,7 +14,7 @@ Vcs-Svn: svn://svn.debian.org/pkg-voip/linphone/trunk/
 Vcs-Browser: http://anonscm.debian.org/viewvc/pkg-voip/linphone/trunk/
 
 
-Package: libortp8
+Package: libortp9
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -32,7 +32,7 @@ Description: Real-time Transport Protocol stack
 Package: libortp-dev
 Section: libdevel
 Architecture: any
-Depends: ${misc:Depends}, libortp8 (= ${binary:Version}),
+Depends: ${misc:Depends}, libortp9 (= ${binary:Version}),
  libsrtp0-dev [!hurd-any !sparc]
 Conflicts: libortp7-dev
 Description: Real-time Transport Protocol stack
@@ -46,9 +46,9 @@ Description: Real-time Transport Protocol stack
    - supports multiplexing IO;
    - supports part of RFC2833 for telephone events over RTP.
 
-Package: libortp8-dbg
+Package: libortp9-dbg
 Architecture: any
-Depends: libortp8 (= ${binary:Version}), ${misc:Depends}
+Depends: libortp9 (= ${binary:Version}), ${misc:Depends}
 Section: debug
 Priority: extra
 Description: Debugging symbols for ortp

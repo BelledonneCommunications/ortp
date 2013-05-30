@@ -1,5 +1,5 @@
 
-EXTRA_DIST=ortp-config-win32.h dll_entry.c master system
+EXTRA_DIST=ortp-config-win32.h dll_entry.c master system winrttimer.cpp winrttimer.h
 
 AM_CPPFLAGS=\
 	-I$(top_srcdir)/include/ \
