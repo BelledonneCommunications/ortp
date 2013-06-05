@@ -133,6 +133,8 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #define _WINSOCKAPI_
 #endif
 
+#define strtok_r strtok_s
+
 typedef  unsigned __int64 uint64_t;
 typedef  __int64 int64_t;
 typedef  unsigned short uint16_t;
@@ -149,6 +151,8 @@ typedef __int16 int16_t;
 #define vsnprintf	_vsnprintf
 #define srandom		srand
 #define random		rand
+
+ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 
 
 typedef SOCKET ortp_socket_t;
