@@ -146,14 +146,12 @@ typedef __int16 int16_t;
 #include <stdint.h> /*provided by mingw32*/
 #include <io.h>
 #define ORTP_PUBLIC
+ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #endif
 
 #define vsnprintf	_vsnprintf
 #define srandom		srand
 #define random		rand
-
-ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
-
 
 typedef SOCKET ortp_socket_t;
 #ifdef WINAPI_FAMILY_PHONE_APP
