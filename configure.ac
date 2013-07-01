@@ -106,6 +106,18 @@ AC_ARG_ENABLE(debug,
 	[debug_enabled=no]
 )
 
+
+AC_ARG_ENABLE(broken_srtp,
+	[AS_HELP_STRING([--enable-broken-srtp], [Skip some sanity test (default=no)])],
+	[case "${enableval}" in
+		yes)	test_for_broken_srtp=no;;
+		no)	test_for_broken_srtp=yes;;
+		*)	AC_MSG_ERROR("Bad value for --enable-broken-srtp");;
+	esac],
+	[test_for_broken_srtp=yes]
+)
+
+
 hpux_host=no
 posixtimer_interval=10000
 PTHREAD_LDFLAGS=
@@ -219,8 +231,14 @@ if test "${srtp_prefix}" != "none" ; then
 
 	if test "$have_srtp_headers$have_srtp_lib" = "yesyes" ; then
 		have_srtp=yes
-		AC_CHECK_LIB(srtp,sha1_update,[
-			AC_MSG_ERROR([This libsrtp version exports symbols conflicting with other libraries. Please use the one from git://git.linphone.org/srtp.git])], have_srtp=yes)
+		if test "$test_for_broken_srtp" = yes; then
+			AC_CHECK_LIB(srtp,sha1_update,[
+			AC_MSG_ERROR([This libsrtp version exports symbols conflicting with polar ssl, resulting in a bad execution path.
+			 Please use the one from git://git.linphone.org/srtp.git
+			 You could also track resolution of defect on https://github.com/cisco/libsrtp/issues/28
+			 If you are not linking against polar ssl, you may prefer to skip this test with --enable-broken-srtp
+			])], have_srtp=yes)
+		fi
 		AC_DEFINE(HAVE_SRTP, 1, [Defined when srtp support is compiled])
 	else
 		AC_MSG_NOTICE([Could not find libsrtp headers or lib, cryto transport disabled.])
