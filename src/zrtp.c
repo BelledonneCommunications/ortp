@@ -722,7 +722,11 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 		}
 
 		uint32_t peerssrc = ntohl(*(uint32_t*)(rtp+8));
+#if HAVE_zrtpcpp_with_len
+		zrtp_processZrtpMessage(zrtpContext, ext_header, peerssrc,rlen);
+#else
 		zrtp_processZrtpMessage(zrtpContext, ext_header, peerssrc);
+#endif
 		userData->last_recv_zrtp_seq_number=seq_number;
 		return 0;
 		}
