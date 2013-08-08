@@ -254,18 +254,18 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 		ortp_free(key);
 		return FALSE;
 	}
-		
+	
 	policy->ssrc = ssrc;
 	policy->key = key;
 	policy->next = NULL;
-		
+	
 	err = ortp_srtp_add_stream(srtp, policy);
 	if (err != err_status_ok) {
-		ortp_error("Failed to add incoming stream to srtp session (%d)", err);
+		ortp_error("Failed to add stream to srtp session (%d)", err);
 		ortp_free(key);
 		return FALSE;
 	}
-		
+	
 	ortp_free(key);
 	return TRUE;
 }
@@ -306,6 +306,7 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 		
 		memset(&policy, 0, sizeof(srtp_policy_t));
 		
+		policy.allow_repeat_tx=1; /*this is necessary to allow telephone-event to be sent 3 times for end of dtmf packet.*/
 		outgoing_ssrc.type = ssrc_specific;
 		outgoing_ssrc.value = ssrc;
 		
