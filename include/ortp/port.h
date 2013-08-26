@@ -76,6 +76,7 @@ typedef pthread_cond_t ortp_cond_t;
 #endif
 
 #define ORTP_PUBLIC
+#define ORTP_INLINE inline
 
 #ifdef __cplusplus
 extern "C"
@@ -199,7 +200,7 @@ ORTP_PUBLIC int WIN_cond_destroy(ortp_cond_t * cond);
 #endif
 
 #define SOCKET_OPTION_VALUE	char *
-#define inline			__inline
+#define ORTP_INLINE __inline
 
 #if defined(_WIN32_WCE)
 

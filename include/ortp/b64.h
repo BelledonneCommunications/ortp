@@ -380,29 +380,29 @@ size_t b64_getErrorStringLength(B64_RC code);
 namespace stlsoft
 {
 
-    inline char const *c_str_data_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
+    ORTP_INLINE char const *c_str_data_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
     {
         return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
     }
-    inline char const *c_str_data( B64_NAMESPACE_QUALIFIER::B64_RC code)
+    ORTP_INLINE char const *c_str_data( B64_NAMESPACE_QUALIFIER::B64_RC code)
     {
         return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
     }
 
-    inline size_t c_str_len_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
+    ORTP_INLINE size_t c_str_len_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
     {
         return B64_NAMESPACE_QUALIFIER::b64_getErrorStringLength(code);
     }
-    inline size_t c_str_len( B64_NAMESPACE_QUALIFIER::B64_RC code)
+    ORTP_INLINE size_t c_str_len( B64_NAMESPACE_QUALIFIER::B64_RC code)
     {
         return B64_NAMESPACE_QUALIFIER::b64_getErrorStringLength(code);
     }
 
-    inline char const *c_str_ptr_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
+    ORTP_INLINE char const *c_str_ptr_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
     {
         return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
     }
-    inline char const *c_str_ptr( B64_NAMESPACE_QUALIFIER::B64_RC code)
+    ORTP_INLINE char const *c_str_ptr( B64_NAMESPACE_QUALIFIER::B64_RC code)
     {
         return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
     }
