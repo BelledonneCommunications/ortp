@@ -870,6 +870,11 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 		session->flags&=~RTP_SOCKET_CONNECTED;
 		session->flags&=~RTCP_SOCKET_CONNECTED;
 	}
+	ortp_message("rtp session [%p] set to rtp [%s:%i] rtcp [%s:%i]"	,session
+																	,rtp_addr
+																	,rtp_port
+																	,rtcp_addr
+																	,rtcp_port);
 	return 0;
 }
 
@@ -1459,7 +1464,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 			{
 				if (session->on_network_error.count>0){
 					rtp_signal_table_emit3(&session->on_network_error,(long)"Error receiving RTCP packet",INT_TO_POINTER(errnum));
-				}else ortp_warning("Error receiving RTCP packet: %s.",getSocketError());
+				}else ortp_warning("Error receiving RTCP packet on port [%i]: %s.",session->rtcp.loc_port,getSocketError());
 				session->rtp.recv_errno=errnum;
 			}
 			/* don't free the cached_mp, it will be reused next time */

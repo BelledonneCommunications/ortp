@@ -102,6 +102,7 @@ typedef struct _RtpTransport
 typedef struct _OrtpNetworkSimulatorParams{
 	int enabled;
 	float max_bandwidth; /*IP bandwidth, in bit/s*/
+	int max_buffer_size; /*Max number of bit buffered before being discarded*/
 	float loss_rate;
 }OrtpNetworkSimulatorParams;
 

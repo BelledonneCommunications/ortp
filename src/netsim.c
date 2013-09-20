@@ -39,6 +39,11 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 	if (params->enabled){
 		if (sim==NULL) sim=simulator_ctx_new();
 		sim->params=*params;
+		if (sim->params.max_bandwidth && sim->params.max_buffer_size==0) {
+			sim->params.max_buffer_size=sim->params.max_bandwidth;
+			ortp_message("Max buffer size not set for rtp session [%p], using [%i]",session,sim->params.max_buffer_size);
+		}
+
 		session->net_sim_ctx=sim;
 	}else{
 		if (sim!=NULL) ortp_network_simulator_destroy(sim);
@@ -81,7 +86,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 		sim->qsize+=bits;
 	}
 	/*flow control*/
-	while (sim->qsize>=sim->params.max_bandwidth){
+	while (sim->qsize>=sim->params.max_buffer_size){
 		ortp_message("rtp_session_network_simulate(): discarding packets.");
 		output=getq(&sim->q);
 		if (output){
