@@ -232,12 +232,17 @@ if test "${srtp_prefix}" != "none" ; then
 	if test "$have_srtp_headers$have_srtp_lib" = "yesyes" ; then
 		have_srtp=yes
 		if test "$test_for_broken_srtp" = yes; then
+			LDFLAGS_save=$LDFLAGS
+			LDFLAGS="$LDFLAGS $SRTP_LIBS"
+			LIBS_save=$LIBS
 			AC_CHECK_LIB(srtp,sha1_update,[
 			AC_MSG_ERROR([This libsrtp version exports symbols conflicting with polar ssl, resulting in a bad execution path.
 			 Please use the one from git://git.linphone.org/srtp.git
 			 You could also track resolution of defect on https://github.com/cisco/libsrtp/issues/28
 			 If you are not linking against polar ssl, you may prefer to skip this test with --enable-broken-srtp
 			])], have_srtp=yes)
+			LDFLAGS=$LDFLAGS_save
+			LIBS=$LIBS_save
 		fi
 		AC_DEFINE(HAVE_SRTP, 1, [Defined when srtp support is compiled])
 	else
