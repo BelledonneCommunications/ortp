@@ -1652,16 +1652,20 @@ static float compute_bw(struct timeval *orig, unsigned int bytes){
 }
 
 float rtp_session_compute_recv_bandwidth(RtpSession *session){
-	float bw;
-	bw=compute_bw(&session->rtp.recv_bw_start,session->rtp.recv_bytes);
-	session->rtp.recv_bytes=0;
+	float bw=-1;
+	if (session) {
+		bw=compute_bw(&session->rtp.recv_bw_start,session->rtp.recv_bytes);
+		session->rtp.recv_bytes=0;
+	}
 	return bw;
 }
 
 float rtp_session_compute_send_bandwidth(RtpSession *session){
-	float bw;
-	bw=compute_bw(&session->rtp.send_bw_start,session->rtp.sent_bytes);
-	session->rtp.sent_bytes=0;
+	float bw=-1;
+	if (session) {
+		bw=compute_bw(&session->rtp.send_bw_start,session->rtp.sent_bytes);
+		session->rtp.sent_bytes=0;
+	}
 	return bw;
 }
 
