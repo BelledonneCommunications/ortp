@@ -62,21 +62,13 @@ LOCAL_CFLAGS += \
 
 
 ifeq ($(BUILD_GPLV3_ZRTP), 1)
-ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
 LOCAL_SHARED_LIBRARIES += libzrtpcpp
-else
-LOCAL_STATIC_LIBRARIES += libzrtpcpp-static
-endif
 LOCAL_CFLAGS += -DHAVE_zrtp
 LOCAL_C_INCLUDES += $(ZRTP_C_INCLUDE)
 endif #ZRTP
 
 ifeq ($(BUILD_SRTP), 1)
-ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
 LOCAL_SHARED_LIBRARIES += libsrtp
-else
-LOCAL_STATIC_LIBRARIES += libsrtp-static
-endif
 LOCAL_C_INCLUDES += $(SRTP_C_INCLUDE)
 LOCAL_CFLAGS += -DHAVE_SRTP -DHAVE_SRTP_SHUTDOWN
 endif #SRTP
