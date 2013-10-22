@@ -50,7 +50,11 @@ BOOL WINAPI DllMain(
     { 
         case DLL_PROCESS_ATTACH:
 
-			OutputDebugString("--> dll_entry.c - oRTP.dll - DLL_PROCESS_ATTACH()\n");
+#ifndef _UNICODE
+			OutputDebugStringA("--> dll_entry.c - oRTP.dll - DLL_PROCESS_ATTACH()\n");
+#else
+			OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - DLL_PROCESS_ATTACH()\n");
+#endif
 		 
 			wVersionRequested = MAKEWORD( 1, 0 );
 
@@ -92,7 +96,11 @@ BOOL WINAPI DllMain(
  
             if (fInit) 
 			{
-				OutputDebugString("--> dll_entry.c - oRTP.dll - Initializing module\n");
+#ifndef _UNICODE
+				OutputDebugStringA("--> dll_entry.c - oRTP.dll - Initializing module\n");
+#else
+				OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - Initializing module\n");
+#endif
 
 #ifdef WINAPI_FAMILY_PHONE_APP
 				lpSharedData->m_ullStartTime = GetTickCount64();
@@ -107,7 +115,11 @@ BOOL WINAPI DllMain(
 			}
 			else
 			{
-				OutputDebugString("--> dll_entry.c - oRTP.dll - Binding\n");
+#ifndef _UNICODE
+				OutputDebugStringA("--> dll_entry.c - oRTP.dll - Binding\n");
+#else
+				OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - Binding\n");
+#endif
 				lpSharedData->m_nReference++;
 			}
             break;
@@ -135,13 +147,21 @@ BOOL WINAPI DllMain(
         case DLL_PROCESS_DETACH:
 
 			if (lpSharedData != NULL)
-			{			
-				OutputDebugString("--> dll_entry.c - oRTP.dll - Binding\n");
+			{
+#ifndef _UNICODE
+				OutputDebugStringA("--> dll_entry.c - oRTP.dll - Binding\n");
+#else
+				OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - Binding\n");
+#endif
 				lpSharedData->m_nReference--;
 
 				if (lpSharedData->m_nReference == 0)
 				{
-					OutputDebugString("--> dll_entry.c - oRTP.dll - Detaching\n");
+#ifndef _UNICODE
+					OutputDebugStringA("--> dll_entry.c - oRTP.dll - Detaching\n");
+#else
+					OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - Detaching\n");
+#endif
 
 					ortp_exit();
 					UnregisterLog(&dwoRTPLogLevel, "LOG_ORTP");

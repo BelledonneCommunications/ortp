@@ -152,8 +152,19 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	}
 	msg=ortp_strdup_vprintf(fmt,args);
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
-	OutputDebugString(msg);
-	OutputDebugString("\r\n");
+	#ifndef _UNICODE
+        OutputDebugStringA(msg);
+        OutputDebugStringA("\r\n");
+	#else
+		{
+			int len=strlen(msg);
+			wchar_t *tmp=(wchar_t*)ortp_malloc0((len+1)*sizeof(wchar_t));
+			mbstowcs(tmp,msg,len);
+			OutputDebugStringW(tmp);
+			OutputDebugStringW(L"\r\n");
+			ortp_free(tmp);
+		}
+	#endif
 #endif
 	fprintf(__log_file,"ortp-%s-%s" ENDLINE,lname,msg);
 	fflush(__log_file);
