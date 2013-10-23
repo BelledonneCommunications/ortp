@@ -667,3 +667,14 @@ PayloadType payload_type_opus = {
 	MIME_TYPE("opus"),
 	CHANNELS(1)
 };
+
+PayloadType payload_type_isac = {
+	TYPE( PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(16000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(32000),
+	MIME_TYPE("iSAC"),
+	CHANNELS(1)
+};
