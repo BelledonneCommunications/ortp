@@ -31,7 +31,7 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
  * portability, payload types must be defined with their fields in the right
  * order.
  */
-#if defined(_ISOC99_SOURCE)
+#if defined(_ISOC99_SOURCE) || defined(__clang__)
 // ISO C99's tagged syntax
 #define TYPE(val)		.type=(val)
 #define CLOCK_RATE(val)		.clock_rate=(val)
