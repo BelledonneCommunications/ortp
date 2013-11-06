@@ -79,7 +79,7 @@ static inline uint64_t convert_timeval_to_millis(struct timeval *t) {
 static void check_timer(ZrtpContext *zrtpContext, OrtpZrtpContext *c) {
 	if (c->timerWillTriggerAt != 0) {
 		struct timeval t;
-		gettimeofday(&t,NULL);
+		ortp_gettimeofday(&t,NULL);
 		uint64_t now=convert_timeval_to_millis(&t);
 		if (now > c->timerWillTriggerAt) {
 			c->timerWillTriggerAt=0;
@@ -237,7 +237,7 @@ static int32_t ozrtp_activateTimer (ZrtpContext* ctx, int32_t time ) {
 		return 0;
 	}
 	struct timeval t;
-	gettimeofday(&t,NULL);
+	ortp_gettimeofday(&t,NULL);
 	user_data(ctx)->timerWillTriggerAt=time+convert_timeval_to_millis(&t);
 	return 1;
 }

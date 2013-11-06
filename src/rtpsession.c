@@ -864,7 +864,7 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		if ((session->flags & RTP_SESSION_RECV_NOT_STARTED)
 		|| session->mode == RTP_SESSION_SENDONLY)
 		{
-		gettimeofday(&session->last_recv_time, NULL);
+		ortp_gettimeofday(&session->last_recv_time, NULL);
 		}
 		if (session->flags & RTP_SESSION_SCHEDULED)
 		{
@@ -1069,7 +1069,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		/* Set initial last_rcv_time to first recv time. */
 		if ((session->flags & RTP_SESSION_SEND_NOT_STARTED)
 		|| session->mode == RTP_SESSION_RECVONLY){
-			gettimeofday(&session->last_recv_time, NULL);
+			ortp_gettimeofday(&session->last_recv_time, NULL);
 		}
 		if (session->flags & RTP_SESSION_SCHEDULED)
 		{
@@ -1643,7 +1643,7 @@ static float compute_bw(struct timeval *orig, unsigned int bytes){
 	float bw;
 	float time;
 	if (bytes==0) return 0;
-	gettimeofday(&current,NULL);
+	ortp_gettimeofday(&current,NULL);
 	time=(float)(current.tv_sec - orig->tv_sec) +
 		((float)(current.tv_usec - orig->tv_usec)*1e-6);
 	bw=((float)bytes)*8/(time+0.001); 

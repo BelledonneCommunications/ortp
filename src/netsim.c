@@ -69,7 +69,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 #else
 	int overhead=IP_UDP_OVERHEAD;
 #endif
-	gettimeofday(&current,NULL);
+	ortp_gettimeofday(&current,NULL);
 	
 	if (sim->last_check.tv_sec==0){
 		sim->last_check=current;

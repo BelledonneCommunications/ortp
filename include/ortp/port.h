@@ -107,7 +107,7 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 
 #define getSocketError() strerror(errno)
 #define getSocketErrorCode() (errno)
-
+#define ortp_gettimeofday(tv,tz) gettimeofday(tv,tz)
 #define ortp_log10f(x)	log10f(x)
 
 
@@ -239,7 +239,7 @@ ORTP_PUBLIC const char *getWinSocketError(int error);
 #ifdef __cplusplus
 extern "C"{
 #endif
-ORTP_PUBLIC int gettimeofday (struct timeval *tv, void* tz);
+ORTP_PUBLIC int ortp_gettimeofday (struct timeval *tv, void* tz);
 #ifdef _WORKAROUND_MINGW32_BUGS
 char * WSAAPI gai_strerror(int errnum);
 #endif

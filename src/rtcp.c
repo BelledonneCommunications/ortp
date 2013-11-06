@@ -215,7 +215,7 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv){
 static void sender_info_init(sender_info_t *info, RtpSession *session){
 	struct timeval tv;
 	uint64_t ntp;
-	gettimeofday(&tv,NULL);
+	ortp_gettimeofday(&tv,NULL);
 	ntp=ortp_timeval_to_ntp(&tv);
 	info->ntp_timestamp_msw=htonl(ntp >>32);
 	info->ntp_timestamp_lsw=htonl(ntp & 0xFFFFFFFF);
@@ -259,7 +259,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	if (stream->last_rcv_SR_time.tv_sec!=0){
 		struct timeval now;
 		double delay;
-		gettimeofday(&now,NULL);
+		ortp_gettimeofday(&now,NULL);
 		delay= (now.tv_sec-stream->last_rcv_SR_time.tv_sec)+ ((now.tv_usec-stream->last_rcv_SR_time.tv_usec)*1e-6);
 		delay= (delay*65536);
 		delay_snc_last_sr=(uint32_t) delay;
@@ -309,7 +309,7 @@ static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 
 		session->rtp.jitter_stats.max_jitter = jitter ;
 
-		gettimeofday( &now, NULL );
+		ortp_gettimeofday( &now, NULL );
 		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000LL ) + ( now.tv_usec / 1000LL );
 	}
 	/* compute mean jitter buffer size */

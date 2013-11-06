@@ -43,7 +43,7 @@ static uint32_t posix_timer_time=0;		/*in milisecond */
 void posix_timer_init()
 {
 	posix_timer.state=RTP_TIMER_RUNNING;
-	gettimeofday(&orig,NULL);
+	ortp_gettimeofday(&orig,NULL);
 	posix_timer_time=0;
 }
 
@@ -54,7 +54,7 @@ void posix_timer_do()
 {
 	int diff,time;
 	struct timeval tv;
-	gettimeofday(&cur,NULL);
+	ortp_gettimeofday(&cur,NULL);
 	time=((cur.tv_usec-orig.tv_usec)/1000 ) + ((cur.tv_sec-orig.tv_sec)*1000 );
 	if ( (diff=time-posix_timer_time)>50){
 		ortp_warning("Must catchup %i miliseconds.",diff);
@@ -69,7 +69,7 @@ void posix_timer_do()
 #else
 		select(0,NULL,NULL,NULL,&tv);
 #endif
-		gettimeofday(&cur,NULL);
+		ortp_gettimeofday(&cur,NULL);
 		time=((cur.tv_usec-orig.tv_usec)/1000 ) + ((cur.tv_sec-orig.tv_sec)*1000 );
 	}
 	posix_timer_time+=POSIXTIMER_INTERVAL/1000;

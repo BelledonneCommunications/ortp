@@ -985,7 +985,7 @@ static void update_sent_bytes(RtpSession*s, int nbytes){
 	int overhead=IP_UDP_OVERHEAD;
 #endif
 	if (s->rtp.sent_bytes==0){
-		gettimeofday(&s->rtp.send_bw_start,NULL);
+		ortp_gettimeofday(&s->rtp.send_bw_start,NULL);
 	}
 	s->rtp.sent_bytes+=nbytes+overhead;
 }
@@ -997,7 +997,7 @@ static void update_recv_bytes(RtpSession*s, int nbytes){
 	int overhead=IP_UDP_OVERHEAD;
 #endif
 	if (s->rtp.recv_bytes==0){
-		gettimeofday(&s->rtp.recv_bw_start,NULL);
+		ortp_gettimeofday(&s->rtp.recv_bw_start,NULL);
 	}
 	s->rtp.recv_bytes+=nbytes+overhead;
 }
@@ -1356,7 +1356,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		const report_block_t *rb;
 		
 		/* Getting the reception date from the main clock */	
-		gettimeofday( &reception_date, NULL );
+		ortp_gettimeofday( &reception_date, NULL );
 
 		if (rtcp_is_SR(block) ) {
 			rtcp_sr_t *sr = (rtcp_sr_t *) rtcp;

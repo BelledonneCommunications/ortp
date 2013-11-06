@@ -119,7 +119,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 #ifndef PERF
 	/* Write down the last RTP/RTCP packet reception time. */
-	gettimeofday(&session->last_recv_time, NULL);
+	ortp_gettimeofday(&session->last_recv_time, NULL);
 #endif
 
 	for (i=0;i<rtp->cc;i++)

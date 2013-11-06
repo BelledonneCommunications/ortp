@@ -50,7 +50,7 @@ extern void av_profile_init(RtpProfile *profile);
 
 static void init_random_number_generator(){
 	struct timeval t;
-	gettimeofday(&t,NULL);
+	ortp_gettimeofday(&t,NULL);
 	srandom(t.tv_usec+t.tv_sec);
 }
 

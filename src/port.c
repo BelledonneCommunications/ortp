@@ -351,7 +351,7 @@ gettimeofday (struct timeval *tv, void *tz)
 
 #else
 
-int gettimeofday (struct timeval *tv, void* tz)
+int ortp_gettimeofday (struct timeval *tv, void* tz)
 {
 	union
 	{
