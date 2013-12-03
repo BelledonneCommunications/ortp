@@ -22,7 +22,8 @@ ortp-config.h
 ortp.spec
 ortp.pc
 ortp.doxygen
-m4
+lt*.m4
+libtool.m4
 doc
 ortp.defs
 stamp-h1
