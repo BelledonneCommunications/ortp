@@ -39,7 +39,7 @@
 #endif
 
 #if (defined(WIN32) || defined(_WIN32_WCE)) && !defined(WINAPI_FAMILY_PHONE_APP)
-#include <Mswsock.h>
+#include <mswsock.h>
 #endif
 
 #ifdef HAVE_SYS_UIO_H

@@ -21,6 +21,7 @@ fi
 
 ORTP_PKGCONFIG_VERSION=${ORTP_VERSION}
 
+AC_SUBST(LIBORTP_SO_CURRENT, $LIBORTP_SO_CURRENT)
 AC_SUBST(LIBORTP_SO_VERSION)
 AC_SUBST(ORTP_VERSION)
 AC_SUBST(ORTP_PKGCONFIG_VERSION)
@@ -41,6 +42,8 @@ AC_DEFINE_UNQUOTED(ORTP_VERSION,"$ORTP_VERSION",[ortp version number])
 dnl Checks for programs.
 AC_PROG_CC
 LT_INIT([win32-dll shared disable-static])
+
+gl_LD_OUTPUT_DEF
 
 AC_MSG_CHECKING([warning make an error on compilation])
 AC_ARG_ENABLE(strict,
@@ -145,6 +148,7 @@ case "$target_os" in
 	;;
 esac
 
+AM_CONDITIONAL(BUILD_WIN32, test "$mingw_found" = "yes")
 AC_CONFIG_COMMANDS([libtool-hacking],
 	[if test "$mingw_found" = "yes" ; then
 		echo "Hacking libtool to work with mingw..."
@@ -383,6 +387,13 @@ AC_ARG_ENABLE(tests_enabled,
 	[tests_enabled=false]
 )
 AM_CONDITIONAL(ENABLE_TESTS, test x$tests_enabled = xyes)
+
+case "$target_os" in
+	*linux*)
+		# Eliminate -lstdc++ addition to postdeps for cross compiles.
+		postdeps_CXX=`echo " $postdeps_CXX " | sed 's, -lstdc++ ,,g'`
+	;;
+esac
 
 dnl ##################################################
 dnl # Check for doxygen

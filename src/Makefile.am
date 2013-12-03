@@ -51,5 +51,19 @@ libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS) $(LIB
 
 libortp_la_LDFLAGS= -version-info $(LIBORTP_SO_VERSION) -no-undefined
 
+if HAVE_LD_OUTPUT_DEF
+libortp_la_LDFLAGS += -Wl,--output-def,libortp-$(LIBORTP_SO_CURRENT).def
+defexecdir = $(libdir)
+defexec_DATA = libortp-$(LIBORTP_SO_CURRENT).def
+CLEANFILES = $(defexec_DATA)
+
+libortp-$(LIBORTP_SO_CURRENT).def: libortp.la
+
+if BUILD_WIN32
+defexec_DATA += libortp-$(LIBORTP_SO_CURRENT).lib
+libortp-$(LIBORTP_SO_CURRENT).lib: libortp-$(LIBORTP_SO_CURRENT).def libortp.la
+	$(DLLTOOL) --dllname libortp-$(LIBORTP_SO_CURRENT).dll --input-def libortp-$(LIBORTP_SO_CURRENT).def --output-lib $@ libortp.la
+endif
+endif
 
 SUBDIRS= . tests
