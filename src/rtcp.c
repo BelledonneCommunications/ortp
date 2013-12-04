@@ -403,8 +403,9 @@ void rtp_session_rtcp_process_send(RtpSession *session){
 		m=make_sr(session);
 		/* send the compound packet */
 		notify_sent_rtcp(session,m);
+		ortp_message("Sending RTCP SR compound message on session [%p].",session);
 		rtp_session_rtcp_send(session,m);
-		ortp_debug("Rtcp compound message sent.");
+
 	}
 }
 
@@ -412,6 +413,7 @@ void rtp_session_rtcp_process_recv(RtpSession *session){
 	RtpStream *st=&session->rtp;
 	RtcpStream *rtcp_st=&session->rtcp;
 	mblk_t *m=NULL;
+	bool_t is_sr=FALSE;
 	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r 
 		|| st->snd_last_ts - rtcp_st->last_rtcp_report_snt_s > rtcp_st->rtcp_report_snt_interval_s){
 		rtcp_st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
@@ -420,15 +422,17 @@ void rtp_session_rtcp_process_recv(RtpSession *session){
 		if (session->rtp.last_rtcp_packet_count<session->rtp.stats.packet_sent){
 			m=make_sr(session);
 			session->rtp.last_rtcp_packet_count=session->rtp.stats.packet_sent;
+			is_sr=TRUE;
 		}else if (session->rtp.stats.packet_recv>0){
 			/*don't send RR when no packet are received yet*/
 			m=make_rr(session);
+			is_sr=FALSE;
 		}
 		if (m!=NULL){
 			/* send the compound packet */
 			notify_sent_rtcp(session,m);
+			ortp_message("Sending RTCP %s compound message on session [%p].",(is_sr?"SR":"RR"),session);
 			rtp_session_rtcp_send(session,m);
-			ortp_debug("Rtcp compound message sent.");
 		}
 	}
 }
