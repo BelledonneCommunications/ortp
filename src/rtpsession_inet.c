@@ -987,9 +987,19 @@ static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_l
 #define IP_UDP_OVERHEAD (20+8)
 #define IP6_UDP_OVERHEAD (40+8)
 
+#ifdef ORTP_INET6
+static bool_t is_ipv6(RtpSession *s){
+	if (s->rtp.sockfamily==AF_INET6){
+		struct sockaddr_in6 *in6=(struct sockaddr_in6*)&s->rtp.rem_addr;
+		return !IN6_IS_ADDR_V4MAPPED(&in6->sin6_addr);
+	}
+	return FALSE;
+}
+#endif
+
 static void update_sent_bytes(RtpSession*s, int nbytes){
 #ifdef ORTP_INET6
-	int overhead=(s->rtp.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead=is_ipv6(s) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 #else
 	int overhead=IP_UDP_OVERHEAD;
 #endif
@@ -1001,7 +1011,7 @@ static void update_sent_bytes(RtpSession*s, int nbytes){
 
 static void update_recv_bytes(RtpSession*s, int nbytes){
 #ifdef ORTP_INET6
-	int overhead=(s->rtp.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead=is_ipv6(s) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 #else
 	int overhead=IP_UDP_OVERHEAD;
 #endif
