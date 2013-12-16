@@ -26,4 +26,5 @@ lt*.m4
 libtool.m4
 doc
 ortp.defs
+INSTALL
 stamp-h1

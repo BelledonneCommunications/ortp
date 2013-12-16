@@ -70,6 +70,12 @@ typedef WSACMSGHDR *LPWSACMSGHDR;
 #define CMSG_DATA WSA_CMSG_DATA
 typedef INT  (WINAPI * LPFN_WSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
 static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
+
+/*Mingw32 does not define AI_V4MAPPED, however it is supported starting from Windows Vista.*/
+#	ifndef AI_V4MAPPED
+#	define AI_V4MAPPED 0x00000800
+#	endif
+
 #endif
 
 static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen){
@@ -763,9 +769,12 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 #ifdef ORTP_INET6
 	struct addrinfo hints, *res0, *res;
 	char num[8];
+	
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_UNSPEC;
+	hints.ai_family = (session->rtp.socket == -1) ? AF_UNSPEC : session->rtp.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
+	
 	snprintf(num, sizeof(num), "%d", rtp_port);
 	err = getaddrinfo(rtp_addr, num, &hints, &res0);
 	if (err) {
@@ -805,8 +814,9 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	}
 	
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_UNSPEC;
+	hints.ai_family = (session->rtp.socket == -1) ? AF_UNSPEC : session->rtp.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
 	snprintf(num, sizeof(num), "%d", rtcp_port);
 	err = getaddrinfo(rtcp_addr, num, &hints, &res0);
 	if (err) {
@@ -878,8 +888,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	return 0;
 }
 
-int
-rtp_session_set_remote_addr_and_port(RtpSession * session, const char * addr, int rtp_port, int rtcp_port){
+int rtp_session_set_remote_addr_and_port(RtpSession * session, const char * addr, int rtp_port, int rtcp_port){
 	return rtp_session_set_remote_addr_full(session,addr,rtp_port,addr,rtcp_port);
 }
 
