@@ -176,6 +176,9 @@ build_scheduler=yes
 dnl Check if we have seteuid system call
 AC_CHECK_FUNCS(seteuid)
 
+dnl Check if we have arc4random family routines available
+AC_CHECK_FUNCS(arc4random)
+
 
 dnl check if we can use the pthread_library
 AC_CHECK_LIB(pthread, pthread_mutex_init, [pthread_enabled=yes], [pthread_enabled=no])

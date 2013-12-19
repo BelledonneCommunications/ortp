@@ -775,7 +775,11 @@ static OrtpZrtpContext* createUserData(ZrtpContext *context) {
 	userData->zrtpContext=context;
 	userData->timerWillTriggerAt=0;
 	userData->last_recv_zrtp_seq_number=0;
+#ifdef HAVE_ARC4RANDOM
+	userData->last_sent_zrtp_seq_number=arc4random_uniform(0xffff) + 1;
+#else
 	userData->last_sent_zrtp_seq_number=rand()+1; // INT_MAX+1 (signed)
+#endif
 
 	userData->srtpRecv=NULL;
 	userData->srtpSend=NULL;

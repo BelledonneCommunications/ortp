@@ -23,7 +23,7 @@
 #if defined(WIN32) || defined(_WIN32_WCE)
 #include "ortp-config-win32.h"
 #elif HAVE_CONFIG_H
-#include "ortp-config.h" /*needed for HAVE_SYS_UIO_H */
+#include "ortp-config.h" /*needed for HAVE_SYS_UIO_H and HAVE_ARC4RANDOM */
 #endif
 #include "ortp/ortp.h"
 #include "utils.h"
@@ -278,11 +278,16 @@ static ortp_socket_t create_and_bind_random(const char *localip, int *sock_famil
 	for (retry=0;retry<100;retry++)
 	{
 		int localport;
+#ifdef HAVE_ARC4RANDOM
+		localport = 5000 + (int)arc4random_uniform(0x10000 - 5000);
+		localport &= 0xfffe;
+#else
 		do
 		{
 			localport = (rand () + 5000) & 0xfffe;
 		}
 		while ((localport < 5000) || (localport > 0xffff));
+#endif
 		/*do not set REUSEADDR in case of random allocation */
 		sock = create_and_bind(localip, localport, sock_family,FALSE);
 		if (sock!=-1) {

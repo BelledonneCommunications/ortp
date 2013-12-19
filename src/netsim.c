@@ -115,7 +115,13 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 }
 
 static mblk_t *simulate_loss_rate(RtpSession *session, mblk_t *input, int rate){
-	if((rand() % 101) >= rate) {
+	int rrate;
+#ifdef HAVE_ARC4RANDOM
+	rrate = arc4random_uniform(101);
+#else
+	rrate = rand() % 101;
+#endif
+	if(rrate >= rate) {
 		return input;
 	}
 	freemsg(input);

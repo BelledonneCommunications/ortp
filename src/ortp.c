@@ -49,9 +49,11 @@ RtpScheduler *__ortp_scheduler;
 extern void av_profile_init(RtpProfile *profile);
 
 static void init_random_number_generator(){
+#ifndef HAVE_ARC4RANDOM
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
 	srandom(t.tv_usec+t.tv_sec);
+#endif
 }
 
 

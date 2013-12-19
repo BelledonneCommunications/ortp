@@ -98,7 +98,11 @@ extern void rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts,
 
 
 static uint32_t uint32_t_random(){
+#ifdef HAVE_ARC4RANDOM
+	return arc4random();
+#else
 	return random();
+#endif
 }
 
 
