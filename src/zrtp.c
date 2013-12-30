@@ -161,7 +161,7 @@ static void print_zrtp_packet(const char *info, const uint8_t *rtp) {
 /*	uint32_t *msg32=(uint32_t*)zmessage;
 	int i=0;
 	for (; i<zmessage_length; i++) {
-		ortp_message("%u", ntohl(msg32[i]));
+		ortp_message("%08x", ntohl(msg32[i]));
 	}*/
 }
 
@@ -331,9 +331,103 @@ static void ozrtp_sendInfo (ZrtpContext* ctx, int32_t severity, int32_t subCode 
 			ortp_warning("ZRTP %s",submsg);
 			break;
 		case zrtp_Severe:/*!< Severe error, security will not be established */
+			switch (subCode) {
+				case zrtp_SevereHelloHMACFailed:
+					/*!< Hash HMAC check of Hello failed! */
+					submsg="zrtp_SevereHelloHMACFailed";
+					break;
+				case zrtp_SevereCommitHMACFailed:
+					/*!< Hash HMAC check of Commit failed! */
+					submsg="zrtp_SevereCommitHMACFailed";
+					break;
+				case zrtp_SevereDH1HMACFailed:
+					/*!< Hash HMAC check of DHPart1 failed! */
+					submsg="zrtp_SevereDH1HMACFailed";
+					break;
+				case zrtp_SevereDH2HMACFailed:
+					/*!< Hash HMAC check of DHPart2 failed! */
+					submsg="zrtp_SevereDH2HMACFailed";
+					break;
+				case zrtp_SevereCannotSend:
+					/*!< Cannot send data - connection or peer down? */
+					submsg="zrtp_SevereCannotSend";
+					break;
+				case zrtp_SevereProtocolError:
+					/*!< Internal protocol error occured! */
+					submsg="zrtp_SevereProtocolError";
+					break;
+				case zrtp_SevereNoTimer:
+					/*!< Cannot start a timer - internal resources exhausted? */
+					submsg="zrtp_SevereNoTimer";
+					break;
+				case zrtp_SevereTooMuchRetries:
+					/*!< Too much retries during ZRTP negotiation - connection or peer down? */
+					submsg="zrtp_SevereTooMuchRetries";
+					break;
+				default:
+					submsg="unknown";
+					break;
+			}
 			ortp_error("ZRTP SEVERE %s",submsg);
 			break;
 		case zrtp_ZrtpError:
+			switch (subCode) {
+				case zrtp_CriticalSWError:
+					submsg="zrtp_CriticalSWError";
+					break;
+				case zrtp_UnsuppZRTPVersion:
+					submsg="zrtp_UnsuppZRTPVersion";
+					break;
+				case zrtp_HelloCompMismatch:
+					submsg="zrtp_HelloCompMismatch";
+					break;
+				case zrtp_UnsuppHashType:
+					submsg="zrtp_UnsuppHashType";
+					break;
+				case zrtp_UnsuppCiphertype:
+					submsg="zrtp_UnsuppCiphertype";
+					break;
+				case zrtp_UnsuppPKExchange:
+					submsg="zrtp_UnsuppPKExchange";
+					break;
+				case zrtp_UnsuppSRTPAuthTag:
+					submsg="zrtp_UnsuppSRTPAuthTag";
+					break;
+				case zrtp_UnsuppSASScheme:
+					submsg="zrtp_UnsuppSASScheme";
+					break;
+				case zrtp_NoSharedSecret:
+					submsg="zrtp_NoSharedSecret";
+					break;
+				case zrtp_DHErrorWrongPV:
+					submsg="zrtp_DHErrorWrongPV";
+					break;
+				case zrtp_DHErrorWrongHVI:
+					submsg="zrtp_DHErrorWrongHVI";
+					break;
+				case zrtp_SASuntrustedMiTM:
+					submsg="zrtp_SASuntrustedMiTM";
+					break;
+				case zrtp_ConfirmHMACWrong:
+					submsg="zrtp_ConfirmHMACWrong";
+					break;
+				case zrtp_NonceReused:
+					submsg="zrtp_NonceReused";
+					break;
+				case zrtp_EqualZIDHello:
+					submsg="zrtp_EqualZIDHello";
+					break;
+				case zrtp_GoCleatNotAllowed:
+					submsg="zrtp_GoCleatNotAllowed";
+					break;
+				case zrtp_IgnorePacket:
+					submsg="zrtp_IgnorePacket";
+					break;
+				default:
+					submsg="unknown";
+					break;
+			}
+
 			ortp_error("ZRTP ERROR %s",submsg);
 			break;
 		default:
@@ -722,11 +816,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 		}
 
 		uint32_t peerssrc = ntohl(*(uint32_t*)(rtp+8));
-#if HAVE_zrtpcpp_with_len
-		zrtp_processZrtpMessage(zrtpContext, ext_header, peerssrc,rlen);
-#else
-		zrtp_processZrtpMessage(zrtpContext, ext_header, peerssrc);
-#endif
+		zrtp_processZrtpMessage(zrtpContext, ext_header, peerssrc, rlen);
 		userData->last_recv_zrtp_seq_number=seq_number;
 		return 0;
 		}
