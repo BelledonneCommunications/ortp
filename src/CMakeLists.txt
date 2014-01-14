@@ -48,6 +48,11 @@ add_definitions(
 set(LIBS ws2_32 delayimp Winmm qwave)
 endif(WIN32)
 
+if(ORTP_ENABLE_SRTP)
+	add_definitions(-DHAVE_SRTP)
+	list(APPEND LIBS ${LIBSRTP})
+endif(ORTP_ENABLE_SRTP)
+
 add_library(libortp SHARED ${SOURCE_FILES})
 set_target_properties(libortp PROPERTIES VERSION 0.22.1 SOVERSION 9)
 
