@@ -45,7 +45,7 @@ add_definitions(
 	-DWINDOWS_NATIVE
 )
 
-set(LIBS ws2_32 delayimp Winmm qwave)
+set(LIBS ws2_32 delayimp Winmm)
 endif(WIN32)
 
 if(ORTP_ENABLE_SRTP)
