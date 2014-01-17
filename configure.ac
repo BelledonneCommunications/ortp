@@ -125,6 +125,15 @@ hpux_host=no
 posixtimer_interval=10000
 PTHREAD_LDFLAGS=
 
+case "$target" in
+        #macosx 64 bits
+        x86_64-apple-darwin*)
+                LIBS="$LIBS -mmacosx-version-min=10.6"
+                CXXFLAGS="$CXXFLAGS -mmacosx-version-min=10.6"
+                CFLAGS="$CFLAGS -mmacosx-version-min=10.6"
+        ;;
+esac
+
 case "$target_os" in
 	*hpux*) 
 		hpux_host=yes
