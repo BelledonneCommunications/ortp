@@ -123,6 +123,14 @@ PayloadType * rtp_profile_get_payload_from_rtpmap(RtpProfile *profile, const cha
 }
 
 int rtp_profile_move_payload(RtpProfile *prof,int oldpos,int newpos){
+	if (oldpos<0 || oldpos>=RTP_PROFILE_MAX_PAYLOADS) {
+		ortp_error("Bad old pos index %i",oldpos);
+		return -1;
+	}
+	if (newpos<0 || newpos>=RTP_PROFILE_MAX_PAYLOADS) {
+		ortp_error("Bad new pos index %i",newpos);
+		return -1;
+	}
 	prof->payload[newpos]=prof->payload[oldpos];
 	prof->payload[oldpos]=NULL;
 	return 0;
