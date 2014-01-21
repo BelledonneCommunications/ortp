@@ -482,7 +482,8 @@ int ortp_client_pipe_close(ortp_socket_t sock){
 void *ortp_shm_open(unsigned int keyid, int size, int create){
 	key_t key=keyid;
 	void *mem;
-	int fd=shmget(key,size,create ? (IPC_CREAT | 0666) : 0666);
+	int perms=S_IRUSR|S_IWUSR;
+	int fd=shmget(key,size,create ? (IPC_CREAT | perms ) : perms);
 	if (fd==-1){
 		printf("shmget failed: %s\n",strerror(errno));
 		return NULL;
