@@ -71,11 +71,13 @@ typedef WSACMSGHDR *LPWSACMSGHDR;
 typedef INT  (WINAPI * LPFN_WSARECVMSG)(SOCKET, LPWSAMSG, LPDWORD, LPWSAOVERLAPPED, LPWSAOVERLAPPED_COMPLETION_ROUTINE);
 static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 
-/*Mingw32 does not define AI_V4MAPPED, however it is supported starting from Windows Vista.*/
+#endif
+
+#if defined(WIN32) || defined(_WIN32_WCE) || defined(__QNX__)
+/* Mingw32 does not define AI_V4MAPPED, however it is supported starting from Windows Vista. QNX also does not define AI_V4MAPPED. */
 #	ifndef AI_V4MAPPED
 #	define AI_V4MAPPED 0x00000800
 #	endif
-
 #endif
 
 static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen){
