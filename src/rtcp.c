@@ -236,6 +236,8 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	
 	/* compute the statistics */
 	if (stream->hwrcv_since_last_SR!=0){
+		int expected_packets=stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR;
+		if (expected_packets==0) expected_packets=1;/*prevent division by zero*/
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
 			packet_loss = session->lost_packets_test_vector;
@@ -245,12 +247,12 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			stream->stats.cum_packet_loss = packet_loss;
 		}else {
 			/* Normal mode */
-			packet_loss = ( stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR ) - stream->hwrcv_since_last_SR;
+			packet_loss = expected_packets - stream->hwrcv_since_last_SR;
 			if ( packet_loss < 0 )
 				packet_loss = 0;
 			stream->stats.cum_packet_loss += packet_loss;
 		}
-		loss_fraction=(int)( 256 * packet_loss) / stream->hwrcv_since_last_SR ;
+		loss_fraction=(int)( 256 * packet_loss) / expected_packets;
 	}
 	/* reset them */
 	stream->hwrcv_since_last_SR=0;
