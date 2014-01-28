@@ -107,6 +107,9 @@
 
 #endif
 
+#ifdef __QNX__
+#include <sys/neutrino.h>
+#endif /* __QNX__ */
 
 #if !defined(HAVE_OPENSSL_HMAC_H) || !defined(HAVE_OPENSSL_MD5_H)
 #define NOSSL 1
@@ -1194,12 +1197,12 @@ stunRand(void)
 			read(fd,&tick,sizeof(tick));
 			closesocket(fd);
 	   }
-#elif defined(__GNUC__) && ( defined(__i686__) || defined(__i386__) )
-      asm("rdtsc" : "=A" (tick));
-#elif defined(__GNUC__) && defined(__amd64__)
+#elif defined(__GNUC__) && ( defined(__i686__) || defined(__i386__) || defined(__amd64__) )
       asm("rdtsc" : "=A" (tick));
 #elif defined (__SUNPRO_CC) && defined( __sparc__ )	
       tick = gethrtime();
+#elif defined(__QNX__)
+	  tick = (uint64_t)ClockCycles();
 #elif defined(__linux) || defined(__linux__) || defined(HAVE_DEV_RANDOM) 
       {
  	fd_set fdSet;
