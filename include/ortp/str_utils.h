@@ -83,13 +83,13 @@ extern "C" {
 #endif
 
 ORTP_PUBLIC void qinit(queue_t *q);
-	
+
 ORTP_PUBLIC void putq(queue_t *q, mblk_t *m);
 
 ORTP_PUBLIC mblk_t * getq(queue_t *q);
 
 ORTP_PUBLIC void insq(queue_t *q,mblk_t *emp, mblk_t *mp);
-	
+
 ORTP_PUBLIC void remq(queue_t *q, mblk_t *mp);
 
 ORTP_PUBLIC mblk_t * peekq(queue_t *q);
@@ -101,13 +101,13 @@ ORTP_PUBLIC void flushq(queue_t *q, int how);
 ORTP_PUBLIC void mblk_init(mblk_t *mp);
 
 ORTP_PUBLIC void mblk_meta_copy(const mblk_t *source, mblk_t *dest);
-	
+
 /* allocates a mblk_t, that points to a datab_t, that points to a buffer of size size. */
-ORTP_PUBLIC mblk_t *allocb(int size, int unused);
+ORTP_PUBLIC mblk_t *allocb(size_t size, int unused);
 #define BPRI_MED 0
 
 /* allocates a mblk_t, that points to a datab_t, that points to buf; buf will be freed using freefn */
-ORTP_PUBLIC mblk_t *esballoc(uint8_t *buf, int size, int pri, void (*freefn)(void*) );
+ORTP_PUBLIC mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void*) );
 
 /* frees a mblk_t, and if the datab ref_count is 0, frees it and the buffer too */
 ORTP_PUBLIC void freeb(mblk_t *m);
@@ -134,8 +134,8 @@ ORTP_PUBLIC mblk_t *copyb(mblk_t *mp);
 /* duplicates a complex message with buffer included */
 ORTP_PUBLIC mblk_t *copymsg(mblk_t *mp);
 
-ORTP_PUBLIC mblk_t * appendb(mblk_t *mp, const char *data, int size, bool_t pad);
-ORTP_PUBLIC void msgappend(mblk_t *mp, const char *data, int size, bool_t pad);
+ORTP_PUBLIC mblk_t * appendb(mblk_t *mp, const char *data, size_t size, bool_t pad);
+ORTP_PUBLIC void msgappend(mblk_t *mp, const char *data, size_t size, bool_t pad);
 
 ORTP_PUBLIC mblk_t *concatb(mblk_t *mp, mblk_t *newm);
 
@@ -151,7 +151,7 @@ typedef struct _msgb_allocator{
 }msgb_allocator_t;
 
 ORTP_PUBLIC void msgb_allocator_init(msgb_allocator_t *pa);
-ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, int size);
+ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, size_t size);
 ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 
 #ifdef __cplusplus

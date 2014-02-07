@@ -46,9 +46,9 @@ void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
 #endif
 }
 
-dblk_t *datab_alloc(int size){
+dblk_t *datab_alloc(size_t size){
 	dblk_t *db;
-	int total_size=sizeof(dblk_t)+size;
+	size_t total_size=sizeof(dblk_t)+size;
 	db=(dblk_t *) ortp_malloc(total_size);
 	db->db_base=(uint8_t*)db+sizeof(dblk_t);
 	db->db_lim=db->db_base+size;
@@ -71,48 +71,48 @@ static inline void datab_unref(dblk_t *d){
 }
 
 
-mblk_t *allocb(int size, int pri)
+mblk_t *allocb(size_t size, int pri)
 {
 	mblk_t *mp;
 	dblk_t *datab;
-	
+
 	mp=(mblk_t *) ortp_malloc(sizeof(mblk_t));
 	mblk_init(mp);
 	datab=datab_alloc(size);
-	
+
 	mp->b_datap=datab;
 	mp->b_rptr=mp->b_wptr=datab->db_base;
 	mp->b_next=mp->b_prev=mp->b_cont=NULL;
 	return mp;
 }
 
-mblk_t *esballoc(uint8_t *buf, int size, int pri, void (*freefn)(void*) )
+mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void*) )
 {
 	mblk_t *mp;
 	dblk_t *datab;
-	
+
 	mp=(mblk_t *) ortp_malloc(sizeof(mblk_t));
 	mblk_init(mp);
 	datab=(dblk_t *) ortp_malloc(sizeof(dblk_t));
-	
+
 
 	datab->db_base=buf;
 	datab->db_lim=buf+size;
 	datab->db_ref=1;
 	datab->db_freefn=freefn;
-	
+
 	mp->b_datap=datab;
 	mp->b_rptr=mp->b_wptr=buf;
 	mp->b_next=mp->b_prev=mp->b_cont=NULL;
 	return mp;
 }
 
-	
+
 void freeb(mblk_t *mp)
 {
 	return_if_fail(mp->b_datap!=NULL);
 	return_if_fail(mp->b_datap->db_base!=NULL);
-	
+
 	datab_unref(mp->b_datap);
 	ortp_free(mp);
 }
@@ -134,7 +134,7 @@ mblk_t *dupb(mblk_t *mp)
 	mblk_t *newm;
 	return_val_if_fail(mp->b_datap!=NULL,NULL);
 	return_val_if_fail(mp->b_datap->db_base!=NULL,NULL);
-	
+
 	datab_ref(mp->b_datap);
 	newm=(mblk_t *) ortp_malloc(sizeof(mblk_t));
 	mblk_init(newm);
@@ -200,7 +200,7 @@ void insq(queue_t *q,mblk_t *emp, mblk_t *mp)
 	emp->b_prev->b_next=mp;
 	mp->b_prev=emp->b_prev;
 	emp->b_prev=mp;
-	mp->b_next=emp;	
+	mp->b_next=emp;
 }
 
 void remq(queue_t *q, mblk_t *mp){
@@ -215,7 +215,7 @@ void remq(queue_t *q, mblk_t *mp){
 void flushq(queue_t *q, int how)
 {
 	mblk_t *mp;
-	
+
 	while ((mp=getq(q))!=NULL)
 	{
 		freemsg(mp);
@@ -288,15 +288,15 @@ mblk_t *copymsg(mblk_t *mp)
 	return newm;
 }
 
-mblk_t * appendb(mblk_t *mp, const char *data, int size, bool_t pad){
-	int padcnt=0;
-	int i;
+mblk_t * appendb(mblk_t *mp, const char *data, size_t size, bool_t pad){
+	size_t padcnt=0;
+	size_t i;
 	if (pad){
-		padcnt= (int)(4L-( (long)(((long)mp->b_wptr)+size) % 4L)) % 4L;
+		padcnt= (size_t)(4L-( (long)(((long)mp->b_wptr)+size) % 4L)) % 4L;
 	}
 	if ((mp->b_wptr + size +padcnt) > mp->b_datap->db_lim){
 		/* buffer is not large enough: append a new block (with the same size ?)*/
-		int plen=(int)((char*)mp->b_datap->db_lim - (char*) mp->b_datap->db_base);
+		size_t plen=(size_t)((char*)mp->b_datap->db_lim - (char*) mp->b_datap->db_base);
 		mp->b_cont=allocb(MAX(plen,size),0);
 		mp=mp->b_cont;
 	}
@@ -309,7 +309,7 @@ mblk_t * appendb(mblk_t *mp, const char *data, int size, bool_t pad){
 	return mp;
 }
 
-void msgappend(mblk_t *mp, const char *data, int size, bool_t pad){
+void msgappend(mblk_t *mp, const char *data, size_t size, bool_t pad){
 	while(mp->b_cont!=NULL) mp=mp->b_cont;
 	appendb(mp,data,size,pad);
 }
@@ -325,7 +325,7 @@ void msgb_allocator_init(msgb_allocator_t *a){
 	qinit(&a->q);
 }
 
-mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, int size){
+mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 	queue_t *q=&a->q;
 	mblk_t *m,*found=NULL;
 
