@@ -1661,60 +1661,25 @@ stunServerProcessMsg( char* buf,
 		 }
 		 else
 		 {
-			if (!req.hasUsername)
-			{
-			   ortp_error("stun: No UserName. Send 432.");
-			   stunCreateErrorResponse(resp, 4, 32, "No UserName and contains SA_MESSAGEINTEGRITY");
-			   return TRUE;
-			}
-			else
-			{
-			   //ortp_debug("stun: Validating username: %s", req.username.value );
-			   /* !jf! could retrieve associated password from provisioning here */
-			   if (strcmp(req.username.value, "test") == 0)
-			   {
-				  if (0)
-				  {
-					 /* !jf! if the credentials are stale */
-					 stunCreateErrorResponse(resp, 4, 30, "Stale credentials on BindRequest");
-					 return TRUE;
-				  }
-				  else
-				  {
-					 unsigned char hmac[20];
-					 //ortp_debug("stun: Validating SA_MESSAGEINTEGRITY");
-					 /* need access to shared secret */
+			 if (!req.hasUsername)
+			 {
+				 ortp_error("stun: No UserName. Send 432.");
+				 stunCreateErrorResponse(resp, 4, 32, "No UserName and contains SA_MESSAGEINTEGRITY");
+				 return TRUE;
+			 }
+			 else
+			 {
+				 // NOTE: some code was here to perform integrity check by testing over a "test":"1234"
+				 // account. It was removed, and we'll validate any message provided that it has a
+				 // username. Git will have the history if need be.
 
-#ifndef NOSSL
-					 {
-						unsigned int hmacSize=20;
+				 /* need to compute this later after message is filled in */
+				 resp->hasMessageIntegrity = TRUE;
+				 /* assert(req.hasUsername); */
+				 resp->hasUsername = TRUE;
+				 resp->username = req.username; /* copy username in */
+			 }
 
-						HMAC(EVP_sha1(),
-							 "1234", 4,
-							 (const unsigned char*) buf, bufLen-20-4,
-							 hmac, &hmacSize);
-					 }
-#endif
-
-					 if (memcmp(buf, hmac, 20) != 0)
-					 {
-						ortp_error("stun: SA_MESSAGEINTEGRITY is bad. Sending ");
-						stunCreateErrorResponse(resp, 4, 3, "Unknown username. Try test with password 1234");
-						return TRUE;
-					 }
-
-					 /* need to compute this later after message is filled in */
-					 resp->hasMessageIntegrity = TRUE;
-					 /* assert(req.hasUsername); */
-					 resp->hasUsername = TRUE;
-					 resp->username = req.username; /* copy username in */
-				  }
-			   }
-			   else
-			   {
-				  ortp_error("stun: Invalid username: %s Send 430", req.username.value);
-			   }
-			}
 		 }
 
 		 /* TODO !jf! should check for unknown attributes here and send 420 listing the
