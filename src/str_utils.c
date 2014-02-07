@@ -222,17 +222,17 @@ void flushq(queue_t *q, int how)
 	}
 }
 
-int msgdsize(const mblk_t *mp)
+size_t msgdsize(const mblk_t *mp)
 {
-	int msgsize=0;
+	size_t msgsize=0;
 	while(mp!=NULL){
-		msgsize+=(int) (mp->b_wptr-mp->b_rptr);
+		msgsize+=(size_t) (mp->b_wptr-mp->b_rptr);
 		mp=mp->b_cont;
 	}
 	return msgsize;
 }
 
-void msgpullup(mblk_t *mp,int len)
+void msgpullup(mblk_t *mp,size_t len)
 {
 	mblk_t *firstm=mp;
 	dblk_t *db;

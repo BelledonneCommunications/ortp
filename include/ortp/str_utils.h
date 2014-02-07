@@ -123,10 +123,10 @@ ORTP_PUBLIC mblk_t *dupb(mblk_t *m);
 ORTP_PUBLIC mblk_t	*dupmsg(mblk_t* m);
 
 /* returns the size of data of a message */
-ORTP_PUBLIC int msgdsize(const mblk_t *mp);
+ORTP_PUBLIC size_t msgdsize(const mblk_t *mp);
 
 /* concatenates all fragment of a complex message*/
-ORTP_PUBLIC void msgpullup(mblk_t *mp,int len);
+ORTP_PUBLIC void msgpullup(mblk_t *mp,size_t len);
 
 /* duplicates a single message, but with buffer included */
 ORTP_PUBLIC mblk_t *copyb(mblk_t *mp);
