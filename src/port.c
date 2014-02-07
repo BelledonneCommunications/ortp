@@ -257,9 +257,9 @@ static unsigned WINAPI thread_starter(void *data){
 
 int WIN_thread_create(ortp_thread_t *th, void *attr, void * (*func)(void *), void *data)
 {
-    thread_param_t *params=ortp_new(thread_param_t,1);
-    params->func=func;
-    params->arg=data;
+	thread_param_t *params=ortp_new(thread_param_t,1);
+	params->func=func;
+	params->arg=data;
 	*th=(HANDLE)_beginthreadex( NULL, 0, thread_starter, params, 0, NULL);
 	return 0;
 }
@@ -452,9 +452,19 @@ int ortp_server_pipe_close(ortp_socket_t spipe){
 }
 
 ortp_socket_t ortp_client_pipe_connect(const char *name){
+	ortp_socket_t sock = -1;
 	struct sockaddr_un sa;
+	struct stat fstats;
 	char *pipename=make_pipe_name(name);
-	ortp_socket_t sock=socket(AF_UNIX,SOCK_STREAM,0);
+	uid_t uid = getuid();
+
+	// check that the creator of the pipe is us
+	if( (stat(name, &fstats) == 0) && (fstats.st_uid != uid) ){
+		ortp_error("UID of file %s (%u) differs from ours (%u)", pipename, fstats.st_uid, uid);
+		return -1;
+	}
+
+	sock = socket(AF_UNIX,SOCK_STREAM,0);
 	sa.sun_family=AF_UNIX;
 	strncpy(sa.sun_path,pipename,sizeof(sa.sun_path)-1);
 	ortp_free(pipename);
@@ -584,14 +594,14 @@ ortp_pipe_t ortp_client_pipe_connect(const char *name){
 #else
 	char *pipename=make_pipe_name(name);
 	ortp_pipe_t hpipe = CreateFile(
-         pipename,   // pipe name
-         GENERIC_READ |  // read and write access
-         GENERIC_WRITE,
-         0,              // no sharing
-         NULL,           // default security attributes
-         OPEN_EXISTING,  // opens existing pipe
-         0,              // default attributes
-         NULL);          // no template file
+		 pipename,   // pipe name
+		 GENERIC_READ |  // read and write access
+		 GENERIC_WRITE,
+		 0,              // no sharing
+		 NULL,           // default security attributes
+		 OPEN_EXISTING,  // opens existing pipe
+		 0,              // default attributes
+		 NULL);          // no template file
 	ortp_free(pipename);
 	return hpipe;
 #endif
@@ -639,16 +649,16 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 	if (create){
 		h = CreateFileMapping(
 			INVALID_HANDLE_VALUE,    // use paging file
-			NULL,                    // default security 
+			NULL,                    // default security
 			PAGE_READWRITE,          // read/write access
-			0,                       // maximum object size (high-order DWORD) 
-			size,                // maximum object size (low-order DWORD)  
+			0,                       // maximum object size (high-order DWORD)
+			size,                // maximum object size (low-order DWORD)
 			name);                 // name of mapping object
 	}else{
 		h = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
-			name);               // name of mapping object 
+			name);               // name of mapping object
 	}
 	if (h==(HANDLE)-1) {
 		ortp_error("Fail to open file mapping (create=%i)",create);
@@ -656,8 +666,8 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 	}
 	buf = (LPTSTR) MapViewOfFile(h, // handle to map object
 		FILE_MAP_ALL_ACCESS,  // read/write permission
-		0,                    
-		0,                    
+		0,
+		0,
 		size);
 	if (buf!=NULL){
 		MapInfo *i=(MapInfo*)ortp_new(MapInfo,1);
@@ -739,21 +749,21 @@ void ortp_get_cur_time(ortpTimeSpec *ret){
 
 #if defined(_WIN32) && !defined(_MSC_VER)
 char* strtok_r(char *str, const char *delim, char **nextp){
-    char *ret;
+	char *ret;
 
-    if (str == NULL){
-        str = *nextp;
-    }
-    str += strspn(str, delim);
-    if (*str == '\0'){
-        return NULL;
-    }
-    ret = str;
-    str += strcspn(str, delim);
-    if (*str){
-        *str++ = '\0';
-    }
-    *nextp = str;
-    return ret;
+	if (str == NULL){
+		str = *nextp;
+	}
+	str += strspn(str, delim);
+	if (*str == '\0'){
+		return NULL;
+	}
+	ret = str;
+	str += strcspn(str, delim);
+	if (*str){
+		*str++ = '\0';
+	}
+	*nextp = str;
+	return ret;
 }
 #endif
