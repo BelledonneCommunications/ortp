@@ -1325,14 +1325,16 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 	/*ortp_message("rtt curntp=%u, last_sr_time=%u, sr_delay=%u",approx_ntp,last_sr_time,sr_delay);*/
 	if (last_sr_time!=0 && sr_delay!=0){
 		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
-		rtt_frac/=65536.0;
-		/*take into account the network simulator */
-		if (session->net_sim_ctx && session->net_sim_ctx->params.max_bandwidth>0){
-			double sim_delay=(double)session->net_sim_ctx->qsize/(double)session->net_sim_ctx->params.max_bandwidth;
-			rtt_frac+=sim_delay;
-		}
-		session->rtt=rtt_frac;
-		/*ortp_message("rtt estimated to %f ms",session->rtt);*/
+		if (rtt_frac>=0){
+			rtt_frac/=65536.0;
+			/*take into account the network simulator */
+			if (session->net_sim_ctx && session->net_sim_ctx->params.max_bandwidth>0){
+				double sim_delay=(double)session->net_sim_ctx->qsize/(double)session->net_sim_ctx->params.max_bandwidth;
+				rtt_frac+=sim_delay;
+			}
+			session->rtt=rtt_frac;
+			/*ortp_message("rtt estimated to %f ms",session->rtt);*/
+		}else ortp_warning("Negative RTT computation, maybe due to clock adjustments.");
 	}
 }
 
