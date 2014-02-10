@@ -460,7 +460,7 @@ ortp_socket_t ortp_client_pipe_connect(const char *name){
 
 	// check that the creator of the pipe is us
 	if( (stat(name, &fstats) == 0) && (fstats.st_uid != uid) ){
-		ortp_error("UID of file %s (%u) differs from ours (%u)", pipename, fstats.st_uid, uid);
+		ortp_error("UID of file %s (%lu) differs from ours (%lu)", pipename, (unsigned long)fstats.st_uid, (unsigned long)uid);
 		return -1;
 	}
 
