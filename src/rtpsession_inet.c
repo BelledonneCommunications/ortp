@@ -1322,7 +1322,7 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 	uint32_t approx_ntp=(curntp>>16) & 0xFFFFFFFF;
 	uint32_t last_sr_time=report_block_get_last_SR_time(rb);
 	uint32_t sr_delay=report_block_get_last_SR_delay(rb);
-	/*ortp_message("rtt curntp=%u, last_sr_time=%u, sr_delay=%u",approx_ntp,last_sr_time,sr_delay);*/
+	/*ortp_message("rtt approx_ntp=%u, last_sr_time=%u, sr_delay=%u",approx_ntp,last_sr_time,sr_delay);*/
 	if (last_sr_time!=0 && sr_delay!=0){
 		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
 		if (rtt_frac>=0){
@@ -1333,7 +1333,7 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 				rtt_frac+=sim_delay;
 			}
 			session->rtt=rtt_frac;
-			/*ortp_message("rtt estimated to %f ms",session->rtt);*/
+			/*ortp_message("rtt estimated to %f s",session->rtt);*/
 		}else ortp_warning("Negative RTT computation, maybe due to clock adjustments.");
 	}
 }
