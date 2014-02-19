@@ -54,7 +54,7 @@ if(ORTP_ENABLE_SRTP)
 endif(ORTP_ENABLE_SRTP)
 
 add_library(ortp SHARED ${SOURCE_FILES})
-set_target_properties(ortp PROPERTIES VERSION 0.22.1 SOVERSION 9)
+set_target_properties(ortp PROPERTIES VERSION 0.23.0 SOVERSION 9)
 
 target_link_libraries(ortp ${LIBS})
 
