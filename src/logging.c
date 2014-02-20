@@ -170,3 +170,57 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	fflush(__log_file);
 	ortp_free(msg);
 }
+
+
+#ifdef __QNX__
+#include <slog2.h>
+
+static bool_t slog2_registered = FALSE;
+static slog2_buffer_set_config_t slog2_buffer_config;
+static slog2_buffer_t slog2_buffer_handle[2];
+
+void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args) {
+	uint8_t severity;
+	uint8_t buffer_idx = 1;
+
+	if (slog2_registered != TRUE) {
+		slog2_buffer_config.buffer_set_name = domain;
+		slog2_buffer_config.num_buffers = 2;
+		slog2_buffer_config.verbosity_level = SLOG2_DEBUG2;
+		slog2_buffer_config.buffer_config[0].buffer_name = "hi_rate";
+		slog2_buffer_config.buffer_config[0].num_pages = 6;
+		slog2_buffer_config.buffer_config[1].buffer_name = "lo_rate";
+		slog2_buffer_config.buffer_config[1].num_pages = 2;
+		if (slog2_register(&slog2_buffer_config, slog2_buffer_handle, 0) == 0) {
+			slog2_registered = TRUE;
+		} else {
+			fprintf(stderr, "Error registering slogger2 buffer!\n");
+			return;
+		}
+	}
+
+	switch (lev) {
+		case ORTP_DEBUG:
+			severity = SLOG2_DEBUG1;
+			buffer_idx = 0;
+			break;
+		case ORTP_MESSAGE:
+			severity = SLOG2_INFO;
+			buffer_idx = 0;
+			break;
+		case ORTP_WARNING:
+			severity = SLOG2_WARNING;
+			break;
+		case ORTP_ERROR:
+			severity = SLOG2_ERROR;
+			break;
+		case ORTP_FATAL:
+			severity = SLOG2_CRITICAL;
+			break;
+		default:
+			ortp_fatal("Bad level!");
+	}
+
+	vslog2f(slog2_buffer_handle[buffer_idx], 0, severity, fmt, args);
+}
+#endif /* __QNX__ */

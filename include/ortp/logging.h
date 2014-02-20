@@ -138,6 +138,11 @@ static inline void CHECK_FORMAT_ARGS(1,2) ortp_fatal(const char *fmt,...)
 }
 
 
+#ifdef __QNX__
+void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args);
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif
