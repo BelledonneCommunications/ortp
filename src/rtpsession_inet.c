@@ -869,7 +869,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	if (can_connect(session)){
 		if (try_connect(session->rtp.socket,(struct sockaddr*)&session->rtp.rem_addr,session->rtp.rem_addrlen))
 			session->flags|=RTP_SOCKET_CONNECTED;
-		if (session->rtcp.socket>=0){
+		if (session->rtcp.socket!=(ortp_socket_t)-1){
 			if (try_connect(session->rtcp.socket,(struct sockaddr*)&session->rtcp.rem_addr,session->rtcp.rem_addrlen))
 				session->flags|=RTCP_SOCKET_CONNECTED;
 		}
@@ -1482,7 +1482,7 @@ rtp_session_rtcp_recv (RtpSession * session)
 		{
 			int errnum=getSocketErrorCode();
 
-			if (error == 0 || (error=-1 && errnum==0))
+			if (error == 0 || (error==-1 && errnum==0))
 			{
 				/*ortp_warning
 					("rtcp_recv: strange... recv() returned zero.");*/
