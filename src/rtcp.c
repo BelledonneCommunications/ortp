@@ -495,3 +495,33 @@ rtp_session_bye(RtpSession *session, const char *reason)
     return ret;
 }
 
+
+static int rtcp_xr_header_init(uint8_t *buf, RtpSession *session, int bytes_len) {
+	rtcp_xr_header_t *header = (rtcp_xr_header_t *)buf;
+	rtcp_common_header_init(&header->ch, session, RTCP_XR, 0, bytes_len);
+	header->ssrc = htonl(session->snd.ssrc);
+	return sizeof(rtcp_xr_header_t);
+}
+
+static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, RtpSession *session) {
+	struct timeval tv;
+	uint64_t ntp;
+	rtcp_xr_rcvr_rtt_report_block_t *block = (rtcp_xr_rcvr_rtt_report_block_t *)buf;
+
+	block->bt = RTCP_XR_RCVR_RTT;
+	block->reserved = 0;
+	block->length = htons(2);
+	ortp_gettimeofday(&tv, NULL);
+	ntp = ortp_timeval_to_ntp(&tv);
+	block->ntp_timestamp_msw = htonl(ntp >> 32);
+	block->ntp_timestamp_lsw = htonl(ntp & 0xFFFFFFFF);
+	return sizeof(rtcp_xr_rcvr_rtt_report_block_t);
+}
+
+void rtp_session_send_rtcp_xr_rcvr_rtt(RtpSession *session) {
+	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_rcvr_rtt_report_block_t);
+	mblk_t *h = allocb(size, 0);
+	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
+	h->b_wptr += rtcp_xr_rcvr_rtt_init(h->b_wptr, session);
+	rtp_session_rtcp_send(session, h);
+}

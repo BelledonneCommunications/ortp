@@ -417,6 +417,11 @@ ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, co
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_delay_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number);
+
+
+ORTP_PUBLIC void rtp_session_send_rtcp_xr_rcvr_rtt(RtpSession *session);
+
+
 /*private */
 ORTP_PUBLIC void rtp_session_init(RtpSession *session, int mode);
 #define rtp_session_set_flag(session,flag) (session)->flags|=(flag)
