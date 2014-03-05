@@ -37,14 +37,15 @@ extern "C"{
 /* RTCP common header */
 
 typedef enum {
-    RTCP_SR	= 200,
-    RTCP_RR	= 201,
-    RTCP_SDES	= 202,
-    RTCP_BYE	= 203,
-    RTCP_APP	= 204
+	RTCP_SR = 200,
+	RTCP_RR = 201,
+	RTCP_SDES = 202,
+	RTCP_BYE = 203,
+	RTCP_APP = 204,
+	RTCP_XR = 207
 } rtcp_type_t;
- 
- 
+
+
 typedef struct rtcp_common_header
 {
 #ifdef ORTP_BIGENDIAN
@@ -58,7 +59,7 @@ typedef struct rtcp_common_header
 	uint16_t version:2;
 	uint16_t packet_type:8;
 #endif
-        uint16_t length:16;
+	uint16_t length:16;
 } rtcp_common_header_t;
 
 #define rtcp_common_header_set_version(ch,v) (ch)->version=v
@@ -78,11 +79,11 @@ typedef struct rtcp_common_header
 
 typedef struct sender_info
 {
-        uint32_t ntp_timestamp_msw;
-        uint32_t ntp_timestamp_lsw;
-        uint32_t rtp_timestamp;
-        uint32_t senders_packet_count;
-        uint32_t senders_octet_count;
+	uint32_t ntp_timestamp_msw;
+	uint32_t ntp_timestamp_lsw;
+	uint32_t rtp_timestamp;
+	uint32_t senders_packet_count;
+	uint32_t senders_octet_count;
 } sender_info_t;
 
 uint64_t sender_info_get_ntp_timestamp(const sender_info_t *si);
@@ -95,12 +96,12 @@ uint64_t sender_info_get_ntp_timestamp(const sender_info_t *si);
 
 typedef struct report_block
 {
-        uint32_t ssrc;
-        uint32_t fl_cnpl;/*fraction lost + cumulative number of packet lost*/
-        uint32_t ext_high_seq_num_rec; /*extended highest sequence number received */
-        uint32_t interarrival_jitter;
-        uint32_t lsr; /*last SR */
-        uint32_t delay_snc_last_sr; /*delay since last sr*/
+	uint32_t ssrc;
+	uint32_t fl_cnpl;/*fraction lost + cumulative number of packet lost*/
+	uint32_t ext_high_seq_num_rec; /*extended highest sequence number received */
+	uint32_t interarrival_jitter;
+	uint32_t lsr; /*last SR */
+	uint32_t delay_snc_last_sr; /*delay since last sr*/
 } report_block_t;
 
 #define report_block_get_ssrc(rb) \
@@ -127,16 +128,16 @@ typedef struct report_block
 /* SDES packets */
 
 typedef enum {
-    RTCP_SDES_END		= 0,
-    RTCP_SDES_CNAME 	= 1,
-    RTCP_SDES_NAME	= 2,
-    RTCP_SDES_EMAIL	= 3,
-    RTCP_SDES_PHONE	= 4,
-    RTCP_SDES_LOC		= 5,
-    RTCP_SDES_TOOL	= 6,
-    RTCP_SDES_NOTE	= 7,
-    RTCP_SDES_PRIV		= 8,
-    RTCP_SDES_MAX		= 9
+	RTCP_SDES_END = 0,
+	RTCP_SDES_CNAME = 1,
+	RTCP_SDES_NAME = 2,
+	RTCP_SDES_EMAIL = 3,
+	RTCP_SDES_PHONE = 4,
+	RTCP_SDES_LOC = 5,
+	RTCP_SDES_TOOL = 6,
+	RTCP_SDES_NOTE = 7,
+	RTCP_SDES_PRIV = 8,
+	RTCP_SDES_MAX = 9
 } rtcp_sdes_type_t;
 
 typedef struct sdes_chunk
@@ -151,7 +152,7 @@ typedef struct sdes_item
 {
 	uint8_t item_type;
 	uint8_t len;
-	char content[1];	
+	char content[1];
 } sdes_item_t;
 
 #define RTCP_SDES_MAX_STRING_SIZE 255
@@ -174,6 +175,92 @@ typedef struct rtcp_bye
 } rtcp_bye_t;
 #define RTCP_BYE_HEADER_SIZE sizeof(rtcp_bye_t)
 #define RTCP_BYE_REASON_MAX_STRING_SIZE 255
+
+
+/* RTCP XR packet */
+
+typedef enum {
+	RTCP_XR_LOSS_RLE = 1,
+	RTCP_XR_DUPLICATE_RLE = 2,
+	RTCP_XR_PACKET_RECEIPT_TIMES = 3,
+	RTCP_XR_RCVR_RTT = 4,
+	RTCP_XR_DLRR = 5,
+	RTCP_XR_STAT_SUMMARY = 6,
+	RTCP_XR_VOIP_METRICS = 7
+} rtcp_xr_block_type_t;
+
+typedef struct rtcp_xr_header {
+	rtcp_common_header_t ch;
+	uint32_t ssrc;
+} rtcp_xr_header_t;
+
+typedef struct rtcp_xr_rcvr_rtt_report_block {
+	uint8_t bt;
+	uint8_t reserved;
+	uint16_t length;
+	uint32_t ntp_timestamp_msw;
+	uint32_t ntp_timestamp_lsw;
+} rtcp_xr_rcvr_rtt_report_block_t;
+
+typedef struct rtcp_xr_dlrr_report_subblock {
+	uint32_t ssrc;
+	uint32_t lrr;
+	uint32_t dlrr;
+} rtcp_xr_dlrr_report_subblock_t;
+
+typedef struct rtcp_xr_dlrr_report_block {
+	uint8_t bt;
+	uint8_t reserved;
+	uint16_t length;
+	rtcp_xr_dlrr_report_subblock_t content[1];
+} rtcp_xr_dlrr_report_block_t;
+
+typedef struct rtcp_xr_stat_summary_report_block {
+	uint8_t bt;
+	uint8_t flags;
+	uint16_t length;
+	uint32_t ssrc;
+	uint16_t begin_seq;
+	uint16_t end_seq;
+	uint32_t lost_packets;
+	uint32_t dup_packets;
+	uint32_t min_jitter;
+	uint32_t max_jitter;
+	uint32_t mean_jitter;
+	uint32_t dev_jitter;
+	uint8_t min_ttl_or_hl;
+	uint8_t max_ttl_or_hl;
+	uint8_t mean_ttl_or_hl;
+	uint8_t dev_ttl_or_hl;
+} rtcp_xr_stat_summary_report_block_t;
+
+typedef struct rtcp_xr_voip_metrics_report_block {
+	uint8_t bt;
+	uint8_t reserved;
+	uint16_t length;
+	uint32_t ssrc;
+	uint8_t loss_rate;
+	uint8_t discard_rate;
+	uint8_t burst_density;
+	uint8_t gap_density;
+	uint16_t burst_duration;
+	uint16_t gap_duration;
+	uint16_t round_trip_delay;
+	uint16_t end_system_delay;
+	uint8_t signal_level;
+	uint8_t noise_level;
+	uint8_t rerl;
+	uint8_t gmin;
+	uint8_t r_factor;
+	uint8_t ext_r_factor;
+	uint8_t mos_lq;
+	uint8_t mos_cq;
+	uint8_t rx_config;
+	uint8_t reserved2;
+	uint16_t jb_nominal;
+	uint16_t jb_maximum;
+	uint16_t jb_abs_max;
+} rtcp_xr_voip_metrics_report_block_t;
 
 
 
@@ -228,7 +315,7 @@ ORTP_PUBLIC const report_block_t * rtcp_RR_get_report_block(const mblk_t *m,int 
 
 /*SDES accessors */
 ORTP_PUBLIC bool_t rtcp_is_SDES(const mblk_t *m);
-typedef void (*SdesItemFoundCallback)(void *user_data, uint32_t csrc, rtcp_sdes_type_t t, const char *content, uint8_t content_len); 
+typedef void (*SdesItemFoundCallback)(void *user_data, uint32_t csrc, rtcp_sdes_type_t t, const char *content, uint8_t content_len);
 ORTP_PUBLIC void rtcp_sdes_parse(const mblk_t *m, SdesItemFoundCallback cb, void *user_data);
 
 /*BYE accessors */
