@@ -420,6 +420,9 @@ ORTP_PUBLIC mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uin
 
 
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_rcvr_rtt(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_rtcp_xr_dlrr(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_stat_summary(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_voip_metrics(RtpSession *session);
 
 
 /*private */
