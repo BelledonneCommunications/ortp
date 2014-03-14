@@ -114,6 +114,29 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	struct timeval last_check;
 }OrtpNetworkSimulatorCtx;
 
+typedef enum {
+	OrtpRtcpXrRcvrRttNone,
+	OrtpRtcpXrRcvrRttAll,
+	OrtpRtcpXrRcvrRttSender
+} OrtpRtcpXrRcvrRttMode;
+
+typedef enum {
+	OrtpRtcpXrStatSummaryLoss = (1 << 0),
+	OrtpRtcpXrStatSummaryDup = (1 << 1),
+	OrtpRtcpXrStatSummaryJitt = (1 << 2),
+	OrtpRtcpXrStatSummaryTTL = (1 << 3),
+	OrtpRtcpXrStatSummaryHL = (1 << 4)
+} OrtpRtcpXrStatSummaryFlag;
+
+typedef struct OrtpRtcpXrConfiguration {
+	bool_t enabled;
+	bool_t stat_summary_enabled;
+	bool_t voip_metrics_enabled;
+	OrtpRtcpXrRcvrRttMode rcvr_rtt_mode;
+	int rcvr_rtt_max_size;
+	OrtpRtcpXrStatSummaryFlag stat_summary_flags;
+} OrtpRtcpXrConfiguration;
+
 typedef struct _RtpStream
 {
 	ortp_socket_t socket;
@@ -185,6 +208,7 @@ typedef struct _RtcpStream
 	uint32_t rtcp_report_snt_interval_r; /* the interval in timestamp unit for receive path between rtcp report sent */
 	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
 	bool_t enabled; /*tells whether we can send RTCP packets */
+	OrtpRtcpXrConfiguration xr_conf;
 } RtcpStream;
 
 typedef struct _RtpSession RtpSession;
@@ -339,6 +363,8 @@ ORTP_PUBLIC void rtp_session_set_connected_mode(RtpSession *session, bool_t yesn
 ORTP_PUBLIC void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
 
 ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms);
+
+ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config);
 
 ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
 

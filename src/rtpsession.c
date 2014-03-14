@@ -431,6 +431,12 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms){
 	session->rtcp.interval=value_ms;
 }
 
+void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config) {
+	if (config != NULL) {
+		session->rtcp.xr_conf = *config;
+	}
+}
+
 /**
  *	Set the RTP profile to be used for the sending by this session. By default, all session are created by
  *	rtp_session_new() are initialized with the AV profile, as defined in RFC 3551. The application
