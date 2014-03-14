@@ -29,7 +29,7 @@
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 #include <srtp/srtp.h>
-#include <libzrtpcpp/ZrtpCWrapper.h>
+#include <bzrtp/bzrtp.h>
 #endif
 
 

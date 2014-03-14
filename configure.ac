@@ -290,7 +290,7 @@ AC_ARG_ENABLE(zrtp,
 )
 
 if test "$zrtp" = "true" ; then
-	PKG_CHECK_MODULES(LIBZRTPCPP, libzrtpcppcore >= 4.0.0)
+	PKG_CHECK_MODULES(LIBZRTPCPP, libbzrtp >= 0.0.0)
 	if test "$have_srtp" = "no" ; then
 		AC_MSG_ERROR("ZRTP requires SRTP")
 	fi
