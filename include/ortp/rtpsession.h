@@ -209,9 +209,12 @@ typedef struct _RtcpStream
 	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
 	bool_t enabled; /*tells whether we can send RTCP packets */
 	OrtpRtcpXrConfiguration xr_conf;
-	uint32_t rtcp_xr_rcvr_rtt_interval;
-	uint32_t rtcp_xr_stat_summary_interval;
-	uint32_t rtcp_xr_voip_metrics_interval;
+	uint32_t last_rtcp_xr_rcvr_rtt_s;	/* The time of the last RTCP XR rcvr rtt packet sent, in send timestamp unit */
+	uint32_t last_rtcp_xr_stat_summary_s;	/* The time of the last RTCP XR stat summary packet sent, in send timestamp unit */
+	uint32_t last_rtcp_xr_voip_metrics_s;	/* The time of the last RTCP XR voip metrics packet sent, in send timestamp unit */
+	uint32_t rtcp_xr_rcvr_rtt_interval;	/* The interval in timestamp unit for RTCP XR rcvr rtt packet sending */
+	uint32_t rtcp_xr_stat_summary_interval;	/* The interval in timestamp unit for RTCP XR stat summary packet sending */
+	uint32_t rtcp_xr_voip_metrics_interval;	/* The interval in timestamp unit for RTCP XR voip metrics packet sending */
 } RtcpStream;
 
 typedef struct _RtpSession RtpSession;
@@ -453,8 +456,8 @@ ORTP_PUBLIC mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uin
 
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_rcvr_rtt(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_dlrr(RtpSession *session);
-ORTP_PUBLIC void rtp_session_send_stat_summary(RtpSession *session);
-ORTP_PUBLIC void rtp_session_send_voip_metrics(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_rtcp_xr_stat_summary(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session);
 
 
 /*private */

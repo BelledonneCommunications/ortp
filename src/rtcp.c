@@ -401,6 +401,27 @@ static void notify_sent_rtcp(RtpSession *session, mblk_t *rtcp){
 	}
 }
 
+static void rtp_session_rtcp_xr_process_send(RtpSession *session) {
+	RtpStream *st = &session->rtp;
+	RtcpStream *rtcp_st = &session->rtcp;
+
+	if ((rtcp_st->xr_conf.rcvr_rtt_mode != OrtpRtcpXrRcvrRttNone)
+		&& ((st->snd_last_ts - rtcp_st->last_rtcp_xr_rcvr_rtt_s) > rtcp_st->rtcp_xr_rcvr_rtt_interval)) {
+		rtcp_st->last_rtcp_xr_rcvr_rtt_s = st->snd_last_ts;
+		rtp_session_send_rtcp_xr_rcvr_rtt(session);
+	}
+	if ((rtcp_st->xr_conf.stat_summary_enabled == TRUE)
+		&& ((st->snd_last_ts - rtcp_st->last_rtcp_xr_stat_summary_s) > rtcp_st->rtcp_xr_stat_summary_interval)) {
+		rtcp_st->last_rtcp_xr_stat_summary_s = st->snd_last_ts;
+		rtp_session_send_rtcp_xr_stat_summary(session);
+	}
+	if ((rtcp_st->xr_conf.voip_metrics_enabled == TRUE)
+		&& ((st->snd_last_ts - rtcp_st->last_rtcp_xr_voip_metrics_s) > rtcp_st->rtcp_xr_voip_metrics_interval)) {
+		rtcp_st->last_rtcp_xr_voip_metrics_s = st->snd_last_ts;
+		rtp_session_send_rtcp_xr_voip_metrics(session);
+	}
+}
+
 void rtp_session_rtcp_process_send(RtpSession *session){
 	RtpStream *st=&session->rtp;
 	RtcpStream *rtcp_st=&session->rtcp;
@@ -414,7 +435,9 @@ void rtp_session_rtcp_process_send(RtpSession *session){
 		notify_sent_rtcp(session,m);
 		ortp_message("Sending RTCP SR compound message on session [%p].",session);
 		rtp_session_rtcp_send(session,m);
-
+	}
+	if (session->rtcp.xr_conf.enabled == TRUE) {
+		rtp_session_rtcp_xr_process_send(session);
 	}
 }
 
@@ -564,7 +587,7 @@ void rtp_session_send_rtcp_xr_dlrr(RtpSession *session) {
 	rtp_session_rtcp_send(session, h);
 }
 
-void rtp_session_send_stat_summary(RtpSession *session) {
+void rtp_session_send_rtcp_xr_stat_summary(RtpSession *session) {
 	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_stat_summary_report_block_t);
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
@@ -572,7 +595,7 @@ void rtp_session_send_stat_summary(RtpSession *session) {
 	rtp_session_rtcp_send(session, h);
 }
 
-void rtp_session_send_voip_metrics(RtpSession *session) {
+void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session) {
 	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_voip_metrics_report_block_t);
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
