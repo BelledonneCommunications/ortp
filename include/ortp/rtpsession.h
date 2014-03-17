@@ -209,6 +209,9 @@ typedef struct _RtcpStream
 	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
 	bool_t enabled; /*tells whether we can send RTCP packets */
 	OrtpRtcpXrConfiguration xr_conf;
+	uint32_t rtcp_xr_rcvr_rtt_interval;
+	uint32_t rtcp_xr_stat_summary_interval;
+	uint32_t rtcp_xr_voip_metrics_interval;
 } RtcpStream;
 
 typedef struct _RtpSession RtpSession;
@@ -365,6 +368,9 @@ ORTP_PUBLIC void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
 ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms);
 
 ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms);
 
 ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
 

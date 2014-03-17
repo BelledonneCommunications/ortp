@@ -437,6 +437,28 @@ void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfigur
 	}
 }
 
+static void set_rtcp_xr_interval(RtpSession *session, uint32_t *interval, int value_ms) {
+	int sendpt = rtp_session_get_send_payload_type(session);
+	if (sendpt != -1) {
+		PayloadType *pt = rtp_profile_get_payload(session->snd.profile, sendpt);
+		if (pt != NULL){
+			*interval = (value_ms * pt->clock_rate) / 1000;
+		}
+	}
+}
+
+void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms) {
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_rcvr_rtt_interval, value_ms);
+}
+
+void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms) {
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_stat_summary_interval, value_ms);
+}
+
+void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms) {
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_voip_metrics_interval, value_ms);
+}
+
 /**
  *	Set the RTP profile to be used for the sending by this session. By default, all session are created by
  *	rtp_session_new() are initialized with the AV profile, as defined in RFC 3551. The application
