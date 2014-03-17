@@ -281,6 +281,16 @@ static int ozrtp_loadCache(void *clientData, uint8_t** output, uint32_t *outputS
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
 	char *filename = userData->zidFilename; 
 	FILE *CACHEFD = fopen(filename, "r+");
+	if (CACHEFD == NULL) { /* file doesn't seem to exist, try to create it */
+		CACHEFD = fopen(filename, "w");
+		if (CACHEFD != NULL) { /* file created with success */
+			*output = NULL;
+			*outputSize = 0;
+			fclose(CACHEFD);
+			return 0;
+		}
+		return -1;
+	}
 	fseek(CACHEFD, 0L, SEEK_END);  /* Position to end of file */
   	*outputSize = ftell(CACHEFD);     /* Get file length */
   	rewind(CACHEFD);               /* Back to start of file */
