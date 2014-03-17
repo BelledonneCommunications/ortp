@@ -555,7 +555,7 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	rtcp_xr_stat_summary_report_block_t *block = (rtcp_xr_stat_summary_report_block_t *)buf;
 
 	block->bt = RTCP_XR_STAT_SUMMARY;
-	block->flags = 0; // TODO: Fill flags
+	block->flags = session->rtcp.xr_conf.stat_summary_flags;
 	block->length = htons(9);
 	// TODO: Fill other fields from info in the session
 	return sizeof(rtcp_xr_stat_summary_report_block_t);
