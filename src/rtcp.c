@@ -397,6 +397,7 @@ static void notify_sent_rtcp(RtpSession *session, mblk_t *rtcp){
 		ev=ortp_event_new(ORTP_EVENT_RTCP_PACKET_EMITTED);
 		evd=ortp_event_get_data(ev);
 		evd->packet=dupmsg(rtcp);
+		msgpullup(evd->packet,-1);
 		rtp_session_dispatch_event(session,ev);
 	}
 }
