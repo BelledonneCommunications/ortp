@@ -576,6 +576,7 @@ void rtp_session_send_rtcp_xr_rcvr_rtt(RtpSession *session) {
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
 	h->b_wptr += rtcp_xr_rcvr_rtt_init(h->b_wptr, session);
+	notify_sent_rtcp(session, h);
 	rtp_session_rtcp_send(session, h);
 }
 
@@ -584,6 +585,7 @@ void rtp_session_send_rtcp_xr_dlrr(RtpSession *session) {
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
 	h->b_wptr += rtcp_xr_dlrr_init(h->b_wptr, session);
+	notify_sent_rtcp(session, h);
 	rtp_session_rtcp_send(session, h);
 }
 
@@ -592,6 +594,7 @@ void rtp_session_send_rtcp_xr_stat_summary(RtpSession *session) {
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
 	h->b_wptr += rtcp_xr_stat_summary_init(h->b_wptr, session);
+	notify_sent_rtcp(session, h);
 	rtp_session_rtcp_send(session, h);
 }
 
@@ -600,5 +603,6 @@ void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session) {
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
 	h->b_wptr += rtcp_xr_voip_metrics_init(h->b_wptr, session);
+	notify_sent_rtcp(session, h);
 	rtp_session_rtcp_send(session, h);
 }
