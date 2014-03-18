@@ -283,3 +283,17 @@ void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len){
 		*data=NULL;
 	}
 }
+
+
+/* RTCP XR accessors */
+bool_t rtcp_is_XR(const mblk_t *m) {
+	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
+	if ((ch != NULL) && (rtcp_common_header_get_packet_type(ch) == RTCP_XR)) {
+		if (msgdsize(m) < MIN_RTCP_XR_PACKET_SIZE) {
+			ortp_warning("Too short RTCP XR packet.");
+			return FALSE;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}

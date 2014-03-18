@@ -262,6 +262,8 @@ typedef struct rtcp_xr_voip_metrics_report_block {
 	uint16_t jb_abs_max;
 } rtcp_xr_voip_metrics_report_block_t;
 
+#define MIN_RTCP_XR_PACKET_SIZE (sizeof(rtcp_xr_header_t) + 4)
+
 
 
 typedef struct rtcp_sr{
@@ -331,6 +333,9 @@ ORTP_PUBLIC uint32_t rtcp_APP_get_ssrc(const mblk_t *m);
 ORTP_PUBLIC void rtcp_APP_get_name(const mblk_t *m, char *name); 
 /* retrieve the data. when returning, data points directly into the mblk_t */
 ORTP_PUBLIC void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len);
+
+/* RTCP XR accessors */
+ORTP_PUBLIC bool_t rtcp_is_XR(const mblk_t *m);
 
 
 #ifdef __cplusplus
