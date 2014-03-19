@@ -532,9 +532,9 @@ static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, RtpSession *session) {
 	uint64_t ntp;
 	rtcp_xr_rcvr_rtt_report_block_t *block = (rtcp_xr_rcvr_rtt_report_block_t *)buf;
 
-	block->bt = RTCP_XR_RCVR_RTT;
-	block->reserved = 0;
-	block->length = htons(2);
+	block->bh.bt = RTCP_XR_RCVR_RTT;
+	block->bh.flags = 0; // Reserved bits
+	block->bh.length = htons(2);
 	ortp_gettimeofday(&tv, NULL);
 	ntp = ortp_timeval_to_ntp(&tv);
 	block->ntp_timestamp_msw = htonl(ntp >> 32);
@@ -545,9 +545,9 @@ static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, RtpSession *session) {
 static int rtcp_xr_dlrr_init(uint8_t *buf, RtpSession *session) {
 	rtcp_xr_dlrr_report_block_t *block = (rtcp_xr_dlrr_report_block_t *)buf;
 
-	block->bt = RTCP_XR_DLRR;
-	block->reserved = 0;
-	block->length = htons(3);
+	block->bh.bt = RTCP_XR_DLRR;
+	block->bh.flags = 0; // Reserved bits
+	block->bh.length = htons(3);
 	// TODO: Fill the rest of the block and handle multiple subblocks
 	return sizeof(rtcp_xr_dlrr_report_block_t);
 }
@@ -555,9 +555,9 @@ static int rtcp_xr_dlrr_init(uint8_t *buf, RtpSession *session) {
 static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	rtcp_xr_stat_summary_report_block_t *block = (rtcp_xr_stat_summary_report_block_t *)buf;
 
-	block->bt = RTCP_XR_STAT_SUMMARY;
-	block->flags = session->rtcp.xr_conf.stat_summary_flags;
-	block->length = htons(9);
+	block->bh.bt = RTCP_XR_STAT_SUMMARY;
+	block->bh.flags = session->rtcp.xr_conf.stat_summary_flags;
+	block->bh.length = htons(9);
 	// TODO: Fill other fields from info in the session
 	return sizeof(rtcp_xr_stat_summary_report_block_t);
 }
@@ -565,9 +565,9 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 	rtcp_xr_voip_metrics_report_block_t *block = (rtcp_xr_voip_metrics_report_block_t *)buf;
 
-	block->bt = RTCP_XR_VOIP_METRICS;
-	block->reserved = 0;
-	block->length = htons(8);
+	block->bh.bt = RTCP_XR_VOIP_METRICS;
+	block->bh.flags = 0; // Reserved bits
+	block->bh.length = htons(8);
 	// TODO: Fill other fields from info in the session
 	return sizeof(rtcp_xr_voip_metrics_report_block_t);
 }

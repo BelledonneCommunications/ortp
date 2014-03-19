@@ -194,10 +194,14 @@ typedef struct rtcp_xr_header {
 	uint32_t ssrc;
 } rtcp_xr_header_t;
 
-typedef struct rtcp_xr_rcvr_rtt_report_block {
+typedef struct rtcp_xr_generic_block_header {
 	uint8_t bt;
-	uint8_t reserved;
+	uint8_t flags;
 	uint16_t length;
+} rtcp_xr_generic_block_header_t;
+
+typedef struct rtcp_xr_rcvr_rtt_report_block {
+	rtcp_xr_generic_block_header_t bh;
 	uint32_t ntp_timestamp_msw;
 	uint32_t ntp_timestamp_lsw;
 } rtcp_xr_rcvr_rtt_report_block_t;
@@ -209,16 +213,12 @@ typedef struct rtcp_xr_dlrr_report_subblock {
 } rtcp_xr_dlrr_report_subblock_t;
 
 typedef struct rtcp_xr_dlrr_report_block {
-	uint8_t bt;
-	uint8_t reserved;
-	uint16_t length;
+	rtcp_xr_generic_block_header_t bh;
 	rtcp_xr_dlrr_report_subblock_t content[1];
 } rtcp_xr_dlrr_report_block_t;
 
 typedef struct rtcp_xr_stat_summary_report_block {
-	uint8_t bt;
-	uint8_t flags;
-	uint16_t length;
+	rtcp_xr_generic_block_header_t bh;
 	uint32_t ssrc;
 	uint16_t begin_seq;
 	uint16_t end_seq;
@@ -235,9 +235,7 @@ typedef struct rtcp_xr_stat_summary_report_block {
 } rtcp_xr_stat_summary_report_block_t;
 
 typedef struct rtcp_xr_voip_metrics_report_block {
-	uint8_t bt;
-	uint8_t reserved;
-	uint16_t length;
+	rtcp_xr_generic_block_header_t bh;
 	uint32_t ssrc;
 	uint8_t loss_rate;
 	uint8_t discard_rate;
@@ -336,6 +334,47 @@ ORTP_PUBLIC void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len);
 
 /* RTCP XR accessors */
 ORTP_PUBLIC bool_t rtcp_is_XR(const mblk_t *m);
+ORTP_PUBLIC rtcp_xr_block_type_t rtcp_XR_get_block_type(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_get_ssrc(const mblk_t *m);
+ORTP_PUBLIC uint64_t rtcp_XR_rcvr_rtt_get_ntp_timestamp(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_dlrr_get_ssrc(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_dlrr_get_lrr(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_dlrr_get_dlrr(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_stat_summary_get_flags(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_ssrc(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_stat_summary_get_begin_seq(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_stat_summary_get_end_seq(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_lost_packets(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_dup_packets(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_min_jitter(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_max_jitter(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_mean_jitter(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_stat_summary_get_dev_jitter(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_stat_summary_get_min_ttl_or_hl(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_stat_summary_get_max_ttl_or_hl(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_stat_summary_get_mean_ttl_or_hl(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_stat_summary_get_dev_ttl_or_hl(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_XR_voip_metrics_get_ssrc(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_loss_rate(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_discard_rate(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_burst_density(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_gap_density(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_burst_duration(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_gap_duration(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_round_trip_delay(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_end_system_delay(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_signal_level(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_noise_level(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_rerl(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_gmin(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_r_factor(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_ext_r_factor(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_mos_lq(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_mos_cq(const mblk_t *m);
+ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_rx_config(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_nominal(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_maximum(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m);
 
 
 #ifdef __cplusplus
