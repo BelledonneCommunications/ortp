@@ -1422,6 +1422,12 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 	return 0;
 }
 
+static void reply_to_collaborative_rtcp_xr_packet(RtpSession *session, mblk_t *block) {
+	if (rtcp_is_XR(block) && (rtcp_XR_get_block_type(block) == RTCP_XR_RCVR_RTT)) {
+		rtp_session_send_rtcp_xr_dlrr(session);
+	}
+}
+
 
 int
 rtp_session_rtcp_recv (RtpSession * session)
@@ -1462,10 +1468,13 @@ rtp_session_rtcp_recv (RtpSession * session)
 		if (error > 0)
 		{
 			mp->b_wptr += error;
-			if (process_rtcp_packet( session, mp, (struct sockaddr*)&remaddr, addrlen) >= 0)
-			/* post an event to notify the application*/
-			{
+			if (process_rtcp_packet( session, mp, (struct sockaddr*)&remaddr, addrlen) >= 0) {
+				/* post an event to notify the application*/
 				rtp_session_notify_inc_rtcp(session,mp);
+				/* reply to collaborative RTCP XR packets if needed. */
+				if (session->rtcp.xr_conf.enabled == TRUE) {
+					reply_to_collaborative_rtcp_xr_packet(session, mp);
+				}
 			}
 			session->rtcp.cached_mp=NULL;
 			if (session->symmetric_rtp && !sock_connected){
