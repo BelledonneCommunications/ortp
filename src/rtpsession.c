@@ -109,8 +109,9 @@ static uint32_t uint32_t_random(){
 #define RTP_SEQ_IS_GREATER(seq1,seq2)\
 	((uint16_t)((uint16_t)(seq1) - (uint16_t)(seq2))< (uint16_t)(1<<15))
 
-/* put an rtp packet in queue. It is called by rtp_parse()*/
-void rtp_putq(queue_t *q, mblk_t *mp)
+/* put an rtp packet in queue. It is called by rtp_parse()
+   A return value of -1 means the packet was a duplicate, 0 means the packet was ok */
+int rtp_putq(queue_t *q, mblk_t *mp)
 {
 	mblk_t *tmp;
 	rtp_header_t *rtp=(rtp_header_t*)mp->b_rptr,*tmprtp;
@@ -120,7 +121,7 @@ void rtp_putq(queue_t *q, mblk_t *mp)
 	
 	if (qempty(q)) {
 		putq(q,mp);
-		return;
+		return 0;
 	}
 	tmp=qlast(q);
 	/* we look at the queue from bottom to top, because enqueued packets have a better chance
@@ -130,23 +131,23 @@ void rtp_putq(queue_t *q, mblk_t *mp)
 		tmprtp=(rtp_header_t*)tmp->b_rptr;
 		ortp_debug("rtp_putq(): Seeing packet with seq=%i",tmprtp->seq_number);
 		
- 		if (rtp->seq_number == tmprtp->seq_number)
- 		{
- 			/* this is a duplicated packet. Don't queue it */
- 			ortp_debug("rtp_putq: duplicated message.");
- 			freemsg(mp);
- 			return;
+		if (rtp->seq_number == tmprtp->seq_number)
+		{
+			/* this is a duplicated packet. Don't queue it */
+			ortp_debug("rtp_putq: duplicated message.");
+			freemsg(mp);
+			return -1;
 		}else if (RTP_SEQ_IS_GREATER(rtp->seq_number,tmprtp->seq_number)){
 			
 			insq(q,tmp->b_next,mp);
-			return;
- 		}
+			return 0;
+		}
 		tmp=tmp->b_prev;
 	}
 	/* this packet is the oldest, it has to be 
 	placed on top of the queue */
 	insq(q,qfirst(q),mp);
-	
+	return 0;
 }
 
 

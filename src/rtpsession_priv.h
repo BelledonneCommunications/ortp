@@ -44,7 +44,7 @@ typedef enum {
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 
 void rtp_session_update_payload_type(RtpSession * session, int pt);
-void rtp_putq(queue_t *q, mblk_t *mp);
+int rtp_putq(queue_t *q, mblk_t *mp);
 mblk_t * rtp_getq(queue_t *q, uint32_t ts, int *rejected);
 int rtp_session_rtp_recv(RtpSession * session, uint32_t ts);
 int rtp_session_rtcp_recv(RtpSession * session);

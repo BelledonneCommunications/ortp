@@ -565,11 +565,49 @@ static int rtcp_xr_dlrr_init(uint8_t *buf, RtpSession *session) {
 
 static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	rtcp_xr_stat_summary_report_block_t *block = (rtcp_xr_stat_summary_report_block_t *)buf;
+	uint16_t last_rcv_seq = session->rtp.hwrcv_extseq & 0xFFFF;
+	uint8_t flags = session->rtcp.xr_conf.stat_summary_flags;
+	uint32_t expected_packets;
+	uint32_t lost_packets = 0;
+	uint32_t dup_packets = session->rtcp_xr_stats.dup_since_last_stat_summary;
+
+	/* Compute lost and duplicate packets statistics */
+	if (flags & OrtpRtcpXrStatSummaryLoss) {
+		uint32_t no_duplicate_received = session->rtcp_xr_stats.rcv_since_last_stat_summary - dup_packets;
+		expected_packets = last_rcv_seq - session->rtcp_xr_stats.rcv_seq_at_last_stat_summary;
+		lost_packets = (expected_packets > session->rtcp_xr_stats.rcv_since_last_stat_summary)
+			? (expected_packets - no_duplicate_received) : 0;
+	}
 
 	block->bh.bt = RTCP_XR_STAT_SUMMARY;
-	block->bh.flags = session->rtcp.xr_conf.stat_summary_flags;
+	block->bh.flags = flags;
 	block->bh.length = htons(9);
-	// TODO: Fill other fields from info in the session
+	block->ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	block->begin_seq = htons(session->rtcp_xr_stats.rcv_seq_at_last_stat_summary + 1);
+	block->end_seq = htons(last_rcv_seq + 1);
+	block->lost_packets = htonl(lost_packets);
+	block->dup_packets = htonl(dup_packets);
+	if (flags & OrtpRtcpXrStatSummaryJitt) {
+		/* TODO */
+	} else {
+		block->min_jitter = htonl(0);
+		block->max_jitter = htonl(0);
+		block->mean_jitter = htonl(0);
+		block->dev_jitter = htonl(0);
+	}
+	if (flags & (OrtpRtcpXrStatSummaryTTL | OrtpRtcpXrStatSummaryHL)) {
+		/* TODO */
+	} else {
+		block->min_ttl_or_hl = 0;
+		block->max_ttl_or_hl = 0;
+		block->mean_ttl_or_hl = 0;
+		block->dev_ttl_or_hl = 0;
+	}
+
+	session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = last_rcv_seq;
+	session->rtcp_xr_stats.rcv_since_last_stat_summary = 0;
+	session->rtcp_xr_stats.dup_since_last_stat_summary = 0;
+
 	return sizeof(rtcp_xr_stat_summary_report_block_t);
 }
 

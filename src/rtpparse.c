@@ -23,11 +23,12 @@
 #include "utils.h"
 #include "rtpsession_priv.h"
 
-static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded)
+static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded, int *duplicate)
 {
 	mblk_t *tmp;
 	int header_size;
 	*discarded=0;
+	*duplicate=0;
 	header_size=RTP_FIXED_HEADER_SIZE+ (4*rtp->cc);
 	if ((mp->b_wptr - mp->b_rptr)==header_size){
 		ortp_debug("Rtp packet contains no data.");
@@ -35,9 +36,13 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 		freemsg(mp);
 		return FALSE;
 	}
+
 	/* and then add the packet to the queue */
-	
-	rtp_putq(q,mp);
+	if (rtp_putq(q,mp) < 0) {
+		/* It was a duplicate packet */
+		(*duplicate)++;
+	}
+
 	/* make some checks: q size must not exceed RtpStream::max_rq_size */
 	while (q->q_mcount > maxrqsz)
 	{
@@ -56,6 +61,8 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen)
 {
 	int i;
+	int discarded;
+	int duplicate;
 	rtp_header_t *rtp;
 	int msgsize;
 	RtpStream *rtpstream=&session->rtp;
@@ -102,8 +109,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	ortp_global_stats.hw_recv+=msgsize;
 	stats->hw_recv+=msgsize;
 	session->rtp.hwrcv_since_last_SR++;
+	session->rtcp_xr_stats.rcv_since_last_stat_summary++;
 
-	
 	/* convert all header data from network order to host order */
 	rtp->seq_number=ntohs(rtp->seq_number);
 	rtp->timestamp=ntohl(rtp->timestamp);
@@ -189,14 +196,16 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		/* the first sequence number received should be initialized at the beginning, so that the first receiver reports contains valid loss rate*/
 		if (stats->packet_recv==1){
 			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
+			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number;
 		}
 	}
 	
 	/* check for possible telephone events */
 	if (rtp->paytype==session->rcv.telephone_events_pt){
-		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&i);
-		stats->discarded+=i;
-		ortp_global_stats.discarded+=i;
+		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
+		stats->discarded+=discarded;
+		ortp_global_stats.discarded+=discarded;
+		session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 		return;
 	}
 	
@@ -233,9 +242,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		}
 	}
 	
-	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&i))
+	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate))
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
-	stats->discarded+=i;
-	ortp_global_stats.discarded+=i;
+	stats->discarded+=discarded;
+	ortp_global_stats.discarded+=discarded;
+	session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 }
 

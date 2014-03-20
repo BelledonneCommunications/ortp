@@ -140,6 +140,9 @@ typedef struct OrtpRtcpXrConfiguration {
 typedef struct OrtpRtcpXrStats {
 	uint32_t last_rcvr_rtt_ts;	/* NTP timestamp (middle 32 bits) of last received XR rcvr-rtt */
 	struct timeval last_rcvr_rtt_time;	/* Time at which last XR rcvr-rtt was received  */
+	uint16_t rcv_seq_at_last_stat_summary;	/* Received sequence number at last XR stat-summary sent */
+	uint32_t rcv_since_last_stat_summary;	/* The number of packets received since last XR stat-summary was sent */
+	uint32_t dup_since_last_stat_summary;	/* The number of duplicate packets received since last XR stat-summary was sent */
 } OrtpRtcpXrStats;
 
 typedef struct _RtpStream
