@@ -1338,6 +1338,22 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 	}
 }
 
+static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, struct timeval reception_date) {
+	uint64_t ntp_timestamp;
+	OrtpRtcpXrStats *stats = &session->rtcp_xr_stats;
+
+	switch (rtcp_XR_get_block_type(block)) {
+		case RTCP_XR_RCVR_RTT:
+			ntp_timestamp = rtcp_XR_rcvr_rtt_get_ntp_timestamp(block);
+			stats->last_rcvr_rtt_ts = (ntp_timestamp >> 16) & 0xffffffff;
+			stats->last_rcvr_rtt_time.tv_sec = reception_date.tv_sec;
+			stats->last_rcvr_rtt_time.tv_usec = reception_date.tv_usec;
+			break;
+		default:
+			break;
+	}
+}
+
 /*
  * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
  * @param session : the current session descriptor.
@@ -1416,6 +1432,8 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		}else if ( rtcp_is_RR(block)){
 			rb=rtcp_RR_get_report_block(block,0);
 			if (rb) compute_rtt(session,&reception_date,rb);
+		} else if (rtcp_is_XR(block)) {
+			compute_rtcp_xr_statistics(session, block, reception_date);
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);

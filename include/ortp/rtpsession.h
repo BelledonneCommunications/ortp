@@ -137,6 +137,11 @@ typedef struct OrtpRtcpXrConfiguration {
 	OrtpRtcpXrStatSummaryFlag stat_summary_flags;
 } OrtpRtcpXrConfiguration;
 
+typedef struct OrtpRtcpXrStats {
+	uint32_t last_rcvr_rtt_ts;	/* NTP timestamp (middle 32 bits) of last received XR rcvr-rtt */
+	struct timeval last_rcvr_rtt_time;	/* Time at which last XR rcvr-rtt was received  */
+} OrtpRtcpXrStats;
+
 typedef struct _RtpStream
 {
 	ortp_socket_t socket;
@@ -255,6 +260,7 @@ struct _RtpSession
 	msgb_allocator_t allocator;
 	RtpStream rtp;
 	RtcpStream rtcp;
+	OrtpRtcpXrStats rtcp_xr_stats;
 	RtpSessionMode mode;
 	struct _RtpScheduler *sched;
 	uint32_t flags;

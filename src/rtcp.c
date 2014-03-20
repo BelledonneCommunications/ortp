@@ -543,12 +543,23 @@ static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, RtpSession *session) {
 }
 
 static int rtcp_xr_dlrr_init(uint8_t *buf, RtpSession *session) {
+	uint32_t dlrr = 0;
 	rtcp_xr_dlrr_report_block_t *block = (rtcp_xr_dlrr_report_block_t *)buf;
 
 	block->bh.bt = RTCP_XR_DLRR;
 	block->bh.flags = 0; // Reserved bits
 	block->bh.length = htons(3);
-	// TODO: Fill the rest of the block and handle multiple subblocks
+	block->content[0].ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	block->content[0].lrr = htonl(session->rtcp_xr_stats.last_rcvr_rtt_ts);
+	if (session->rtcp_xr_stats.last_rcvr_rtt_time.tv_sec != 0) {
+		struct timeval now;
+		double delay;
+		ortp_gettimeofday(&now, NULL);
+		delay = ((now.tv_sec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_sec)
+			+ ((now.tv_usec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_usec) * 1e-6)) * 65536;
+		dlrr = (uint32_t) delay;
+	}
+	block->content[0].dlrr = htonl(dlrr);
 	return sizeof(rtcp_xr_dlrr_report_block_t);
 }
 
