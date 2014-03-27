@@ -596,7 +596,12 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 		block->dev_jitter = htonl(0);
 	}
 	if (flags & (OrtpRtcpXrStatSummaryTTL | OrtpRtcpXrStatSummaryHL)) {
-		/* TODO */
+		block->min_ttl_or_hl = session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary;
+		block->max_ttl_or_hl = session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary;
+		block->mean_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)
+			? (uint8_t)session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary : 0;
+		block->dev_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 1)
+			? (uint8_t)(session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary / (session->rtcp_xr_stats.rcv_since_last_stat_summary - 1)) : 0;
 	} else {
 		block->min_ttl_or_hl = 0;
 		block->max_ttl_or_hl = 0;

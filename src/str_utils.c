@@ -36,6 +36,7 @@ void mblk_init(mblk_t *mp)
 #if defined(ORTP_TIMESTAMP)
 	memset(&(mp->timestamp), 0, sizeof(struct timeval));
 #endif
+	mp->ttl_or_hl = 0;
 }
 
 void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
@@ -44,6 +45,7 @@ void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
 #if defined(ORTP_TIMESTAMP)
 	dest->timestamp = source->timestamp;
 #endif
+	dest->ttl_or_hl = source->ttl_or_hl;
 }
 
 dblk_t *datab_alloc(size_t size){

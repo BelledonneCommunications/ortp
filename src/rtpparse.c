@@ -198,6 +198,30 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
 			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number;
 		}
+		/* TTL/HL statistics */
+		if (session->rtcp_xr_stats.rcv_since_last_stat_summary == 1) {
+			session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = 255;
+			session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = 0;
+			session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary = 0;
+			session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+			session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+		} else {
+			double x = (double) mp->ttl_or_hl;
+			double *olds = &session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary;
+			double *oldm = &session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary;
+			double *news = &session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary;
+			double *newm = &session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary;
+			*newm = *oldm + (x - *oldm) / session->rtcp_xr_stats.rcv_since_last_stat_summary;
+			*news = *olds + ((x - *oldm) * (x - *newm));
+			*oldm = *newm;
+			*olds = *news;
+		}
+		if (mp->ttl_or_hl < session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary) {
+			session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+		}
+		if (mp->ttl_or_hl > session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary) {
+			session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+		}
 	}
 	
 	/* check for possible telephone events */
