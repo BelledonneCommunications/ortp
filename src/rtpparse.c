@@ -58,6 +58,66 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 	return TRUE;
 }
 
+static void compute_mean_and_deviation(uint32_t nb, double x, double *olds, double *oldm, double *news, double *newm) {
+	*newm = *oldm + (x - *oldm) / nb;
+	*news = *olds + ((x - *oldm) * (x - *newm));
+	*oldm = *newm;
+	*olds = *news;
+}
+
+static void update_rtcp_xr_stat_summary(RtpSession *session, mblk_t *mp, uint32_t local_str_ts) {
+	rtp_header_t *rtp = (rtp_header_t *)mp->b_rptr;
+	int64_t diff = (int64_t)rtp->timestamp - (int64_t)local_str_ts;
+
+	/* TTL/HL statistics */
+	if (session->rtcp_xr_stats.rcv_since_last_stat_summary == 1) {
+		session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = 255;
+		session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = 0;
+		session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary = 0;
+		session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+		session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+	}
+	compute_mean_and_deviation(session->rtcp_xr_stats.rcv_since_last_stat_summary,
+		(double)mp->ttl_or_hl,
+		&session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary,
+		&session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary,
+		&session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary,
+		&session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary);
+	if (mp->ttl_or_hl < session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary) {
+		session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+	}
+	if (mp->ttl_or_hl > session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary) {
+		session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+	}
+
+	/* Jitter statistics */
+	if (session->rtcp_xr_stats.rcv_since_last_stat_summary == 1) {
+		session->rtcp_xr_stats.min_jitter_since_last_stat_summary = 0xFFFFFFFF;
+		session->rtcp_xr_stats.max_jitter_since_last_stat_summary = 0;
+	} else {
+		int64_t signed_jitter = diff - session->rtcp_xr_stats.last_jitter_diff_since_last_stat_summary;
+		uint32_t jitter;
+		if (signed_jitter < 0) {
+			jitter = (uint32_t)(-signed_jitter);
+		} else {
+			jitter = (uint32_t)(signed_jitter);
+		}
+		compute_mean_and_deviation(session->rtcp_xr_stats.rcv_since_last_stat_summary - 1,
+			(double)jitter,
+			&session->rtcp_xr_stats.olds_jitter_since_last_stat_summary,
+			&session->rtcp_xr_stats.oldm_jitter_since_last_stat_summary,
+			&session->rtcp_xr_stats.news_jitter_since_last_stat_summary,
+			&session->rtcp_xr_stats.newm_jitter_since_last_stat_summary);
+		if (jitter < session->rtcp_xr_stats.min_jitter_since_last_stat_summary) {
+			session->rtcp_xr_stats.min_jitter_since_last_stat_summary = jitter;
+		}
+		if (jitter > session->rtcp_xr_stats.max_jitter_since_last_stat_summary) {
+			session->rtcp_xr_stats.max_jitter_since_last_stat_summary = jitter;
+		}
+	}
+	session->rtcp_xr_stats.last_jitter_diff_since_last_stat_summary = diff;
+}
+
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen)
 {
 	int i;
@@ -198,30 +258,6 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
 			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number;
 		}
-		/* TTL/HL statistics */
-		if (session->rtcp_xr_stats.rcv_since_last_stat_summary == 1) {
-			session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = 255;
-			session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = 0;
-			session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary = 0;
-			session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
-			session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
-		} else {
-			double x = (double) mp->ttl_or_hl;
-			double *olds = &session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary;
-			double *oldm = &session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary;
-			double *news = &session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary;
-			double *newm = &session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary;
-			*newm = *oldm + (x - *oldm) / session->rtcp_xr_stats.rcv_since_last_stat_summary;
-			*news = *olds + ((x - *oldm) * (x - *newm));
-			*oldm = *newm;
-			*olds = *news;
-		}
-		if (mp->ttl_or_hl < session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary) {
-			session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
-		}
-		if (mp->ttl_or_hl > session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary) {
-			session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
-		}
 	}
 	
 	/* check for possible telephone events */
@@ -238,8 +274,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	if (session->hw_recv_pt!=rtp->paytype){
 		rtp_session_update_payload_type(session,rtp->paytype);
 	}
-	
+
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
+
+	update_rtcp_xr_stat_summary(session, mp, local_str_ts);
 
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) {
 		/* detect timestamp important jumps in the future, to workaround stupid rtp senders */

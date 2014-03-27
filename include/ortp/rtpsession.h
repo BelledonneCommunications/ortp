@@ -143,6 +143,13 @@ typedef struct OrtpRtcpXrStats {
 	uint16_t rcv_seq_at_last_stat_summary;	/* Received sequence number at last XR stat-summary sent */
 	uint32_t rcv_since_last_stat_summary;	/* The number of packets received since last XR stat-summary was sent */
 	uint32_t dup_since_last_stat_summary;	/* The number of duplicate packets received since last XR stat-summary was sent */
+	uint32_t min_jitter_since_last_stat_summary;	/* The minimum value of jitter since last XR stat-summary was sent */
+	uint32_t max_jitter_since_last_stat_summary;	/* The maximum value of jitter since last XR stat-summary was sent */
+	double olds_jitter_since_last_stat_summary;
+	double oldm_jitter_since_last_stat_summary;
+	double news_jitter_since_last_stat_summary;
+	double newm_jitter_since_last_stat_summary;
+	int64_t last_jitter_diff_since_last_stat_summary;
 	double olds_ttl_or_hl_since_last_stat_summary;
 	double oldm_ttl_or_hl_since_last_stat_summary;
 	double news_ttl_or_hl_since_last_stat_summary;

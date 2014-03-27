@@ -588,7 +588,12 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	block->lost_packets = htonl(lost_packets);
 	block->dup_packets = htonl(dup_packets);
 	if (flags & OrtpRtcpXrStatSummaryJitt) {
-		/* TODO */
+		block->min_jitter = htonl(session->rtcp_xr_stats.min_jitter_since_last_stat_summary);
+		block->max_jitter = htonl(session->rtcp_xr_stats.max_jitter_since_last_stat_summary);
+		block->mean_jitter = htonl((session->rtcp_xr_stats.rcv_since_last_stat_summary > 1)
+			? (uint32_t)session->rtcp_xr_stats.newm_jitter_since_last_stat_summary : 0);
+		block->dev_jitter = htonl((session->rtcp_xr_stats.rcv_since_last_stat_summary > 2)
+			? (uint32_t)sqrt(session->rtcp_xr_stats.news_jitter_since_last_stat_summary / (session->rtcp_xr_stats.rcv_since_last_stat_summary - 2)) : 0);
 	} else {
 		block->min_jitter = htonl(0);
 		block->max_jitter = htonl(0);
@@ -601,7 +606,7 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 		block->mean_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)
 			? (uint8_t)session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary : 0;
 		block->dev_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 1)
-			? (uint8_t)(session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary / (session->rtcp_xr_stats.rcv_since_last_stat_summary - 1)) : 0;
+			? (uint8_t)sqrt(session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary / (session->rtcp_xr_stats.rcv_since_last_stat_summary - 1)) : 0;
 	} else {
 		block->min_ttl_or_hl = 0;
 		block->max_ttl_or_hl = 0;
