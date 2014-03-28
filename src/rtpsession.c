@@ -1169,6 +1169,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	
 	stream->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
+	session->rtcp_xr_stats.discarded_count += rejected;
 
 	goto end;
 

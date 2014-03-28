@@ -587,7 +587,8 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	block->end_seq = htons(last_rcv_seq + 1);
 	block->lost_packets = htonl(lost_packets);
 	block->dup_packets = htonl(dup_packets);
-	if (flags & OrtpRtcpXrStatSummaryJitt) {
+	if ((flags & OrtpRtcpXrStatSummaryJitt)
+		&& (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)) {
 		block->min_jitter = htonl(session->rtcp_xr_stats.min_jitter_since_last_stat_summary);
 		block->max_jitter = htonl(session->rtcp_xr_stats.max_jitter_since_last_stat_summary);
 		block->mean_jitter = htonl((session->rtcp_xr_stats.rcv_since_last_stat_summary > 1)
@@ -600,7 +601,8 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 		block->mean_jitter = htonl(0);
 		block->dev_jitter = htonl(0);
 	}
-	if (flags & (OrtpRtcpXrStatSummaryTTL | OrtpRtcpXrStatSummaryHL)) {
+	if ((flags & (OrtpRtcpXrStatSummaryTTL | OrtpRtcpXrStatSummaryHL))
+		&& (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)) {
 		block->min_ttl_or_hl = session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary;
 		block->max_ttl_or_hl = session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary;
 		block->mean_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)
@@ -621,13 +623,71 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	return sizeof(rtcp_xr_stat_summary_report_block_t);
 }
 
+static uint8_t calc_rate(double d1, double d2) {
+	double rate = (d1 / d2) * 256;
+	uint32_t int_rate = (uint32_t)rate;
+	if (int_rate > 255) int_rate = 255;
+	return (uint8_t)int_rate;
+}
+
 static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
+	JBParameters jbparams;
+	uint32_t expected_packets;
+	uint32_t lost_packets;
 	rtcp_xr_voip_metrics_report_block_t *block = (rtcp_xr_voip_metrics_report_block_t *)buf;
+	float rtt = rtp_session_get_round_trip_propagation(session);
+	uint16_t int_rtt = (rtt >= 0) ? (rtt * 1000) : 0;
+
+	rtp_session_get_jitter_buffer_params(session, &jbparams);
 
 	block->bh.bt = RTCP_XR_VOIP_METRICS;
 	block->bh.flags = 0; // Reserved bits
 	block->bh.length = htons(8);
-	// TODO: Fill other fields from info in the session
+	block->ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	block->gmin = RTCP_XR_GMIN;
+
+	// Fill RX config
+	block->rx_config = 0;
+	if (jbparams.adaptive) {
+		block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_JBA_ADA;
+	} else {
+		block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_JBA_NON;
+	}
+	// TODO: fill PLC flags
+
+	// Fill JB fields
+	block->jb_nominal = htons((uint16_t)jbparams.nom_size);
+	if (jbparams.adaptive) {
+		block->jb_maximum = htons((session->rtp.jittctl.adapt_jitt_comp_ts * 1000) / session->rtp.jittctl.clock_rate);
+	} else {
+		block->jb_maximum = block->jb_nominal;
+	}
+	block->jb_abs_max = htons(65535);
+
+	if (session->rtcp_xr_stats.rcv_count > 0) {
+		expected_packets = session->rtcp_xr_stats.last_rcv_seq - session->rtcp_xr_stats.first_rcv_seq + 1;
+		lost_packets = expected_packets - session->rtcp_xr_stats.rcv_count;
+		block->loss_rate = calc_rate((double)lost_packets, (double)expected_packets);
+		block->discard_rate = calc_rate((double)session->rtcp_xr_stats.discarded_count, (double)expected_packets);
+		// TODO: fill burst_density, gap_density, burst_duration, gap_duration
+		block->round_trip_delay = htons(int_rtt);
+	} else {
+		block->loss_rate = 0;
+		block->discard_rate = 0;
+		block->burst_density = 0;
+		block->gap_density = 0;
+		block->burst_duration = htons(0);
+		block->gap_duration = htons(0);
+		block->round_trip_delay = htons(0);
+		block->end_system_delay = htons(0);
+		block->signal_level = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		block->noise_level = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		block->rerl = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		block->r_factor = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		block->ext_r_factor = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		block->mos_lq = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		block->mos_cq = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+	}
 	return sizeof(rtcp_xr_voip_metrics_report_block_t);
 }
 

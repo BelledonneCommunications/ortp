@@ -257,7 +257,9 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		if (stats->packet_recv==1){
 			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
 			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number;
+			session->rtcp_xr_stats.first_rcv_seq = extseq->one;
 		}
+		session->rtcp_xr_stats.last_rcv_seq = extseq->one;
 	}
 	
 	/* check for possible telephone events */
@@ -265,6 +267,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
 		stats->discarded+=discarded;
 		ortp_global_stats.discarded+=discarded;
+		session->rtcp_xr_stats.discarded_count += discarded;
 		session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 		return;
 	}
@@ -300,6 +303,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			freemsg(mp);
 			stats->outoftime++;
 			ortp_global_stats.outoftime++;
+			session->rtcp_xr_stats.discarded_count++;
 			return;
 		}
 	}
@@ -308,6 +312,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
 	stats->discarded+=discarded;
 	ortp_global_stats.discarded+=discarded;
+	session->rtcp_xr_stats.discarded_count += discarded;
 	session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
+	if ((discarded == 0) && (duplicate == 0)) {
+		session->rtcp_xr_stats.rcv_count++;
+	}
 }
 

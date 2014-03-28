@@ -114,6 +114,8 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	struct timeval last_check;
 }OrtpNetworkSimulatorCtx;
 
+#define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
+
 typedef enum {
 	OrtpRtcpXrRcvrRttNone,
 	OrtpRtcpXrRcvrRttAll,
@@ -156,6 +158,10 @@ typedef struct OrtpRtcpXrStats {
 	double newm_ttl_or_hl_since_last_stat_summary;
 	uint8_t min_ttl_or_hl_since_last_stat_summary;	/* The minimum value of TTL/HL since last XR stat-summary was sent */
 	uint8_t max_ttl_or_hl_since_last_stat_summary;	/* The maximum value of TTL/HL since last XR stat-summary was sent */
+	uint32_t first_rcv_seq;
+	uint32_t last_rcv_seq;
+	uint32_t rcv_count;
+	uint32_t discarded_count;
 } OrtpRtcpXrStats;
 
 typedef struct _RtpStream
