@@ -117,6 +117,26 @@ typedef struct _OrtpNetworkSimulatorCtx{
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
 
 typedef enum {
+	OrtpRtcpXrNoPlc,
+	OrtpRtcpXrSilencePlc,
+	OrtpRtcpXrEnhancedPlc
+} OrtpRtcpXrPlcStatus;
+
+typedef OrtpRtcpXrPlcStatus (*OrtpRtcpXrPlcCallback)(unsigned long userdata);
+typedef int8_t (*OrtpRtcpXrSignalLevelCallback)(unsigned long userdata);
+typedef int8_t (*OrtpRtcpXrNoiseLevelCallback)(unsigned long userdata);
+typedef float (*OrtpRtcpXrAverageQualityIndicator)(unsigned long userdata);
+
+typedef struct OrtpRtcpXrMediaCallbacks {
+	OrtpRtcpXrPlcCallback plc;
+	OrtpRtcpXrSignalLevelCallback signal_level;
+	OrtpRtcpXrNoiseLevelCallback noise_level;
+	OrtpRtcpXrAverageQualityIndicator average_qi;
+	OrtpRtcpXrAverageQualityIndicator average_lq_qi;
+	unsigned long userdata;
+} OrtpRtcpXrMediaCallbacks;
+
+typedef enum {
 	OrtpRtcpXrRcvrRttNone,
 	OrtpRtcpXrRcvrRttAll,
 	OrtpRtcpXrRcvrRttSender
@@ -236,6 +256,7 @@ typedef struct _RtcpStream
 	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
 	bool_t enabled; /*tells whether we can send RTCP packets */
 	OrtpRtcpXrConfiguration xr_conf;
+	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
 	uint32_t last_rtcp_xr_rcvr_rtt_s;	/* The time of the last RTCP XR rcvr rtt packet sent, in send timestamp unit */
 	uint32_t last_rtcp_xr_stat_summary_s;	/* The time of the last RTCP XR stat summary packet sent, in send timestamp unit */
 	uint32_t last_rtcp_xr_voip_metrics_s;	/* The time of the last RTCP XR voip metrics packet sent, in send timestamp unit */
@@ -405,6 +426,7 @@ ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRt
 ORTP_PUBLIC void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms);
 ORTP_PUBLIC void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms);
 ORTP_PUBLIC void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, const OrtpRtcpXrMediaCallbacks *cbs);
 
 ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
 

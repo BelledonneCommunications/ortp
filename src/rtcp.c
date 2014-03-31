@@ -637,8 +637,16 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 	rtcp_xr_voip_metrics_report_block_t *block = (rtcp_xr_voip_metrics_report_block_t *)buf;
 	float rtt = rtp_session_get_round_trip_propagation(session);
 	uint16_t int_rtt = (rtt >= 0) ? (rtt * 1000) : 0;
+	float qi = -1;
+	float lq_qi = -1;
 
 	rtp_session_get_jitter_buffer_params(session, &jbparams);
+	if (session->rtcp.xr_media_callbacks.average_qi != NULL) {
+		qi = session->rtcp.xr_media_callbacks.average_qi(session->rtcp.xr_media_callbacks.userdata);
+	}
+	if (session->rtcp.xr_media_callbacks.average_lq_qi != NULL) {
+		lq_qi = session->rtcp.xr_media_callbacks.average_lq_qi(session->rtcp.xr_media_callbacks.userdata);
+	}
 
 	block->bh.bt = RTCP_XR_VOIP_METRICS;
 	block->bh.flags = 0; // Reserved bits
@@ -653,7 +661,22 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 	} else {
 		block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_JBA_NON;
 	}
-	// TODO: fill PLC flags
+	if (session->rtcp.xr_media_callbacks.plc != NULL) {
+		switch (session->rtcp.xr_media_callbacks.plc(session->rtcp.xr_media_callbacks.userdata)) {
+			default:
+			case OrtpRtcpXrNoPlc:
+				block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_PLC_UNS;
+				break;
+			case OrtpRtcpXrSilencePlc:
+				block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_PLC_DIS;
+				break;
+			case OrtpRtcpXrEnhancedPlc:
+				block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_PLC_ENH;
+				break;
+		}
+	} else {
+		block->rx_config |= RTCP_XR_VOIP_METRICS_CONFIG_PLC_UNS;
+	}
 
 	// Fill JB fields
 	block->jb_nominal = htons((uint16_t)jbparams.nom_size);
@@ -670,7 +693,42 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 		block->loss_rate = calc_rate((double)lost_packets, (double)expected_packets);
 		block->discard_rate = calc_rate((double)session->rtcp_xr_stats.discarded_count, (double)expected_packets);
 		// TODO: fill burst_density, gap_density, burst_duration, gap_duration
+		block->burst_density = 0;
+		block->gap_density = 0;
+		block->burst_duration = htons(0);
+		block->gap_duration = htons(0);
 		block->round_trip_delay = htons(int_rtt);
+		// TODO: fill end_system_delay
+		block->end_system_delay = htons(0);
+		if (session->rtcp.xr_media_callbacks.signal_level != NULL) {
+			block->signal_level = session->rtcp.xr_media_callbacks.signal_level(session->rtcp.xr_media_callbacks.userdata);
+		} else {
+			block->signal_level = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		}
+		if (session->rtcp.xr_media_callbacks.noise_level != NULL) {
+			block->noise_level = session->rtcp.xr_media_callbacks.noise_level(session->rtcp.xr_media_callbacks.userdata);
+		} else {
+			block->noise_level = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		}
+		block->rerl = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		if (qi < 0) {
+			block->r_factor = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		} else {
+			block->r_factor = (uint8_t)(qi * 20);
+		}
+		block->ext_r_factor = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		if (lq_qi < 0) {
+			block->mos_lq = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		} else {
+			block->mos_lq = (uint8_t)(qi * 10);
+			if (block->mos_lq < 10) block->mos_lq = 10;
+		}
+		if (qi < 0) {
+			block->mos_cq = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
+		} else {
+			block->mos_cq = (uint8_t)(qi * 10);
+			if (block->mos_cq < 10) block->mos_cq = 10;
+		}
 	} else {
 		block->loss_rate = 0;
 		block->discard_rate = 0;
