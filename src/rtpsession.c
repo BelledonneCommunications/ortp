@@ -51,6 +51,9 @@ static void payload_type_changed(RtpSession *session, PayloadType *pt){
 	jitter_control_set_payload(&session->rtp.jittctl,pt);
 	rtp_session_set_time_jump_limit(session,session->rtp.time_jump);
 	rtp_session_set_rtcp_report_interval(session,session->rtcp.interval);
+	rtp_session_set_rtcp_xr_rcvr_rtt_interval(session, session->rtcp.rtcp_xr_rcvr_rtt_interval_ms);
+	rtp_session_set_rtcp_xr_stat_summary_interval(session, session->rtcp.rtcp_xr_stat_summary_interval_ms);
+	rtp_session_set_rtcp_xr_voip_metrics_interval(session, session->rtcp.rtcp_xr_voip_metrics_interval_ms);
 	if (pt->type==PAYLOAD_VIDEO){
 		session->permissive=TRUE;
 		ortp_message("Using permissive algorithm");
@@ -438,26 +441,27 @@ void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfigur
 	}
 }
 
-static void set_rtcp_xr_interval(RtpSession *session, uint32_t *interval, int value_ms) {
+static void set_rtcp_xr_interval(RtpSession *session, uint32_t *interval, int *interval_ms, int value_ms) {
 	int sendpt = rtp_session_get_send_payload_type(session);
 	if (sendpt != -1) {
 		PayloadType *pt = rtp_profile_get_payload(session->snd.profile, sendpt);
 		if (pt != NULL){
+			*interval_ms = value_ms;
 			*interval = (value_ms * pt->clock_rate) / 1000;
 		}
 	}
 }
 
 void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms) {
-	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_rcvr_rtt_interval, value_ms);
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_rcvr_rtt_interval, &session->rtcp.rtcp_xr_rcvr_rtt_interval_ms, value_ms);
 }
 
 void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms) {
-	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_stat_summary_interval, value_ms);
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_stat_summary_interval, &session->rtcp.rtcp_xr_stat_summary_interval_ms, value_ms);
 }
 
 void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms) {
-	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_voip_metrics_interval, value_ms);
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_voip_metrics_interval, &session->rtcp.rtcp_xr_voip_metrics_interval_ms, value_ms);
 }
 
 /**

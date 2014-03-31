@@ -236,6 +236,9 @@ typedef struct _RtcpStream
 	uint32_t rtcp_xr_rcvr_rtt_interval;	/* The interval in timestamp unit for RTCP XR rcvr rtt packet sending */
 	uint32_t rtcp_xr_stat_summary_interval;	/* The interval in timestamp unit for RTCP XR stat summary packet sending */
 	uint32_t rtcp_xr_voip_metrics_interval;	/* The interval in timestamp unit for RTCP XR voip metrics packet sending */
+	int rtcp_xr_rcvr_rtt_interval_ms;	/* The interval in milliseconds for RTCP XR rcvr rtt packet sending */
+	int rtcp_xr_stat_summary_interval_ms;	/* The interval in milliseconds for RTCP XR stat summary packet sending */
+	int rtcp_xr_voip_metrics_interval_ms;	/* The interval in milliseconds for RTCP XR voip metrics packet sending */
 } RtcpStream;
 
 typedef struct _RtpSession RtpSession;
