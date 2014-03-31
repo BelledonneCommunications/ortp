@@ -1350,14 +1350,12 @@ void rtp_session_notify_inc_rtcp(RtpSession *session, mblk_t *m){
 	else freemsg(m);  /* avoid memory leak */
 }
 
-static void compute_rtt(RtpSession *session, const struct timeval *now, const report_block_t *rb){
+static void compute_rtt(RtpSession *session, const struct timeval *now, uint32_t lrr, uint32_t dlrr){
 	uint64_t curntp=ortp_timeval_to_ntp(now);
 	uint32_t approx_ntp=(curntp>>16) & 0xFFFFFFFF;
-	uint32_t last_sr_time=report_block_get_last_SR_time(rb);
-	uint32_t sr_delay=report_block_get_last_SR_delay(rb);
-	/*ortp_message("rtt approx_ntp=%u, last_sr_time=%u, sr_delay=%u",approx_ntp,last_sr_time,sr_delay);*/
-	if (last_sr_time!=0 && sr_delay!=0){
-		double rtt_frac=approx_ntp-last_sr_time-sr_delay;
+	/*ortp_message("rtt approx_ntp=%u, lrr=%u, dlrr=%u",approx_ntp,lrr,dlrr);*/
+	if (lrr!=0 && dlrr!=0){
+		double rtt_frac=approx_ntp-lrr-dlrr;
 		if (rtt_frac>=0){
 			rtt_frac/=65536.0;
 			/*take into account the network simulator */
@@ -1371,7 +1369,13 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, const re
 	}
 }
 
-static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, struct timeval reception_date) {
+static void compute_rtt_from_report_block(RtpSession *session, const struct timeval *now, const report_block_t *rb) {
+	uint32_t last_sr_time = report_block_get_last_SR_time(rb);
+	uint32_t sr_delay = report_block_get_last_SR_delay(rb);
+	compute_rtt(session, now, last_sr_time, sr_delay);
+}
+
+static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, const struct timeval *now) {
 	uint64_t ntp_timestamp;
 	OrtpRtcpXrStats *stats = &session->rtcp_xr_stats;
 
@@ -1379,8 +1383,11 @@ static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, struc
 		case RTCP_XR_RCVR_RTT:
 			ntp_timestamp = rtcp_XR_rcvr_rtt_get_ntp_timestamp(block);
 			stats->last_rcvr_rtt_ts = (ntp_timestamp >> 16) & 0xffffffff;
-			stats->last_rcvr_rtt_time.tv_sec = reception_date.tv_sec;
-			stats->last_rcvr_rtt_time.tv_usec = reception_date.tv_usec;
+			stats->last_rcvr_rtt_time.tv_sec = now->tv_sec;
+			stats->last_rcvr_rtt_time.tv_usec = now->tv_usec;
+			break;
+		case RTCP_XR_DLRR:
+			compute_rtt(session, now, rtcp_XR_dlrr_get_lrr(block), rtcp_XR_dlrr_get_dlrr(block));
 			break;
 		default:
 			break;
@@ -1461,12 +1468,12 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 			rtpstream->last_rcv_SR_time.tv_usec = reception_date.tv_usec;
 			rtpstream->last_rcv_SR_time.tv_sec = reception_date.tv_sec;
 			rb=rtcp_SR_get_report_block(block,0);
-			if (rb) compute_rtt(session,&reception_date,rb);
+			if (rb) compute_rtt_from_report_block(session,&reception_date,rb);
 		}else if ( rtcp_is_RR(block)){
 			rb=rtcp_RR_get_report_block(block,0);
-			if (rb) compute_rtt(session,&reception_date,rb);
+			if (rb) compute_rtt_from_report_block(session,&reception_date,rb);
 		} else if (rtcp_is_XR(block)) {
-			compute_rtcp_xr_statistics(session, block, reception_date);
+			compute_rtcp_xr_statistics(session, block, &reception_date);
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);
