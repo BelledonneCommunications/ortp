@@ -278,9 +278,8 @@ fi
 
 
 dnl check for libzrtp support (RFC 6189: Media Path Key Agreement for Unicast Secure RTP)
-dnl zrtp is GPLv3+
 AC_ARG_ENABLE(zrtp,
-	[AS_HELP_STRING([--enable-zrtp], [Turn on or off compilation of zrtp (GPLv3+ only) (default=no)])],
+	[AS_HELP_STRING([--enable-zrtp], [Turn on or off compilation of zrtp (default=no)])],
 	[case "${enableval}" in
 		yes)	zrtp=true ;;
 		no)	zrtp=false ;;
