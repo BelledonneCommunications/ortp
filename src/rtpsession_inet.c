@@ -138,12 +138,12 @@ static ortp_socket_t create_and_bind(const char *addr, int port, int *sock_famil
 			default:
 			case AF_INET:
 #ifdef IP_RECVTTL
-				err = setsockopt(sock, SOL_IP, IP_RECVTTL, &optval, sizeof(optval));
+				err = setsockopt(sock, IPPROTO_IP, IP_RECVTTL, &optval, sizeof(optval));
 #endif
 				break;
 			case AF_INET6:
 #ifdef IPV6_RECVHOPLIMIT
-				err = setsockopt(sock, SOL_IPV6, IPV6_RECVHOPLIMIT, &optval, sizeof(optval));
+				err = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &optval, sizeof(optval));
 #endif
 				break;
 		}
@@ -1237,13 +1237,13 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 			}
 #endif
 #ifdef IP_RECVTTL
-			if ((cmsghdr->cmsg_level == SOL_IP) && (cmsghdr->cmsg_type == IP_TTL)) {
+			if ((cmsghdr->cmsg_level == IPPROTO_IP) && (cmsghdr->cmsg_type == IP_TTL)) {
 				uint32_t *ptr = (uint32_t *)CMSG_DATA(cmsghdr);
 				msg->ttl_or_hl = (*ptr & 0xFF);
 			}
 #endif
 #ifdef IPV6_RECVHOPLIMIT
-			if ((cmsghdr->cmsg_level == SOL_IPV6) && (cmsghdr->cmsg_type == IPV6_HOPLIMIT)) {
+			if ((cmsghdr->cmsg_level == IPPROTO_IPV6) && (cmsghdr->cmsg_type == IPV6_HOPLIMIT)) {
 				uint32_t *ptr = (uint32_t *)CMSG_DATA(cmsghdr);
 				msg->ttl_or_hl = (*ptr & 0xFF);
 			}
