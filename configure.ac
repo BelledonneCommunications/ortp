@@ -60,20 +60,8 @@ AC_ARG_ENABLE(perf,
 
 ORTP_DEFS=
 
-dnl enable ipv6 support
-AC_ARG_ENABLE(ipv6,
-	[AS_HELP_STRING([--enable-ipv6], [Turn on ipv6 support (default=yes)])],
-	[case "${enableval}" in
-		yes)	ipv6=true;;
-		no)	ipv6=false;;
-		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-ipv6) ;;
-	esac],
-	[ipv6=true]
-)
-if test x$ipv6 = xtrue ; then
-	ORTP_DEFS="$ORTP_DEFS -DORTP_INET6"
-	AC_DEFINE(__APPLE_USE_RFC_2292, 1, [ Apple wants you to declare what behavior you want by defining either __APPLE_USE_RFC_2292])
-fi
+AC_DEFINE(__APPLE_USE_RFC_2292, 1, [ Apple wants you to declare what behavior you want by defining either __APPLE_USE_RFC_2292])
+
 
 dnl enable timestamp support
 AC_ARG_ENABLE(ntp-timestamp,

@@ -36,7 +36,6 @@ set(SOURCE_FILES
 endif(WIN32)
 
 add_definitions(
-	-DORTP_INET6
 	-DORTP_EXPORTS
 )
 

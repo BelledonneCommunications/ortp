@@ -196,11 +196,7 @@ typedef struct _RtpStream
 	queue_t tev_rq;
 	mblk_t *cached_mp;
 	int loc_port;
-#ifdef ORTP_INET6
 	struct sockaddr_storage rem_addr;
-#else
-	struct sockaddr_in rem_addr;
-#endif
 	int rem_addrlen;
 	void *QoSHandle;
 	unsigned long QoSFlowID;
@@ -243,11 +239,7 @@ typedef struct _RtcpStream
 	struct _RtpTransport *tr; 
 	mblk_t *cached_mp;
 	int loc_port;
-#ifdef ORTP_INET6
 	struct sockaddr_storage rem_addr;
-#else
-	struct sockaddr_in rem_addr;
-#endif
 	int rem_addrlen;
 	int interval;
 	uint32_t last_rtcp_report_snt_r;	/* the time of the last rtcp report sent, in recv timestamp unit */
@@ -373,6 +365,7 @@ ORTP_PUBLIC bool_t rtp_session_adaptive_jitter_compensation_enabled(RtpSession *
 ORTP_PUBLIC void rtp_session_set_time_jump_limit(RtpSession *session, int miliseconds);
 ORTP_PUBLIC int rtp_session_set_local_addr(RtpSession *session,const char *addr, int rtp_port, int rtcp_port);
 ORTP_PUBLIC int rtp_session_get_local_port(const RtpSession *session);
+ORTP_PUBLIC int rtp_session_get_local_rtcp_port(const RtpSession *session);
 
 ORTP_PUBLIC int
 rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port);
