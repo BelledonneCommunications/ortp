@@ -289,7 +289,7 @@ AC_ARG_ENABLE(zrtp,
 )
 
 if test "$zrtp" = "true" ; then
-	PKG_CHECK_MODULES(LIBZRTPCPP, libbzrtp >= 0.0.0)
+	PKG_CHECK_MODULES(LIBBZRTP, libbzrtp >= 0.0.0)
 	if test "$have_srtp" = "no" ; then
 		AC_MSG_ERROR("ZRTP requires SRTP")
 	fi
@@ -297,7 +297,7 @@ if test "$zrtp" = "true" ; then
 else
 	echo "ZRTP compilation is disabled."
 fi
-AM_CONDITIONAL(LIBZRTPCPP,test x$zrtp != xfalse)
+AM_CONDITIONAL(LIBBZRTP,test x$zrtp != xfalse)
 
 
 if test $debug_enabled = "yes"; then
@@ -376,8 +376,8 @@ fi
 
 AC_SUBST(SSL_LIBS)
 
-ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SRTP_LIBS $SSL_LIBS $LIBZRTPCPP_LIBS"
-ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $SRTP_CFLAGS $LIBZRTPCPP_CFLAGS"
+ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SRTP_LIBS $SSL_LIBS $LIBBZRTP_LIBS"
+ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $SRTP_CFLAGS $LIBBZRTP_CFLAGS"
 CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs
 
@@ -494,6 +494,3 @@ AC_OUTPUT(
 	ortp.doxygen
 )
 
-if test "$zrtp" = "true" ; then
-	AC_MSG_WARN([Compiled with ZRTP support thus license is now GPLv3+])
-fi
