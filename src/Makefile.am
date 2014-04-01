@@ -42,7 +42,7 @@ libortp_la_SOURCES=	str_utils.c 	\
 			zrtp.c \
 			netsim.c
 
-if LIBBZRTPP
+if LIBBZRTP
 AM_CFLAGS+= $(LIBBZRTP_CFLAGS)
 AM_LDFLAGS+= $(LIBBZRTP_LDFLAGS)
 endif
