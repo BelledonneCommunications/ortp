@@ -40,6 +40,7 @@ extern "C"{
 
 typedef struct OrtpZrtpParams {
 	const char *zid_file; // File where to store secrets and other information
+	const char *uri; /* the sip URI of correspondant */
 } OrtpZrtpParams;
 
 typedef struct _OrtpZrtpContext OrtpZrtpContext ;

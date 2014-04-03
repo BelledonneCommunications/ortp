@@ -42,12 +42,12 @@ libortp_la_SOURCES=	str_utils.c 	\
 			zrtp.c \
 			netsim.c
 
-if LIBZRTPCPP
-AM_CFLAGS+= $(LIBZRTPCPP_CFLAGS)
-AM_LDFLAGS+= $(LIBZRTPCPP_LDFLAGS)
+if LIBBZRTP
+AM_CFLAGS+= $(LIBBZRTP_CFLAGS)
+AM_LDFLAGS+= $(LIBBZRTP_LDFLAGS)
 endif
 
-libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS) $(LIBZRTPCPP_LIBS)
+libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS) $(LIBBZRTP_LIBS)
 
 libortp_la_LDFLAGS= -version-info $(LIBORTP_SO_VERSION) -no-undefined
 

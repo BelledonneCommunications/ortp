@@ -45,6 +45,7 @@ struct _OrtpZrtpContext{
 	RtpTransport rtpt;
 	RtpTransport rtcpt;
 	char *zidFilename;
+	char *peerURI;
 };
 
 typedef enum {
@@ -79,7 +80,6 @@ static inline uint64_t get_timeval_in_millis() {
 * @return
 *    zero if sending failed, one if packet was sent
 */
-#include <stdio.h>
 static int32_t ozrtp_sendDataZRTP (void *clientData, uint8_t* data, int32_t length ){
 
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
@@ -314,6 +314,35 @@ static int ozrtp_writeCache(void *clientData, uint8_t* input, uint32_t inputSize
 
 }
 
+/**
+ * @brief This callback is called when context is ready to compute exported keys as in rfc6189 section 4.5.2
+ * Computed keys are added to zid cache with sip URI of peer(found in client Data) to be used for IM ciphering
+ *
+ * @param[in]	clientData		Contains opaque zrtp context but also peer sip URI
+ * @param[in]	peerZid			Peer ZID to address correct node in zid cache
+ * @param[in]	role			RESPONDER or INITIATOR, needed to compute the pair of keys for IM ciphering
+ *
+ * @return 	0 on success
+ */
+static int ozrtp_addExportedKeysInZidCache(void *clientData, uint8_t peerZid[12], uint8_t role) {
+	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
+	bzrtpContext_t *zrtpContext = userData->zrtpContext;
+
+	/* Write the peer sip URI in cache */
+	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"uri", 3, (uint8_t *)(userData->peerURI), strlen(userData->peerURI), BZRTP_CUSTOMCACHE_PLAINDATA, BZRTP_CACHE_LOADFILE|BZRTP_CACHE_DONTWRITEFILE);
+
+	/* Derive the master keys and session index */
+	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"sndKey", 6, (uint8_t *)((role==RESPONDER)?"ResponderKey":"InitiatorKey"), 12, BZRTP_CUSTOMCACHE_USEKDF, BZRTP_CACHE_DONTLOADFILE|BZRTP_CACHE_DONTWRITEFILE);
+	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"rcvKey", 6, (uint8_t *)((role==RESPONDER)?"InitiatorKey":"ResponderKey"), 12, BZRTP_CUSTOMCACHE_USEKDF, BZRTP_CACHE_DONTLOADFILE|BZRTP_CACHE_DONTWRITEFILE);
+	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"sndSId", 6, (uint8_t *)((role==RESPONDER)?"ResponderSId":"InitiatorSId"), 12, BZRTP_CUSTOMCACHE_USEKDF, BZRTP_CACHE_DONTLOADFILE|BZRTP_CACHE_DONTWRITEFILE);
+	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"rcvSId", 6, (uint8_t *)((role==RESPONDER)?"InitiatorSId":"ResponderSId"), 12, BZRTP_CUSTOMCACHE_USEKDF, BZRTP_CACHE_DONTLOADFILE|BZRTP_CACHE_WRITEFILE);
+
+
+	return 0;
+}
+
+/*** end of Callback functions implementations ***/
+
 static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	int slen;
 	err_status_t err;
@@ -391,6 +420,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 			err_status_t err = srtp_unprotect(userData->srtpRecv,m->b_wptr,&rlen);
 			if (err != err_status_ok) {
 				ortp_warning("srtp_unprotect failed; packet may be plain RTP");
+				return -1;
 			}
 		}
 		// in both cases (RTP plain and deciphered srtp)
@@ -458,6 +488,13 @@ static OrtpZrtpContext* createUserData(bzrtpContext_t *context, OrtpZrtpParams *
 		userData->zidFilename = NULL;
 	}
 
+	/* get the sip URI of peer and store it into the context to set it in the cache */
+	if (strlen(params->uri)>0) {
+		userData->peerURI = strdup(params->uri);
+	} else {
+		userData->peerURI = NULL;
+	}
+
 
 	return userData;
 }
@@ -495,6 +532,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	bzrtp_setCallback(context, (int (*)())ozrtp_startSrtpSession, ZRTP_CALLBACK_STARTSRTPSESSION);
 	bzrtp_setCallback(context, (int (*)())ozrtp_loadCache, ZRTP_CALLBACK_LOADCACHE);
 	bzrtp_setCallback(context, (int (*)())ozrtp_writeCache, ZRTP_CALLBACK_WRITECACHE);
+	bzrtp_setCallback(context, (int (*)())ozrtp_addExportedKeysInZidCache, ZRTP_CALLBACK_CONTEXTREADYFOREXPORTEDKEYS);
 	/* create and link user data */
 	OrtpZrtpContext *userData=createUserData(context, params);
 	userData->session=s;
@@ -537,6 +575,9 @@ void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx) {
 	if (ctx->srtpSend != NULL) srtp_dealloc(ctx->srtpSend);
 	if (ctx->srtpRecv != NULL) srtp_dealloc(ctx->srtpRecv);
 
+	free(ctx->zidFilename);
+	free(ctx->peerURI);
+	free(ctx);
 	ortp_message("ORTP-ZRTP context destroyed");
 }
 
