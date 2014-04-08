@@ -114,6 +114,76 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	struct timeval last_check;
 }OrtpNetworkSimulatorCtx;
 
+#define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
+
+typedef enum {
+	OrtpRtcpXrNoPlc,
+	OrtpRtcpXrSilencePlc,
+	OrtpRtcpXrEnhancedPlc
+} OrtpRtcpXrPlcStatus;
+
+typedef OrtpRtcpXrPlcStatus (*OrtpRtcpXrPlcCallback)(unsigned long userdata);
+typedef int8_t (*OrtpRtcpXrSignalLevelCallback)(unsigned long userdata);
+typedef int8_t (*OrtpRtcpXrNoiseLevelCallback)(unsigned long userdata);
+typedef float (*OrtpRtcpXrAverageQualityIndicator)(unsigned long userdata);
+
+typedef struct OrtpRtcpXrMediaCallbacks {
+	OrtpRtcpXrPlcCallback plc;
+	OrtpRtcpXrSignalLevelCallback signal_level;
+	OrtpRtcpXrNoiseLevelCallback noise_level;
+	OrtpRtcpXrAverageQualityIndicator average_qi;
+	OrtpRtcpXrAverageQualityIndicator average_lq_qi;
+	unsigned long userdata;
+} OrtpRtcpXrMediaCallbacks;
+
+typedef enum {
+	OrtpRtcpXrRcvrRttNone,
+	OrtpRtcpXrRcvrRttAll,
+	OrtpRtcpXrRcvrRttSender
+} OrtpRtcpXrRcvrRttMode;
+
+typedef enum {
+	OrtpRtcpXrStatSummaryLoss = (1 << 7),
+	OrtpRtcpXrStatSummaryDup = (1 << 6),
+	OrtpRtcpXrStatSummaryJitt = (1 << 5),
+	OrtpRtcpXrStatSummaryTTL = (1 << 3),
+	OrtpRtcpXrStatSummaryHL = (1 << 4)
+} OrtpRtcpXrStatSummaryFlag;
+
+typedef struct OrtpRtcpXrConfiguration {
+	bool_t enabled;
+	bool_t stat_summary_enabled;
+	bool_t voip_metrics_enabled;
+	OrtpRtcpXrRcvrRttMode rcvr_rtt_mode;
+	int rcvr_rtt_max_size;
+	OrtpRtcpXrStatSummaryFlag stat_summary_flags;
+} OrtpRtcpXrConfiguration;
+
+typedef struct OrtpRtcpXrStats {
+	uint32_t last_rcvr_rtt_ts;	/* NTP timestamp (middle 32 bits) of last received XR rcvr-rtt */
+	struct timeval last_rcvr_rtt_time;	/* Time at which last XR rcvr-rtt was received  */
+	uint16_t rcv_seq_at_last_stat_summary;	/* Received sequence number at last XR stat-summary sent */
+	uint32_t rcv_since_last_stat_summary;	/* The number of packets received since last XR stat-summary was sent */
+	uint32_t dup_since_last_stat_summary;	/* The number of duplicate packets received since last XR stat-summary was sent */
+	uint32_t min_jitter_since_last_stat_summary;	/* The minimum value of jitter since last XR stat-summary was sent */
+	uint32_t max_jitter_since_last_stat_summary;	/* The maximum value of jitter since last XR stat-summary was sent */
+	double olds_jitter_since_last_stat_summary;
+	double oldm_jitter_since_last_stat_summary;
+	double news_jitter_since_last_stat_summary;
+	double newm_jitter_since_last_stat_summary;
+	int64_t last_jitter_diff_since_last_stat_summary;
+	double olds_ttl_or_hl_since_last_stat_summary;
+	double oldm_ttl_or_hl_since_last_stat_summary;
+	double news_ttl_or_hl_since_last_stat_summary;
+	double newm_ttl_or_hl_since_last_stat_summary;
+	uint8_t min_ttl_or_hl_since_last_stat_summary;	/* The minimum value of TTL/HL since last XR stat-summary was sent */
+	uint8_t max_ttl_or_hl_since_last_stat_summary;	/* The maximum value of TTL/HL since last XR stat-summary was sent */
+	uint32_t first_rcv_seq;
+	uint32_t last_rcv_seq;
+	uint32_t rcv_count;
+	uint32_t discarded_count;
+} OrtpRtcpXrStats;
+
 typedef struct _RtpStream
 {
 	ortp_socket_t socket;
@@ -126,11 +196,7 @@ typedef struct _RtpStream
 	queue_t tev_rq;
 	mblk_t *cached_mp;
 	int loc_port;
-#ifdef ORTP_INET6
 	struct sockaddr_storage rem_addr;
-#else
-	struct sockaddr_in rem_addr;
-#endif
 	int rem_addrlen;
 	void *QoSHandle;
 	unsigned long QoSFlowID;
@@ -173,11 +239,7 @@ typedef struct _RtcpStream
 	struct _RtpTransport *tr; 
 	mblk_t *cached_mp;
 	int loc_port;
-#ifdef ORTP_INET6
 	struct sockaddr_storage rem_addr;
-#else
-	struct sockaddr_in rem_addr;
-#endif
 	int rem_addrlen;
 	int interval;
 	uint32_t last_rtcp_report_snt_r;	/* the time of the last rtcp report sent, in recv timestamp unit */
@@ -185,6 +247,17 @@ typedef struct _RtcpStream
 	uint32_t rtcp_report_snt_interval_r; /* the interval in timestamp unit for receive path between rtcp report sent */
 	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
 	bool_t enabled; /*tells whether we can send RTCP packets */
+	OrtpRtcpXrConfiguration xr_conf;
+	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
+	uint32_t last_rtcp_xr_rcvr_rtt_s;	/* The time of the last RTCP XR rcvr rtt packet sent, in send timestamp unit */
+	uint32_t last_rtcp_xr_stat_summary_s;	/* The time of the last RTCP XR stat summary packet sent, in send timestamp unit */
+	uint32_t last_rtcp_xr_voip_metrics_s;	/* The time of the last RTCP XR voip metrics packet sent, in send timestamp unit */
+	uint32_t rtcp_xr_rcvr_rtt_interval;	/* The interval in timestamp unit for RTCP XR rcvr rtt packet sending */
+	uint32_t rtcp_xr_stat_summary_interval;	/* The interval in timestamp unit for RTCP XR stat summary packet sending */
+	uint32_t rtcp_xr_voip_metrics_interval;	/* The interval in timestamp unit for RTCP XR voip metrics packet sending */
+	int rtcp_xr_rcvr_rtt_interval_ms;	/* The interval in milliseconds for RTCP XR rcvr rtt packet sending */
+	int rtcp_xr_stat_summary_interval_ms;	/* The interval in milliseconds for RTCP XR stat summary packet sending */
+	int rtcp_xr_voip_metrics_interval_ms;	/* The interval in milliseconds for RTCP XR voip metrics packet sending */
 } RtcpStream;
 
 typedef struct _RtpSession RtpSession;
@@ -225,6 +298,7 @@ struct _RtpSession
 	msgb_allocator_t allocator;
 	RtpStream rtp;
 	RtcpStream rtcp;
+	OrtpRtcpXrStats rtcp_xr_stats;
 	RtpSessionMode mode;
 	struct _RtpScheduler *sched;
 	uint32_t flags;
@@ -291,6 +365,7 @@ ORTP_PUBLIC bool_t rtp_session_adaptive_jitter_compensation_enabled(RtpSession *
 ORTP_PUBLIC void rtp_session_set_time_jump_limit(RtpSession *session, int miliseconds);
 ORTP_PUBLIC int rtp_session_set_local_addr(RtpSession *session,const char *addr, int rtp_port, int rtcp_port);
 ORTP_PUBLIC int rtp_session_get_local_port(const RtpSession *session);
+ORTP_PUBLIC int rtp_session_get_local_rtcp_port(const RtpSession *session);
 
 ORTP_PUBLIC int
 rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port);
@@ -339,6 +414,12 @@ ORTP_PUBLIC void rtp_session_set_connected_mode(RtpSession *session, bool_t yesn
 ORTP_PUBLIC void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
 
 ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms);
+
+ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms);
+ORTP_PUBLIC void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, const OrtpRtcpXrMediaCallbacks *cbs);
 
 ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
 
@@ -421,8 +502,8 @@ ORTP_PUBLIC mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uin
 
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_rcvr_rtt(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_dlrr(RtpSession *session);
-ORTP_PUBLIC void rtp_session_send_stat_summary(RtpSession *session);
-ORTP_PUBLIC void rtp_session_send_voip_metrics(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_rtcp_xr_stat_summary(RtpSession *session);
+ORTP_PUBLIC void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session);
 
 
 /*private */

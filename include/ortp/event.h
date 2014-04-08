@@ -31,19 +31,10 @@ typedef enum {
 	OrtpRTCPSocket
 } OrtpSocketType;
 
-typedef struct RtpEndpoint{
-#ifdef ORTP_INET6
-	struct sockaddr_storage addr;
-#else
-	struct sockaddr addr;
-#endif
-	socklen_t addrlen;
-}RtpEndpoint;
-
-
 struct _OrtpEventData{
 	mblk_t *packet;	/* most events are associated to a received packet */
-	RtpEndpoint *ep;
+	struct sockaddr_storage source_addr;
+	socklen_t source_addrlen;
 	ortpTimeSpec ts;
 	union {
 		int telephone_event;
@@ -65,9 +56,6 @@ typedef struct _OrtpEventData OrtpEventData;
 #ifdef __cplusplus
 extern "C"{
 #endif
-
-ORTP_PUBLIC RtpEndpoint *rtp_endpoint_new(struct sockaddr *addr, socklen_t addrlen);
-ORTP_PUBLIC RtpEndpoint *rtp_endpoint_dup(const RtpEndpoint *ep);
 
 ORTP_PUBLIC OrtpEvent * ortp_event_new(OrtpEventType tp);
 ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);

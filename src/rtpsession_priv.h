@@ -22,6 +22,15 @@
 
 #include "ortp/rtpsession.h"
 
+#define RTCP_XR_GMIN 16 /* Recommended value of Gmin from RFC3611, section 4.7.6 */
+#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_STD ((1 << 7) | (1 << 6))
+#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_ENH (1 << 7)
+#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_DIS (1 << 6)
+#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_UNS 0
+#define RTCP_XR_VOIP_METRICS_CONFIG_JBA_ADA ((1 << 5) | (1 << 4))
+#define RTCP_XR_VOIP_METRICS_CONFIG_JBA_NON (1 << 5)
+#define RTCP_XR_VOIP_METRICS_CONFIG_JBA_UNK 0
+
 typedef enum {
 	RTP_SESSION_RECV_SYNC=1,	/* the rtp session is synchronising in the incoming stream */
 	RTP_SESSION_FIRST_PACKET_DELIVERED=1<<1,
@@ -44,7 +53,7 @@ typedef enum {
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 
 void rtp_session_update_payload_type(RtpSession * session, int pt);
-void rtp_putq(queue_t *q, mblk_t *mp);
+int rtp_putq(queue_t *q, mblk_t *mp);
 mblk_t * rtp_getq(queue_t *q, uint32_t ts, int *rejected);
 int rtp_session_rtp_recv(RtpSession * session, uint32_t ts);
 int rtp_session_rtcp_recv(RtpSession * session);

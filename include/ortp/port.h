@@ -53,9 +53,7 @@
 
 #include <sys/time.h>
 
-#ifdef ORTP_INET6
 #include <netdb.h>
-#endif
 
 typedef int ortp_socket_t;
 typedef pthread_t ortp_thread_t;

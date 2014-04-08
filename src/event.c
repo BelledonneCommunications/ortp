@@ -20,26 +20,6 @@
 #include "ortp/event.h"
 #include "ortp/ortp.h"
 
-RtpEndpoint *rtp_endpoint_new(struct sockaddr *addr, socklen_t addrlen){
-	RtpEndpoint *ep=ortp_new(RtpEndpoint,1);
-	if (sizeof(ep->addr)<addrlen){
-		ortp_free(ep);
-		ortp_fatal("Bad socklen_t size !");
-		return NULL;
-	}
-	memcpy(&ep->addr,addr,addrlen);
-	ep->addrlen=addrlen;
-	return ep;
-}
-
-void rtp_endpoint_destroy(RtpEndpoint *ep){
-	ortp_free(ep);
-}
-
-RtpEndpoint *rtp_endpoint_dup(const RtpEndpoint *ep){
-	return rtp_endpoint_new((struct sockaddr*)&ep->addr,ep->addrlen);
-}
-
 OrtpEvent * ortp_event_new(unsigned long type){
 	OrtpEventData *ed;
 	const int size=sizeof(OrtpEventType)+sizeof(OrtpEventData);
@@ -56,7 +36,6 @@ OrtpEvent *ortp_event_dup(OrtpEvent *ev){
 	OrtpEventData * ed = ortp_event_get_data(ev);
 	OrtpEventData * edv = ortp_event_get_data(nev);
 	memcpy(edv,ed,sizeof(OrtpEventData));
-	if (ed->ep) edv->ep = rtp_endpoint_dup(ed->ep);
 	if (ed->packet) edv->packet = copymsg(ed->packet);
 	return nev;
 }
@@ -73,7 +52,6 @@ void ortp_event_destroy(OrtpEvent *ev){
 	OrtpEventData *d=ortp_event_get_data(ev);
 	if (ev->b_datap->db_ref==1){
 		if (d->packet) 	freemsg(d->packet);
-		if (d->ep) rtp_endpoint_destroy(d->ep);
 	}
 	freemsg(ev);
 }

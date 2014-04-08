@@ -60,6 +60,7 @@ typedef struct msgb
 	struct timeval timestamp;
 #endif
 	ortp_recv_addr_t recv_addr;
+	uint8_t ttl_or_hl;
 } mblk_t;
 
 

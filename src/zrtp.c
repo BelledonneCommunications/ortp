@@ -341,7 +341,6 @@ static int ozrtp_addExportedKeysInZidCache(void *clientData, uint8_t peerZid[12]
 	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"rcvIndex", 6, (uint8_t *)"00000000", 8, BZRTP_CUSTOMCACHE_PLAINDATA, BZRTP_CACHE_DONTLOADFILE|BZRTP_CACHE_DONTWRITEFILE);
 	bzrtp_addCustomDataInCache(zrtpContext, peerZid, (uint8_t *)"sndIndex", 6, (uint8_t *)"00000000", 8, BZRTP_CUSTOMCACHE_PLAINDATA, BZRTP_CACHE_DONTLOADFILE|BZRTP_CACHE_WRITEFILE);
 
-
 	return 0;
 }
 
@@ -498,7 +497,6 @@ static OrtpZrtpContext* createUserData(bzrtpContext_t *context, OrtpZrtpParams *
 	} else {
 		userData->peerURI = NULL;
 	}
-
 
 	return userData;
 }

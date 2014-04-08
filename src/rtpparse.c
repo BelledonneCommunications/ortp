@@ -23,11 +23,12 @@
 #include "utils.h"
 #include "rtpsession_priv.h"
 
-static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded)
+static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded, int *duplicate)
 {
 	mblk_t *tmp;
 	int header_size;
 	*discarded=0;
+	*duplicate=0;
 	header_size=RTP_FIXED_HEADER_SIZE+ (4*rtp->cc);
 	if ((mp->b_wptr - mp->b_rptr)==header_size){
 		ortp_debug("Rtp packet contains no data.");
@@ -35,9 +36,13 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 		freemsg(mp);
 		return FALSE;
 	}
+
 	/* and then add the packet to the queue */
-	
-	rtp_putq(q,mp);
+	if (rtp_putq(q,mp) < 0) {
+		/* It was a duplicate packet */
+		(*duplicate)++;
+	}
+
 	/* make some checks: q size must not exceed RtpStream::max_rq_size */
 	while (q->q_mcount > maxrqsz)
 	{
@@ -53,9 +58,71 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 	return TRUE;
 }
 
+static void compute_mean_and_deviation(uint32_t nb, double x, double *olds, double *oldm, double *news, double *newm) {
+	*newm = *oldm + (x - *oldm) / nb;
+	*news = *olds + ((x - *oldm) * (x - *newm));
+	*oldm = *newm;
+	*olds = *news;
+}
+
+static void update_rtcp_xr_stat_summary(RtpSession *session, mblk_t *mp, uint32_t local_str_ts) {
+	rtp_header_t *rtp = (rtp_header_t *)mp->b_rptr;
+	int64_t diff = (int64_t)rtp->timestamp - (int64_t)local_str_ts;
+
+	/* TTL/HL statistics */
+	if (session->rtcp_xr_stats.rcv_since_last_stat_summary == 1) {
+		session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = 255;
+		session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = 0;
+		session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary = 0;
+		session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+		session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+	}
+	compute_mean_and_deviation(session->rtcp_xr_stats.rcv_since_last_stat_summary,
+		(double)mp->ttl_or_hl,
+		&session->rtcp_xr_stats.olds_ttl_or_hl_since_last_stat_summary,
+		&session->rtcp_xr_stats.oldm_ttl_or_hl_since_last_stat_summary,
+		&session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary,
+		&session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary);
+	if (mp->ttl_or_hl < session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary) {
+		session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+	}
+	if (mp->ttl_or_hl > session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary) {
+		session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary = mp->ttl_or_hl;
+	}
+
+	/* Jitter statistics */
+	if (session->rtcp_xr_stats.rcv_since_last_stat_summary == 1) {
+		session->rtcp_xr_stats.min_jitter_since_last_stat_summary = 0xFFFFFFFF;
+		session->rtcp_xr_stats.max_jitter_since_last_stat_summary = 0;
+	} else {
+		int64_t signed_jitter = diff - session->rtcp_xr_stats.last_jitter_diff_since_last_stat_summary;
+		uint32_t jitter;
+		if (signed_jitter < 0) {
+			jitter = (uint32_t)(-signed_jitter);
+		} else {
+			jitter = (uint32_t)(signed_jitter);
+		}
+		compute_mean_and_deviation(session->rtcp_xr_stats.rcv_since_last_stat_summary - 1,
+			(double)jitter,
+			&session->rtcp_xr_stats.olds_jitter_since_last_stat_summary,
+			&session->rtcp_xr_stats.oldm_jitter_since_last_stat_summary,
+			&session->rtcp_xr_stats.news_jitter_since_last_stat_summary,
+			&session->rtcp_xr_stats.newm_jitter_since_last_stat_summary);
+		if (jitter < session->rtcp_xr_stats.min_jitter_since_last_stat_summary) {
+			session->rtcp_xr_stats.min_jitter_since_last_stat_summary = jitter;
+		}
+		if (jitter > session->rtcp_xr_stats.max_jitter_since_last_stat_summary) {
+			session->rtcp_xr_stats.max_jitter_since_last_stat_summary = jitter;
+		}
+	}
+	session->rtcp_xr_stats.last_jitter_diff_since_last_stat_summary = diff;
+}
+
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen)
 {
 	int i;
+	int discarded;
+	int duplicate;
 	rtp_header_t *rtp;
 	int msgsize;
 	RtpStream *rtpstream=&session->rtp;
@@ -82,7 +149,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 				OrtpEvent *ev=ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed=ortp_event_get_data(ev);
 				ed->packet=mp;
-				ed->ep=rtp_endpoint_new(addr,addrlen);
+				memcpy(&ed->source_addr,addr,addrlen);
+				ed->source_addrlen=addrlen;
 				ed->info.socket_type = OrtpRTPSocket;
 				rtp_session_dispatch_event(session,ev);
 				return;
@@ -102,8 +170,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	ortp_global_stats.hw_recv+=msgsize;
 	stats->hw_recv+=msgsize;
 	session->rtp.hwrcv_since_last_SR++;
+	session->rtcp_xr_stats.rcv_since_last_stat_summary++;
 
-	
 	/* convert all header data from network order to host order */
 	rtp->seq_number=ntohs(rtp->seq_number);
 	rtp->timestamp=ntohl(rtp->timestamp);
@@ -189,14 +257,19 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		/* the first sequence number received should be initialized at the beginning, so that the first receiver reports contains valid loss rate*/
 		if (stats->packet_recv==1){
 			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
+			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number;
+			session->rtcp_xr_stats.first_rcv_seq = extseq->one;
 		}
+		session->rtcp_xr_stats.last_rcv_seq = extseq->one;
 	}
 	
 	/* check for possible telephone events */
 	if (rtp->paytype==session->rcv.telephone_events_pt){
-		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&i);
-		stats->discarded+=i;
-		ortp_global_stats.discarded+=i;
+		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
+		stats->discarded+=discarded;
+		ortp_global_stats.discarded+=discarded;
+		session->rtcp_xr_stats.discarded_count += discarded;
+		session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 		return;
 	}
 	
@@ -205,8 +278,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	if (session->hw_recv_pt!=rtp->paytype){
 		rtp_session_update_payload_type(session,rtp->paytype);
 	}
-	
+
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
+
+	update_rtcp_xr_stat_summary(session, mp, local_str_ts);
 
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) {
 		/* detect timestamp important jumps in the future, to workaround stupid rtp senders */
@@ -229,13 +304,19 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			freemsg(mp);
 			stats->outoftime++;
 			ortp_global_stats.outoftime++;
+			session->rtcp_xr_stats.discarded_count++;
 			return;
 		}
 	}
 	
-	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&i))
+	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate))
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
-	stats->discarded+=i;
-	ortp_global_stats.discarded+=i;
+	stats->discarded+=discarded;
+	ortp_global_stats.discarded+=discarded;
+	session->rtcp_xr_stats.discarded_count += discarded;
+	session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
+	if ((discarded == 0) && (duplicate == 0)) {
+		session->rtcp_xr_stats.rcv_count++;
+	}
 }
 

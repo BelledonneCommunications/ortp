@@ -51,6 +51,9 @@ static void payload_type_changed(RtpSession *session, PayloadType *pt){
 	jitter_control_set_payload(&session->rtp.jittctl,pt);
 	rtp_session_set_time_jump_limit(session,session->rtp.time_jump);
 	rtp_session_set_rtcp_report_interval(session,session->rtcp.interval);
+	rtp_session_set_rtcp_xr_rcvr_rtt_interval(session, session->rtcp.rtcp_xr_rcvr_rtt_interval_ms);
+	rtp_session_set_rtcp_xr_stat_summary_interval(session, session->rtcp.rtcp_xr_stat_summary_interval_ms);
+	rtp_session_set_rtcp_xr_voip_metrics_interval(session, session->rtcp.rtcp_xr_voip_metrics_interval_ms);
 	if (pt->type==PAYLOAD_VIDEO){
 		session->permissive=TRUE;
 		ortp_message("Using permissive algorithm");
@@ -109,8 +112,9 @@ static uint32_t uint32_t_random(){
 #define RTP_SEQ_IS_GREATER(seq1,seq2)\
 	((uint16_t)((uint16_t)(seq1) - (uint16_t)(seq2))< (uint16_t)(1<<15))
 
-/* put an rtp packet in queue. It is called by rtp_parse()*/
-void rtp_putq(queue_t *q, mblk_t *mp)
+/* put an rtp packet in queue. It is called by rtp_parse()
+   A return value of -1 means the packet was a duplicate, 0 means the packet was ok */
+int rtp_putq(queue_t *q, mblk_t *mp)
 {
 	mblk_t *tmp;
 	rtp_header_t *rtp=(rtp_header_t*)mp->b_rptr,*tmprtp;
@@ -120,7 +124,7 @@ void rtp_putq(queue_t *q, mblk_t *mp)
 	
 	if (qempty(q)) {
 		putq(q,mp);
-		return;
+		return 0;
 	}
 	tmp=qlast(q);
 	/* we look at the queue from bottom to top, because enqueued packets have a better chance
@@ -130,23 +134,23 @@ void rtp_putq(queue_t *q, mblk_t *mp)
 		tmprtp=(rtp_header_t*)tmp->b_rptr;
 		ortp_debug("rtp_putq(): Seeing packet with seq=%i",tmprtp->seq_number);
 		
- 		if (rtp->seq_number == tmprtp->seq_number)
- 		{
- 			/* this is a duplicated packet. Don't queue it */
- 			ortp_debug("rtp_putq: duplicated message.");
- 			freemsg(mp);
- 			return;
+		if (rtp->seq_number == tmprtp->seq_number)
+		{
+			/* this is a duplicated packet. Don't queue it */
+			ortp_debug("rtp_putq: duplicated message.");
+			freemsg(mp);
+			return -1;
 		}else if (RTP_SEQ_IS_GREATER(rtp->seq_number,tmprtp->seq_number)){
 			
 			insq(q,tmp->b_next,mp);
-			return;
- 		}
+			return 0;
+		}
 		tmp=tmp->b_prev;
 	}
 	/* this packet is the oldest, it has to be 
 	placed on top of the queue */
 	insq(q,qfirst(q),mp);
-	
+	return 0;
 }
 
 
@@ -429,6 +433,43 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms){
 		}
 	}
 	session->rtcp.interval=value_ms;
+}
+
+void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config) {
+	if (config != NULL) {
+		session->rtcp.xr_conf = *config;
+	}
+}
+
+static void set_rtcp_xr_interval(RtpSession *session, uint32_t *interval, int *interval_ms, int value_ms) {
+	int sendpt = rtp_session_get_send_payload_type(session);
+	if (sendpt != -1) {
+		PayloadType *pt = rtp_profile_get_payload(session->snd.profile, sendpt);
+		if (pt != NULL){
+			*interval_ms = value_ms;
+			*interval = (value_ms * pt->clock_rate) / 1000;
+		}
+	}
+}
+
+void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms) {
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_rcvr_rtt_interval, &session->rtcp.rtcp_xr_rcvr_rtt_interval_ms, value_ms);
+}
+
+void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms) {
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_stat_summary_interval, &session->rtcp.rtcp_xr_stat_summary_interval_ms, value_ms);
+}
+
+void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms) {
+	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_voip_metrics_interval, &session->rtcp.rtcp_xr_voip_metrics_interval_ms, value_ms);
+}
+
+void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, const OrtpRtcpXrMediaCallbacks *cbs) {
+	if (cbs != NULL) {
+		memcpy(&session->rtcp.xr_media_callbacks, cbs, sizeof(session->rtcp.xr_media_callbacks));
+	} else {
+		memset(&session->rtcp.xr_media_callbacks, 0, sizeof(session->rtcp.xr_media_callbacks));
+	}
 }
 
 /**
@@ -1136,6 +1177,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	
 	stream->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
+	session->rtcp_xr_stats.discarded_count += rejected;
 
 	goto end;
 

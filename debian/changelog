@@ -1,3 +1,11 @@
+ortp (0.23.0) unstable; urgency=low
+
+  * Network simulator improvements
+  * Security bugfixes
+  * Updated to use ZRTPCPP>=4.0
+
+ -- Sylvain Berfini <sylvain.berfini@linphone.org>  Mon, 31 March 2013 15:10:01 +0200
+
 ortp (0.22.0) unstable; urgency=low
 
   * New version + migrate to ABI9.
