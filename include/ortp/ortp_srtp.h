@@ -20,7 +20,7 @@
 #ifndef ortp_srtp_h
 #define ortp_srtp_h
 
-#ifdef HAVE_SRTP
+#if defined(HAVE_SRTP) || defined(ORTP_HAVE_SRTP)
 #if defined(ANDROID) || defined(WINAPI_FAMILY_PHONE_APP)
 // Android and Windows phone don't use make install
 #include <srtp.h>
@@ -29,13 +29,11 @@
 #endif
 #else
 
-typedef  void* srtp_t;
+typedef void* srtp_t;
 typedef int err_status_t;
-typedef int srtp_policy_t;
+typedef struct srtp_policy srtp_policy_t;
 
 #endif
-
-#include <ortp/rtpsession.h>
 
 /*srtp defines all this stuff*/
 #undef PACKAGE_BUGREPORT
@@ -43,6 +41,10 @@ typedef int srtp_policy_t;
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
+
+#include <ortp/rtpsession.h>
+
+
 
 #ifdef __cplusplus
 extern "C"{
@@ -52,18 +54,21 @@ enum ortp_srtp_crypto_suite_t {
 	AES_128_SHA1_80 = 1,
 	AES_128_SHA1_32,
 	AES_128_NO_AUTH,
-	NO_CIPHER_SHA1_80
+	NO_CIPHER_SHA1_80,
+	AES_256_SHA1_80,
+	AES_256_SHA1_32
 };
 
 ORTP_PUBLIC err_status_t ortp_srtp_init(void);
 ORTP_PUBLIC err_status_t ortp_srtp_create(srtp_t *session, const srtp_policy_t *policy);
 ORTP_PUBLIC err_status_t ortp_srtp_dealloc(srtp_t session);
 ORTP_PUBLIC err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy);
+ORTP_PUBLIC err_status_t ortp_srtp_remove_stream(srtp_t session, uint32_t ssrc);
 ORTP_PUBLIC err_status_t ortp_crypto_get_random(uint8_t *tmp, int size);
 ORTP_PUBLIC bool_t ortp_srtp_supported(void);
 
 ORTP_PUBLIC int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
-
+ORTP_PUBLIC void srtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
 
 ORTP_PUBLIC void ortp_srtp_shutdown(void);

@@ -249,6 +249,7 @@ if test "${srtp_prefix}" != "none" ; then
 			LIBS=$LIBS_save
 		fi
 		AC_DEFINE(HAVE_SRTP, 1, [Defined when srtp support is compiled])
+		ORTP_DEFS="$ORTP_DEFS -DORTP_HAVE_SRTP"
 	else
 		AC_MSG_NOTICE([Could not find libsrtp headers or lib, cryto transport disabled.])
 		SRTP_CFLAGS=
@@ -289,8 +290,9 @@ AM_CONDITIONAL(LIBBZRTP,test x$zrtp != xfalse)
 
 
 if test $debug_enabled = "yes"; then
-	ORTP_DEFS="$ORTP_DEFS -DORTP_DEBUG_MODE -g"
+	ORTP_DEFS="$ORTP_DEFS -DORTP_DEBUG_MODE"
 	CFLAGS=`echo $CFLAGS | sed 's/-O.//'`
+	CFLAGS="$CFLAGS -g"
 fi
 
 

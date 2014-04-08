@@ -376,7 +376,7 @@ ORTP_PUBLIC int rtp_session_set_remote_addr(RtpSession *session,const char *addr
 a valid socket (potentially connect()ed )to be used by the RtpSession */
 ORTP_PUBLIC void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd);
 ORTP_PUBLIC void rtp_session_set_transports(RtpSession *session, RtpTransport *rtptr, RtpTransport *rtcptr);
-
+ORTP_PUBLIC void rtp_session_get_transports(RtpSession *session, RtpTransport **rtptr, RtpTransport **rtcptr);
 /*those methods are provided for people who wants to send non-RTP messages using the RTP/RTCP sockets */
 ORTP_PUBLIC ortp_socket_t rtp_session_get_rtp_socket(const RtpSession *session);
 ORTP_PUBLIC ortp_socket_t rtp_session_get_rtcp_socket(const RtpSession *session);

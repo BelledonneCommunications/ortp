@@ -30,48 +30,86 @@
 #undef PACKAGE_VERSION
 
 #include "ortp/ortp_srtp.h"
+
 #include "rtpsession_priv.h"
+
 #ifdef HAVE_SRTP
+
+#if defined(ANDROID) || defined(WINAPI_FAMILY_PHONE_APP)
+// Android and Windows phone don't use make install
+#include <srtp_priv.h>
+#else
+#include <srtp/srtp_priv.h>
+#endif
 
 #include "ortp/b64.h"
 
 #define SRTP_PAD_BYTES (SRTP_MAX_TRAILER_LEN + 4)
 
-static int  srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
+static int srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	srtp_t srtp=(srtp_t)t->data;
 	int slen;
 	err_status_t err;
+	rtp_header_t *header=(rtp_header_t*)m->b_rptr;
 	/* enlarge the buffer for srtp to write its data */
 	slen=msgdsize(m);
-	msgpullup(m,slen+SRTP_PAD_BYTES);
-	err=srtp_protect(srtp,m->b_rptr,&slen);
-	if (err==err_status_ok){
-		return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
-	}
-	ortp_error("srtp_protect() failed (%d)", err);
+	
+	/*only encrypt real RTP packets*/
+	if (slen>RTP_FIXED_HEADER_SIZE && header->version==2){
+		msgpullup(m,slen+SRTP_PAD_BYTES);
+		err=srtp_protect(srtp,m->b_rptr,&slen);
+		if (err==err_status_ok){
+			return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+		}
+		ortp_error("srtp_protect() failed (%d)", err);
+	}else return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+	
 	return -1;
+}
+
+static srtp_stream_ctx_t * find_other_ssrc(srtp_t srtp, uint32_t ssrc){
+	srtp_stream_ctx_t *stream;
+	for (stream=srtp->stream_list;stream!=NULL;stream=stream->next){
+		if (stream->ssrc!=ssrc) return stream;
+	}
+	return stream;
+}
+
+/*
+* The ssrc_any_inbound feature of the libsrtp is not working good.
+* It cannot be changed dynamically nor removed.
+* As a result we prefer not to use it, but instead the recv stream is configured with a dummy SSRC value.
+* When the first packet arrives, or when the SSRC changes, then we change the ssrc value inside the srtp stream context, 
+* so that the stream that was configured with the dummy SSRC value becomes now fully valid.
+*/
+static void update_recv_stream(RtpSession *session, srtp_t srtp, uint32_t new_ssrc){
+	uint32_t send_ssrc=rtp_session_get_send_ssrc(session);
+	srtp_stream_ctx_t *recvstream=find_other_ssrc(srtp,htonl(send_ssrc));
+	if (recvstream){
+		recvstream->ssrc=new_ssrc;
+	}
 }
 
 static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
 	srtp_t srtp=(srtp_t)t->data;
 	int err;
 	int slen;
+	
 	err=rtp_session_rtp_recv_abstract(t->session->rtp.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		/* keep NON-RTP data unencrypted */
-		rtp_header_t *rtp;
-		if (err>=RTP_FIXED_HEADER_SIZE)
-		{
-			rtp = (rtp_header_t*)m->b_wptr;
-			if (rtp->version!=2)
-			{
-				return err;
-			}
-		}
-
+		rtp_header_t *rtp=(rtp_header_t*)m->b_wptr;
+		if (err<RTP_FIXED_HEADER_SIZE || rtp->version!=2 )
+			return err;
+			
 		slen=err;
 		srtp_err = srtp_unprotect(srtp,m->b_wptr,&slen);
+		if (srtp_err==err_status_no_ctx){
+			update_recv_stream(t->session,srtp,rtp->ssrc);
+			slen=err;
+			srtp_err = srtp_unprotect(srtp,m->b_wptr,&slen);
+		}
 		if (srtp_err==err_status_ok)
 			return slen;
 		else {
@@ -82,7 +120,7 @@ static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr 
 	return err;
 }
 
-static int  srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
+static int srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	srtp_t srtp=(srtp_t)t->data;
 	int slen;
 	err_status_t srtp_err;
@@ -104,19 +142,21 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 	err=rtp_session_rtp_recv_abstract(t->session->rtcp.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
+		uint32_t new_ssrc;
 		/* keep NON-RTP data unencrypted */
-		rtcp_common_header_t *rtcp;
-		if (err>=RTCP_COMMON_HEADER_SIZE)
-		{
-			rtcp = (rtcp_common_header_t*)m->b_wptr;
-			if (rtcp->version!=2)
-			{
-				return err;
-			}
-		}
+		rtcp_common_header_t *rtcp=(rtcp_common_header_t*)m->b_wptr;
+		if (err<(sizeof(rtcp_common_header_t)+4) || rtcp->version!=2 )
+			return err;
+			
 
 		slen=err;
 		srtp_err=srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
+		if (srtp_err==err_status_no_ctx){
+			new_ssrc=*(uint32_t*)(m->b_wptr+sizeof(rtcp_common_header_t));
+			update_recv_stream(t->session,srtp,new_ssrc);
+			slen=err;
+			srtp_err=srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
+		}
 		if (srtp_err==err_status_ok)
 			return slen;
 		else {
@@ -165,6 +205,10 @@ int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	return 0;
 }
 
+void srtp_transport_destroy(RtpTransport *tp){
+	ortp_free(tp);
+}
+
 static int srtp_init_done=0;
 
 err_status_t ortp_srtp_init(void)
@@ -210,11 +254,15 @@ err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy)
 	return srtp_add_stream(session, policy);
 }
 
+err_status_t ortp_srtp_remove_stream(srtp_t session, uint32_t ssrc){
+	return srtp_remove_stream(session,ssrc);
+}
+
 bool_t ortp_srtp_supported(void){
 	return TRUE;
 }
 
-static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ortp_srtp_crypto_suite_t suite, ssrc_t ssrc, const char* b64_key)
+bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ortp_srtp_crypto_suite_t suite, ssrc_t ssrc, const char* b64_key)
 {
 	uint8_t* key;
 	int key_size;
@@ -237,9 +285,17 @@ static bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ort
 			crypto_policy_set_null_cipher_hmac_sha1_80(&policy->rtcp);
 			break;
 		case AES_128_SHA1_80: /*default mode*/
-		default:
-			crypto_policy_set_rtp_default(&policy->rtp);
-			crypto_policy_set_rtcp_default(&policy->rtcp);
+			crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy->rtp);
+			crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy->rtcp);
+			break;
+		case AES_256_SHA1_80:
+			crypto_policy_set_aes_cm_256_hmac_sha1_80(&policy->rtp);
+			crypto_policy_set_aes_cm_256_hmac_sha1_80(&policy->rtcp);
+			break;
+		case AES_256_SHA1_32:
+			crypto_policy_set_aes_cm_256_hmac_sha1_32(&policy->rtp);
+			crypto_policy_set_aes_cm_256_hmac_sha1_32(&policy->rtcp);
+			break;
 	}
 	key_size = b64_decode(b64_key, b64_key_length, 0, 0);
 	if (key_size != policy->rtp.cipher_key_len) {
@@ -319,6 +375,7 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 	return session;
 }
 
+
 #else
 
 err_status_t ortp_srtp_init(void) {
@@ -349,8 +406,11 @@ err_status_t ortp_srtp_dealloc(srtp_t session)
 	return -1;
 }
 
-err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy)
-{
+err_status_t ortp_srtp_add_stream(srtp_t session, const srtp_policy_t *policy){
+	return -1;
+}
+
+err_status_t ortp_srtp_remove_stream(srtp_t session, uint32_t ssrc){
 	return -1;
 }
 
@@ -360,6 +420,9 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 }
 
 void ortp_srtp_shutdown(void){
+}
+
+void srtp_transport_destroy(RtpTransport *tp){
 }
 
 #endif
