@@ -21,12 +21,12 @@
 #define ortp_srtp_h
 
 #if defined(HAVE_SRTP) || defined(ORTP_HAVE_SRTP)
-#if defined(ANDROID) || defined(WINAPI_FAMILY_PHONE_APP)
+#	if defined(ANDROID) || defined(WINAPI_FAMILY_PHONE_APP)
 // Android and Windows phone don't use make install
-#include <srtp.h>
-#else
-#include <srtp/srtp.h>
-#endif
+#	include <srtp.h>
+#	else
+#	include <srtp/srtp.h>
+#	endif
 #else
 
 typedef void* srtp_t;
