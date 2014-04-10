@@ -4,7 +4,7 @@
 	dh $@ --parallel --with autotools_dev
 
 override_dh_auto_configure:
-	./configure --enable-broken-srtp
+	./configure --prefix=/usr --enable-broken-srtp
 
 override_dh_makeshlibs:
 	dh_makeshlibs -V
@@ -14,6 +14,3 @@ override_dh_installchangelogs:
 
 override_dh_strip:
 	dh_strip --dbg-package=libortp9-dbg
-
-override_dh_install:
-        $(MAKE) DESTDIR=$$(pwd)/debian/tmp prefix=/usr install
