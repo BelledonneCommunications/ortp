@@ -123,16 +123,16 @@ typedef enum {
 } OrtpRtcpXrPlcStatus;
 
 typedef OrtpRtcpXrPlcStatus (*OrtpRtcpXrPlcCallback)(unsigned long userdata);
-typedef int8_t (*OrtpRtcpXrSignalLevelCallback)(unsigned long userdata);
-typedef int8_t (*OrtpRtcpXrNoiseLevelCallback)(unsigned long userdata);
-typedef float (*OrtpRtcpXrAverageQualityIndicator)(unsigned long userdata);
+typedef int (*OrtpRtcpXrSignalLevelCallback)(unsigned long userdata);
+typedef int (*OrtpRtcpXrNoiseLevelCallback)(unsigned long userdata);
+typedef float (*OrtpRtcpXrAverageQualityIndicatorCallback)(unsigned long userdata);
 
 typedef struct OrtpRtcpXrMediaCallbacks {
 	OrtpRtcpXrPlcCallback plc;
 	OrtpRtcpXrSignalLevelCallback signal_level;
 	OrtpRtcpXrNoiseLevelCallback noise_level;
-	OrtpRtcpXrAverageQualityIndicator average_qi;
-	OrtpRtcpXrAverageQualityIndicator average_lq_qi;
+	OrtpRtcpXrAverageQualityIndicatorCallback average_qi;
+	OrtpRtcpXrAverageQualityIndicatorCallback average_lq_qi;
 	unsigned long userdata;
 } OrtpRtcpXrMediaCallbacks;
 
