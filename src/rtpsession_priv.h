@@ -23,13 +23,6 @@
 #include "ortp/rtpsession.h"
 
 #define RTCP_XR_GMIN 16 /* Recommended value of Gmin from RFC3611, section 4.7.6 */
-#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_STD ((1 << 7) | (1 << 6))
-#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_ENH (1 << 7)
-#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_DIS (1 << 6)
-#define RTCP_XR_VOIP_METRICS_CONFIG_PLC_UNS 0
-#define RTCP_XR_VOIP_METRICS_CONFIG_JBA_ADA ((1 << 5) | (1 << 4))
-#define RTCP_XR_VOIP_METRICS_CONFIG_JBA_NON (1 << 5)
-#define RTCP_XR_VOIP_METRICS_CONFIG_JBA_UNK 0
 
 typedef enum {
 	RTP_SESSION_RECV_SYNC=1,	/* the rtp session is synchronising in the incoming stream */
