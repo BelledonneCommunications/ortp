@@ -838,6 +838,10 @@ void rtp_session_set_transports(RtpSession *session, struct _RtpTransport *rtptr
 	else session->flags&=~(RTP_SESSION_USING_TRANSPORT);
 }
 
+void rtp_session_get_transports(RtpSession *session, RtpTransport **rtptr, RtpTransport **rtcptr){
+	if (rtptr) *rtptr=session->rtp.tr;
+	if (rtcptr) *rtcptr=session->rtcp.tr;
+}
 
 
 /**

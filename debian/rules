@@ -3,8 +3,8 @@
 %:
 	dh $@ --parallel --with autotools_dev
 
-#override_dh_auto_configure:
-#	./configure
+override_dh_auto_configure:
+	./configure --prefix=/usr --enable-broken-srtp
 
 override_dh_makeshlibs:
 	dh_makeshlibs -V
