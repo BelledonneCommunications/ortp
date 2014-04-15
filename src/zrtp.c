@@ -493,12 +493,6 @@ static OrtpZrtpContext* createUserData(bzrtpContext_t *context, OrtpZrtpParams *
 		userData->zidFilename = NULL;
 	}
 
-	/* get the sip URI of peer and store it into the context to set it in the cache */
-	if (params->uri && strlen(params->uri)>0) {
-		userData->peerURI = strdup(params->uri);
-	} else {
-		userData->peerURI = NULL;
-	}
 
 	return userData;
 }
@@ -538,11 +532,22 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 		/*enabling cache*/
 		bzrtp_setCallback(context, (int (*)())ozrtp_loadCache, ZRTP_CALLBACK_LOADCACHE);
 		bzrtp_setCallback(context, (int (*)())ozrtp_writeCache, ZRTP_CALLBACK_WRITECACHE);
-		bzrtp_setCallback(context, (int (*)())ozrtp_addExportedKeysInZidCache, ZRTP_CALLBACK_CONTEXTREADYFOREXPORTEDKEYS);
+		/* enable exportedKeys computation only if we have an uri to associate them */
+		if (params->uri && strlen(params->uri)>0) {
+			bzrtp_setCallback(context, (int (*)())ozrtp_addExportedKeysInZidCache, ZRTP_CALLBACK_CONTEXTREADYFOREXPORTEDKEYS);
+		}
 	}
 	/* create and link user data */
 	OrtpZrtpContext *userData=createUserData(context, params);
 	userData->session=s;
+
+	/* get the sip URI of peer and store it into the context to set it in the cache. Done only for the first channel as it is useless for the other ones which doesn't update the cache */
+	if (params->uri && strlen(params->uri)>0) {
+		userData->peerURI = strdup(params->uri);
+	} else {
+		userData->peerURI = NULL;
+	}
+
 	bzrtp_setClientData(context, s->snd.ssrc, (void *)userData);
 	
 	bzrtp_initBzrtpContext(context); /* init is performed only when creating the first channel context */
