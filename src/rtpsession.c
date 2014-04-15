@@ -1698,21 +1698,31 @@ static float compute_bw(struct timeval *orig, unsigned int bytes){
 }
 
 float rtp_session_compute_recv_bandwidth(RtpSession *session){
-	float bw=-1;
-	if (session) {
-		bw=compute_bw(&session->rtp.recv_bw_start,session->rtp.recv_bytes);
-		session->rtp.recv_bytes=0;
-	}
-	return bw;
+	session->rtp.download_bw=compute_bw(&session->rtp.recv_bw_start,session->rtp.recv_bytes);
+	session->rtp.recv_bytes=0;
+	return session->rtp.download_bw;
 }
 
 float rtp_session_compute_send_bandwidth(RtpSession *session){
-	float bw=-1;
-	if (session) {
-		bw=compute_bw(&session->rtp.send_bw_start,session->rtp.sent_bytes);
-		session->rtp.sent_bytes=0;
-	}
-	return bw;
+	session->rtp.upload_bw=compute_bw(&session->rtp.send_bw_start,session->rtp.sent_bytes);
+	session->rtp.sent_bytes=0;
+	return session->rtp.upload_bw;
+}
+
+/**
+ * Get last computed recv bandwidth.
+ * Computation must have been done with rtp_session_compute_recv_bandwidth()
+**/
+float rtp_session_get_recv_bandwidth(RtpSession *session){
+	return session->rtp.download_bw;
+}
+
+/**
+ * Get last computed send bandwidth.
+ * Computation must have been done with rtp_session_compute_send_bandwidth()
+**/
+float rtp_session_get_send_bandwidth(RtpSession *session){
+	return session->rtp.upload_bw;
 }
 
 int rtp_session_get_last_send_error_code(RtpSession *session){
