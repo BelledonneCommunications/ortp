@@ -493,8 +493,11 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	bzrtp_setCallback(context, (int (*)())ozrtp_sendDataZRTP, ZRTP_CALLBACK_SENDDATA);
 	bzrtp_setCallback(context, (int (*)())ozrtp_srtpSecretsAvailable, ZRTP_CALLBACK_SRTPSECRETSAVAILABLE);
 	bzrtp_setCallback(context, (int (*)())ozrtp_startSrtpSession, ZRTP_CALLBACK_STARTSRTPSESSION);
-	bzrtp_setCallback(context, (int (*)())ozrtp_loadCache, ZRTP_CALLBACK_LOADCACHE);
-	bzrtp_setCallback(context, (int (*)())ozrtp_writeCache, ZRTP_CALLBACK_WRITECACHE);
+	if (params->zid_file) {
+		/*enabling cache*/
+		bzrtp_setCallback(context, (int (*)())ozrtp_loadCache, ZRTP_CALLBACK_LOADCACHE);
+		bzrtp_setCallback(context, (int (*)())ozrtp_writeCache, ZRTP_CALLBACK_WRITECACHE);
+	}
 	/* create and link user data */
 	OrtpZrtpContext *userData=createUserData(context, params);
 	userData->session=s;
