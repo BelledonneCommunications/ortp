@@ -223,6 +223,8 @@ typedef struct _RtpStream
 	struct timeval send_bw_start; /* used for bandwidth estimation */
 	unsigned int recv_bytes; /* used for bandwidth estimation */
 	struct timeval recv_bw_start; /* used for bandwidth estimation */
+	float upload_bw;
+	float download_bw;
 	rtp_stats_t stats;
 	int recv_errno;
 	int send_errno;
@@ -441,6 +443,8 @@ ORTP_PUBLIC void rtp_session_unregister_event_queue(RtpSession *session, OrtpEvQ
 /* IP bandwidth usage estimation functions, returning bits/s*/
 ORTP_PUBLIC float rtp_session_compute_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_compute_recv_bandwidth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_send_bandwidth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_recv_bandwidth(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype, const char *name, const uint8_t *data, int datalen);
 
