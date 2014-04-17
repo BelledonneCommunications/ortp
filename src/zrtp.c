@@ -516,13 +516,13 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, R
 
 	rtp_session_set_transports(s, &userData->rtpt, &userData->rtcpt);
 
-	ortp_message("Starting ZRTP engine");
+	ortp_message("Starting ZRTP engine on session [%p]",s);
 	bzrtp_startChannelEngine(context, s->snd.ssrc);
 	return userData;
 }
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
-	ortp_message("Creating ZRTP engine");
+	ortp_message("Creating ZRTP engine on session [%p]",s);
 	bzrtpContext_t *context = bzrtp_createBzrtpContext(s->snd.ssrc); /* create the zrtp context, provide the SSRC of first channel */
 	/* set callback functions */
 	bzrtp_setCallback(context, (int (*)())ozrtp_sendDataZRTP, ZRTP_CALLBACK_SENDDATA);
