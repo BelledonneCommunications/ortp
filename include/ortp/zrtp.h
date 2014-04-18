@@ -22,18 +22,6 @@
 
 #include <ortp/rtpsession.h>
 
-
-#ifdef HAVE_zrtp
-#undef PACKAGE_NAME
-#undef PACKAGE_STRING
-#undef PACKAGE_TARNAME
-#undef PACKAGE_VERSION
-#include <srtp/srtp.h>
-#include <bzrtp/bzrtp.h>
-#endif
-
-
-
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -48,6 +36,11 @@ typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 ORTP_PUBLIC bool_t ortp_zrtp_available();
 
 ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
+/**
+ * can be used to give more time for establishing zrtp session
+ * */
+ORTP_PUBLIC void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s);
+
 ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params);
 
 ORTP_PUBLIC void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);

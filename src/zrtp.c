@@ -33,6 +33,12 @@
 #endif
 
 #ifdef HAVE_zrtp
+#undef PACKAGE_NAME
+#undef PACKAGE_STRING
+#undef PACKAGE_TARNAME
+#undef PACKAGE_VERSION
+#include <srtp/srtp.h>
+#include <bzrtp/bzrtp.h>
 
 
 #define SRTP_PAD_BYTES (SRTP_MAX_TRAILER_LEN + 4)
@@ -593,7 +599,9 @@ void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx) {
 	ortp_message("ORTP-ZRTP context destroyed");
 }
 
-
+void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s) {
+	bzrtp_resetRetransmissionTimer(ctx->zrtpContext,s->snd.ssrc);
+}
 
 #else
 
@@ -612,7 +620,7 @@ bool_t ortp_zrtp_available(){return FALSE;}
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
-
+void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s) {};
 #endif
 
 
