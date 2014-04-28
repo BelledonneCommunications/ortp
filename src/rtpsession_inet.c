@@ -1327,13 +1327,12 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 
 		if (rtcp_is_SR(block) ) {
 			rtcp_sr_t *sr = (rtcp_sr_t *) rtcp;
-			
+
 			/* The session descriptor values are reset in case there is an error in the SR block parsing */
 			rtpstream->last_rcv_SR_ts = 0;
 			rtpstream->last_rcv_SR_time.tv_usec = 0;
 			rtpstream->last_rcv_SR_time.tv_sec = 0;
 
-			
 			if ( ntohl( sr->ssrc ) != session->rcv.ssrc ) {
 				ortp_debug( "Receiving a RTCP SR packet from an unknown ssrc" );
 				return 0;

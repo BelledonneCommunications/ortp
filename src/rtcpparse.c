@@ -506,3 +506,49 @@ uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m) {
 	rtcp_xr_voip_metrics_report_block_t *b = (rtcp_xr_voip_metrics_report_block_t *)(m->b_rptr + sizeof(rtcp_xr_header_t));
 	return ntohs(b->jb_abs_max);
 }
+
+
+/* RTCP PSFB accessors */
+bool_t rtcp_is_PSFB(const mblk_t *m) {
+	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
+	if ((ch != NULL) && (rtcp_common_header_get_packet_type(ch) == RTCP_PSFB)) {
+		if (msgdsize(m) < MIN_RTCP_PSFB_PACKET_SIZE) {
+			ortp_warning("Too short RTCP PSFB packet.");
+			return FALSE;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+rtcp_psfb_type_t rtcp_PSFB_get_type(const mblk_t *m) {
+	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
+	return (rtcp_psfb_type_t)rtcp_common_header_get_rc(ch);
+}
+
+uint32_t rtcp_PSFB_get_packet_sender_ssrc(const mblk_t *m) {
+	rtcp_fb_header_t *fbh = (rtcp_fb_header_t *)(m->b_rptr + sizeof(rtcp_common_header_t));
+	return ntohl(fbh->packet_sender_ssrc);
+}
+
+uint32_t rtcp_PSFB_get_media_source_ssrc(const mblk_t *m) {
+	rtcp_fb_header_t *fbh = (rtcp_fb_header_t *)(m->b_rptr + sizeof(rtcp_common_header_t));
+	return ntohl(fbh->media_source_ssrc);
+}
+
+rtcp_fb_fir_fci_t * rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned int idx) {
+	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
+	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_fir_fci_t));
+	if (rtcp_common_header_get_length(ch) < (size / 8)) {
+		return NULL;
+	}
+	return (rtcp_fb_fir_fci_t *)(m->b_rptr + size - sizeof(rtcp_fb_fir_fci_t));
+}
+
+uint32_t rtcp_PSFB_fir_fci_get_ssrc(const rtcp_fb_fir_fci_t *fci) {
+	return ntohl(fci->ssrc);
+}
+
+uint8_t rtcp_PSFB_fir_fci_get_seq_nr(const rtcp_fb_fir_fci_t *fci) {
+	return fci->seq_nr;
+}

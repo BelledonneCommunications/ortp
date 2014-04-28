@@ -292,6 +292,7 @@ typedef struct rtcp_fb_fir_fci {
 	uint16_t pad2;
 } rtcp_fb_fir_fci_t;
 
+#define MIN_RTCP_PSFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
 
 
 
@@ -406,6 +407,15 @@ ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_rx_config(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_nominal(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_maximum(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m);
+
+/* RTCP PSFB accessors */
+ORTP_PUBLIC bool_t rtcp_is_PSFB(const mblk_t *m);
+ORTP_PUBLIC rtcp_psfb_type_t rtcp_PSFB_get_type(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_PSFB_get_packet_sender_ssrc(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_PSFB_get_media_source_ssrc(const mblk_t *m);
+ORTP_PUBLIC rtcp_fb_fir_fci_t * rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned int idx);
+ORTP_PUBLIC uint32_t rtcp_PSFB_fir_fci_get_ssrc(const rtcp_fb_fir_fci_t *fci);
+ORTP_PUBLIC uint8_t rtcp_PSFB_fir_fci_get_seq_nr(const rtcp_fb_fir_fci_t *fci);
 
 
 #ifdef __cplusplus
