@@ -42,6 +42,8 @@ typedef enum {
 	RTCP_SDES = 202,
 	RTCP_BYE = 203,
 	RTCP_APP = 204,
+	RTCP_RTPFB = 205,
+	RTCP_PSFB = 206,
 	RTCP_XR = 207
 } rtcp_type_t;
 
@@ -269,6 +271,27 @@ typedef struct rtcp_xr_voip_metrics_report_block {
 } rtcp_xr_voip_metrics_report_block_t;
 
 #define MIN_RTCP_XR_PACKET_SIZE (sizeof(rtcp_xr_header_t) + 4)
+
+typedef enum {
+	RTCP_PSFB_PLI = 1,
+	RTCP_PSFB_SLI = 2,
+	RTCP_PSFB_RPSI = 3,
+	RTCP_PSFB_FIR = 4,
+	RTCP_PSFB_AFB = 15
+} rtcp_psfb_type_t;
+
+typedef struct rtcp_fb_header {
+	uint32_t packet_sender_ssrc;
+	uint32_t media_source_ssrc;
+} rtcp_fb_header_t;
+
+typedef struct rtcp_fb_fir_fci {
+	uint32_t ssrc;
+	uint8_t seq_nr;
+	uint8_t pad1;
+	uint16_t pad2;
+} rtcp_fb_fir_fci_t;
+
 
 
 
