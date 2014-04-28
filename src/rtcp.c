@@ -834,37 +834,43 @@ static mblk_t * rtp_session_create_rtcp_fb_fir(RtpSession *session) {
 }
 
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
-	RtpStream *st = &session->rtp;
-	RtcpStream *rtcp_st = &session->rtcp;
 	mblk_t *m;
 	mblk_t *m_pli;
+	RtpStream *st = &session->rtp;
+	RtcpStream *rtcp_st = &session->rtcp;
+	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 
-	rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
-	rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
-	m = make_sr(session);
-	m_pli = rtp_session_create_rtcp_fb_pli(session);
-	concatb(m, m_pli);
+	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
+		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
+		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
+		m = make_sr(session);
+		m_pli = rtp_session_create_rtcp_fb_pli(session);
+		concatb(m, m_pli);
 
-	/* send the compound packet */
-	notify_sent_rtcp(session, m);
-	ortp_message("Sending RTCP SR compound message with PLI on session [%p]", session);
-	rtp_session_rtcp_send(session, m);
+		/* send the compound packet */
+		notify_sent_rtcp(session, m);
+		ortp_message("Sending RTCP SR compound message with PLI on session [%p]", session);
+		rtp_session_rtcp_send(session, m);
+	}
 }
 
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
-	RtpStream *st = &session->rtp;
-	RtcpStream *rtcp_st = &session->rtcp;
 	mblk_t *m;
 	mblk_t *m_fir;
+	RtpStream *st = &session->rtp;
+	RtcpStream *rtcp_st = &session->rtcp;
+	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 
-	rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
-	rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
-	m = make_sr(session);
-	m_fir = rtp_session_create_rtcp_fb_fir(session);
-	concatb(m, m_fir);
+	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
+		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
+		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
+		m = make_sr(session);
+		m_fir = rtp_session_create_rtcp_fb_fir(session);
+		concatb(m, m_fir);
 
-	/* send the compound packet */
-	notify_sent_rtcp(session, m);
-	ortp_message("Sending RTCP SR compound message with FIR on session [%p]", session);
-	rtp_session_rtcp_send(session, m);
+		/* send the compound packet */
+		notify_sent_rtcp(session, m);
+		ortp_message("Sending RTCP SR compound message with FIR on session [%p]", session);
+		rtp_session_rtcp_send(session, m);
+	}
 }
