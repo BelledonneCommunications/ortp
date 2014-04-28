@@ -1026,10 +1026,6 @@ rtp_session_send_with_ts (RtpSession * session, const uint8_t * buffer, int len,
 
 
 
-extern void rtcp_parse(RtpSession *session, mblk_t *mp);
-
-
-
 static void payload_type_changed_notify(RtpSession *session, int paytype){
 	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile,paytype);
 	if (pt) {

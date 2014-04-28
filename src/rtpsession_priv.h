@@ -54,7 +54,6 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m);
 int rtp_session_rtcp_send (RtpSession * session, mblk_t * m);
 
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen);
-void rtp_session_rtcp_parse(RtpSession *session, mblk_t *mp);
 
 mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input);
 void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim);
