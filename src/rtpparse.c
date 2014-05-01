@@ -50,7 +50,7 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 		tmp=getq(q);
 		if (mp!=NULL)
 		{
-			ortp_debug("rtp_putq: Queue is full. Discarding message with ts=%i",((rtp_header_t*)mp->b_rptr)->timestamp);
+			ortp_warning("rtp_putq: Queue is full. Discarding message with ts=%u",((rtp_header_t*)mp->b_rptr)->timestamp);
 			freemsg(tmp);
 			(*discarded)++;
 		}
