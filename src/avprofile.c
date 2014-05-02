@@ -386,7 +386,7 @@ PayloadType payload_type_speex_nb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_speex_wb={
@@ -400,7 +400,7 @@ PayloadType payload_type_speex_wb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_speex_uwb={
@@ -414,7 +414,7 @@ PayloadType payload_type_speex_uwb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_ilbc={
@@ -439,7 +439,7 @@ PayloadType payload_type_amr={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_amrwb={
@@ -453,7 +453,7 @@ PayloadType payload_type_amrwb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_mp4v={
@@ -623,7 +623,7 @@ PayloadType payload_type_silk_nb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_silk_mb={
@@ -637,7 +637,7 @@ PayloadType payload_type_silk_mb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_silk_wb={
@@ -651,7 +651,7 @@ PayloadType payload_type_silk_wb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_silk_swb={
@@ -665,7 +665,7 @@ PayloadType payload_type_silk_swb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_aaceld_22k={
@@ -676,7 +676,10 @@ PayloadType payload_type_aaceld_22k={
 	PATTERN_LENGTH( 0),
 	NORMAL_BITRATE(32000),
 	MIME_TYPE ("mpeg4-generic"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_aaceld_44k={
@@ -688,6 +691,9 @@ PayloadType payload_type_aaceld_44k={
 	NORMAL_BITRATE(64000),
 	MIME_TYPE ("mpeg4-generic"),
 	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_opus = {
@@ -701,7 +707,7 @@ PayloadType payload_type_opus = {
 	CHANNELS(2), /*mandatory according to RFC*/
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
 PayloadType payload_type_isac = {
@@ -715,5 +721,5 @@ PayloadType payload_type_isac = {
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
-	PAYLOAD_TYPE_IS_VBR
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
