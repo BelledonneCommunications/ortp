@@ -41,7 +41,9 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define NORMAL_BITRATE(val)	.normal_bitrate=(val)
 #define MIME_TYPE(val)		.mime_type=(val)
 #define CHANNELS(val)		.channels=(val)
-#define FMTP(val)		.FMTP=(val)
+#define RECV_FMTP(val)		.recv_fmtp=(val)
+#define SEND_FMTP(val)		.send_fmtp=(val)
+#define FLAGS(val)		.flags=(val)
 #elif defined(__GNUC__)
 // GCC's legacy tagged syntax (even old versions have it)
 #define TYPE(val)		type: (val)
@@ -52,7 +54,9 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define NORMAL_BITRATE(val)	normal_bitrate: (val)
 #define MIME_TYPE(val)		mime_type: (val)
 #define CHANNELS(val)		channels: (val)
-#define FMTP(val)		FMTP: (val)
+#define RECV_FMTP(val)		recv_fmtp: (val)
+#define SEND_FMTP(val)		send_fmtp: (val)
+#define FLAGS(val)		flags: (val)
 #else
 // No tagged syntax supported
 #define TYPE(val)		(val)
@@ -63,7 +67,9 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define NORMAL_BITRATE(val)	(val)
 #define MIME_TYPE(val)		(val)
 #define CHANNELS(val)		(val)
-#define FMTP(val)		(val)
+#define RECV_FMTP(val)		(val)
+#define SEND_FMTP(val)		(val)
+#define FLAGS(val)		(val)
 
 #endif
 
@@ -198,7 +204,7 @@ PayloadType payload_type_g726_40={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 40000),
 	MIME_TYPE ("G726-40"),
 	CHANNELS(1)
 };
@@ -209,7 +215,7 @@ PayloadType payload_type_g726_32={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 32000),
 	MIME_TYPE ("G726-32"),
 	CHANNELS(1)
 };
@@ -220,7 +226,7 @@ PayloadType payload_type_g726_24={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 24000),
 	MIME_TYPE ("G726-24"),
 	CHANNELS(1)
 };
@@ -231,7 +237,7 @@ PayloadType payload_type_g726_16={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 16000),
 	MIME_TYPE ("G726-16"),
 	CHANNELS(1)
 };
@@ -242,7 +248,7 @@ PayloadType payload_type_aal2_g726_40={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 40000),
 	MIME_TYPE ("AAL2-G726-40"),
 	CHANNELS(1)
 };
@@ -253,7 +259,7 @@ PayloadType payload_type_aal2_g726_32={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 32000),
 	MIME_TYPE ("AAL2-G726-32"),
 	CHANNELS(1)
 };
@@ -264,7 +270,7 @@ PayloadType payload_type_aal2_g726_24={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 24000),
 	MIME_TYPE ("AAL2-G726-24"),
 	CHANNELS(1)
 };
@@ -275,7 +281,7 @@ PayloadType payload_type_aal2_g726_16={
 	BITS_PER_SAMPLE( 0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH( 0),
-	NORMAL_BITRATE( 8000),
+	NORMAL_BITRATE( 16000),
 	MIME_TYPE ("AAL2-G726-16"),
 	CHANNELS(1)
 };
@@ -377,7 +383,10 @@ PayloadType payload_type_speex_nb={
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(8000),   /*not true: 8000 is the minimum*/
 	MIME_TYPE ("speex"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_speex_wb={
@@ -388,7 +397,10 @@ PayloadType payload_type_speex_wb={
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(28000),
 	MIME_TYPE ("speex"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_speex_uwb={
@@ -399,7 +411,10 @@ PayloadType payload_type_speex_uwb={
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(28000),
 	MIME_TYPE ("speex"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_ilbc={
@@ -421,7 +436,10 @@ PayloadType payload_type_amr={
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(12200),
 	MIME_TYPE ("AMR"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_amrwb={
@@ -432,7 +450,10 @@ PayloadType payload_type_amrwb={
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(23850),
 	MIME_TYPE ("AMR-WB"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_mp4v={
@@ -599,7 +620,10 @@ PayloadType payload_type_silk_nb={
 	PATTERN_LENGTH( 0),
 	NORMAL_BITRATE(13000),
 	MIME_TYPE ("SILK"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_silk_mb={
@@ -610,7 +634,10 @@ PayloadType payload_type_silk_mb={
 	PATTERN_LENGTH( 0),
 	NORMAL_BITRATE(15000),
 	MIME_TYPE ("SILK"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_silk_wb={
@@ -621,7 +648,10 @@ PayloadType payload_type_silk_wb={
 	PATTERN_LENGTH( 0),
 	NORMAL_BITRATE(20000),
 	MIME_TYPE ("SILK"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_silk_swb={
@@ -632,7 +662,10 @@ PayloadType payload_type_silk_swb={
 	PATTERN_LENGTH( 0),
 	NORMAL_BITRATE(30000),
 	MIME_TYPE ("SILK"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_aaceld_22k={
@@ -654,7 +687,7 @@ PayloadType payload_type_aaceld_44k={
 	PATTERN_LENGTH( 0),
 	NORMAL_BITRATE(64000),
 	MIME_TYPE ("mpeg4-generic"),
-	CHANNELS(1)
+	CHANNELS(1),
 };
 
 PayloadType payload_type_opus = {
@@ -665,7 +698,10 @@ PayloadType payload_type_opus = {
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(20000),
 	MIME_TYPE("opus"),
-	CHANNELS(2) /*mandatory according to RFC*/
+	CHANNELS(2), /*mandatory according to RFC*/
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };
 
 PayloadType payload_type_isac = {
@@ -676,5 +712,8 @@ PayloadType payload_type_isac = {
 	PATTERN_LENGTH(0),
 	NORMAL_BITRATE(32000),
 	MIME_TYPE("iSAC"),
-	CHANNELS(1)
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	PAYLOAD_TYPE_IS_VBR
 };

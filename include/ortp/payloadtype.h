@@ -34,14 +34,16 @@ extern "C"{
 /* flags for PayloadType::flags */
 
 #define	PAYLOAD_TYPE_ALLOCATED (1)
-	/* private flags for future use by ortp */
-#define	PAYLOAD_TYPE_PRIV1 (1<<1)
+/*payload type represents a VBR codec*/
+#define	PAYLOAD_TYPE_IS_VBR (1<<1)
+/* private flags for future use by ortp */
 #define	PAYLOAD_TYPE_PRIV2 (1<<2)
 #define	PAYLOAD_TYPE_PRIV3 (1<<3)
 	/* user flags, can be used by the application on top of oRTP */
 #define	PAYLOAD_TYPE_USER_FLAG_0 (1<<4)
 #define	PAYLOAD_TYPE_USER_FLAG_1 (1<<5)
 #define	PAYLOAD_TYPE_USER_FLAG_2 (1<<6)
+#define	PAYLOAD_TYPE_USER_FLAG_3 (1<<7)
 	/* ask for more if you need*/
 
 #define PAYLOAD_AUDIO_CONTINUOUS 0
