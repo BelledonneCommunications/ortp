@@ -60,6 +60,8 @@ typedef struct msgb
 	struct timeval timestamp;
 #endif
 	ortp_recv_addr_t recv_addr;
+	struct sockaddr_storage src_addr; /*source address incoming packet used by simulator*/
+	socklen_t src_addrlen; /*source address incoming packet length used by simulator*/
 	uint8_t ttl_or_hl;
 } mblk_t;
 

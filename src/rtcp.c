@@ -56,7 +56,7 @@ static mblk_t *sdes_chunk_new(uint32_t ssrc){
 
 
 static mblk_t * sdes_chunk_append_item(mblk_t *m, rtcp_sdes_type_t sdes_type, const char *content)
-{	
+{
 	if ( content )
 	{
 		sdes_item_t si;
@@ -83,8 +83,8 @@ static mblk_t * sdes_chunk_pad(mblk_t *m){
  * Set session's SDES item for automatic sending of RTCP compound packets.
  * If some items are not specified, use NULL.
 **/
-void rtp_session_set_source_description(RtpSession *session, 
-    const char *cname, const char *name, const char *email, const char *phone, 
+void rtp_session_set_source_description(RtpSession *session,
+    const char *cname, const char *name, const char *email, const char *phone,
     const char *loc, const char *tool, const char *note){
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
 	mblk_t *m=chunk;
@@ -106,8 +106,8 @@ void rtp_session_set_source_description(RtpSession *session,
 }
 
 void
-rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc, 
-    const char *cname, const char *name, const char *email, const char *phone, 
+rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc,
+    const char *cname, const char *name, const char *email, const char *phone,
     const char *loc, const char *tool, const char *note)
 {
 	mblk_t *chunk = sdes_chunk_new(csrc);
@@ -139,12 +139,12 @@ mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session)
 	int rc=0;
     rtcp = (rtcp_common_header_t*)mp->b_wptr;
 	mp->b_wptr+=sizeof(rtcp_common_header_t);
-	
+
 	/* concatenate all sdes chunks */
 	sdes_chunk_set_ssrc(session->sd,session->snd.ssrc);
 	m=concatb(m,dupmsg(session->sd));
 	rc++;
-	
+
 	q=&session->contributing_sources;
     for (tmp=qbegin(q); !qend(q,tmp); tmp=qnext(q,mp)){
 		m=concatb(m,dupmsg(tmp));
@@ -156,7 +156,7 @@ mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session)
 
 
 mblk_t *rtcp_create_simple_bye_packet(uint32_t ssrc, const char *reason)
-{	
+{
 	int packet_size;
 	int strsize = 0;
 	int strpadding = 0;
@@ -181,7 +181,7 @@ mblk_t *rtcp_create_simple_bye_packet(uint32_t ssrc, const char *reason)
 	if (reason!=NULL) {
 		const char pad[] = {0, 0, 0};
 		unsigned char strsize_octet = (unsigned char)strsize;
-		
+
 		appendb(mp, (const char*)&strsize_octet, 1, FALSE);
 		appendb(mp, reason,strsize, FALSE);
 		appendb(mp, pad,strpadding, FALSE);
@@ -209,7 +209,7 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv){
 	uint64_t lsw;
 	msw=tv->tv_sec + 0x83AA7E80; /* 0x83AA7E80 is the number of seconds from 1900 to 1970 */
 	lsw=(uint32_t)((double)tv->tv_usec*(double)(((uint64_t)1)<<32)*1.0e-6);
-	return msw<<32 | lsw; 
+	return msw<<32 | lsw;
 }
 
 static void sender_info_init(sender_info_t *info, RtpSession *session){
@@ -233,11 +233,11 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	RtpStream *stream=&session->rtp;
 	uint32_t delay_snc_last_sr=0;
 	uint32_t fl_cnpl;
-	
+
 	/* compute the statistics */
 	if (stream->hwrcv_since_last_SR!=0){
 		int expected_packets=stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR;
-		
+
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
 			packet_loss = session->lost_packets_test_vector;
@@ -264,7 +264,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	/* reset them */
 	stream->hwrcv_since_last_SR=0;
 	stream->hwrcv_seq_at_last_SR=stream->hwrcv_extseq;
-	
+
 	if (stream->last_rcv_SR_time.tv_sec!=0){
 		struct timeval now;
 		double delay;
@@ -273,7 +273,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		delay= (delay*65536);
 		delay_snc_last_sr=(uint32_t) delay;
 	}
-	
+
 	b->ssrc=htonl(session->rcv.ssrc);
 	fl_cnpl=((loss_fraction&0xFF)<<24) | (stream->stats.cum_packet_loss & 0xFFFFFF);
 	b->fl_cnpl=htonl(fl_cnpl);
@@ -365,7 +365,7 @@ static int rtcp_app_init(RtpSession *session, uint8_t *buf, uint8_t subtype, con
 static mblk_t * make_rr(RtpSession *session){
 	mblk_t *cm=NULL;
 	mblk_t *sdes=NULL;
-	
+
 	cm=allocb(sizeof(rtcp_sr_t),0);
 	cm->b_wptr+=rtcp_rr_init(session,cm->b_wptr,sizeof(rtcp_rr_t));
 	/* make a SDES packet */
@@ -379,7 +379,7 @@ static mblk_t * make_rr(RtpSession *session){
 static mblk_t * make_sr(RtpSession *session){
 	mblk_t *cm=NULL;
 	mblk_t *sdes=NULL;
-	
+
 	cm=allocb(sizeof(rtcp_sr_t),0);
 	cm->b_wptr+=rtcp_sr_init(session,cm->b_wptr,sizeof(rtcp_sr_t));
 	/* make a SDES packet */
@@ -427,7 +427,7 @@ void rtp_session_rtcp_process_send(RtpSession *session){
 	RtpStream *st=&session->rtp;
 	RtcpStream *rtcp_st=&session->rtcp;
 	mblk_t *m;
-	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r 
+	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r
 		|| st->snd_last_ts - rtcp_st->last_rtcp_report_snt_s > rtcp_st->rtcp_report_snt_interval_s){
 		rtcp_st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
 		rtcp_st->last_rtcp_report_snt_s=st->snd_last_ts;
@@ -447,7 +447,7 @@ void rtp_session_rtcp_process_recv(RtpSession *session){
 	RtcpStream *rtcp_st=&session->rtcp;
 	mblk_t *m=NULL;
 	bool_t is_sr=FALSE;
-	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r 
+	if (st->rcv_last_app_ts - rtcp_st->last_rtcp_report_snt_r > rtcp_st->rtcp_report_snt_interval_r
 		|| st->snd_last_ts - rtcp_st->last_rtcp_report_snt_s > rtcp_st->rtcp_report_snt_interval_s){
 		rtcp_st->last_rtcp_report_snt_r=st->rcv_last_app_ts;
 		rtcp_st->last_rtcp_report_snt_s=st->snd_last_ts;

@@ -67,7 +67,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	int overhead=(session->rtp.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 
 	ortp_gettimeofday(&current,NULL);
-	
+
 	if (sim->last_check.tv_sec==0){
 		sim->last_check=current;
 		sim->bit_budget=0;
@@ -84,7 +84,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	}
 	/*flow control*/
 	while (sim->qsize>=sim->params.max_buffer_size){
-		ortp_message("rtp_session_network_simulate(): discarding packets.");
+		// ortp_message("rtp_session_network_simulate(): discarding packets.");
 		output=getq(&sim->q);
 		if (output){
 			bits=(msgdsize(output)+overhead)*8;
@@ -92,9 +92,9 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 			freemsg(output);
 		}
 	}
-	
+
 	output=NULL;
-	
+
 	/*see if we can output a packet*/
 	if (sim->bit_budget>=0){
 		output=getq(&sim->q);
@@ -125,16 +125,28 @@ static mblk_t *simulate_loss_rate(RtpSession *session, mblk_t *input, int rate){
 	return NULL;
 }
 
-mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input){
+mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t *is_rtp_packet){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
 	mblk_t *om=NULL;
-	
+
 	om=input;
+
+	/*while packet is stored in network simulator queue, keep its type in reserved1 space*/
+	if (input != NULL){
+		input->reserved1 = *is_rtp_packet;
+	}
+
 	if (sim->params.max_bandwidth>0){
 		om=simulate_bandwidth_limit(session,input);
 	}
 	if (sim->params.loss_rate>0 && om){
 		om=simulate_loss_rate(session,om, sim->params.loss_rate);
+	}
+	/*finally when releasing the packet from the simulator, reset the reserved1 space to default,
+	since it will be used by mediastreamer later*/
+	if (om != NULL){
+		*is_rtp_packet = om->reserved1;
+		om->reserved1 = 0;
 	}
 	return om;
 }
