@@ -25,11 +25,13 @@
 
 static OrtpNetworkSimulatorCtx* simulator_ctx_new(void){
 	OrtpNetworkSimulatorCtx *ctx=(OrtpNetworkSimulatorCtx*)ortp_malloc0(sizeof(OrtpNetworkSimulatorCtx));
+	qinit(&ctx->latency_q);
 	qinit(&ctx->q);
 	return ctx;
 }
 
 void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
+	flushq(&sim->latency_q,0);
 	flushq(&sim->q,0);
 	ortp_free(sim);
 }
@@ -41,7 +43,7 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 		sim->params=*params;
 		if (sim->params.max_bandwidth && sim->params.max_buffer_size==0) {
 			sim->params.max_buffer_size=sim->params.max_bandwidth;
-			ortp_message("Max buffer size not set for rtp session [%p], using [%i]",session,sim->params.max_buffer_size);
+			ortp_message("Max buffer size not set for RTP session [%p], using [%i]",session,sim->params.max_buffer_size);
 		}
 
 		session->net_sim_ctx=sim;
@@ -57,6 +59,35 @@ static int64_t elapsed_us(struct timeval *tv1, struct timeval *tv2){
 
 #define IP_UDP_OVERHEAD (20+8)
 #define IP6_UDP_OVERHEAD (40+8)
+
+static mblk_t * simulate_latency(RtpSession *session, mblk_t *input){
+	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
+	struct timeval current;
+	mblk_t *output=NULL;
+	uint32_t current_ts;
+	ortp_gettimeofday(&current,NULL);
+	/*since we must store expiration date in reserved2(32bits) only(reserved1
+	already used), we need to reduce time stamp to milliseconds only*/
+	current_ts = 1000*current.tv_sec + current.tv_usec/1000;
+
+	/*queue the packet - store expiration timestamps in reserved fields*/
+	if (input){
+		input->reserved2 = current_ts + sim->params.latency;
+		putq(&sim->latency_q,input);
+	}
+
+	if ((output=peekq(&sim->latency_q))!=NULL){
+		if (TIME_IS_NEWER_THAN(current_ts, output->reserved2)){
+			output->reserved2=0;
+			getq(&sim->latency_q);
+
+			/*return the first dequeued packet*/
+			return output;
+		}
+	}
+
+	return NULL;
+}
 
 static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
@@ -132,12 +163,16 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 	om=input;
 
 	/*while packet is stored in network simulator queue, keep its type in reserved1 space*/
-	if (input != NULL){
-		input->reserved1 = *is_rtp_packet;
+	if (om != NULL){
+		om->reserved1 = *is_rtp_packet;
+	}
+
+	if (sim->params.latency>0){
+		om=simulate_latency(session,om);
 	}
 
 	if (sim->params.max_bandwidth>0){
-		om=simulate_bandwidth_limit(session,input);
+		om=simulate_bandwidth_limit(session,om);
 	}
 	if (sim->params.loss_rate>0 && om){
 		om=simulate_loss_rate(session,om, sim->params.loss_rate);

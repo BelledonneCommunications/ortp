@@ -17,11 +17,11 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-/** 
+/**
  * \file rtpsession.h
  * \brief The RtpSession api
  *
- * The RtpSession objects represent a RTP session: once it is configured with 
+ * The RtpSession objects represent a RTP session: once it is configured with
  * local and remote network addresses and a payload type is given, it let you send
  * and recv a media stream.
 **/
@@ -104,6 +104,7 @@ typedef struct _OrtpNetworkSimulatorParams{
 	float max_bandwidth; /*IP bandwidth, in bit/s*/
 	int max_buffer_size; /*Max number of bit buffered before being discarded*/
 	float loss_rate;
+	uint latency; /*Packet transmission delay, in ms*/
 }OrtpNetworkSimulatorParams;
 
 typedef struct _OrtpNetworkSimulatorCtx{
@@ -111,6 +112,7 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	int bit_budget;
 	int qsize;
 	queue_t q;
+	queue_t latency_q;
 	struct timeval last_check;
 }OrtpNetworkSimulatorCtx;
 
@@ -187,7 +189,7 @@ typedef struct OrtpRtcpXrStats {
 typedef struct _RtpStream
 {
 	ortp_socket_t socket;
-	struct _RtpTransport *tr; 
+	struct _RtpTransport *tr;
 	int sockfamily;
 	int max_rq_size;
 	int time_jump;
@@ -201,7 +203,7 @@ typedef struct _RtpStream
 	void *QoSHandle;
 	unsigned long QoSFlowID;
 	JitterControl jittctl;
-	uint32_t snd_time_offset;/*the scheduler time when the application send its first timestamp*/	
+	uint32_t snd_time_offset;/*the scheduler time when the application send its first timestamp*/
 	uint32_t snd_ts_offset;	/* the first application timestamp sent by the application */
 	uint32_t snd_rand_offset;	/* a random number added to the user offset to make the stream timestamp*/
 	uint32_t snd_last_ts;	/* the last stream timestamp sended */
@@ -209,7 +211,7 @@ typedef struct _RtpStream
 	uint32_t rcv_ts_offset;  /* the first stream timestamp */
 	uint32_t rcv_query_ts_offset;	/* the first user timestamp asked by the application */
 	uint32_t rcv_last_ts;	/* the last stream timestamp got by the application */
-	uint32_t rcv_last_app_ts; /* the last application timestamp asked by the application */	
+	uint32_t rcv_last_app_ts; /* the last application timestamp asked by the application */
 	uint32_t rcv_last_ret_ts; /* the timestamp of the last sample returned (only for continuous audio)*/
 	uint32_t hwrcv_extseq; /* last received on socket extended sequence number */
 	uint32_t hwrcv_seq_at_last_SR;
@@ -238,7 +240,7 @@ typedef struct _RtcpStream
 {
 	ortp_socket_t socket;
 	int sockfamily;
-	struct _RtpTransport *tr; 
+	struct _RtpTransport *tr;
 	mblk_t *cached_mp;
 	int loc_port;
 	struct sockaddr_storage rem_addr;
@@ -270,7 +272,7 @@ typedef struct _RtpSession RtpSession;
  * An object representing a bi-directional RTP session.
  * It holds sockets, jitter buffer, various counters (timestamp, sequence numbers...)
  * Applications SHOULD NOT try to read things within the RtpSession object but use
- * instead its public API (the rtp_session_* methods) where RtpSession is used as a 
+ * instead its public API (the rtp_session_* methods) where RtpSession is used as a
  * pointer.
  * rtp_session_new() allocates and initialize a RtpSession.
 **/
@@ -327,7 +329,7 @@ struct _RtpSession
 	bool_t ssrc_set;
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
 };
-	
+
 
 
 
@@ -471,17 +473,17 @@ ORTP_PUBLIC void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * sessio
 /* in use with the scheduler to convert a timestamp in scheduler time unit (ms) */
 ORTP_PUBLIC uint32_t rtp_session_ts_to_time(RtpSession *session,uint32_t timestamp);
 ORTP_PUBLIC uint32_t rtp_session_time_to_ts(RtpSession *session, int millisecs);
-/* this function aims at simulating senders with "imprecise" clocks, resulting in 
+/* this function aims at simulating senders with "imprecise" clocks, resulting in
 rtp packets sent with timestamp uncorrelated with the system clock .
 This is only availlable to sessions working with the oRTP scheduler */
 ORTP_PUBLIC void rtp_session_make_time_distorsion(RtpSession *session, int milisec);
 
 /*RTCP functions */
 ORTP_PUBLIC void rtp_session_set_source_description(RtpSession *session, const char *cname,
-	const char *name, const char *email, const char *phone, 
+	const char *name, const char *email, const char *phone,
     const char *loc, const char *tool, const char *note);
-ORTP_PUBLIC void rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc, 
-    const char *cname, const char *name, const char *email, const char *phone, 
+ORTP_PUBLIC void rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc,
+    const char *cname, const char *name, const char *email, const char *phone,
     const char *loc, const char *tool, const char *note);
 ORTP_PUBLIC void rtp_session_remove_contributing_sources(RtpSession *session, uint32_t csrc);
 ORTP_PUBLIC mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session);
