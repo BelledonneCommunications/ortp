@@ -104,7 +104,7 @@ typedef struct _OrtpNetworkSimulatorParams{
 	float max_bandwidth; /*IP bandwidth, in bit/s*/
 	int max_buffer_size; /*Max number of bit buffered before being discarded*/
 	float loss_rate;
-	uint latency; /*Packet transmission delay, in ms*/
+	uint32_t latency; /*Packet transmission delay, in ms*/
 }OrtpNetworkSimulatorParams;
 
 typedef struct _OrtpNetworkSimulatorCtx{
