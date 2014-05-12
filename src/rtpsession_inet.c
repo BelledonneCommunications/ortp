@@ -1326,7 +1326,6 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	int error;
 	ortp_socket_t sockfd=session->rtp.socket;
 	struct sockaddr_storage remaddr;
-	bool_t is_rtp_packet = TRUE;
 
 	socklen_t addrlen = sizeof (remaddr);
 	mblk_t *mp;
@@ -1336,6 +1335,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
+		bool_t is_rtp_packet = TRUE;
 
 		if (session->rtp.cached_mp==NULL){
 			 session->rtp.cached_mp = msgb_allocator_alloc(&session->allocator,session->recv_buf_size);
@@ -1407,7 +1407,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 int rtp_session_rtcp_recv (RtpSession * session) {
 	int error;
 	struct sockaddr_storage remaddr;
-	bool_t is_rtp_packet = FALSE;
+
 	socklen_t addrlen=0;
 	mblk_t *mp;
 
@@ -1417,6 +1417,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
+		bool_t is_rtp_packet = FALSE;
 		if (session->rtcp.cached_mp==NULL){
 			 session->rtcp.cached_mp = allocb (RTCP_MAX_RECV_BUFSIZE, 0);
 		}
