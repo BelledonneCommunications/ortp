@@ -1297,19 +1297,21 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	addrlen = mp->src_addrlen;
 
 	if (is_rtp_packet){
+		if (session->use_connect){
+			/* In the case where use_connect is false, symmetric RTP is handled in rtp_session_rtp_parse() */
+			if (session->symmetric_rtp && !sock_connected){
+				/* store the sender RTP address to do symmetric RTP */
+				memcpy(&session->rtp.rem_addr,&remaddr,addrlen);
+				session->rtp.rem_addrlen=addrlen;
+				if (try_connect(session->rtp.socket,remaddr,addrlen))
+					session->flags|=RTP_SOCKET_CONNECTED;
+			}
+		}
 		/* then parse the message and put on jitter buffer queue */
 		update_recv_bytes(session,mp->b_wptr-mp->b_rptr);
 		rtp_session_rtp_parse(session, mp, user_ts, remaddr,addrlen);
 		/*for bandwidth measurements:*/
 	}else {
-		if (process_rtcp_packet(session, mp, remaddr, addrlen) >= 0){
-			/* post an event to notify the application*/
-			rtp_session_notify_inc_rtcp(session,mp);
-			/* reply to collaborative RTCP XR packets if needed. */
-			if (session->rtcp.xr_conf.enabled == TRUE){
-				reply_to_collaborative_rtcp_xr_packet(session, mp);
-			}
-		}
 		if (session->symmetric_rtp && !sock_connected){
 			/* store the sender RTP address to do symmetric RTP */
 			memcpy(&session->rtcp.rem_addr,remaddr,addrlen);
@@ -1318,6 +1320,19 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 				if (try_connect(session->rtcp.socket,remaddr,addrlen))
 					session->flags|=RTCP_SOCKET_CONNECTED;
 			}
+		}
+		if (process_rtcp_packet(session, mp, remaddr, addrlen) >= 0){
+			/* a copy is needed since rtp_session_notify_inc_rtcp will free the mp,
+			and we don't want to send RTCP XR packet before notifying the application
+			that a message has been received*/
+			mblk_t * copy = copymsg(mp);
+			/* post an event to notify the application */
+			rtp_session_notify_inc_rtcp(session,mp);
+			/* reply to collaborative RTCP XR packets if needed. */
+			if (session->rtcp.xr_conf.enabled == TRUE){
+				reply_to_collaborative_rtcp_xr_packet(session, copy);
+			}
+			freemsg(copy);
 		}
 	}
 }
@@ -1352,16 +1367,6 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 				  &addrlen);
 		}
 		if (error > 0){
-			if (session->use_connect){
-				/* In the case where use_connect is false, symmetric RTP is handled in rtp_session_rtp_parse() */
-				if (session->symmetric_rtp && !sock_connected){
-					/* store the sender RTP address to do symmetric RTP */
-					memcpy(&session->rtp.rem_addr,&remaddr,addrlen);
-					session->rtp.rem_addrlen=addrlen;
-					if (try_connect(sockfd,(struct sockaddr*)&remaddr,addrlen))
-						session->flags|=RTP_SOCKET_CONNECTED;
-				}
-			}
 			mp->b_wptr+=error;
 
 			/*if we use the network simulator, store packet source address for later use(otherwise it will be used immediately)*/
@@ -1408,7 +1413,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	int error;
 	struct sockaddr_storage remaddr;
 
-	socklen_t addrlen=0;
+	socklen_t addrlen = sizeof (remaddr);
 	mblk_t *mp;
 
 	if (session->rtcp.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no RTCP sockets for the moment*/
@@ -1425,17 +1430,18 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 		mp=session->rtcp.cached_mp;
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(session->rtcp.socket, mp, 0, NULL, NULL);
-		}else {
+		}else{
 			addrlen=sizeof (remaddr);
 
-			if (rtp_session_using_transport(session, rtcp))
-			  error=(session->rtcp.tr->t_recvfrom)(session->rtcp.tr, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
-			else
-			  error=rtp_session_rtp_recv_abstract (session->rtcp.socket,mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
+			if (rtp_session_using_transport(session, rtcp)){
+				error=(session->rtcp.tr->t_recvfrom)(session->rtcp.tr, mp, 0,
+					(struct sockaddr *) &remaddr,
+					&addrlen);
+			}else{
+				error=rtp_session_rtp_recv_abstract (session->rtcp.socket,mp, 0,
+					(struct sockaddr *) &remaddr,
+					&addrlen);
+			}
 		}
 		if (error > 0)
 		{
