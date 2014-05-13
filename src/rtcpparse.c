@@ -537,18 +537,29 @@ uint32_t rtcp_PSFB_get_media_source_ssrc(const mblk_t *m) {
 }
 
 rtcp_fb_fir_fci_t * rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned int idx) {
-	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
 	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_fir_fci_t));
-	if (rtcp_common_header_get_length(ch) < (size / 8)) {
+	unsigned int rtcp_size = rtcp_get_size(m);
+	if (size > rtcp_size) {
 		return NULL;
 	}
 	return (rtcp_fb_fir_fci_t *)(m->b_rptr + size - sizeof(rtcp_fb_fir_fci_t));
 }
 
-uint32_t rtcp_PSFB_fir_fci_get_ssrc(const rtcp_fb_fir_fci_t *fci) {
-	return ntohl(fci->ssrc);
+rtcp_fb_sli_fci_t * rtcp_PSFB_sli_get_fci(const mblk_t *m, unsigned int idx) {
+	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_sli_fci_t));
+	unsigned int rtcp_size = rtcp_get_size(m);
+	if (size > rtcp_size) {
+		return NULL;
+	}
+	return (rtcp_fb_sli_fci_t *)(m->b_rptr + size - sizeof(rtcp_fb_sli_fci_t));
 }
 
-uint8_t rtcp_PSFB_fir_fci_get_seq_nr(const rtcp_fb_fir_fci_t *fci) {
-	return fci->seq_nr;
+rtcp_fb_rpsi_fci_t * rtcp_PSFB_rpsi_get_fci(const mblk_t *m) {
+	return (rtcp_fb_rpsi_fci_t *)(m->b_rptr + sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t));
+}
+
+uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m) {
+	rtcp_fb_rpsi_fci_t *fci = rtcp_PSFB_rpsi_get_fci(m);
+	uint16_t bit_string_len_in_bytes = rtcp_get_size(m) - (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + 2);
+	return ((bit_string_len_in_bytes * 8) - fci->pb);
 }

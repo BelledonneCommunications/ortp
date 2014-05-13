@@ -292,6 +292,35 @@ typedef struct rtcp_fb_fir_fci {
 	uint16_t pad2;
 } rtcp_fb_fir_fci_t;
 
+#define rtcp_fb_fir_fci_get_ssrc(fci) ntohl((fci)->ssrc)
+#define rtcp_fb_fir_fci_get_seq_nr(fci) (fci)->seq_nr
+
+typedef struct rtcp_fb_sli_fci {
+	uint32_t value;
+} rtcp_fb_sli_fci_t;
+
+#define rtcp_fb_sli_fci_get_first(fci) \
+	((uint16_t)((ntohl((fci)->value) >> 19) & 0x00001FFF))
+#define rtcp_fb_sli_fci_set_first(fci, first) \
+	((fci)->value) = htonl((ntohl((fci)->value) & 0x0007FFFF) | (((first) & 0x00001FFF) << 19))
+#define rtcp_fb_sli_fci_get_number(fci) \
+	((uint16_t)((ntohl((fci)->value) >> 6) & 0x00001FFF))
+#define rtcp_fb_sli_fci_set_number(fci, number) \
+	((fci)->value) = htonl((ntohl((fci)->value) & 0xFFF8003F) | (((number) & 0x00001FFF) << 6))
+#define rtcp_fb_sli_fci_get_picture_id(fci) \
+	((uint8_t)(ntohl((fci)->value) & 0x0000003F))
+#define rtcp_fb_sli_fci_set_picture_id(fci, picture_id) \
+	((fci)->value) = htonl((ntohl((fci)->value) & 0xFFFFFFC0) | ((picture_id) & 0x0000003F))
+
+typedef struct rtcp_fb_rpsi_fci {
+	uint8_t pb;
+	uint8_t payload_type;
+	uint16_t bit_string[1];
+} rtcp_fb_rpsi_fci_t;
+
+#define rtcp_fb_rpsi_fci_get_payload_type(fci) (fci)->payload_type
+#define rtcp_fb_rpsi_fci_get_bit_string(fci) ((uint8_t *)(fci)->bit_string)
+
 #define MIN_RTCP_PSFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
 
 
@@ -414,8 +443,9 @@ ORTP_PUBLIC rtcp_psfb_type_t rtcp_PSFB_get_type(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_PSFB_get_packet_sender_ssrc(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_PSFB_get_media_source_ssrc(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_fir_fci_t * rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned int idx);
-ORTP_PUBLIC uint32_t rtcp_PSFB_fir_fci_get_ssrc(const rtcp_fb_fir_fci_t *fci);
-ORTP_PUBLIC uint8_t rtcp_PSFB_fir_fci_get_seq_nr(const rtcp_fb_fir_fci_t *fci);
+ORTP_PUBLIC rtcp_fb_sli_fci_t * rtcp_PSFB_sli_get_fci(const mblk_t *m, unsigned int idx);
+ORTP_PUBLIC rtcp_fb_rpsi_fci_t * rtcp_PSFB_rpsi_get_fci(const mblk_t *m);
+ORTP_PUBLIC uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m);
 
 
 #ifdef __cplusplus

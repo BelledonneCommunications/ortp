@@ -833,6 +833,65 @@ static mblk_t * rtp_session_create_rtcp_fb_fir(RtpSession *session) {
 	return h;
 }
 
+static mblk_t * rtp_session_create_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
+	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_sli_fci_t);
+	mblk_t *h = allocb(size, 0);
+	rtcp_common_header_t *ch;
+	rtcp_fb_header_t *fbh;
+	rtcp_fb_sli_fci_t *fci;
+
+	/* Fill SLI */
+	ch = (rtcp_common_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_common_header_t);
+	fbh = (rtcp_fb_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_header_t);
+	fci = (rtcp_fb_sli_fci_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_sli_fci_t);
+	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
+	fbh->media_source_ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	rtcp_fb_sli_fci_set_first(fci, first);
+	rtcp_fb_sli_fci_set_number(fci, number);
+	rtcp_fb_sli_fci_set_picture_id(fci, picture_id);
+
+	/* Fill common header */
+	rtcp_common_header_init(ch, session, RTCP_PSFB, RTCP_PSFB_SLI, msgdsize(h));
+
+	return h;
+}
+
+static mblk_t * rtp_session_create_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
+	uint16_t bit_string_len_in_bytes = (bit_string_len / 8) + (((bit_string_len % 8) == 0) ? 0 : 1);
+	int additional_bytes = bit_string_len_in_bytes - 2;
+	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_rpsi_fci_t) + additional_bytes;
+	mblk_t *h = allocb(size, 0);
+	rtcp_common_header_t *ch;
+	rtcp_fb_header_t *fbh;
+	rtcp_fb_rpsi_fci_t *fci;
+	int i;
+
+	/* Fill RPSI */
+	ch = (rtcp_common_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_common_header_t);
+	fbh = (rtcp_fb_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_header_t);
+	fci = (rtcp_fb_rpsi_fci_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_rpsi_fci_t);
+	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
+	fbh->media_source_ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	fci->pb = (bit_string_len_in_bytes * 8) - bit_string_len;
+	fci->payload_type = rtp_session_get_recv_payload_type(session) & 0x7F;
+	memset(&fci->bit_string, 0, bit_string_len_in_bytes);
+	memcpy(&fci->bit_string, bit_string, bit_string_len / 8);
+	for (i = 0; i < (bit_string_len % 8); i++) {
+		fci->bit_string[bit_string_len_in_bytes - 1] |= (bit_string[bit_string_len_in_bytes - 1] & (1 << (7 - i)));
+	}
+
+	/* Fill common header */
+	rtcp_common_header_init(ch, session, RTCP_PSFB, RTCP_PSFB_RPSI, msgdsize(h));
+
+	return h;
+}
+
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	mblk_t *m;
 	mblk_t *m_pli;
@@ -871,6 +930,48 @@ void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 		/* send the compound packet */
 		notify_sent_rtcp(session, m);
 		ortp_message("Sending RTCP SR compound message with FIR on session [%p]", session);
+		rtp_session_rtcp_send(session, m);
+	}
+}
+
+void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
+	mblk_t *m;
+	mblk_t *m_sli;
+	RtpStream *st = &session->rtp;
+	RtcpStream *rtcp_st = &session->rtcp;
+	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
+
+	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
+		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
+		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
+		m = make_sr(session);
+		m_sli = rtp_session_create_rtcp_fb_sli(session, first, number, picture_id);
+		concatb(m, m_sli);
+
+		/* send the compound packet */
+		notify_sent_rtcp(session, m);
+		ortp_message("Sending RTCP SR compound message with SLI on session [%p]", session);
+		rtp_session_rtcp_send(session, m);
+	}
+}
+
+void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
+	mblk_t *m;
+	mblk_t *m_rpsi;
+	RtpStream *st = &session->rtp;
+	RtcpStream *rtcp_st = &session->rtcp;
+	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
+
+	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
+		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
+		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
+		m = make_sr(session);
+		m_rpsi = rtp_session_create_rtcp_fb_rpsi(session, bit_string, bit_string_len);
+		concatb(m, m_rpsi);
+
+		/* send the compound packet */
+		notify_sent_rtcp(session, m);
+		ortp_message("Sending RTCP SR compound message with RPSI on session [%p]", session);
 		rtp_session_rtcp_send(session, m);
 	}
 }
