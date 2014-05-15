@@ -911,9 +911,11 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	RtcpStream *rtcp_st = &session->rtcp;
 	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 
-	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
+	if ((payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED)
+		&& ((st->snd_last_ts - rtcp_st->last_rtcp_fb_pli_snt) > 1000)) {
 		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
 		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
+		rtcp_st->last_rtcp_fb_pli_snt = st->snd_last_ts;
 		m = make_sr(session);
 		m_pli = rtp_session_create_rtcp_fb_pli(session);
 		concatb(m, m_pli);

@@ -263,6 +263,7 @@ typedef struct _RtcpStream
 	int rtcp_xr_stat_summary_interval_ms;	/* The interval in milliseconds for RTCP XR stat summary packet sending */
 	int rtcp_xr_voip_metrics_interval_ms;	/* The interval in milliseconds for RTCP XR voip metrics packet sending */
 	uint8_t rtcp_fb_fir_seq_nr;	/* The FIR command sequence number */
+	uint32_t last_rtcp_fb_pli_snt;
 } RtcpStream;
 
 typedef struct _RtpSession RtpSession;
