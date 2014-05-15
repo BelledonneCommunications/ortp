@@ -860,14 +860,21 @@ static mblk_t * rtp_session_create_rtcp_fb_sli(RtpSession *session, uint16_t fir
 }
 
 static mblk_t * rtp_session_create_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
-	uint16_t bit_string_len_in_bytes = (bit_string_len / 8) + (((bit_string_len % 8) == 0) ? 0 : 1);
-	int additional_bytes = bit_string_len_in_bytes - 2;
-	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_rpsi_fci_t) + additional_bytes;
-	mblk_t *h = allocb(size, 0);
+	uint16_t bit_string_len_in_bytes;
+	int additional_bytes;
+	int size;
+	mblk_t *h;
 	rtcp_common_header_t *ch;
 	rtcp_fb_header_t *fbh;
 	rtcp_fb_rpsi_fci_t *fci;
 	int i;
+
+	/* Calculate packet size and allocate memory. */
+	bit_string_len_in_bytes = (bit_string_len / 8) + (((bit_string_len % 8) == 0) ? 0 : 1);
+	additional_bytes = bit_string_len_in_bytes - 2;
+	if (additional_bytes < 0) additional_bytes = 0;
+	size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_rpsi_fci_t) + additional_bytes;
+	h = allocb(size, 0);
 
 	/* Fill RPSI */
 	ch = (rtcp_common_header_t *)h->b_wptr;
@@ -878,9 +885,14 @@ static mblk_t * rtp_session_create_rtcp_fb_rpsi(RtpSession *session, uint8_t *bi
 	h->b_wptr += sizeof(rtcp_fb_rpsi_fci_t);
 	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
 	fbh->media_source_ssrc = htonl(rtp_session_get_recv_ssrc(session));
-	fci->pb = (bit_string_len_in_bytes * 8) - bit_string_len;
+	if (bit_string_len <= 16) {
+		fci->pb = 16 - bit_string_len;
+		memset(&fci->bit_string, 0, 2);
+	} else {
+		fci->pb = (bit_string_len - 16) % 32;
+		memset(&fci->bit_string, 0, bit_string_len_in_bytes);
+	}
 	fci->payload_type = rtp_session_get_recv_payload_type(session) & 0x7F;
-	memset(&fci->bit_string, 0, bit_string_len_in_bytes);
 	memcpy(&fci->bit_string, bit_string, bit_string_len / 8);
 	for (i = 0; i < (bit_string_len % 8); i++) {
 		fci->bit_string[bit_string_len_in_bytes - 1] |= (bit_string[bit_string_len_in_bytes - 1] & (1 << (7 - i)));
