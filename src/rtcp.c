@@ -79,55 +79,43 @@ static mblk_t * sdes_chunk_pad(mblk_t *m){
 	return appendb(m,"",1,TRUE);
 }
 
+static void sdes_chunk_set_items(mblk_t *m, const char *cname, const char *name,
+	const char *email, const char *phone, const char *loc, const char *tool,
+	const char *note) {
+	if (cname == NULL) {
+		cname = "Unknown";
+	}
+	m = sdes_chunk_append_item(m, RTCP_SDES_CNAME, cname);
+	m = sdes_chunk_append_item(m, RTCP_SDES_NAME, name);
+	m = sdes_chunk_append_item(m, RTCP_SDES_EMAIL, email);
+	m = sdes_chunk_append_item(m, RTCP_SDES_PHONE, phone);
+	m = sdes_chunk_append_item(m, RTCP_SDES_LOC, loc);
+	m = sdes_chunk_append_item(m, RTCP_SDES_TOOL, tool);
+	m = sdes_chunk_append_item(m, RTCP_SDES_NOTE, note);
+	m = sdes_chunk_pad(m);
+}
+
 /**
  * Set session's SDES item for automatic sending of RTCP compound packets.
  * If some items are not specified, use NULL.
 **/
-void rtp_session_set_source_description(RtpSession *session,
-    const char *cname, const char *name, const char *email, const char *phone,
-    const char *loc, const char *tool, const char *note){
+void rtp_session_set_source_description(RtpSession *session, const char *cname,
+	const char *name, const char *email, const char *phone, const char *loc,
+	const char *tool, const char *note) {
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
-	mblk_t *m=chunk;
-	const char *_cname=cname;
-	if (_cname==NULL)
-	{
-		_cname="Unknown";
-	}
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_CNAME, _cname);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_NAME, name);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_EMAIL, email);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_PHONE, phone);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_LOC, loc);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_TOOL, tool);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_NOTE, note);
-	chunk=sdes_chunk_pad(chunk);
-	if (session->sd!=NULL) freemsg(session->sd);
-	session->sd=m;
+	sdes_chunk_set_items(chunk, cname, name, email, phone, loc, tool, note);
+	if (session->sd != NULL) freemsg(session->sd);
+	session->sd = chunk;
 }
 
 void
 rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc,
-    const char *cname, const char *name, const char *email, const char *phone,
-    const char *loc, const char *tool, const char *note)
-{
+	const char *cname, const char *name, const char *email, const char *phone,
+	const char *loc, const char *tool, const char *note) {
 	mblk_t *chunk = sdes_chunk_new(csrc);
-	mblk_t *m=chunk;
-	char *_cname=(char*)cname;
-	if (_cname==NULL)
-	{
-		_cname="toto";
-	}
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_CNAME, cname);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_NAME, name);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_EMAIL, email);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_PHONE, phone);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_LOC, loc);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_TOOL, tool);
-	chunk=sdes_chunk_append_item(chunk, RTCP_SDES_NOTE, note);
-	chunk=sdes_chunk_pad(chunk);
-	putq(&session->contributing_sources,m);
+	sdes_chunk_set_items(chunk, cname, name, email, phone, loc, tool, note);
+	putq(&session->contributing_sources, chunk);
 }
-
 
 
 mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session)
