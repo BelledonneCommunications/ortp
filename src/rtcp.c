@@ -79,13 +79,17 @@ static mblk_t * sdes_chunk_pad(mblk_t *m){
 	return appendb(m,"",1,TRUE);
 }
 
-static void sdes_chunk_set_items(mblk_t *m, const char *cname, const char *name,
-	const char *email, const char *phone, const char *loc, const char *tool,
-	const char *note) {
+static mblk_t * sdes_chunk_set_minimal_items(mblk_t *m, const char *cname) {
 	if (cname == NULL) {
 		cname = "Unknown";
 	}
-	m = sdes_chunk_append_item(m, RTCP_SDES_CNAME, cname);
+	return sdes_chunk_append_item(m, RTCP_SDES_CNAME, cname);
+}
+
+static mblk_t * sdes_chunk_set_full_items(mblk_t *m, const char *cname,
+	const char *name, const char *email, const char *phone, const char *loc,
+	const char *tool, const char *note) {
+	m = sdes_chunk_set_minimal_items(m, cname);
 	m = sdes_chunk_append_item(m, RTCP_SDES_NAME, name);
 	m = sdes_chunk_append_item(m, RTCP_SDES_EMAIL, email);
 	m = sdes_chunk_append_item(m, RTCP_SDES_PHONE, phone);
@@ -93,6 +97,7 @@ static void sdes_chunk_set_items(mblk_t *m, const char *cname, const char *name,
 	m = sdes_chunk_append_item(m, RTCP_SDES_TOOL, tool);
 	m = sdes_chunk_append_item(m, RTCP_SDES_NOTE, note);
 	m = sdes_chunk_pad(m);
+	return m;
 }
 
 /**
@@ -102,10 +107,16 @@ static void sdes_chunk_set_items(mblk_t *m, const char *cname, const char *name,
 void rtp_session_set_source_description(RtpSession *session, const char *cname,
 	const char *name, const char *email, const char *phone, const char *loc,
 	const char *tool, const char *note) {
+	mblk_t *m;
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
-	sdes_chunk_set_items(chunk, cname, name, email, phone, loc, tool, note);
-	if (session->sd != NULL) freemsg(session->sd);
-	session->sd = chunk;
+	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note);
+	if (session->full_sdes != NULL)
+		freemsg(session->full_sdes);
+	session->full_sdes = chunk;
+	chunk = sdes_chunk_new(session->snd.ssrc);
+	m = sdes_chunk_set_minimal_items(chunk, cname);
+	m = sdes_chunk_pad(m);
+	session->minimal_sdes = chunk;
 }
 
 void
@@ -113,7 +124,7 @@ rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc,
 	const char *cname, const char *name, const char *email, const char *phone,
 	const char *loc, const char *tool, const char *note) {
 	mblk_t *chunk = sdes_chunk_new(csrc);
-	sdes_chunk_set_items(chunk, cname, name, email, phone, loc, tool, note);
+	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note);
 	putq(&session->contributing_sources, chunk);
 }
 
@@ -129,8 +140,8 @@ mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session)
 	mp->b_wptr+=sizeof(rtcp_common_header_t);
 
 	/* concatenate all sdes chunks */
-	sdes_chunk_set_ssrc(session->sd,session->snd.ssrc);
-	m=concatb(m,dupmsg(session->sd));
+	sdes_chunk_set_ssrc(session->full_sdes,session->snd.ssrc);
+	m=concatb(m,dupmsg(session->full_sdes));
 	rc++;
 
 	q=&session->contributing_sources;
@@ -357,7 +368,7 @@ static mblk_t * make_rr(RtpSession *session){
 	cm=allocb(sizeof(rtcp_sr_t),0);
 	cm->b_wptr+=rtcp_rr_init(session,cm->b_wptr,sizeof(rtcp_rr_t));
 	/* make a SDES packet */
-	if (session->sd!=NULL)
+	if (session->full_sdes!=NULL)
 		sdes=rtp_session_create_rtcp_sdes_packet(session);
 	/* link them */
 	cm->b_cont=sdes;
@@ -371,7 +382,7 @@ static mblk_t * make_sr(RtpSession *session){
 	cm=allocb(sizeof(rtcp_sr_t),0);
 	cm->b_wptr+=rtcp_sr_init(session,cm->b_wptr,sizeof(rtcp_sr_t));
 	/* make a SDES packet */
-	if (session->sd!=NULL)
+	if (session->full_sdes!=NULL)
 		sdes=rtp_session_create_rtcp_sdes_packet(session);
 	/* link them */
 	cm->b_cont=sdes;

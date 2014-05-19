@@ -1462,7 +1462,10 @@ void rtp_session_uninit (RtpSession * session)
 	if (session->current_tev!=NULL) freemsg(session->current_tev);
 	if (session->rtp.cached_mp!=NULL) freemsg(session->rtp.cached_mp);
 	if (session->rtcp.cached_mp!=NULL) freemsg(session->rtcp.cached_mp);
-	if (session->sd!=NULL) freemsg(session->sd);
+	if (session->full_sdes != NULL)
+		freemsg(session->full_sdes);
+	if (session->minimal_sdes != NULL)
+		freemsg(session->minimal_sdes);
 
 	session->signal_tables = o_list_free(session->signal_tables);
 	msgb_allocator_uninit(&session->allocator);

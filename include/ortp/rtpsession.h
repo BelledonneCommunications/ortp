@@ -317,7 +317,8 @@ struct _RtpSession
 	mblk_t *pending;
 	/* telephony events extension */
 	mblk_t *current_tev;		/* the pending telephony events */
-	mblk_t *sd;
+	mblk_t *minimal_sdes;
+	mblk_t *full_sdes;
 	queue_t contributing_sources;
 	unsigned int lost_packets_test_vector;
 	unsigned int interarrival_jitter_test_vector;
