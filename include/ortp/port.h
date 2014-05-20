@@ -290,6 +290,7 @@ ORTP_PUBLIC char *ortp_strdup_vprintf(const char *fmt, va_list ap);
 ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
 ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
+ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)

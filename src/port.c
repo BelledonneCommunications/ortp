@@ -747,6 +747,12 @@ void ortp_get_cur_time(ortpTimeSpec *ret){
 #endif
 }
 
+uint64_t ortp_get_cur_time_ms(void) {
+	ortpTimeSpec ts;
+	ortp_get_cur_time(&ts);
+	return (ts.tv_sec * 1000LL) + ((ts.tv_nsec + 500000LL) / 1000000LL);
+}
+
 #if defined(_WIN32) && !defined(_MSC_VER)
 char* strtok_r(char *str, const char *delim, char **nextp){
 	char *ret;
