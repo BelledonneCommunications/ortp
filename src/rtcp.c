@@ -203,13 +203,6 @@ void rtp_session_remove_contributing_sources(RtpSession *session, uint32_t ssrc)
 	rtp_session_rtcp_send(session,tmp);
 }
 
-uint64_t ortp_timeval_to_ntp(const struct timeval *tv){
-	uint64_t msw;
-	uint64_t lsw;
-	msw=tv->tv_sec + 0x83AA7E80; /* 0x83AA7E80 is the number of seconds from 1900 to 1970 */
-	lsw=(uint32_t)((double)tv->tv_usec*(double)(((uint64_t)1)<<32)*1.0e-6);
-	return msw<<32 | lsw;
-}
 
 static void sender_info_init(sender_info_t *info, RtpSession *session){
 	struct timeval tv;
