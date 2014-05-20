@@ -1696,19 +1696,27 @@ static float compute_bw(struct timeval *orig, unsigned int bytes){
 	return bw;
 }
 
+static void compute_recv_bandwidth(OrtpStream *os) {
+	os->download_bw = compute_bw(&os->recv_bw_start, os->recv_bytes);
+	os->recv_bytes = 0;
+	ortp_gettimeofday(&os->recv_bw_start, NULL);
+}
+
+static void compute_send_bandwidth(OrtpStream *os) {
+	os->upload_bw = compute_bw(&os->send_bw_start, os->sent_bytes);
+	os->sent_bytes = 0;
+	ortp_gettimeofday(&os->send_bw_start, NULL);
+}
+
 float rtp_session_compute_recv_bandwidth(RtpSession *session) {
-	session->rtp.gs.download_bw = compute_bw(&session->rtp.gs.recv_bw_start, session->rtp.gs.recv_bytes);
-	session->rtp.gs.recv_bytes = 0;
-	session->rtcp.gs.download_bw = compute_bw(&session->rtcp.gs.recv_bw_start, session->rtcp.gs.recv_bytes);
-	session->rtcp.gs.recv_bytes = 0;
+	compute_recv_bandwidth(&session->rtp.gs);
+	compute_recv_bandwidth(&session->rtcp.gs);
 	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 }
 
 float rtp_session_compute_send_bandwidth(RtpSession *session) {
-	session->rtp.gs.upload_bw = compute_bw(&session->rtp.gs.send_bw_start, session->rtp.gs.sent_bytes);
-	session->rtp.gs.sent_bytes = 0;
-	session->rtcp.gs.upload_bw = compute_bw(&session->rtcp.gs.send_bw_start, session->rtcp.gs.sent_bytes);
-	session->rtcp.gs.sent_bytes = 0;
+	compute_send_bandwidth(&session->rtp.gs);
+	compute_send_bandwidth(&session->rtcp.gs);
 	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
 }
 

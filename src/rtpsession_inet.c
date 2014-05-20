@@ -919,7 +919,8 @@ static bool_t is_ipv6(OrtpStream *os) {
 
 static void update_sent_bytes(OrtpStream *os, int nbytes) {
 	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	if (os->sent_bytes == 0) {
+	if ((os->sent_bytes == 0) && (os->send_bw_start.tv_sec == 0) && (os->send_bw_start.tv_usec == 0)) {
+		/* Initialize bandwidth computing time when has not been started yet. */
 		ortp_gettimeofday(&os->send_bw_start, NULL);
 	}
 	os->sent_bytes += nbytes + overhead;
