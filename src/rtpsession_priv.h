@@ -22,6 +22,9 @@
 
 #include "ortp/rtpsession.h"
 
+#define IP_UDP_OVERHEAD (20 + 8)
+#define IP6_UDP_OVERHEAD (40 + 8)
+
 #define RTCP_XR_GMIN 16 /* Recommended value of Gmin from RFC3611, section 4.7.6 */
 
 typedef enum {
@@ -41,7 +44,7 @@ typedef enum {
 	RTCP_OVERRIDE_DELAY=1<<13
 }RtpSessionFlags;
 
-#define rtp_session_using_transport(s, stream) (((s)->flags & RTP_SESSION_USING_TRANSPORT) && (s->stream.tr != 0))
+#define rtp_session_using_transport(s, stream) (((s)->flags & RTP_SESSION_USING_TRANSPORT) && (s->stream.gs.tr != 0))
 
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 

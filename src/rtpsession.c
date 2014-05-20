@@ -254,8 +254,8 @@ rtp_session_init (RtpSession * session, int mode)
 	session->snd.telephone_events_pt=-1;	/* not defined a priori */
 	session->rcv.telephone_events_pt=-1;	/* not defined a priori */
 	rtp_session_set_profile (session, &av_profile); /*the default profile to work with */
-	session->rtp.socket=-1;
-	session->rtcp.socket=-1;
+	session->rtp.gs.socket=-1;
+	session->rtcp.gs.socket=-1;
 #ifndef WIN32
 	session->rtp.snd_socket_size=0;	/*use OS default value unless on windows where they are definitely too short*/
 	session->rtp.rcv_socket_size=0;
@@ -1393,31 +1393,31 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
  * Closes the rtp and rtcp sockets.
 **/
 void rtp_session_release_sockets(RtpSession *session){
-	if (session->rtp.socket!=(ortp_socket_t)-1) close_socket (session->rtp.socket);
-	if (session->rtcp.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.socket);
-	session->rtp.socket=-1;
-	session->rtcp.socket=-1;
+	if (session->rtp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtp.gs.socket);
+	if (session->rtcp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.gs.socket);
+	session->rtp.gs.socket=-1;
+	session->rtcp.gs.socket=-1;
 
-	if (session->rtp.tr && session->rtp.tr->t_close)
-		session->rtp.tr->t_close(session->rtp.tr, session->rtp.tr->data);
-	session->rtp.tr = 0;
+	if (session->rtp.gs.tr && session->rtp.gs.tr->t_close)
+		session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+	session->rtp.gs.tr = 0;
 
-	if (session->rtcp.tr && session->rtcp.tr->t_close)
-		session->rtcp.tr->t_close(session->rtcp.tr, session->rtcp.tr->data);
-	session->rtcp.tr = 0;
+	if (session->rtcp.gs.tr && session->rtcp.gs.tr->t_close)
+		session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+	session->rtcp.gs.tr = 0;
 
 	/* don't discard remote addresses, then can be preserved for next use.
-	session->rtp.rem_addrlen=0;
-	session->rtcp.rem_addrlen=0;
+	session->rtp.gs.rem_addrlen=0;
+	session->rtcp.gs.rem_addrlen=0;
 	*/
 }
 
 ortp_socket_t rtp_session_get_rtp_socket(const RtpSession *session){
-	return rtp_session_using_transport(session, rtp) ? (session->rtp.tr->t_getsocket)(session->rtp.tr) : session->rtp.socket;
+	return rtp_session_using_transport(session, rtp) ? (session->rtp.gs.tr->t_getsocket)(session->rtp.gs.tr) : session->rtp.gs.socket;
 }
 
 ortp_socket_t rtp_session_get_rtcp_socket(const RtpSession *session){
-	return rtp_session_using_transport(session, rtcp) ? (session->rtcp.tr->t_getsocket)(session->rtcp.tr) : session->rtcp.socket;
+	return rtp_session_using_transport(session, rtcp) ? (session->rtcp.gs.tr->t_getsocket)(session->rtcp.gs.tr) : session->rtcp.gs.socket;
 }
 
 /**
@@ -1460,8 +1460,8 @@ void rtp_session_uninit (RtpSession * session)
 	wait_point_uninit(&session->snd.wp);
 	wait_point_uninit(&session->rcv.wp);
 	if (session->current_tev!=NULL) freemsg(session->current_tev);
-	if (session->rtp.cached_mp!=NULL) freemsg(session->rtp.cached_mp);
-	if (session->rtcp.cached_mp!=NULL) freemsg(session->rtcp.cached_mp);
+	if (session->rtp.gs.cached_mp!=NULL) freemsg(session->rtp.gs.cached_mp);
+	if (session->rtcp.gs.cached_mp!=NULL) freemsg(session->rtcp.gs.cached_mp);
 	if (session->full_sdes != NULL)
 		freemsg(session->full_sdes);
 	if (session->minimal_sdes != NULL)
@@ -1696,16 +1696,20 @@ static float compute_bw(struct timeval *orig, unsigned int bytes){
 	return bw;
 }
 
-float rtp_session_compute_recv_bandwidth(RtpSession *session){
-	session->rtp.download_bw=compute_bw(&session->rtp.recv_bw_start,session->rtp.recv_bytes);
-	session->rtp.recv_bytes=0;
-	return session->rtp.download_bw;
+float rtp_session_compute_recv_bandwidth(RtpSession *session) {
+	session->rtp.gs.download_bw = compute_bw(&session->rtp.gs.recv_bw_start, session->rtp.gs.recv_bytes);
+	session->rtp.gs.recv_bytes = 0;
+	session->rtcp.gs.download_bw = compute_bw(&session->rtcp.gs.recv_bw_start, session->rtcp.gs.recv_bytes);
+	session->rtcp.gs.recv_bytes = 0;
+	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 }
 
-float rtp_session_compute_send_bandwidth(RtpSession *session){
-	session->rtp.upload_bw=compute_bw(&session->rtp.send_bw_start,session->rtp.sent_bytes);
-	session->rtp.sent_bytes=0;
-	return session->rtp.upload_bw;
+float rtp_session_compute_send_bandwidth(RtpSession *session) {
+	session->rtp.gs.upload_bw = compute_bw(&session->rtp.gs.send_bw_start, session->rtp.gs.sent_bytes);
+	session->rtp.gs.sent_bytes = 0;
+	session->rtcp.gs.upload_bw = compute_bw(&session->rtcp.gs.send_bw_start, session->rtcp.gs.sent_bytes);
+	session->rtcp.gs.sent_bytes = 0;
+	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
 }
 
 /**
@@ -1713,7 +1717,7 @@ float rtp_session_compute_send_bandwidth(RtpSession *session){
  * Computation must have been done with rtp_session_compute_recv_bandwidth()
 **/
 float rtp_session_get_recv_bandwidth(RtpSession *session){
-	return session->rtp.download_bw;
+	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 }
 
 /**
@@ -1721,7 +1725,23 @@ float rtp_session_get_recv_bandwidth(RtpSession *session){
  * Computation must have been done with rtp_session_compute_send_bandwidth()
 **/
 float rtp_session_get_send_bandwidth(RtpSession *session){
-	return session->rtp.upload_bw;
+	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
+}
+
+float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {
+	return session->rtp.gs.download_bw;
+}
+
+float rtp_session_get_rtp_send_bandwidth(RtpSession *session) {
+	return session->rtp.gs.upload_bw;
+}
+
+float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session) {
+	return session->rtcp.gs.download_bw;
+}
+
+float rtp_session_get_rtcp_send_bandwidth(RtpSession *session) {
+	return session->rtcp.gs.upload_bw;
 }
 
 int rtp_session_get_last_send_error_code(RtpSession *session){

@@ -90,9 +90,9 @@ static int32_t ozrtp_sendDataZRTP (void *clientData, uint8_t* data, int32_t leng
 
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
 	RtpSession *session = userData->session;
-	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.rem_addr;
-	socklen_t destlen=session->rtp.rem_addrlen;
-	ortp_socket_t sockfd=session->rtp.socket;
+	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
+	socklen_t destlen=session->rtp.gs.rem_addrlen;
+	ortp_socket_t sockfd=session->rtp.gs.socket;
 	ortp_message("ZRTP Send packet type %.8s", data+16);
 
 	// Send packet
@@ -366,9 +366,9 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 
 
 	if (stream == rtp_stream) {
-		socket= t->session->rtp.socket;
+		socket= t->session->rtp.gs.socket;
 	} else {
-		socket= t->session->rtcp.socket;
+		socket= t->session->rtcp.gs.socket;
 	}
 
 	if (userData->srtpSend == NULL || !bzrtp_isSecure(zrtpContext, session->snd.ssrc)) {
@@ -415,7 +415,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 	bzrtp_iterate(zrtpContext, session->snd.ssrc, get_timeval_in_millis());
 
 	// Check if something to receive
-	rlen=rtp_session_rtp_recv_abstract(t->session->rtp.socket,m,flags,from,fromlen);
+	rlen=rtp_session_rtp_recv_abstract(t->session->rtp.gs.socket,m,flags,from,fromlen);
 	if (rlen<=0) {
 		// nothing was received or error: pass the information to caller
 		return rlen;
@@ -457,7 +457,7 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 	RtpSession *session = userData->session;
 
 
-	int rlen = rtp_session_rtp_recv_abstract(t->session->rtcp.socket,m,flags,from,fromlen);
+	int rlen = rtp_session_rtp_recv_abstract(t->session->rtcp.gs.socket,m,flags,from,fromlen);
 	if (rlen<=0) {
 		// nothing was received or error: pass the information to caller
 		return rlen;
@@ -478,11 +478,11 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 
 
 static ortp_socket_t ozrtp_rtp_getsocket(RtpTransport *t){
-  return t->session->rtp.socket;
+  return t->session->rtp.gs.socket;
 }
 
 static ortp_socket_t ozrtp_rtcp_getsocket(RtpTransport *t){
-  return t->session->rtcp.socket;
+  return t->session->rtcp.gs.socket;
 }
 
 static OrtpZrtpContext* createUserData(bzrtpContext_t *context, OrtpZrtpParams *params) {
@@ -507,7 +507,7 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, R
 	bzrtpContext_t *context=userData->zrtpContext;
 
 
-	if (s->rtp.tr || s->rtcp.tr)
+	if (s->rtp.gs.tr || s->rtcp.gs.tr)
 		ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
 
 	userData->rtpt.data=userData; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */

@@ -186,20 +186,30 @@ typedef struct OrtpRtcpXrStats {
 	uint32_t discarded_count;
 } OrtpRtcpXrStats;
 
+typedef struct _OrtpStream {
+	ortp_socket_t socket;
+	int sockfamily;
+	int loc_port;
+	int rem_addrlen;
+	struct sockaddr_storage rem_addr;
+	struct _RtpTransport *tr;
+	mblk_t *cached_mp;
+	struct timeval send_bw_start; /* used for bandwidth estimation */
+	struct timeval recv_bw_start; /* used for bandwidth estimation */
+	unsigned int sent_bytes; /* used for bandwidth estimation */
+	unsigned int recv_bytes; /* used for bandwidth estimation */
+	float upload_bw;
+	float download_bw;
+} OrtpStream;
+
 typedef struct _RtpStream
 {
-	ortp_socket_t socket;
-	struct _RtpTransport *tr;
-	int sockfamily;
+	OrtpStream gs;
 	int max_rq_size;
 	int time_jump;
 	uint32_t ts_jump;
 	queue_t rq;
 	queue_t tev_rq;
-	mblk_t *cached_mp;
-	int loc_port;
-	struct sockaddr_storage rem_addr;
-	int rem_addrlen;
 	void *QoSHandle;
 	unsigned long QoSFlowID;
 	JitterControl jittctl;
@@ -221,12 +231,6 @@ typedef struct _RtpStream
 	uint16_t snd_seq; /* send sequence number */
 	uint32_t last_rtcp_packet_count; /*the sender's octet count in the last sent RTCP SR*/
 	uint32_t sent_payload_bytes; /*used for RTCP sender reports*/
-	unsigned int sent_bytes; /* used for bandwidth estimation */
-	struct timeval send_bw_start; /* used for bandwidth estimation */
-	unsigned int recv_bytes; /* used for bandwidth estimation */
-	struct timeval recv_bw_start; /* used for bandwidth estimation */
-	float upload_bw;
-	float download_bw;
 	rtp_stats_t stats;
 	int recv_errno;
 	int send_errno;
@@ -238,13 +242,7 @@ typedef struct _RtpStream
 
 typedef struct _RtcpStream
 {
-	ortp_socket_t socket;
-	int sockfamily;
-	struct _RtpTransport *tr;
-	mblk_t *cached_mp;
-	int loc_port;
-	struct sockaddr_storage rem_addr;
-	int rem_addrlen;
+	OrtpStream gs;
 	int interval;
 	uint32_t last_rtcp_report_snt_r;	/* the time of the last rtcp report sent, in recv timestamp unit */
 	uint32_t last_rtcp_report_snt_s;	/* the time of the last rtcp report sent, in send timestamp unit */
@@ -450,6 +448,10 @@ ORTP_PUBLIC float rtp_session_compute_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_compute_recv_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_recv_bandwidth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_rtp_send_bandwidth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_rtp_recv_bandwidth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_rtcp_send_bandwidth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype, const char *name, const uint8_t *data, int datalen);
 

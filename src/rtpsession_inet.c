@@ -287,7 +287,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 {
 	ortp_socket_t sock;
 	int sockfamily;
-	if (session->rtp.socket!=(ortp_socket_t)-1){
+	if (session->rtp.gs.socket!=(ortp_socket_t)-1){
 		/* don't rebind, but close before*/
 		rtp_session_release_sockets(session);
 	}
@@ -296,15 +296,15 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 	sock=create_and_bind(addr,&rtp_port,&sockfamily,session->reuseaddr);
 	if (sock!=-1){
 		set_socket_sizes(sock,session->rtp.snd_socket_size,session->rtp.rcv_socket_size);
-		session->rtp.sockfamily=sockfamily;
-		session->rtp.socket=sock;
-		session->rtp.loc_port=rtp_port;
+		session->rtp.gs.sockfamily=sockfamily;
+		session->rtp.gs.socket=sock;
+		session->rtp.gs.loc_port=rtp_port;
 		/*try to bind rtcp port */
 		sock=create_and_bind(addr,&rtcp_port,&sockfamily,session->reuseaddr);
 		if (sock!=(ortp_socket_t)-1){
-			session->rtcp.sockfamily=sockfamily;
-			session->rtcp.socket=sock;
-			session->rtcp.loc_port=rtcp_port;
+			session->rtcp.gs.sockfamily=sockfamily;
+			session->rtcp.gs.socket=sock;
+			session->rtcp.gs.loc_port=rtcp_port;
 		}else {
 			ortp_debug("Could not create and bind rtcp socket.");
 			return -1;
@@ -344,22 +344,22 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 #endif
 
 	// Dont't do anything if socket hasn't been created yet
-	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
+	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if defined(WIN32) || defined(_WIN32_WCE)
 	memset(optval, activate, sizeof(optval));
 #endif
 
-	switch (session->rtp.sockfamily) {
+	switch (session->rtp.gs.sockfamily) {
 		case AF_INET:
 #ifdef IP_PKTINFO
 			optname = IP_PKTINFO;
 #else
 			optname = IP_RECVDSTADDR;
 #endif
-			retval = setsockopt(session->rtp.socket, IPPROTO_IP, optname, optval, optlen);
+			retval = setsockopt(session->rtp.gs.socket, IPPROTO_IP, optname, optval, optlen);
 			if (retval < 0) break;
-			retval = setsockopt(session->rtcp.socket, IPPROTO_IP, optname, optval, optlen);
+			retval = setsockopt(session->rtcp.gs.socket, IPPROTO_IP, optname, optval, optlen);
 			break;
 		case AF_INET6:
 #ifdef IPV6_PKTINFO
@@ -367,9 +367,9 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 #else
 			optname = IPV6_RECVDSTADDR;
 #endif
-			retval = setsockopt(session->rtp.socket, IPPROTO_IPV6, optname, optval, optlen);
+			retval = setsockopt(session->rtp.gs.socket, IPPROTO_IPV6, optname, optval, optlen);
 			if (retval < 0) break;
-			retval = setsockopt(session->rtcp.socket, IPPROTO_IPV6, optname, optval, optlen);
+			retval = setsockopt(session->rtcp.gs.socket, IPPROTO_IPV6, optname, optval, optlen);
 			break;
 		default:
 			retval = -1;
@@ -399,28 +399,28 @@ int rtp_session_set_multicast_ttl(RtpSession *session, int ttl)
 	if (ttl>0) session->multicast_ttl = ttl;
 
 	// Don't do anything if socket hasn't been created yet
-	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
+	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
-	switch (session->rtp.sockfamily) {
+	switch (session->rtp.gs.sockfamily) {
 		case AF_INET: {
 
-			retval= setsockopt(session->rtp.socket, IPPROTO_IP, IP_MULTICAST_TTL,
+			retval= setsockopt(session->rtp.gs.socket, IPPROTO_IP, IP_MULTICAST_TTL,
 						 (SOCKET_OPTION_VALUE)  &session->multicast_ttl, sizeof(session->multicast_ttl));
 
 			if (retval<0) break;
 
-			retval= setsockopt(session->rtcp.socket, IPPROTO_IP, IP_MULTICAST_TTL,
+			retval= setsockopt(session->rtcp.gs.socket, IPPROTO_IP, IP_MULTICAST_TTL,
 					 (SOCKET_OPTION_VALUE)	   &session->multicast_ttl, sizeof(session->multicast_ttl));
 
 		} break;
 		case AF_INET6: {
 
-			retval= setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
+			retval= setsockopt(session->rtp.gs.socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 					 (SOCKET_OPTION_VALUE)&session->multicast_ttl, sizeof(session->multicast_ttl));
 
 			if (retval<0) break;
 
-			retval= setsockopt(session->rtcp.socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
+			retval= setsockopt(session->rtcp.gs.socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS,
 					 (SOCKET_OPTION_VALUE) &session->multicast_ttl, sizeof(session->multicast_ttl));
 		} break;
 	default:
@@ -472,28 +472,28 @@ int rtp_session_set_multicast_loopback(RtpSession *session, int yesno)
 	}
 
 	// Don't do anything if socket hasn't been created yet
-	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
+	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
-	switch (session->rtp.sockfamily) {
+	switch (session->rtp.gs.sockfamily) {
 		case AF_INET: {
 
-			retval= setsockopt(session->rtp.socket, IPPROTO_IP, IP_MULTICAST_LOOP,
+			retval= setsockopt(session->rtp.gs.socket, IPPROTO_IP, IP_MULTICAST_LOOP,
 						 (SOCKET_OPTION_VALUE)   &session->multicast_loopback, sizeof(session->multicast_loopback));
 
 			if (retval<0) break;
 
-			retval= setsockopt(session->rtcp.socket, IPPROTO_IP, IP_MULTICAST_LOOP,
+			retval= setsockopt(session->rtcp.gs.socket, IPPROTO_IP, IP_MULTICAST_LOOP,
 						 (SOCKET_OPTION_VALUE)   &session->multicast_loopback, sizeof(session->multicast_loopback));
 
 		} break;
 		case AF_INET6: {
 
-			retval= setsockopt(session->rtp.socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP,
+			retval= setsockopt(session->rtp.gs.socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP,
 				 (SOCKET_OPTION_VALUE)	&session->multicast_loopback, sizeof(session->multicast_loopback));
 
 			if (retval<0) break;
 
-			retval= setsockopt(session->rtcp.socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP,
+			retval= setsockopt(session->rtcp.gs.socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP,
 				 (SOCKET_OPTION_VALUE)	&session->multicast_loopback, sizeof(session->multicast_loopback));
 		} break;
 	default:
@@ -542,7 +542,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (dscp>=0) session->dscp = dscp;
 
 	// Don't do anything if socket hasn't been created yet
-	if (session->rtp.socket == (ortp_socket_t)-1) return 0;
+	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600) && !defined(WINAPI_FAMILY_PHONE_APP)
 	memset(&ovi, 0, sizeof(ovi));
@@ -588,8 +588,8 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				BOOL QoSResult;
 				QoSResult = QOSAddSocketToFlow(
 					session->rtp.QoSHandle,
-					session->rtp.socket,
-					(struct sockaddr*)&session->rtp.rem_addr,
+					session->rtp.gs.socket,
+					(struct sockaddr*)&session->rtp.gs.rem_addr,
 					tos,
 					QOS_NON_ADAPTIVE_FLOW,
 					&session->rtp.QoSFlowID);
@@ -605,7 +605,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 #endif
 		// DSCP value is in the upper six bits of the TOS field
 		tos = (session->dscp << 2) & 0xFC;
-		switch (session->rtp.sockfamily) {
+		switch (session->rtp.gs.sockfamily) {
 			case AF_INET:
 				proto=IPPROTO_IP;
 				value_type=IP_TOS;
@@ -622,11 +622,11 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			ortp_error("Cannot set DSCP because socket family is unspecified.");
 			return -1;
 		}
-		retval = setsockopt(session->rtp.socket, proto, value_type, (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
+		retval = setsockopt(session->rtp.gs.socket, proto, value_type, (SOCKET_OPTION_VALUE)&tos, sizeof(tos));
 		if (retval==-1)
 			ortp_error("Fail to set DSCP value on rtp socket: %s",getSocketError());
-		if (session->rtcp.socket != (ortp_socket_t)-1){
-			if (setsockopt(session->rtcp.socket, proto, value_type, (SOCKET_OPTION_VALUE)&tos, sizeof(tos))==-1){
+		if (session->rtcp.gs.socket != (ortp_socket_t)-1){
+			if (setsockopt(session->rtcp.gs.socket, proto, value_type, (SOCKET_OPTION_VALUE)&tos, sizeof(tos))==-1){
 				ortp_error("Fail to set DSCP value on rtcp socket: %s",getSocketError());
 			}
 		}
@@ -661,11 +661,11 @@ int rtp_session_get_dscp(const RtpSession *session)
 **/
 
 int rtp_session_get_local_port(const RtpSession *session){
-	return (session->rtp.loc_port>0) ? session->rtp.loc_port : -1;
+	return (session->rtp.gs.loc_port>0) ? session->rtp.gs.loc_port : -1;
 }
 
 int rtp_session_get_local_rtcp_port(const RtpSession *session){
-	return (session->rtcp.loc_port>0) ? session->rtcp.loc_port : -1;
+	return (session->rtcp.gs.loc_port>0) ? session->rtcp.gs.loc_port : -1;
 }
 
 
@@ -719,7 +719,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	char num[8];
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = (session->rtp.socket == -1) ? AF_UNSPEC : session->rtp.sockfamily;
+	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
 
@@ -729,7 +729,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 		ortp_warning ("Error in socket address: %s", gai_strerror(err));
 		return -1;
 	}
-	if (session->rtp.socket == -1){
+	if (session->rtp.gs.socket == -1){
 		/* the session has not its socket bound, do it */
 		ortp_message ("Setting random local addresses.");
 		/* bind to an address type that matches the destination address */
@@ -743,9 +743,9 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	err=1;
 	for (res = res0; res; res = res->ai_next) {
 		/* set a destination address that has the same type as the local address */
-		if (res->ai_family==session->rtp.sockfamily ) {
-			memcpy( &session->rtp.rem_addr, res->ai_addr, res->ai_addrlen);
-			session->rtp.rem_addrlen=res->ai_addrlen;
+		if (res->ai_family==session->rtp.gs.sockfamily ) {
+			memcpy( &session->rtp.gs.rem_addr, res->ai_addr, res->ai_addrlen);
+			session->rtp.gs.rem_addrlen=res->ai_addrlen;
 			err=0;
 			break;
 		}
@@ -757,7 +757,7 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	}
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = (session->rtp.socket == -1) ? AF_UNSPEC : session->rtp.sockfamily;
+	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
 	snprintf(num, sizeof(num), "%d", rtcp_port);
@@ -769,10 +769,10 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	err=1;
 	for (res = res0; res; res = res->ai_next) {
 		/* set a destination address that has the same type as the local address */
-		if (res->ai_family==session->rtp.sockfamily ) {
+		if (res->ai_family==session->rtp.gs.sockfamily ) {
 			err=0;
-			memcpy( &session->rtcp.rem_addr, res->ai_addr, res->ai_addrlen);
-			session->rtcp.rem_addrlen=res->ai_addrlen;
+			memcpy( &session->rtcp.gs.rem_addr, res->ai_addr, res->ai_addrlen);
+			session->rtcp.gs.rem_addrlen=res->ai_addrlen;
 			break;
 		}
 	}
@@ -783,10 +783,10 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 	}
 
 	if (can_connect(session)){
-		if (try_connect(session->rtp.socket,(struct sockaddr*)&session->rtp.rem_addr,session->rtp.rem_addrlen))
+		if (try_connect(session->rtp.gs.socket,(struct sockaddr*)&session->rtp.gs.rem_addr,session->rtp.gs.rem_addrlen))
 			session->flags|=RTP_SOCKET_CONNECTED;
-		if (session->rtcp.socket!=(ortp_socket_t)-1){
-			if (try_connect(session->rtcp.socket,(struct sockaddr*)&session->rtcp.rem_addr,session->rtcp.rem_addrlen))
+		if (session->rtcp.gs.socket!=(ortp_socket_t)-1){
+			if (try_connect(session->rtcp.gs.socket,(struct sockaddr*)&session->rtcp.gs.rem_addr,session->rtcp.gs.rem_addrlen))
 				session->flags|=RTCP_SOCKET_CONNECTED;
 		}
 	}else if (session->flags & RTP_SOCKET_CONNECTED){
@@ -794,10 +794,10 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 		See connect(2) manpage*/
 		struct sockaddr sa;
 		sa.sa_family=AF_UNSPEC;
-		if (connect(session->rtp.socket,&sa,sizeof(sa))<0){
+		if (connect(session->rtp.gs.socket,&sa,sizeof(sa))<0){
 			ortp_error("Cannot dissolve connect() association for rtp socket: %s", getSocketError());
 		}
-		if (connect(session->rtcp.socket,&sa,sizeof(sa))<0){
+		if (connect(session->rtcp.gs.socket,&sa,sizeof(sa))<0){
 			ortp_error("Cannot dissolve connect() association for rtcp socket: %s", getSocketError());
 		}
 		session->flags&=~RTP_SOCKET_CONNECTED;
@@ -819,8 +819,8 @@ void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd)
 {
 	if (rtpfd!=-1) set_non_blocking_socket(rtpfd);
 	if (rtcpfd!=-1) set_non_blocking_socket(rtcpfd);
-	session->rtp.socket=rtpfd;
-	session->rtcp.socket=rtcpfd;
+	session->rtp.gs.socket=rtpfd;
+	session->rtcp.gs.socket=rtcpfd;
 	if (rtpfd!=-1 || rtcpfd!=-1 )
 		session->flags|=(RTP_SESSION_USING_EXT_SOCKETS|RTP_SOCKET_CONNECTED|RTCP_SOCKET_CONNECTED);
 	else session->flags&=~(RTP_SESSION_USING_EXT_SOCKETS|RTP_SOCKET_CONNECTED|RTCP_SOCKET_CONNECTED);
@@ -828,8 +828,8 @@ void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd)
 
 void rtp_session_set_transports(RtpSession *session, struct _RtpTransport *rtptr, struct _RtpTransport *rtcptr)
 {
-	session->rtp.tr = rtptr;
-	session->rtcp.tr = rtcptr;
+	session->rtp.gs.tr = rtptr;
+	session->rtcp.gs.tr = rtcptr;
 	if (rtptr)
 		rtptr->session=session;
 	if (rtcptr)
@@ -841,8 +841,8 @@ void rtp_session_set_transports(RtpSession *session, struct _RtpTransport *rtptr
 }
 
 void rtp_session_get_transports(RtpSession *session, RtpTransport **rtptr, RtpTransport **rtcptr){
-	if (rtptr) *rtptr=session->rtp.tr;
-	if (rtcptr) *rtcptr=session->rtcp.tr;
+	if (rtptr) *rtptr=session->rtp.gs.tr;
+	if (rtcptr) *rtcptr=session->rtcp.gs.tr;
 }
 
 
@@ -865,19 +865,19 @@ void rtp_session_flush_sockets(RtpSession *session){
 		{
 		mblk_t *trashmp=esballoc(trash,sizeof(trash),0,NULL);
 
-		while (session->rtp.tr->t_recvfrom(session->rtp.tr,trashmp,0,(struct sockaddr *)&from,&fromlen)>0){};
+		while (session->rtp.gs.tr->t_recvfrom(session->rtp.gs.tr,trashmp,0,(struct sockaddr *)&from,&fromlen)>0){};
 
-		if (session->rtcp.tr)
-			while (session->rtcp.tr->t_recvfrom(session->rtcp.tr,trashmp,0,(struct sockaddr *)&from,&fromlen)>0){};
+		if (session->rtcp.gs.tr)
+			while (session->rtcp.gs.tr->t_recvfrom(session->rtcp.gs.tr,trashmp,0,(struct sockaddr *)&from,&fromlen)>0){};
 			freemsg(trashmp);
 			return;
 		}
 
-	if (session->rtp.socket!=(ortp_socket_t)-1){
-		while (recvfrom(session->rtp.socket,(char*)trash,sizeof(trash),0,(struct sockaddr *)&from,&fromlen)>0){};
+	if (session->rtp.gs.socket!=(ortp_socket_t)-1){
+		while (recvfrom(session->rtp.gs.socket,(char*)trash,sizeof(trash),0,(struct sockaddr *)&from,&fromlen)>0){};
 	}
-	if (session->rtcp.socket!=(ortp_socket_t)-1){
-		while (recvfrom(session->rtcp.socket,(char*)trash,sizeof(trash),0,(struct sockaddr*)&from,&fromlen)>0){};
+	if (session->rtcp.gs.socket!=(ortp_socket_t)-1){
+		while (recvfrom(session->rtcp.gs.socket,(char*)trash,sizeof(trash),0,(struct sockaddr*)&from,&fromlen)>0){};
 	}
 }
 
@@ -908,33 +908,31 @@ static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_l
 }
 #endif
 
-#define IP_UDP_OVERHEAD (20+8)
-#define IP6_UDP_OVERHEAD (40+8)
 
-static bool_t is_ipv6(RtpSession *s){
-	if (s->rtp.sockfamily==AF_INET6){
-		struct sockaddr_in6 *in6=(struct sockaddr_in6*)&s->rtp.rem_addr;
+static bool_t is_ipv6(OrtpStream *os) {
+	if (os->sockfamily == AF_INET6) {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)&os->rem_addr;
 		return !IN6_IS_ADDR_V4MAPPED(&in6->sin6_addr);
 	}
 	return FALSE;
 }
 
-static void update_sent_bytes(RtpSession*s, int nbytes){
-	int overhead=is_ipv6(s) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	if (s->rtp.sent_bytes==0){
-		ortp_gettimeofday(&s->rtp.send_bw_start,NULL);
+static void update_sent_bytes(OrtpStream *os, int nbytes) {
+	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	if (os->sent_bytes == 0) {
+		ortp_gettimeofday(&os->send_bw_start, NULL);
 	}
-	s->rtp.sent_bytes+=nbytes+overhead;
+	os->sent_bytes += nbytes + overhead;
 }
 
-static void update_recv_bytes(RtpSession*s, int nbytes){
-	int overhead=is_ipv6(s) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-
-	if (s->rtp.recv_bytes==0){
-		ortp_gettimeofday(&s->rtp.recv_bw_start,NULL);
+static void update_recv_bytes(OrtpStream *os, int nbytes) {
+	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	if (os->recv_bytes == 0) {
+		ortp_gettimeofday(&os->recv_bw_start, NULL);
 	}
-	s->rtp.recv_bytes+=nbytes+overhead;
+	os->recv_bytes += nbytes + overhead;
 }
+
 
 int
 rtp_session_rtp_send (RtpSession * session, mblk_t * m)
@@ -942,9 +940,9 @@ rtp_session_rtp_send (RtpSession * session, mblk_t * m)
 	int error;
 	int i;
 	rtp_header_t *hdr;
-	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.rem_addr;
-	socklen_t destlen=session->rtp.rem_addrlen;
-	ortp_socket_t sockfd=session->rtp.socket;
+	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
+	socklen_t destlen=session->rtp.gs.rem_addrlen;
+	ortp_socket_t sockfd=session->rtp.gs.socket;
 
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
@@ -964,7 +962,7 @@ rtp_session_rtp_send (RtpSession * session, mblk_t * m)
 	}
 
 	if (rtp_session_using_transport(session, rtp)){
-		error = (session->rtp.tr->t_sendto) (session->rtp.tr,m,0,destaddr,destlen);
+		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
 #ifdef USE_SENDMSG
 		error=rtp_sendmsg(sockfd,m,destaddr,destlen);
@@ -981,7 +979,7 @@ rtp_session_rtp_send (RtpSession * session, mblk_t * m)
 		}else ortp_warning ("[%p] Error sending rtp packet: %s ; socket=%i", session, getSocketError(), sockfd);
 		session->rtp.send_errno=getSocketErrorCode();
 	}else{
-		update_sent_bytes(session,error);
+		update_sent_bytes(&session->rtp.gs, error);
 	}
 	freemsg (m);
 	return error;
@@ -991,9 +989,9 @@ int
 rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 {
 	int error=0;
-	ortp_socket_t sockfd=session->rtcp.socket;
-	struct sockaddr *destaddr=(struct sockaddr*)&session->rtcp.rem_addr;
-	socklen_t destlen=session->rtcp.rem_addrlen;
+	ortp_socket_t sockfd=session->rtcp.gs.socket;
+	struct sockaddr *destaddr=(struct sockaddr*)&session->rtcp.gs.rem_addr;
+	socklen_t destlen=session->rtcp.gs.rem_addrlen;
 	bool_t using_connected_socket=(session->flags & RTCP_SOCKET_CONNECTED)!=0;
 
 	if (using_connected_socket) {
@@ -1002,10 +1000,10 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 	}
 
 	if (session->rtcp.enabled &&
-		( (sockfd!=(ortp_socket_t)-1 && (session->rtcp.rem_addrlen>0 ||using_connected_socket))
+		( (sockfd!=(ortp_socket_t)-1 && (session->rtcp.gs.rem_addrlen>0 ||using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) ){
 		if (rtp_session_using_transport(session, rtcp)){
-			error = (session->rtcp.tr->t_sendto) (session->rtcp.tr, m, 0,
+			error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0,
 			destaddr, destlen);
 		}
 		else{
@@ -1025,10 +1023,13 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 			if (session->on_network_error.count>0){
 				rtp_signal_table_emit3(&session->on_network_error,(long)"Error sending RTCP packet",INT_TO_POINTER(getSocketErrorCode()));
 			}else{
-				ortp_warning ("[%p] Error sending rtcp packet %p: %s ; socket=%i; addr=%s", session, m, getSocketError(), session->rtcp.socket, ortp_inet_ntoa((struct sockaddr*)&session->rtcp.rem_addr,session->rtcp.rem_addrlen,host,sizeof(host)) );
+				ortp_warning ("[%p] Error sending rtcp packet %p: %s ; socket=%i; addr=%s",
+					session, m, getSocketError(), session->rtcp.gs.socket, ortp_inet_ntoa((struct sockaddr*)&session->rtcp.gs.rem_addr,session->rtcp.gs.rem_addrlen,host,sizeof(host)) );
 			}
+		} else {
+			update_sent_bytes(&session->rtcp.gs, error);
 		}
-	}else ortp_message("Not sending rtcp report: sockfd=%i, rem_addrlen=%i, connected=%i",sockfd,session->rtcp.rem_addrlen,using_connected_socket);
+	}else ortp_message("Not sending rtcp report: sockfd=%i, rem_addrlen=%i, connected=%i",sockfd,session->rtcp.gs.rem_addrlen,using_connected_socket);
 	freemsg (m);
 	return error;
 }
@@ -1232,6 +1233,9 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		ortp_debug("Receiving rtcp packet with version number !=2...discarded");
 		return 0;
 	}
+
+	update_recv_bytes(&session->rtcp.gs, block->b_wptr - block->b_rptr);
+
 	/* compound rtcp packet can be composed by more than one rtcp message */
 	do{
 		struct timeval reception_date;
@@ -1301,23 +1305,23 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			/* In the case where use_connect is false, symmetric RTP is handled in rtp_session_rtp_parse() */
 			if (session->symmetric_rtp && !sock_connected){
 				/* store the sender RTP address to do symmetric RTP */
-				memcpy(&session->rtp.rem_addr,&remaddr,addrlen);
-				session->rtp.rem_addrlen=addrlen;
-				if (try_connect(session->rtp.socket,remaddr,addrlen))
+				memcpy(&session->rtp.gs.rem_addr,&remaddr,addrlen);
+				session->rtp.gs.rem_addrlen=addrlen;
+				if (try_connect(session->rtp.gs.socket,remaddr,addrlen))
 					session->flags|=RTP_SOCKET_CONNECTED;
 			}
 		}
 		/* then parse the message and put on jitter buffer queue */
-		update_recv_bytes(session,mp->b_wptr-mp->b_rptr);
+		update_recv_bytes(&session->rtp.gs, mp->b_wptr - mp->b_rptr);
 		rtp_session_rtp_parse(session, mp, user_ts, remaddr,addrlen);
 		/*for bandwidth measurements:*/
 	}else {
 		if (session->symmetric_rtp && !sock_connected){
 			/* store the sender RTP address to do symmetric RTP */
-			memcpy(&session->rtcp.rem_addr,remaddr,addrlen);
-			session->rtcp.rem_addrlen=addrlen;
+			memcpy(&session->rtcp.gs.rem_addr,remaddr,addrlen);
+			session->rtcp.gs.rem_addrlen=addrlen;
 			if (session->use_connect){
-				if (try_connect(session->rtcp.socket,remaddr,addrlen))
+				if (try_connect(session->rtcp.gs.socket,remaddr,addrlen))
 					session->flags|=RTCP_SOCKET_CONNECTED;
 			}
 		}
@@ -1339,7 +1343,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	int error;
-	ortp_socket_t sockfd=session->rtp.socket;
+	ortp_socket_t sockfd=session->rtp.gs.socket;
 	struct sockaddr_storage remaddr;
 
 	socklen_t addrlen = sizeof (remaddr);
@@ -1352,14 +1356,14 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 		bool_t is_rtp_packet = TRUE;
 
-		if (session->rtp.cached_mp==NULL){
-			 session->rtp.cached_mp = msgb_allocator_alloc(&session->allocator,session->recv_buf_size);
+		if (session->rtp.gs.cached_mp==NULL){
+			 session->rtp.gs.cached_mp = msgb_allocator_alloc(&session->allocator,session->recv_buf_size);
 		}
-		mp=session->rtp.cached_mp;
+		mp=session->rtp.gs.cached_mp;
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
-			error = (session->rtp.tr->t_recvfrom)(session->rtp.tr, mp, 0,
+			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0,
 				  (struct sockaddr *) &remaddr,
 				  &addrlen);
 		} else { error = rtp_session_rtp_recv_abstract(sockfd, mp, 0,
@@ -1377,7 +1381,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 			}
 			rtp_process_incoming_packet(session,mp,is_rtp_packet,user_ts);
 
-			session->rtp.cached_mp=NULL;
+			session->rtp.gs.cached_mp=NULL;
 		}
 		else
 		{
@@ -1391,7 +1395,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 				/*hack for iOS and non-working socket because of background mode*/
 				if (errnum==ENOTCONN){
 					/*re-create new sockets */
-					rtp_session_set_local_addr(session,session->rtp.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtp.loc_port,session->rtcp.loc_port);
+					rtp_session_set_local_addr(session,session->rtp.gs.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtp.gs.loc_port,session->rtcp.gs.loc_port);
 				}
 #endif
 			}else{
@@ -1416,29 +1420,29 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	socklen_t addrlen = sizeof (remaddr);
 	mblk_t *mp;
 
-	if (session->rtcp.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no RTCP sockets for the moment*/
+	if (session->rtcp.gs.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no RTCP sockets for the moment*/
 
 
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
 		bool_t is_rtp_packet = FALSE;
-		if (session->rtcp.cached_mp==NULL){
-			 session->rtcp.cached_mp = allocb (RTCP_MAX_RECV_BUFSIZE, 0);
+		if (session->rtcp.gs.cached_mp==NULL){
+			 session->rtcp.gs.cached_mp = allocb (RTCP_MAX_RECV_BUFSIZE, 0);
 		}
 
-		mp=session->rtcp.cached_mp;
+		mp=session->rtcp.gs.cached_mp;
 		if (sock_connected){
-			error=rtp_session_rtp_recv_abstract(session->rtcp.socket, mp, 0, NULL, NULL);
+			error=rtp_session_rtp_recv_abstract(session->rtcp.gs.socket, mp, 0, NULL, NULL);
 		}else{
 			addrlen=sizeof (remaddr);
 
 			if (rtp_session_using_transport(session, rtcp)){
-				error=(session->rtcp.tr->t_recvfrom)(session->rtcp.tr, mp, 0,
+				error=(session->rtcp.gs.tr->t_recvfrom)(session->rtcp.gs.tr, mp, 0,
 					(struct sockaddr *) &remaddr,
 					&addrlen);
 			}else{
-				error=rtp_session_rtp_recv_abstract (session->rtcp.socket,mp, 0,
+				error=rtp_session_rtp_recv_abstract (session->rtcp.gs.socket,mp, 0,
 					(struct sockaddr *) &remaddr,
 					&addrlen);
 			}
@@ -1453,7 +1457,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 			if (session->net_sim_ctx)
 				mp=rtp_session_network_simulate(session,mp,&is_rtp_packet);
 			rtp_process_incoming_packet(session,mp,is_rtp_packet,session->rtp.rcv_last_app_ts);
-			session->rtcp.cached_mp=NULL;
+			session->rtcp.gs.cached_mp=NULL;
 		}
 		else
 		{
@@ -1467,7 +1471,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 				/*hack for iOS and non-working socket because of background mode*/
 				if (errnum==ENOTCONN){
 					/*re-create new sockets */
-					rtp_session_set_local_addr(session,session->rtcp.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtcp.loc_port,session->rtcp.loc_port);
+					rtp_session_set_local_addr(session,session->rtcp.gs.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtcp.gs.loc_port,session->rtcp.gs.loc_port);
 				}
 #endif
 				session->rtp.recv_errno=errnum;

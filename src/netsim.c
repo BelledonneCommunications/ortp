@@ -57,9 +57,6 @@ static int64_t elapsed_us(struct timeval *tv1, struct timeval *tv2){
 	return ((tv2->tv_sec-tv1->tv_sec)*1000000LL)+((tv2->tv_usec-tv1->tv_usec));
 }
 
-#define IP_UDP_OVERHEAD (20+8)
-#define IP6_UDP_OVERHEAD (40+8)
-
 static mblk_t * simulate_latency(RtpSession *session, mblk_t *input){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
 	struct timeval current;
@@ -95,7 +92,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	int64_t elapsed;
 	int bits;
 	mblk_t *output=NULL;
-	int overhead=(session->rtp.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead=(session->rtp.gs.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 
 	ortp_gettimeofday(&current,NULL);
 

@@ -59,10 +59,10 @@ static int srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct socka
 		msgpullup(m,slen+SRTP_PAD_BYTES);
 		err=srtp_protect(srtp,m->b_rptr,&slen);
 		if (err==err_status_ok){
-			return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+			return sendto(t->session->rtp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
 		}
 		ortp_error("srtp_protect() failed (%d)", err);
-	}else return sendto(t->session->rtp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+	}else return sendto(t->session->rtp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
 	
 	return -1;
 }
@@ -95,7 +95,7 @@ static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr 
 	int err;
 	int slen;
 	
-	err=rtp_session_rtp_recv_abstract(t->session->rtp.socket,m,flags,from,fromlen);
+	err=rtp_session_rtp_recv_abstract(t->session->rtp.gs.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		/* keep NON-RTP data unencrypted */
@@ -129,7 +129,7 @@ static int srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sock
 	msgpullup(m,slen+SRTP_PAD_BYTES);
 	srtp_err=srtp_protect_rtcp(srtp,m->b_rptr,&slen);
 	if (srtp_err==err_status_ok){
-		return sendto(t->session->rtcp.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+		return sendto(t->session->rtcp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
 	}
 	ortp_error("srtp_protect_rtcp() failed (%d)", srtp_err);
 	return -1;
@@ -139,7 +139,7 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 	srtp_t srtp=(srtp_t)t->data;
 	int err;
 	int slen;
-	err=rtp_session_rtp_recv_abstract(t->session->rtcp.socket,m,flags,from,fromlen);
+	err=rtp_session_rtp_recv_abstract(t->session->rtcp.gs.socket,m,flags,from,fromlen);
 	if (err>0){
 		err_status_t srtp_err;
 		uint32_t new_ssrc;
@@ -170,13 +170,13 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 ortp_socket_t 
 srtp_getsocket(RtpTransport *t)
 {
-  return t->session->rtp.socket;
+  return t->session->rtp.gs.socket;
 }
 
 ortp_socket_t 
 srtcp_getsocket(RtpTransport *t)
 {
-  return t->session->rtcp.socket;
+  return t->session->rtcp.gs.socket;
 }
 
 /**

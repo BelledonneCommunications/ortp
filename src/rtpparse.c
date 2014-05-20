@@ -207,10 +207,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 				/* store the sender rtp address to do symmetric RTP */
 				if (!session->use_connect){
-					if (session->rtp.socket>0 && session->symmetric_rtp){
+					if (session->rtp.gs.socket>0 && session->symmetric_rtp){
 						/* store the sender rtp address to do symmetric RTP */
-						memcpy(&session->rtp.rem_addr,addr,addrlen);
-						session->rtp.rem_addrlen=addrlen;
+						memcpy(&session->rtp.gs.rem_addr,addr,addrlen);
+						session->rtp.gs.rem_addrlen=addrlen;
 					}
 				}
 				session->rtp.rcv_last_ts = rtp->timestamp;
@@ -234,10 +234,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		session->rcv.ssrc=rtp->ssrc;
 
 		if (!session->use_connect){
-			if (session->rtp.socket>0 && session->symmetric_rtp){
+			if (session->rtp.gs.socket>0 && session->symmetric_rtp){
 				/* store the sender rtp address to do symmetric RTP */
-				memcpy(&session->rtp.rem_addr,addr,addrlen);
-				session->rtp.rem_addrlen=addrlen;
+				memcpy(&session->rtp.gs.rem_addr,addr,addrlen);
+				session->rtp.gs.rem_addrlen=addrlen;
 			}
 		}
 	}
