@@ -290,6 +290,7 @@ struct _RtpSession
 	int inc_same_ssrc_count;
 	int hw_recv_pt; /* recv payload type before jitter buffer */
 	int recv_buf_size;
+	int target_upload_bandwidth; /* Target upload bandwidth at nework layer (with IP and UDP headers) in bits/s */
 	RtpSignalTable on_ssrc_changed;
 	RtpSignalTable on_payload_type_changed;
 	RtpSignalTable on_telephone_event_packet;
@@ -419,6 +420,8 @@ ORTP_PUBLIC void rtp_session_set_connected_mode(RtpSession *session, bool_t yesn
 ORTP_PUBLIC void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
 
 ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms);
+
+ORTP_PUBLIC void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth);
 
 ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config);
 ORTP_PUBLIC void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms);

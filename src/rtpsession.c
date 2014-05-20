@@ -435,6 +435,10 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms){
 	session->rtcp.interval=value_ms;
 }
 
+void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
+	session->target_upload_bandwidth = target_bandwidth;
+}
+
 void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config) {
 	if (config != NULL) {
 		session->rtcp.xr_conf = *config;
