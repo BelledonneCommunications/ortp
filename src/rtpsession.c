@@ -423,22 +423,8 @@ void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno){
  * Sets the default interval in milliseconds for RTCP reports emitted by the session
  *
 **/
-void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms){
-	int recvpt=rtp_session_get_recv_payload_type(session);
-	int sendpt=rtp_session_get_send_payload_type(session);
-	if (recvpt!=-1){
-		PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,recvpt);
-		if (pt!=NULL){
-			session->rtcp.rtcp_report_snt_interval_r=(value_ms*pt->clock_rate)/1000;
-		}
-	}
-	if (sendpt!=-1){
-		PayloadType *pt=rtp_profile_get_payload(session->snd.profile,sendpt);
-		if (pt!=NULL){
-			session->rtcp.rtcp_report_snt_interval_s=(value_ms*pt->clock_rate)/1000;
-		}
-	}
-	session->rtcp.interval=value_ms;
+void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
+	session->rtcp.interval = value_ms;
 }
 
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {

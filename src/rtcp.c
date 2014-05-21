@@ -972,8 +972,6 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 
 	if ((payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED)
 		&& ((st->snd_last_ts - rtcp_st->last_rtcp_fb_pli_snt) > 1000)) {
-		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
-		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
 		rtcp_st->last_rtcp_fb_pli_snt = st->snd_last_ts;
 		m = make_sr(session);
 		m_pli = rtp_session_create_rtcp_fb_pli(session);
@@ -989,13 +987,9 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 	mblk_t *m;
 	mblk_t *m_fir;
-	RtpStream *st = &session->rtp;
-	RtcpStream *rtcp_st = &session->rtcp;
 	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 
 	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
-		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
-		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
 		m = make_sr(session);
 		m_fir = rtp_session_create_rtcp_fb_fir(session);
 		concatb(m, m_fir);
@@ -1010,13 +1004,9 @@ void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
 	mblk_t *m;
 	mblk_t *m_sli;
-	RtpStream *st = &session->rtp;
-	RtcpStream *rtcp_st = &session->rtcp;
 	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 
 	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
-		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
-		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
 		m = make_sr(session);
 		m_sli = rtp_session_create_rtcp_fb_sli(session, first, number, picture_id);
 		concatb(m, m_sli);
@@ -1031,13 +1021,9 @@ void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t 
 void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	mblk_t *m;
 	mblk_t *m_rpsi;
-	RtpStream *st = &session->rtp;
-	RtcpStream *rtcp_st = &session->rtcp;
 	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 
 	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
-		rtcp_st->last_rtcp_report_snt_r = st->rcv_last_app_ts;
-		rtcp_st->last_rtcp_report_snt_s = st->snd_last_ts;
 		m = make_sr(session);
 		m_rpsi = rtp_session_create_rtcp_fb_rpsi(session, bit_string, bit_string_len);
 		concatb(m, m_rpsi);
