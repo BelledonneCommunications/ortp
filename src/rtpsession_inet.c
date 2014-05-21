@@ -1021,6 +1021,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 			}
 		} else {
 			update_sent_bytes(&session->rtcp.gs, error);
+			update_avg_rtcp_size(session, error);
 		}
 	}else ortp_message("Not sending rtcp report: sockfd=%i, rem_addrlen=%i, connected=%i",sockfd,session->rtcp.gs.rem_addrlen,using_connected_socket);
 	freemsg (m);
@@ -1324,6 +1325,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			that a message has been received*/
 			mblk_t * copy = copymsg(mp);
 			/* post an event to notify the application */
+			update_avg_rtcp_size(session, msgdsize(mp));
 			rtp_session_notify_inc_rtcp(session,mp);
 			/* reply to collaborative RTCP XR packets if needed. */
 			if (session->rtcp.xr_conf.enabled == TRUE){

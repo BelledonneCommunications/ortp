@@ -270,6 +270,12 @@ rtp_session_init (RtpSession * session, int mode)
 	qinit(&session->rtp.tev_rq);
 	qinit(&session->contributing_sources);
 	session->eventqs=NULL;
+
+	/* Initialize RTCP send algorithm */
+	session->rtcp.send_algo.initial = TRUE;
+	session->rtcp.send_algo.tp = 0;
+	session->rtcp.send_algo.tn = 0;
+
 	/* init signal tables */
 	rtp_signal_table_init (&session->on_ssrc_changed, session,"ssrc_changed");
 	rtp_signal_table_init (&session->on_payload_type_changed, session,"payload_type_changed");
@@ -437,6 +443,7 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms){
 
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
 	session->target_upload_bandwidth = target_bandwidth;
+	rtp_session_schedule_first_rtcp_send(session);
 }
 
 void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config) {
@@ -911,12 +918,11 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		session->rtp.snd_ts_offset = send_ts;
 		/* Set initial last_rcv_time to first send time. */
 		if ((session->flags & RTP_SESSION_RECV_NOT_STARTED)
-		|| session->mode == RTP_SESSION_SENDONLY)
-		{
-		ortp_gettimeofday(&session->last_recv_time, NULL);
+		|| session->mode == RTP_SESSION_SENDONLY) {
+			rtp_session_schedule_first_rtcp_send(session);
+			ortp_gettimeofday(&session->last_recv_time, NULL);
 		}
-		if (session->flags & RTP_SESSION_SCHEDULED)
-		{
+		if (session->flags & RTP_SESSION_SCHEDULED) {
 			session->rtp.snd_time_offset = sched->time_;
 		}
 		rtp_session_unset_flag (session,RTP_SESSION_SEND_NOT_STARTED);
@@ -1113,11 +1119,11 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		session->rtp.rcv_query_ts_offset = user_ts;
 		/* Set initial last_rcv_time to first recv time. */
 		if ((session->flags & RTP_SESSION_SEND_NOT_STARTED)
-		|| session->mode == RTP_SESSION_RECVONLY){
+		|| session->mode == RTP_SESSION_RECVONLY) {
+			rtp_session_schedule_first_rtcp_send(session);
 			ortp_gettimeofday(&session->last_recv_time, NULL);
 		}
-		if (session->flags & RTP_SESSION_SCHEDULED)
-		{
+		if (session->flags & RTP_SESSION_SCHEDULED) {
 			session->rtp.rcv_time_offset = sched->time_;
 			//ortp_message("setting snd_time_offset=%i",session->rtp.snd_time_offset);
 		}

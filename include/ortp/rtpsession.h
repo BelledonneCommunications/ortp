@@ -116,6 +116,14 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	struct timeval last_check;
 }OrtpNetworkSimulatorCtx;
 
+typedef struct OrtpRtcpSendAlgorithm {
+	uint32_t tn; /* Time of the next scheduled RTCP RR transmission in send timestamp unit. */
+	uint32_t tp; /* Time of the last scheduled RTCP RR transmission in send timestamp unit. */
+	float avg_rtcp_size;
+	bool_t initialized; /* Whether the RTCP send algorithm is fully initialized. */
+	bool_t initial;
+} OrtpRtcpSendAlgorithm;
+
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
 
 typedef enum {
@@ -243,14 +251,15 @@ typedef struct _RtpStream
 typedef struct _RtcpStream
 {
 	OrtpStream gs;
+	OrtpRtcpSendAlgorithm send_algo;
+	OrtpRtcpXrConfiguration xr_conf;
+	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
 	int interval;
+	bool_t enabled; /*tells whether we can send RTCP packets */
 	uint32_t last_rtcp_report_snt_r;	/* the time of the last rtcp report sent, in recv timestamp unit */
 	uint32_t last_rtcp_report_snt_s;	/* the time of the last rtcp report sent, in send timestamp unit */
 	uint32_t rtcp_report_snt_interval_r; /* the interval in timestamp unit for receive path between rtcp report sent */
 	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
-	bool_t enabled; /*tells whether we can send RTCP packets */
-	OrtpRtcpXrConfiguration xr_conf;
-	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
 	uint32_t last_rtcp_xr_rcvr_rtt_s;	/* The time of the last RTCP XR rcvr rtt packet sent, in send timestamp unit */
 	uint32_t last_rtcp_xr_stat_summary_s;	/* The time of the last RTCP XR stat summary packet sent, in send timestamp unit */
 	uint32_t last_rtcp_xr_voip_metrics_s;	/* The time of the last RTCP XR voip metrics packet sent, in send timestamp unit */
