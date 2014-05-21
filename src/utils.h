@@ -28,6 +28,7 @@
 #define UTILS_H
 
 #include "ortp/event.h"
+#include "ortp/rtpsession.h"
 
 struct _OList {
 	struct _OList *next;
@@ -80,5 +81,7 @@ typedef union{
 void ortp_ev_queue_put(OrtpEvQueue *q, OrtpEvent *ev);
 
 uint64_t ortp_timeval_to_ntp(const struct timeval *tv);
+
+bool_t ortp_stream_is_ipv6(OrtpStream *os);
 
 #endif

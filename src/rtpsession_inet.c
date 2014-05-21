@@ -909,16 +909,8 @@ static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_l
 #endif
 
 
-static bool_t is_ipv6(OrtpStream *os) {
-	if (os->sockfamily == AF_INET6) {
-		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)&os->rem_addr;
-		return !IN6_IS_ADDR_V4MAPPED(&in6->sin6_addr);
-	}
-	return FALSE;
-}
-
 static void update_sent_bytes(OrtpStream *os, int nbytes) {
-	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if ((os->sent_bytes == 0) && (os->send_bw_start.tv_sec == 0) && (os->send_bw_start.tv_usec == 0)) {
 		/* Initialize bandwidth computing time when has not been started yet. */
 		ortp_gettimeofday(&os->send_bw_start, NULL);
@@ -927,7 +919,7 @@ static void update_sent_bytes(OrtpStream *os, int nbytes) {
 }
 
 static void update_recv_bytes(OrtpStream *os, int nbytes) {
-	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if (os->recv_bytes == 0) {
 		ortp_gettimeofday(&os->recv_bw_start, NULL);
 	}
