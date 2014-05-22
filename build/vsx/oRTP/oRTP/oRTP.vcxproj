@@ -205,6 +205,8 @@
     <ClCompile Include="..\..\..\..\src\port.c" />
     <ClCompile Include="..\..\..\..\src\posixtimer.c" />
     <ClCompile Include="..\..\..\..\src\rtcp.c" />
+    <ClCompile Include="..\..\..\..\src\rtcp_fb.c" />
+    <ClCompile Include="..\..\..\..\src\rtcp_xr.c" />
     <ClCompile Include="..\..\..\..\src\rtcpparse.c" />
     <ClCompile Include="..\..\..\..\src\rtpparse.c" />
     <ClCompile Include="..\..\..\..\src\rtpprofile.c" />

@@ -1277,7 +1277,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 
 static void reply_to_collaborative_rtcp_xr_packet(RtpSession *session, mblk_t *block) {
 	if (rtcp_is_XR(block) && (rtcp_XR_get_block_type(block) == RTCP_XR_RCVR_RTT)) {
-		rtp_session_send_rtcp_xr_dlrr(session);
+		session->rtcp.rtcp_xr_dlrr_to_send = TRUE;
 	}
 }
 
@@ -1325,7 +1325,6 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			that a message has been received*/
 			mblk_t * copy = copymsg(mp);
 			/* post an event to notify the application */
-			update_avg_rtcp_size(session, msgdsize(mp));
 			rtp_session_notify_inc_rtcp(session,mp);
 			/* reply to collaborative RTCP XR packets if needed. */
 			if (session->rtcp.xr_conf.enabled == TRUE){

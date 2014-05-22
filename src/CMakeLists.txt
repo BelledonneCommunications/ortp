@@ -11,6 +11,8 @@ set(SOURCE_FILES
 	port.c
 	posixtimer.c
 	rtcp.c
+	rtcp_fb.c
+	rtcp_xr.c
 	rtcpparse.c
 	rtpparse.c
 	rtpprofile.c

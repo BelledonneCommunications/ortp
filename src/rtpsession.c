@@ -40,20 +40,12 @@
 #endif
 #endif
 
-extern mblk_t *rtcp_create_simple_bye_packet(uint32_t ssrc, const char *reason);
-extern int rtcp_sr_init(RtpSession *session, char *buf, int size);
-extern int rtcp_rr_init(RtpSession *session, char *buf, int size);
-
 
 
 /* this function initialize all session parameter's that depend on the payload type */
 static void payload_type_changed(RtpSession *session, PayloadType *pt){
 	jitter_control_set_payload(&session->rtp.jittctl,pt);
 	rtp_session_set_time_jump_limit(session,session->rtp.time_jump);
-	rtp_session_set_rtcp_report_interval(session,session->rtcp.interval);
-	rtp_session_set_rtcp_xr_rcvr_rtt_interval(session, session->rtcp.rtcp_xr_rcvr_rtt_interval_ms);
-	rtp_session_set_rtcp_xr_stat_summary_interval(session, session->rtcp.rtcp_xr_stat_summary_interval_ms);
-	rtp_session_set_rtcp_xr_voip_metrics_interval(session, session->rtcp.rtcp_xr_voip_metrics_interval_ms);
 	if (pt->type==PAYLOAD_VIDEO){
 		session->permissive=TRUE;
 		ortp_message("Using permissive algorithm");
@@ -430,43 +422,6 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
 	session->target_upload_bandwidth = target_bandwidth;
 	rtp_session_schedule_first_rtcp_send(session);
-}
-
-void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config) {
-	if (config != NULL) {
-		session->rtcp.xr_conf = *config;
-	}
-}
-
-static void set_rtcp_xr_interval(RtpSession *session, uint32_t *interval, int *interval_ms, int value_ms) {
-	int sendpt = rtp_session_get_send_payload_type(session);
-	if (sendpt != -1) {
-		PayloadType *pt = rtp_profile_get_payload(session->snd.profile, sendpt);
-		if (pt != NULL){
-			*interval_ms = value_ms;
-			*interval = (value_ms * pt->clock_rate) / 1000;
-		}
-	}
-}
-
-void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms) {
-	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_rcvr_rtt_interval, &session->rtcp.rtcp_xr_rcvr_rtt_interval_ms, value_ms);
-}
-
-void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms) {
-	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_stat_summary_interval, &session->rtcp.rtcp_xr_stat_summary_interval_ms, value_ms);
-}
-
-void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms) {
-	set_rtcp_xr_interval(session, &session->rtcp.rtcp_xr_voip_metrics_interval, &session->rtcp.rtcp_xr_voip_metrics_interval_ms, value_ms);
-}
-
-void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, const OrtpRtcpXrMediaCallbacks *cbs) {
-	if (cbs != NULL) {
-		memcpy(&session->rtcp.xr_media_callbacks, cbs, sizeof(session->rtcp.xr_media_callbacks));
-	} else {
-		memset(&session->rtcp.xr_media_callbacks, 0, sizeof(session->rtcp.xr_media_callbacks));
-	}
 }
 
 /**
@@ -967,7 +922,7 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 
 	error = rtp_session_rtp_send (session, mp);
 	/*send RTCP packet if needed */
-	rtp_session_rtcp_process_send(session);
+	rtp_session_run_rtcp_send_scheduler(session);
 	/* receives rtcp packet if session is send-only*/
 	/*otherwise it is done in rtp_session_recvm_with_ts */
 	if (session->mode==RTP_SESSION_SENDONLY) rtp_session_rtcp_recv(session);
@@ -1209,7 +1164,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	{
 		ortp_debug ("No mp for timestamp queried");
 	}
-	rtp_session_rtcp_process_recv(session);
+	rtp_session_run_rtcp_send_scheduler(session);
 	
 	if (session->flags & RTP_SESSION_SCHEDULED)
 	{
