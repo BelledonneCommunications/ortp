@@ -24,7 +24,35 @@
 #include "rtpsession_priv.h"
 
 
-static mblk_t * rtp_session_create_rtcp_fb_pli(RtpSession *session) {
+static void rtp_session_add_fb_packet_to_send(RtpSession *session, mblk_t *m) {
+	if (session->rtcp.send_algo.fb_packets == NULL) {
+		session->rtcp.send_algo.fb_packets = m;
+	} else {
+		concatb(session->rtcp.send_algo.fb_packets, m);
+	}
+}
+
+static bool_t is_fb_packet_to_be_sent_immediately(RtpSession *session) {
+	uint64_t t0;
+
+	if (rtp_session_has_fb_packets_to_send(session) == TRUE)
+		return FALSE;
+	t0 = ortp_get_cur_time_ms();
+	if (t0 > session->rtcp.send_algo.tn)
+		return FALSE;
+	if (session->rtcp.send_algo.allow_early == FALSE) {
+		if ((session->rtcp.send_algo.tn - t0) >= session->rtcp.send_algo.T_max_fb_delay) {
+			/* Discard message as it is considered that it will not be useful to the sender
+			   at the time it will receive it. */
+			freemsg(session->rtcp.send_algo.fb_packets);
+			session->rtcp.send_algo.fb_packets = NULL;
+		}
+		return FALSE;
+	}
+	return TRUE;
+}
+
+static mblk_t * make_rtcp_fb_pli(RtpSession *session) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t);
 	mblk_t *h= allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -44,7 +72,7 @@ static mblk_t * rtp_session_create_rtcp_fb_pli(RtpSession *session) {
 	return h;
 }
 
-static mblk_t * rtp_session_create_rtcp_fb_fir(RtpSession *session) {
+static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_fir_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -71,7 +99,7 @@ static mblk_t * rtp_session_create_rtcp_fb_fir(RtpSession *session) {
 	return h;
 }
 
-static mblk_t * rtp_session_create_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
+static mblk_t * make_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_sli_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -97,7 +125,7 @@ static mblk_t * rtp_session_create_rtcp_fb_sli(RtpSession *session, uint16_t fir
 	return h;
 }
 
-static mblk_t * rtp_session_create_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
+static mblk_t * make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	uint16_t bit_string_len_in_bytes;
 	int additional_bytes;
 	int size;
@@ -144,72 +172,53 @@ static mblk_t * rtp_session_create_rtcp_fb_rpsi(RtpSession *session, uint8_t *bi
 
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	mblk_t *m;
-	mblk_t *m_pli;
-	RtpStream *st = &session->rtp;
-	RtcpStream *rtcp_st = &session->rtcp;
-	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
-
-	if ((payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED)
-		&& ((st->snd_last_ts - rtcp_st->last_rtcp_fb_pli_snt) > 1000)) {
-		rtcp_st->last_rtcp_fb_pli_snt = st->snd_last_ts;
-		m = NULL; //make_sr(session);
-		m_pli = rtp_session_create_rtcp_fb_pli(session);
-		concatb(m, m_pli);
-
-		/* send the compound packet */
-		//notify_sent_rtcp(session, m);
-		ortp_message("Sending RTCP SR compound message with PLI on session [%p]", session);
-		rtp_session_rtcp_send(session, m);
+	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		m = make_rtcp_fb_pli(session);
+		rtp_session_add_fb_packet_to_send(session, m);
+		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+		}
 	}
 }
 
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 	mblk_t *m;
-	mblk_t *m_fir;
-	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
-
-	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
-		m = NULL; //make_sr(session);
-		m_fir = rtp_session_create_rtcp_fb_fir(session);
-		concatb(m, m_fir);
-
-		/* send the compound packet */
-		//notify_sent_rtcp(session, m);
-		ortp_message("Sending RTCP SR compound message with FIR on session [%p]", session);
-		rtp_session_rtcp_send(session, m);
+	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		m = make_rtcp_fb_fir(session);
+		rtp_session_add_fb_packet_to_send(session, m);
+		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+		}
 	}
 }
 
 void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
 	mblk_t *m;
-	mblk_t *m_sli;
-	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
-
-	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
-		m = NULL; //make_sr(session);
-		m_sli = rtp_session_create_rtcp_fb_sli(session, first, number, picture_id);
-		concatb(m, m_sli);
-
-		/* send the compound packet */
-		//notify_sent_rtcp(session, m);
-		ortp_message("Sending RTCP SR compound message with SLI on session [%p]", session);
-		rtp_session_rtcp_send(session, m);
+	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		m = make_rtcp_fb_sli(session, first, number, picture_id);
+		rtp_session_add_fb_packet_to_send(session, m);
+		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+		}
 	}
 }
 
 void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	mblk_t *m;
-	mblk_t *m_rpsi;
-	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
-
-	if (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) {
-		m = NULL; //make_sr(session);
-		m_rpsi = rtp_session_create_rtcp_fb_rpsi(session, bit_string, bit_string_len);
-		concatb(m, m_rpsi);
-
-		/* send the compound packet */
-		//notify_sent_rtcp(session, m);
-		ortp_message("Sending RTCP SR compound message with RPSI on session [%p]", session);
-		rtp_session_rtcp_send(session, m);
+	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		m = make_rtcp_fb_rpsi(session, bit_string, bit_string_len);
+		rtp_session_add_fb_packet_to_send(session, m);
+		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+		}
 	}
+}
+
+bool_t rtp_session_is_avpf_enabled(RtpSession *session) {
+	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
+	return (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) ? TRUE : FALSE;
+}
+
+bool_t rtp_session_has_fb_packets_to_send(RtpSession *session) {
+	return (session->rtcp.send_algo.fb_packets == NULL) ? FALSE : TRUE;
 }

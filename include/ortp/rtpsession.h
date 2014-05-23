@@ -117,11 +117,19 @@ typedef struct _OrtpNetworkSimulatorCtx{
 }OrtpNetworkSimulatorCtx;
 
 typedef struct OrtpRtcpSendAlgorithm {
-	uint32_t tn; /* Time of the next scheduled RTCP RR transmission in send timestamp unit. */
-	uint32_t tp; /* Time of the last scheduled RTCP RR transmission in send timestamp unit. */
+	uint64_t tn; /* Time of the next scheduled RTCP RR transmission in milliseconds. */
+	uint64_t tp; /* Time of the last scheduled RTCP RR transmission in milliseconds. */
+	uint64_t t_rr_last; /* Time of the last regular RTCP packet sent in milliseconds. */
+	uint32_t T_rr; /* Interval for the scheduling of the next regular RTCP packet. */
+	uint32_t T_max_fb_delay; /* Interval within which a feeback message is considered to be useful to the sender. */
+	uint32_t T_rr_interval; /* Minimal interval to be used between regular RTCP packets. */
+	uint32_t T_rr_current_interval;
+	uint32_t Tmin; /* Minimal interval between RTCP packets. */
 	float avg_rtcp_size;
+	mblk_t *fb_packets;
 	bool_t initialized; /* Whether the RTCP send algorithm is fully initialized. */
 	bool_t initial;
+	bool_t allow_early;
 } OrtpRtcpSendAlgorithm;
 
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
@@ -254,7 +262,6 @@ typedef struct _RtcpStream
 	OrtpRtcpSendAlgorithm send_algo;
 	OrtpRtcpXrConfiguration xr_conf;
 	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
-	int interval;
 	bool_t enabled; /*tells whether we can send RTCP packets */
 	bool_t rtcp_xr_dlrr_to_send;
 	uint8_t rtcp_fb_fir_seq_nr;	/* The FIR command sequence number */

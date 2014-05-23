@@ -265,8 +265,7 @@ rtp_session_init (RtpSession * session, int mode)
 
 	/* Initialize RTCP send algorithm */
 	session->rtcp.send_algo.initial = TRUE;
-	session->rtcp.send_algo.tp = 0;
-	session->rtcp.send_algo.tn = 0;
+	session->rtcp.send_algo.allow_early = TRUE;
 
 	/* init signal tables */
 	rtp_signal_table_init (&session->on_ssrc_changed, session,"ssrc_changed");
@@ -416,12 +415,12 @@ void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno){
  *
 **/
 void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
-	session->rtcp.interval = value_ms;
+	if (value_ms <= 0) session->rtcp.send_algo.T_rr_interval = 0;
+	else session->rtcp.send_algo.T_rr_interval = (uint32_t)value_ms;
 }
 
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
 	session->target_upload_bandwidth = target_bandwidth;
-	rtp_session_schedule_first_rtcp_send(session);
 }
 
 /**
@@ -860,7 +859,6 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		/* Set initial last_rcv_time to first send time. */
 		if ((session->flags & RTP_SESSION_RECV_NOT_STARTED)
 		|| session->mode == RTP_SESSION_SENDONLY) {
-			rtp_session_schedule_first_rtcp_send(session);
 			ortp_gettimeofday(&session->last_recv_time, NULL);
 		}
 		if (session->flags & RTP_SESSION_SCHEDULED) {
@@ -1061,7 +1059,6 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		/* Set initial last_rcv_time to first recv time. */
 		if ((session->flags & RTP_SESSION_SEND_NOT_STARTED)
 		|| session->mode == RTP_SESSION_RECVONLY) {
-			rtp_session_schedule_first_rtcp_send(session);
 			ortp_gettimeofday(&session->last_recv_time, NULL);
 		}
 		if (session->flags & RTP_SESSION_SCHEDULED) {

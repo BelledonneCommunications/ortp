@@ -398,6 +398,13 @@ static void append_xr_packets(RtpSession *session, mblk_t *m) {
 	}
 }
 
+static void append_fb_packets(RtpSession *session, mblk_t *m) {
+	if (session->rtcp.send_algo.fb_packets != NULL) {
+		concatb(m, session->rtcp.send_algo.fb_packets);
+		session->rtcp.send_algo.fb_packets = NULL;
+	}
+}
+
 static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t full) {
 	mblk_t *m;
 	bool_t is_sr = FALSE;
@@ -416,6 +423,9 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 		if ((full == TRUE) && (session->rtcp.xr_conf.enabled == TRUE)) {
 			append_xr_packets(session, m);
 		}
+		if (rtp_session_is_avpf_enabled(session) == TRUE) {
+			append_fb_packets(session, m);
+		}
 		/* Send the compound packet */
 		notify_sent_rtcp(session, m);
 		ortp_message("Sending RTCP %s compound message on session [%p].",(is_sr ? "SR" : "RR"), session);
@@ -423,47 +433,55 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 	}
 }
 
+static float rtcp_rand(float t) {
+	return t * ((rand() / (RAND_MAX + 1.0)) + 0.5);
+}
+
 /**
  * This is a simplified version with this limit of the algorithm described in
  * the appendix A.7 of RFC3550.
  */
-uint64_t compute_rtcp_interval(RtpSession *session) {
+void compute_rtcp_interval(RtpSession *session) {
 	float t;
-	float rtcp_min_time = session->rtcp.interval;
+	float rtcp_min_time;
 	float rtcp_bw;
 
-	if (session->target_upload_bandwidth == 0) return 0;
+	if (session->target_upload_bandwidth == 0) return;
 
 	/* Compute target RTCP bandwidth in bits/s. */
 	rtcp_bw = 0.05f * session->target_upload_bandwidth;
 
-	if (session->rtcp.send_algo.initial == TRUE) {
-		rtcp_min_time /= 2;
+	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		rtcp_min_time = session->rtcp.send_algo.Tmin;
+	} else {
+		rtcp_min_time = session->rtcp.send_algo.T_rr_interval;
+		if (session->rtcp.send_algo.initial == TRUE) {
+			rtcp_min_time /= 2.;
+		}
 	}
 
 	t = ((session->rtcp.send_algo.avg_rtcp_size * 8 * 2) / rtcp_bw) * 1000;
 	if (t < rtcp_min_time) t = rtcp_min_time;
-	t = t * ((rand() / (RAND_MAX + 1.0)) + 0.5);
+	t = rtcp_rand(t);
 	t = t / (2.71828 - 1.5); /* Compensation */
-	return (uint64_t)t;
+	session->rtcp.send_algo.T_rr = (uint32_t)t;
 }
 
 void update_avg_rtcp_size(RtpSession *session, int bytes) {
 	int overhead = (ortp_stream_is_ipv6(&session->rtcp.gs) == TRUE) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	int size = bytes + overhead;
-	session->rtcp.send_algo.avg_rtcp_size = (size / 16.)
-		+ ((15 * session->rtcp.send_algo.avg_rtcp_size) / 16.);
+	session->rtcp.send_algo.avg_rtcp_size = ((size + (15 * session->rtcp.send_algo.avg_rtcp_size)) / 16.);
 }
 
-void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
+static void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
 	uint64_t tc;
-	uint64_t interval;
 	size_t overhead;
 	size_t report_size;
 	size_t sdes_size;
 	size_t xr_size = 0;
+	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
 
-	if ((session->rtcp.enabled == FALSE) || (session->target_upload_bandwidth == 0) || (session->rtcp.send_algo.initialized == TRUE))
+	if ((session->rtcp.enabled == FALSE) || (session->target_upload_bandwidth == 0) || (sa->initialized == TRUE))
 		return;
 
 	overhead = (ortp_stream_is_ipv6(&session->rtcp.gs) == TRUE) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
@@ -488,27 +506,69 @@ void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
 		if (session->rtcp.xr_conf.voip_metrics_enabled == TRUE)
 			xr_size += sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_voip_metrics_report_block_t);
 	}
-	session->rtcp.send_algo.avg_rtcp_size = (float)(overhead + report_size + sdes_size + xr_size);
-	session->rtcp.send_algo.initialized = TRUE;
+	sa->avg_rtcp_size = (float)(overhead + report_size + sdes_size + xr_size);
+	sa->initialized = TRUE;
 
 	tc = ortp_get_cur_time_ms();
-	interval = compute_rtcp_interval(session);
-	if (interval > 0) session->rtcp.send_algo.tn = tc + interval;
+	compute_rtcp_interval(session);
+	if (sa->T_rr > 0) sa->tn = tc + sa->T_rr;
+	sa->tp = tc;
+	sa->t_rr_last = tc;
+	sa->Tmin = 0;
+}
+
+static void rtp_session_reschedule(RtpSession *session, uint64_t tc) {
+	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
+	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		sa->tp = tc;
+		sa->tn = tc + sa->T_rr;
+	}
+}
+
+void rtp_session_send_regular_rtcp_packet_and_reschedule(RtpSession *session, uint64_t tc) {
+	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
+	rtp_session_create_and_send_rtcp_packet(session, TRUE);
+	sa->tp = tc;
+	sa->t_rr_last = sa->tn;
+	compute_rtcp_interval(session);
+	sa->tn = tc + sa->T_rr;
+	sa->initial = FALSE;
+}
+
+void rtp_session_send_fb_rtcp_packet_and_reschedule(RtpSession *session) {
+	uint64_t previous_tn;
+	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
+	rtp_session_create_and_send_rtcp_packet(session, FALSE);
+	sa->allow_early = FALSE;
+	previous_tn = sa->tn;
+	sa->tn = sa->tp + 2 * sa->T_rr;
+	sa->tp = previous_tn;
 }
 
 void rtp_session_run_rtcp_send_scheduler(RtpSession *session) {
-	uint64_t interval;
 	uint64_t tc = ortp_get_cur_time_ms();
+	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
 
-	if ((session->rtcp.send_algo.tn != 0) && (tc >= session->rtcp.send_algo.tn)) {
-		interval = compute_rtcp_interval(session);
-		session->rtcp.send_algo.tn = session->rtcp.send_algo.tp + interval;
-		if (session->rtcp.send_algo.tn <= tc) {
-			rtp_session_create_and_send_rtcp_packet(session, TRUE);
-			session->rtcp.send_algo.tp = tc;
-			interval = compute_rtcp_interval(session);
-			session->rtcp.send_algo.tn = tc + interval;
-			session->rtcp.send_algo.initial = FALSE;
+	if (tc >= sa->tn) {
+		compute_rtcp_interval(session);
+		sa->tn = sa->tp + sa->T_rr;
+		if (tc >= sa->tn) {
+			if (sa->t_rr_last == 0) {
+				rtp_session_schedule_first_rtcp_send(session);
+			} else {
+				if (sa->T_rr_interval != 0) {
+					sa->T_rr_current_interval = (uint32_t)rtcp_rand((float)sa->T_rr_interval);
+				} else {
+					sa->T_rr_current_interval = 0;
+				}
+				if (sa->tn >= (sa->t_rr_last + sa->T_rr_current_interval)) {
+					rtp_session_send_regular_rtcp_packet_and_reschedule(session, tc);
+				} else if (rtp_session_has_fb_packets_to_send(session) == TRUE) {
+					rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+				} else {
+					rtp_session_reschedule(session, tc);
+				}
+			}
 		}
 	}
 }
