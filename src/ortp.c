@@ -60,7 +60,7 @@ static bool_t win32_init_sockets(void){
 	WORD wVersionRequested;
 	WSADATA wsaData;
 	int i;
-	
+
 	wVersionRequested = MAKEWORD(2,0);
 	if( (i = WSAStartup(wVersionRequested,  &wsaData))!=0)
 	{
@@ -99,7 +99,7 @@ void ortp_init()
 /**
  *	Initialize the oRTP scheduler. You only have to do that if you intend to use the
  *	scheduled mode of the #RtpSession in your application.
- *	
+ *
 **/
 void ortp_scheduler_init()
 {
@@ -108,7 +108,7 @@ void ortp_scheduler_init()
 	initialized=TRUE;
 #ifdef __hpux
 	/* on hpux, we must block sigalrm on the main process, because signal delivery
-	is ?random?, well, sometimes the SIGALRM goes to both the main thread and the 
+	is ?random?, well, sometimes the SIGALRM goes to both the main thread and the
 	scheduler thread */
 	sigset_t set;
 	sigemptyset(&set);
@@ -124,7 +124,7 @@ void ortp_scheduler_init()
 
 /**
  * Gracefully uninitialize the library, including shutdowning the scheduler if it was started.
- *	
+ *
 **/
 void ortp_exit()
 {
@@ -155,7 +155,7 @@ RtpScheduler * ortp_get_scheduler()
 void ortp_global_stats_display()
 {
 	rtp_stats_display(&ortp_global_stats,"Global statistics");
-#ifdef ENABLE_MEMCHECK	
+#ifdef ENABLE_MEMCHECK
 	printf("Unfreed allocations: %i\n",ortp_allocations);
 #endif
 }
@@ -163,9 +163,9 @@ void ortp_global_stats_display()
 /**
  * Print RTP statistics.
 **/
-void rtp_stats_display(const rtp_stats_t *stats, const char *header) { 
+void rtp_stats_display(const rtp_stats_t *stats, const char *header) {
 	ortp_log(ORTP_MESSAGE, "===========================================================");
-	ortp_log(ORTP_MESSAGE, "%s", header);                
+	ortp_log(ORTP_MESSAGE, "%s", header);
 	ortp_log(ORTP_MESSAGE, "-----------------------------------------------------------");
 	ortp_log(ORTP_MESSAGE, "sent                          %20"PRId64" packets", stats->packet_sent);
 	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->sent);
@@ -173,9 +173,10 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header) {
 	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->hw_recv);
 	ortp_log(ORTP_MESSAGE, "incoming delivered to the app %20"PRId64" bytes  ", stats->recv);
 	ortp_log(ORTP_MESSAGE, "lost                          %20"PRId64" packets", stats->cum_packet_loss);
-	ortp_log(ORTP_MESSAGE, "received too late             %20"PRId64" packets", stats->outoftime);        
+	ortp_log(ORTP_MESSAGE, "received too late             %20"PRId64" packets", stats->outoftime);
 	ortp_log(ORTP_MESSAGE, "bad formatted                 %20"PRId64" packets", stats->bad);
-	ortp_log(ORTP_MESSAGE, "discarded (queue overflow)    %20"PRId64" packets", stats->discarded);       
+	ortp_log(ORTP_MESSAGE, "discarded (queue overflow)    %20"PRId64" packets", stats->discarded);
+	ortp_log(ORTP_MESSAGE, "duplicated                    %20"PRId64" packets", stats->duplicated);
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 }
 
@@ -199,6 +200,6 @@ void rtp_stats_reset(rtp_stats_t *stats){
  * Returns: true if ortp has a version number greater or equal than the required one.
 **/
 bool_t ortp_min_version_required(int major, int minor, int micro){
-	return ((major*1000000) + (minor*1000) + micro) <= 
+	return ((major*1000000) + (minor*1000) + micro) <=
 		   ((ORTP_MAJOR_VERSION*1000000) + (ORTP_MINOR_VERSION*1000) + ORTP_MICRO_VERSION);
 }

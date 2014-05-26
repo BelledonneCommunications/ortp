@@ -111,7 +111,7 @@ typedef struct report_block
 #define report_block_get_fraction_lost(rb) \
 	(((uint32_t)ntohl((rb)->fl_cnpl))>>24)
 #define report_block_get_cum_packet_loss(rb) \
-	(((uint32_t)ntohl((rb)->fl_cnpl)) & 0xFFFFFF)
+	(((uint32_t)ntohl(rb->fl_cnpl)) & 0xFFFFFF) + ((ntohl(rb->fl_cnpl)>>23&1) ? -0xFFFFFF-1 : 0)
 #define report_block_get_high_ext_seq(rb) \
 	ntohl(((report_block_t*)(rb))->ext_high_seq_num_rec)
 #define report_block_get_interarrival_jitter(rb) \
@@ -169,7 +169,7 @@ typedef struct rtcp_bye_reason
 	uint8_t len;
 	char content[1];
 } rtcp_bye_reason_t;
- 
+
 typedef struct rtcp_bye
 {
 	rtcp_common_header_t ch;
@@ -389,7 +389,7 @@ ORTP_PUBLIC bool_t rtcp_is_APP(const mblk_t *m);
 ORTP_PUBLIC int rtcp_APP_get_subtype(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_APP_get_ssrc(const mblk_t *m);
 /* name argument is supposed to be at least 4 characters (note: no '\0' written)*/
-ORTP_PUBLIC void rtcp_APP_get_name(const mblk_t *m, char *name); 
+ORTP_PUBLIC void rtcp_APP_get_name(const mblk_t *m, char *name);
 /* retrieve the data. when returning, data points directly into the mblk_t */
 ORTP_PUBLIC void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len);
 

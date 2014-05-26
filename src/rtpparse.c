@@ -127,7 +127,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	int msgsize;
 	RtpStream *rtpstream=&session->rtp;
 	rtp_stats_t *stats=&rtpstream->stats;
-	
+
 	msgsize=mp->b_wptr-mp->b_rptr;
 
 	if (msgsize<RTP_FIXED_HEADER_SIZE){
@@ -241,7 +241,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			}
 		}
 	}
-	
+
 	/* update some statistics */
 	{
 		poly32_t *extseq=(poly32_t*)&rtpstream->hwrcv_extseq;
@@ -254,23 +254,25 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		}
 		/* the first sequence number received should be initialized at the beginning, so that the first receiver reports contains valid loss rate*/
 		if (stats->packet_recv==1){
-			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number;
-			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number;
+			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number-1;
+			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number-1;
 			session->rtcp_xr_stats.first_rcv_seq = extseq->one;
 		}
 		session->rtcp_xr_stats.last_rcv_seq = extseq->one;
 	}
-	
+
 	/* check for possible telephone events */
 	if (rtp->paytype==session->rcv.telephone_events_pt){
 		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
 		stats->discarded+=discarded;
 		ortp_global_stats.discarded+=discarded;
+		stats->duplicated+=duplicate;
+		ortp_global_stats.duplicated+=duplicate;
 		session->rtcp_xr_stats.discarded_count += discarded;
 		session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 		return;
 	}
-	
+
 	/* check for possible payload type change, in order to update accordingly our clock-rate dependant
 	parameters */
 	if (session->hw_recv_pt!=rtp->paytype){
@@ -292,7 +294,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			/* Call timstamp jumb in case of
 			 * large negative Ts jump or if ts is set to 0
 			*/
-			
+
 			if ( RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts, rtp->timestamp + session->rtp.ts_jump) ){
 				ortp_warning("rtp_parse: negative timestamp jump");
 				rtp_signal_table_emit2(&session->on_timestamp_jump,
@@ -306,11 +308,13 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			return;
 		}
 	}
-	
+
 	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate))
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
 	stats->discarded+=discarded;
 	ortp_global_stats.discarded+=discarded;
+	stats->duplicated+=duplicate;
+	ortp_global_stats.duplicated+=duplicate;
 	session->rtcp_xr_stats.discarded_count += discarded;
 	session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 	if ((discarded == 0) && (duplicate == 0)) {
