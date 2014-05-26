@@ -406,7 +406,7 @@ static void append_fb_packets(RtpSession *session, mblk_t *m) {
 }
 
 static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t full) {
-	mblk_t *m;
+	mblk_t *m=NULL;
 	bool_t is_sr = FALSE;
 
 	if (session->rtp.last_rtcp_packet_count < session->rtp.stats.packet_sent) {
