@@ -59,11 +59,11 @@ dblk_t *datab_alloc(size_t size){
 	return db;
 }
 
-static inline void datab_ref(dblk_t *d){
+static ORTP_INLINE void datab_ref(dblk_t *d){
 	d->db_ref++;
 }
 
-static inline void datab_unref(dblk_t *d){
+static ORTP_INLINE void datab_unref(dblk_t *d){
 	d->db_ref--;
 	if (d->db_ref==0){
 		if (d->db_freefn!=NULL)

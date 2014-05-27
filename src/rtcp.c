@@ -265,8 +265,21 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	}
 
 	b->ssrc=htonl(session->rcv.ssrc);
+
+
 	fl_cnpl=((loss_fraction&0xFF)<<24) | (stream->stats.cum_packet_loss & 0xFFFFFF);
-	b->fl_cnpl=htonl(fl_cnpl);
+	fl_cnpl=htonl(fl_cnpl);
+	report_block_set_cum_packet_lost(b, stream->stats.cum_packet_loss);
+	report_block_set_fraction_lost(b, loss_fraction);
+	if (fl_cnpl != b->fl_cnpl) {
+		printf("cum_loss=%ld\n", stream->stats.cum_packet_loss);
+		printf("loss_rate=%d\n", loss_fraction);
+		/*printf("clamp=%ld\n", report_block_clamp_cum_packet_lost(stream->stats.cum_packet_loss));*/
+		printf("prev=%d vs mine=%d\n", fl_cnpl, b->fl_cnpl);
+		exit(1);
+	}
+
+	b->fl_cnpl=fl_cnpl;
 	if ( session->flags & RTCP_OVERRIDE_JITTER ) {
 		/* If the test mode is enabled, replace the interarrival jitter field with the test vector value set by rtp_session_rtcp_set_jitter_value() */
 		b->interarrival_jitter = htonl( session->interarrival_jitter_test_vector );
