@@ -72,6 +72,7 @@ mblk_t * make_xr_stat_summary(RtpSession *session);
 mblk_t * make_xr_voip_metrics(RtpSession *session);
 
 bool_t rtp_session_is_avpf_enabled(RtpSession *session);
+bool_t rtp_session_is_avpf_feature_enabled(RtpSession *session, unsigned char feature);
 bool_t rtp_session_has_fb_packets_to_send(RtpSession *session);
 void rtp_session_send_regular_rtcp_packet_and_reschedule(RtpSession *session, uint64_t tc);
 void rtp_session_send_fb_rtcp_packet_and_reschedule(RtpSession *session);

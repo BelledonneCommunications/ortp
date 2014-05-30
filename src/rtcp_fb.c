@@ -172,7 +172,7 @@ static mblk_t * make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint
 
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	mblk_t *m;
-	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+	if ((rtp_session_is_avpf_enabled(session) == TRUE) && (rtp_session_is_avpf_feature_enabled(session, PAYLOAD_TYPE_AVPF_PLI) == TRUE)) {
 		m = make_rtcp_fb_pli(session);
 		rtp_session_add_fb_packet_to_send(session, m);
 		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
@@ -183,7 +183,7 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 	mblk_t *m;
-	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+	if ((rtp_session_is_avpf_enabled(session) == TRUE) && (rtp_session_is_avpf_feature_enabled(session, PAYLOAD_TYPE_AVPF_FIR) == TRUE)) {
 		m = make_rtcp_fb_fir(session);
 		rtp_session_add_fb_packet_to_send(session, m);
 		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
@@ -194,7 +194,7 @@ void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 
 void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
 	mblk_t *m;
-	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+	if ((rtp_session_is_avpf_enabled(session) == TRUE) && (rtp_session_is_avpf_feature_enabled(session, PAYLOAD_TYPE_AVPF_SLI) == TRUE)) {
 		m = make_rtcp_fb_sli(session, first, number, picture_id);
 		rtp_session_add_fb_packet_to_send(session, m);
 		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
@@ -205,7 +205,7 @@ void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t 
 
 void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	mblk_t *m;
-	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+	if ((rtp_session_is_avpf_enabled(session) == TRUE) && (rtp_session_is_avpf_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
 		m = make_rtcp_fb_rpsi(session, bit_string, bit_string_len);
 		rtp_session_add_fb_packet_to_send(session, m);
 		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
@@ -217,6 +217,13 @@ void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uin
 bool_t rtp_session_is_avpf_enabled(RtpSession *session) {
 	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
 	return (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) ? TRUE : FALSE;
+}
+
+bool_t rtp_session_is_avpf_feature_enabled(RtpSession *session, unsigned char feature) {
+	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
+	PayloadTypeAvpfParams params = payload_type_get_avpf_params(pt);
+	if (params.features & feature) return TRUE;
+	return FALSE;
 }
 
 bool_t rtp_session_has_fb_packets_to_send(RtpSession *session) {

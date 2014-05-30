@@ -20,6 +20,8 @@
 
 #include <ortp/payloadtype.h>
 #include <ortp/rtpprofile.h>
+#include <ortp/ortp.h>
+#include <ortp/rtcp.h>
 
 char offset127=127; 
 char offset0xD5=(char)0xD5; 
@@ -43,6 +45,8 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define CHANNELS(val)		.channels=(val)
 #define RECV_FMTP(val)		.recv_fmtp=(val)
 #define SEND_FMTP(val)		.send_fmtp=(val)
+#define NO_AVPF		.avpf={.features=PAYLOAD_TYPE_AVPF_NONE, .trr_interval=0}
+#define AVPF(feat, intv)		.avpf={.features=(feat), .trr_interval=(intv)}
 #define FLAGS(val)		.flags=(val)
 #elif defined(__GNUC__)
 // GCC's legacy tagged syntax (even old versions have it)
@@ -56,6 +60,8 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define CHANNELS(val)		channels: (val)
 #define RECV_FMTP(val)		recv_fmtp: (val)
 #define SEND_FMTP(val)		send_fmtp: (val)
+#define NO_AVPF		avpf: {features: PAYLOAD_TYPE_AVPF_NONE, trr_interval: 0}
+#define AVPF(feat, intv)		avpf: {features: (feat), trr_interval: (intv)}
 #define FLAGS(val)		flags: (val)
 #else
 // No tagged syntax supported
@@ -69,6 +75,8 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define CHANNELS(val)		(val)
 #define RECV_FMTP(val)		(val)
 #define SEND_FMTP(val)		(val)
+#define NO_AVPF		{PAYLOAD_TYPE_AVPF_NONE, 0}
+#define AVPF(feat, intv)		{(feat), (intv)}
 #define FLAGS(val)		(val)
 
 #endif
@@ -84,6 +92,7 @@ PayloadType payload_type_pcmu8000={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -98,6 +107,7 @@ PayloadType payload_type_pcma8000={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -112,6 +122,7 @@ PayloadType payload_type_pcm8000={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -126,6 +137,7 @@ PayloadType payload_type_l16_mono={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -140,6 +152,7 @@ PayloadType payload_type_l16_stereo={
 	CHANNELS(2),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -154,6 +167,7 @@ PayloadType payload_type_lpc1016={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -169,6 +183,7 @@ PayloadType payload_type_gsm={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -183,6 +198,7 @@ PayloadType payload_type_lpc={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -197,6 +213,7 @@ PayloadType payload_type_g7231={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -211,6 +228,7 @@ PayloadType payload_type_g729={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -225,6 +243,7 @@ PayloadType payload_type_g7221={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -239,6 +258,7 @@ PayloadType payload_type_g726_40={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -253,6 +273,7 @@ PayloadType payload_type_g726_32={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -267,6 +288,7 @@ PayloadType payload_type_g726_24={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -281,6 +303,7 @@ PayloadType payload_type_g726_16={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -295,6 +318,7 @@ PayloadType payload_type_aal2_g726_40={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -309,6 +333,7 @@ PayloadType payload_type_aal2_g726_32={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -323,6 +348,7 @@ PayloadType payload_type_aal2_g726_24={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -337,6 +363,7 @@ PayloadType payload_type_aal2_g726_16={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -351,6 +378,7 @@ PayloadType payload_type_mpv={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -366,6 +394,7 @@ PayloadType payload_type_h261={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -380,6 +409,7 @@ PayloadType payload_type_h263={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -394,6 +424,7 @@ PayloadType payload_type_truespeech={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -439,6 +470,7 @@ PayloadType payload_type_lpc1015={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -453,6 +485,7 @@ PayloadType payload_type_speex_nb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -467,6 +500,7 @@ PayloadType payload_type_speex_wb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -481,6 +515,7 @@ PayloadType payload_type_speex_uwb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -495,6 +530,7 @@ PayloadType payload_type_ilbc={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -509,6 +545,7 @@ PayloadType payload_type_amr={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -523,6 +560,7 @@ PayloadType payload_type_amrwb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -537,6 +575,7 @@ PayloadType payload_type_mp4v={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -552,6 +591,7 @@ PayloadType payload_type_evrc0={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -566,6 +606,7 @@ PayloadType payload_type_evrcb0={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
  
@@ -580,6 +621,7 @@ PayloadType payload_type_h263_1998={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -594,6 +636,7 @@ PayloadType payload_type_h263_2000={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -608,6 +651,7 @@ PayloadType payload_type_theora={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -622,6 +666,7 @@ PayloadType payload_type_h264={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -636,6 +681,7 @@ PayloadType payload_type_x_snow={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -650,6 +696,7 @@ PayloadType payload_type_jpeg={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -664,6 +711,7 @@ PayloadType payload_type_vp8={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	AVPF(PAYLOAD_TYPE_AVPF_FIR | PAYLOAD_TYPE_AVPF_PLI | PAYLOAD_TYPE_AVPF_SLI | PAYLOAD_TYPE_AVPF_RPSI, RTCP_DEFAULT_REPORT_INTERVAL),
 	FLAGS(PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED)
 };
 
@@ -678,6 +726,7 @@ PayloadType	payload_type_t140={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -692,6 +741,7 @@ PayloadType payload_type_t140_red={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -706,6 +756,7 @@ PayloadType	payload_type_x_udpftp={
 	CHANNELS(0),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -720,6 +771,7 @@ PayloadType payload_type_g722={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(0)
 };
 
@@ -734,6 +786,7 @@ PayloadType payload_type_silk_nb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -748,6 +801,7 @@ PayloadType payload_type_silk_mb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -762,6 +816,7 @@ PayloadType payload_type_silk_wb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -776,6 +831,7 @@ PayloadType payload_type_silk_swb={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -790,6 +846,7 @@ PayloadType payload_type_aaceld_22k={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -804,6 +861,7 @@ PayloadType payload_type_aaceld_44k={
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -818,6 +876,7 @@ PayloadType payload_type_opus = {
 	CHANNELS(2), /*mandatory according to RFC*/
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
@@ -832,5 +891,6 @@ PayloadType payload_type_isac = {
 	CHANNELS(1),
 	RECV_FMTP(NULL),
 	SEND_FMTP(NULL),
+	NO_AVPF,
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
