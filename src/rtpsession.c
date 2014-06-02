@@ -291,7 +291,7 @@ rtp_session_init (RtpSession * session, int mode)
 	rtp_session_set_jitter_buffer_params(session,&jbp);
 	rtp_session_set_time_jump_limit(session,5000);
 	rtp_session_enable_rtcp(session,TRUE);
-	rtp_session_set_rtcp_report_interval(session,RTCP_DEFAULT_REPORT_INTERVAL);
+	rtp_session_set_rtcp_report_interval(session,RTCP_DEFAULT_REPORT_INTERVAL*1000);
 	session->recv_buf_size = UDP_MAX_SIZE;
 	session->symmetric_rtp = FALSE;
 	session->permissive=FALSE;
