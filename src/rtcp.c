@@ -137,6 +137,8 @@ void rtp_session_set_source_description(RtpSession *session, const char *cname,
 	chunk = sdes_chunk_new(session->snd.ssrc);
 	m = sdes_chunk_set_minimal_items(chunk, cname);
 	m = sdes_chunk_pad(m);
+	if (session->minimal_sdes != NULL)
+		freemsg(session->minimal_sdes);
 	session->minimal_sdes = chunk;
 }
 
