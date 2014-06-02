@@ -76,8 +76,8 @@ struct _PayloadType
 	int channels; /**< number of channels of audio */
 	char *recv_fmtp; /* various format parameters for the incoming stream */
 	char *send_fmtp; /* various format parameters for the outgoing stream */
-	int flags;
 	struct _PayloadTypeAvpfParams avpf; /* AVPF parameters */
+	int flags;
 	void *user_data;
 };
 
