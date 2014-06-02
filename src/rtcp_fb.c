@@ -170,11 +170,24 @@ static mblk_t * make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint
 	return h;
 }
 
+static bool_t rtp_session_rtcp_fb_scheduled(RtpSession *session, rtcp_psfb_type_t type) {
+	mblk_t *m = session->rtcp.send_algo.fb_packets;
+	while (m != NULL) {
+		if (rtcp_PSFB_get_type(m) == type) {
+			return TRUE;
+		}
+		m = m->b_cont;
+	}
+	return FALSE;
+}
+
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	mblk_t *m;
 	if ((rtp_session_is_avpf_enabled(session) == TRUE) && (rtp_session_is_avpf_feature_enabled(session, PAYLOAD_TYPE_AVPF_PLI) == TRUE)) {
-		m = make_rtcp_fb_pli(session);
-		rtp_session_add_fb_packet_to_send(session, m);
+		if (rtp_session_rtcp_fb_scheduled(session, RTCP_PSFB_PLI) != TRUE) {
+			m = make_rtcp_fb_pli(session);
+			rtp_session_add_fb_packet_to_send(session, m);
+		}
 		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
 			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 		}
@@ -184,8 +197,10 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 	mblk_t *m;
 	if ((rtp_session_is_avpf_enabled(session) == TRUE) && (rtp_session_is_avpf_feature_enabled(session, PAYLOAD_TYPE_AVPF_FIR) == TRUE)) {
-		m = make_rtcp_fb_fir(session);
-		rtp_session_add_fb_packet_to_send(session, m);
+		if (rtp_session_rtcp_fb_scheduled(session, RTCP_PSFB_FIR) != TRUE) {
+			m = make_rtcp_fb_fir(session);
+			rtp_session_add_fb_packet_to_send(session, m);
+		}
 		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
 			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 		}
