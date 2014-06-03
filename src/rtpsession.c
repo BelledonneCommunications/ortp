@@ -264,6 +264,7 @@ rtp_session_init (RtpSession * session, int mode)
 	session->eventqs=NULL;
 
 	/* Initialize RTCP send algorithm */
+	session->target_upload_bandwidth = 80000; /* 80kbits/s to have 4kbits/s dedicated to RTCP if rtp_session_set_target_upload_bandwidth() is not called. */
 	session->rtcp.send_algo.initial = TRUE;
 	session->rtcp.send_algo.allow_early = TRUE;
 
