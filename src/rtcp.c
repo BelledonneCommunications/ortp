@@ -436,7 +436,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 }
 
 static float rtcp_rand(float t) {
-	return t * ((rand() / (RAND_MAX + 1.0)) + 0.5);
+	return t * ((rand() / (RAND_MAX * 1.0f)) + 0.5f);
 }
 
 /**
@@ -454,6 +454,7 @@ void compute_rtcp_interval(RtpSession *session) {
 	rtcp_bw = 0.05f * session->target_upload_bandwidth;
 
 	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		session->rtcp.send_algo.T_rr_interval = rtp_session_get_avpf_rr_interval(session) * 1000;
 		rtcp_min_time = session->rtcp.send_algo.Tmin;
 	} else {
 		rtcp_min_time = session->rtcp.send_algo.T_rr_interval;

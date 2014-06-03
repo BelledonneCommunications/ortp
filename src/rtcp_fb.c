@@ -241,6 +241,12 @@ bool_t rtp_session_is_avpf_feature_enabled(RtpSession *session, unsigned char fe
 	return FALSE;
 }
 
+uint8_t rtp_session_get_avpf_rr_interval(RtpSession *session) {
+	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
+	PayloadTypeAvpfParams params = payload_type_get_avpf_params(pt);
+	return (uint8_t)params.trr_interval;
+}
+
 bool_t rtp_session_has_fb_packets_to_send(RtpSession *session) {
 	return (session->rtcp.send_algo.fb_packets == NULL) ? FALSE : TRUE;
 }
