@@ -368,7 +368,7 @@ ORTP_PUBLIC void rtp_session_rtcp_process_send(struct _RtpSession *s);
 ORTP_PUBLIC void rtp_session_rtcp_process_recv(struct _RtpSession *s);
 
 
-#define RTCP_DEFAULT_REPORT_INTERVAL 5000 /*ms*/
+#define RTCP_DEFAULT_REPORT_INTERVAL 5 /* in seconds */
 
 
 /* packet parsing api */

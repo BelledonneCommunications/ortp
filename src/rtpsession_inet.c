@@ -909,16 +909,8 @@ static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_l
 #endif
 
 
-static bool_t is_ipv6(OrtpStream *os) {
-	if (os->sockfamily == AF_INET6) {
-		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)&os->rem_addr;
-		return !IN6_IS_ADDR_V4MAPPED(&in6->sin6_addr);
-	}
-	return FALSE;
-}
-
 static void update_sent_bytes(OrtpStream *os, int nbytes) {
-	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if ((os->sent_bytes == 0) && (os->send_bw_start.tv_sec == 0) && (os->send_bw_start.tv_usec == 0)) {
 		/* Initialize bandwidth computing time when has not been started yet. */
 		ortp_gettimeofday(&os->send_bw_start, NULL);
@@ -927,7 +919,7 @@ static void update_sent_bytes(OrtpStream *os, int nbytes) {
 }
 
 static void update_recv_bytes(OrtpStream *os, int nbytes) {
-	int overhead = is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if (os->recv_bytes == 0) {
 		ortp_gettimeofday(&os->recv_bw_start, NULL);
 	}
@@ -1029,6 +1021,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m)
 			}
 		} else {
 			update_sent_bytes(&session->rtcp.gs, error);
+			update_avg_rtcp_size(session, error);
 		}
 	}else ortp_message("Not sending rtcp report: sockfd=%i, rem_addrlen=%i, connected=%i",sockfd,session->rtcp.gs.rem_addrlen,using_connected_socket);
 	freemsg (m);
@@ -1284,7 +1277,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 
 static void reply_to_collaborative_rtcp_xr_packet(RtpSession *session, mblk_t *block) {
 	if (rtcp_is_XR(block) && (rtcp_XR_get_block_type(block) == RTCP_XR_RCVR_RTT)) {
-		rtp_session_send_rtcp_xr_dlrr(session);
+		session->rtcp.rtcp_xr_dlrr_to_send = TRUE;
 	}
 }
 

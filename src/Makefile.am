@@ -32,7 +32,9 @@ libortp_la_SOURCES=	str_utils.c 	\
 			telephonyevents.c  \
 			payloadtype.c \
 			rtpprofile.c \
-			rtcp.c  \
+			rtcp.c \
+			rtcp_fb.c \
+			rtcp_xr.c \
 			utils.c utils.h \
 			rtcpparse.c \
 			event.c \

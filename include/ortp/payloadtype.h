@@ -52,6 +52,17 @@ extern "C"{
 #define PAYLOAD_TEXT 4
 #define PAYLOAD_OTHER 3  /* ?? */
 
+#define PAYLOAD_TYPE_AVPF_NONE 0
+#define PAYLOAD_TYPE_AVPF_FIR (1 << 0)
+#define PAYLOAD_TYPE_AVPF_PLI (1 << 1)
+#define PAYLOAD_TYPE_AVPF_SLI (1 << 2)
+#define PAYLOAD_TYPE_AVPF_RPSI (1 << 3)
+
+struct _PayloadTypeAvpfParams {
+	unsigned char features; /**< A bitmask of PAYLOAD_TYPE_AVPF_* macros. */
+	unsigned char trr_interval; /**< The interval in seconds between regular RTCP packets. */
+};
+
 struct _PayloadType
 {
 	int type; /**< one of PAYLOAD_* macros*/
@@ -65,6 +76,7 @@ struct _PayloadType
 	int channels; /**< number of channels of audio */
 	char *recv_fmtp; /* various format parameters for the incoming stream */
 	char *send_fmtp; /* various format parameters for the outgoing stream */
+	struct _PayloadTypeAvpfParams avpf; /* AVPF parameters */
 	int flags;
 	void *user_data;
 };
@@ -72,6 +84,7 @@ struct _PayloadType
 #ifndef PayloadType_defined
 #define PayloadType_defined
 typedef struct _PayloadType PayloadType;
+typedef struct _PayloadTypeAvpfParams PayloadTypeAvpfParams;
 #endif
 
 #define payload_type_set_flag(pt,flag) (pt)->flags|=((int)flag)
@@ -87,6 +100,8 @@ ORTP_PUBLIC void payload_type_set_recv_fmtp(PayloadType *pt, const char *fmtp);
 ORTP_PUBLIC void payload_type_set_send_fmtp(PayloadType *pt, const char *fmtp);
 ORTP_PUBLIC void payload_type_append_recv_fmtp(PayloadType *pt, const char *fmtp);
 ORTP_PUBLIC void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp);
+#define payload_type_get_avpf_params(pt)	((pt)->avpf)
+ORTP_PUBLIC void payload_type_set_avpf_params(PayloadType *pt, PayloadTypeAvpfParams params);
 
 #define payload_type_get_bitrate(pt)	((pt)->normal_bitrate)
 #define payload_type_get_rate(pt)		((pt)->clock_rate)

@@ -45,6 +45,8 @@ LOCAL_SRC_FILES := \
 	src/payloadtype.c \
 	src/rtpprofile.c \
 	src/rtcp.c \
+	src/rtcp_fb.c \
+	src/rtcp_xr.c \
 	src/utils.c \
 	src/rtcpparse.c \
 	src/event.c \

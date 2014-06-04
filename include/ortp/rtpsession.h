@@ -116,6 +116,22 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	struct timeval last_check;
 }OrtpNetworkSimulatorCtx;
 
+typedef struct OrtpRtcpSendAlgorithm {
+	uint64_t tn; /* Time of the next scheduled RTCP RR transmission in milliseconds. */
+	uint64_t tp; /* Time of the last scheduled RTCP RR transmission in milliseconds. */
+	uint64_t t_rr_last; /* Time of the last regular RTCP packet sent in milliseconds. */
+	uint32_t T_rr; /* Interval for the scheduling of the next regular RTCP packet. */
+	uint32_t T_max_fb_delay; /* Interval within which a feeback message is considered to be useful to the sender. */
+	uint32_t T_rr_interval; /* Minimal interval to be used between regular RTCP packets. */
+	uint32_t T_rr_current_interval;
+	uint32_t Tmin; /* Minimal interval between RTCP packets. */
+	float avg_rtcp_size;
+	mblk_t *fb_packets;
+	bool_t initialized; /* Whether the RTCP send algorithm is fully initialized. */
+	bool_t initial;
+	bool_t allow_early;
+} OrtpRtcpSendAlgorithm;
+
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
 
 typedef enum {
@@ -243,23 +259,11 @@ typedef struct _RtpStream
 typedef struct _RtcpStream
 {
 	OrtpStream gs;
-	int interval;
-	uint32_t last_rtcp_report_snt_r;	/* the time of the last rtcp report sent, in recv timestamp unit */
-	uint32_t last_rtcp_report_snt_s;	/* the time of the last rtcp report sent, in send timestamp unit */
-	uint32_t rtcp_report_snt_interval_r; /* the interval in timestamp unit for receive path between rtcp report sent */
-	uint32_t rtcp_report_snt_interval_s; /* the interval in timestamp unit for send path between rtcp report sent */
-	bool_t enabled; /*tells whether we can send RTCP packets */
+	OrtpRtcpSendAlgorithm send_algo;
 	OrtpRtcpXrConfiguration xr_conf;
 	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
-	uint32_t last_rtcp_xr_rcvr_rtt_s;	/* The time of the last RTCP XR rcvr rtt packet sent, in send timestamp unit */
-	uint32_t last_rtcp_xr_stat_summary_s;	/* The time of the last RTCP XR stat summary packet sent, in send timestamp unit */
-	uint32_t last_rtcp_xr_voip_metrics_s;	/* The time of the last RTCP XR voip metrics packet sent, in send timestamp unit */
-	uint32_t rtcp_xr_rcvr_rtt_interval;	/* The interval in timestamp unit for RTCP XR rcvr rtt packet sending */
-	uint32_t rtcp_xr_stat_summary_interval;	/* The interval in timestamp unit for RTCP XR stat summary packet sending */
-	uint32_t rtcp_xr_voip_metrics_interval;	/* The interval in timestamp unit for RTCP XR voip metrics packet sending */
-	int rtcp_xr_rcvr_rtt_interval_ms;	/* The interval in milliseconds for RTCP XR rcvr rtt packet sending */
-	int rtcp_xr_stat_summary_interval_ms;	/* The interval in milliseconds for RTCP XR stat summary packet sending */
-	int rtcp_xr_voip_metrics_interval_ms;	/* The interval in milliseconds for RTCP XR voip metrics packet sending */
+	bool_t enabled; /*tells whether we can send RTCP packets */
+	bool_t rtcp_xr_dlrr_to_send;
 	uint8_t rtcp_fb_fir_seq_nr;	/* The FIR command sequence number */
 	uint32_t last_rtcp_fb_pli_snt;
 } RtcpStream;
@@ -427,9 +431,6 @@ ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int v
 ORTP_PUBLIC void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth);
 
 ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config);
-ORTP_PUBLIC void rtp_session_set_rtcp_xr_rcvr_rtt_interval(RtpSession *session, int value_ms);
-ORTP_PUBLIC void rtp_session_set_rtcp_xr_stat_summary_interval(RtpSession *session, int value_ms);
-ORTP_PUBLIC void rtp_session_set_rtcp_xr_voip_metrics_interval(RtpSession *session, int value_ms);
 ORTP_PUBLIC void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, const OrtpRtcpXrMediaCallbacks *cbs);
 
 ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
@@ -495,8 +496,10 @@ ORTP_PUBLIC void rtp_session_set_source_description(RtpSession *session, const c
 ORTP_PUBLIC void rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc,
     const char *cname, const char *name, const char *email, const char *phone,
     const char *loc, const char *tool, const char *note);
-ORTP_PUBLIC void rtp_session_remove_contributing_sources(RtpSession *session, uint32_t csrc);
-ORTP_PUBLIC mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session);
+/* DEPRECATED: Use rtp_session_remove_contributing_source instead of rtp_session_remove_contributing_sources */
+#define rtp_session_remove_contributing_sources rtp_session_remove_contributing_source
+ORTP_PUBLIC void rtp_session_remove_contributing_source(RtpSession *session, uint32_t csrc);
+ORTP_PUBLIC mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full);
 
 ORTP_PUBLIC void rtp_session_get_last_recv_time(RtpSession *session, struct timeval *tv);
 ORTP_PUBLIC int rtp_session_bye(RtpSession *session, const char *reason);

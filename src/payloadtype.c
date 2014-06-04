@@ -117,6 +117,12 @@ void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp){
 	}
 }
 
+void payload_type_set_avpf_params(PayloadType *pt, PayloadTypeAvpfParams params) {
+	if (canWrite(pt)) {
+		memcpy(&pt->avpf, &params, sizeof(pt->avpf));
+	}
+}
+
 
 /**
  * Frees a PayloadType.

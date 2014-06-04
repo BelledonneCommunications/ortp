@@ -58,7 +58,24 @@ int rtp_session_rtcp_send (RtpSession * session, mblk_t * m);
 
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen);
 
+void rtp_session_run_rtcp_send_scheduler(RtpSession *session);
+void update_avg_rtcp_size(RtpSession *session, int bytes);
+
 mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t *is_rtp_packet);
 void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim);
+
+void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s,int type, int rc, int bytes_len);
+
+mblk_t * make_xr_rcvr_rtt(RtpSession *session);
+mblk_t * make_xr_dlrr(RtpSession *session);
+mblk_t * make_xr_stat_summary(RtpSession *session);
+mblk_t * make_xr_voip_metrics(RtpSession *session);
+
+bool_t rtp_session_is_avpf_enabled(RtpSession *session);
+bool_t rtp_session_is_avpf_feature_enabled(RtpSession *session, unsigned char feature);
+uint8_t rtp_session_get_avpf_rr_interval(RtpSession *session);
+bool_t rtp_session_has_fb_packets_to_send(RtpSession *session);
+void rtp_session_send_regular_rtcp_packet_and_reschedule(RtpSession *session, uint64_t tc);
+void rtp_session_send_fb_rtcp_packet_and_reschedule(RtpSession *session);
 
 #endif
