@@ -36,8 +36,6 @@ struct _OList {
 	void *data;
 };
 
-typedef struct _OList OList;
-
 
 #define o_list_next(elem) ((elem)->next)
 
