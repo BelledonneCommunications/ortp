@@ -231,19 +231,23 @@ void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uin
 
 bool_t rtp_session_avpf_enabled(RtpSession *session) {
 	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
-	return (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED) ? TRUE : FALSE;
+	return pt && (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED);
 }
 
 bool_t rtp_session_avpf_feature_enabled(RtpSession *session, unsigned char feature) {
 	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
-	PayloadTypeAvpfParams params = payload_type_get_avpf_params(pt);
+	PayloadTypeAvpfParams params;
+	if (!pt) return FALSE;
+	params = payload_type_get_avpf_params(pt);
 	if (params.features & feature) return TRUE;
 	return FALSE;
 }
 
 uint8_t rtp_session_get_avpf_rr_interval(RtpSession *session) {
 	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
-	PayloadTypeAvpfParams params = payload_type_get_avpf_params(pt);
+	PayloadTypeAvpfParams params;
+	if (!pt) return FALSE;
+	params=payload_type_get_avpf_params(pt);
 	return (uint8_t)params.trr_interval;
 }
 
