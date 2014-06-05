@@ -531,6 +531,9 @@ ORTP_PUBLIC void rtp_session_send_rtcp_xr_stat_summary(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session);
 
 
+ORTP_PUBLIC bool_t rtp_session_avpf_enabled(RtpSession *session);
+ORTP_PUBLIC bool_t rtp_session_avpf_feature_enabled(RtpSession *session, unsigned char feature);
+ORTP_PUBLIC uint8_t rtp_session_get_avpf_rr_interval(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_pli(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_fir(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id);
