@@ -28,3 +28,4 @@ doc
 ortp.defs
 INSTALL
 stamp-h1
+*.vcxproj.*

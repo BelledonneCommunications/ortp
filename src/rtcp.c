@@ -425,7 +425,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 		if ((full == TRUE) && (session->rtcp.xr_conf.enabled == TRUE)) {
 			append_xr_packets(session, m);
 		}
-		if (rtp_session_is_avpf_enabled(session) == TRUE) {
+		if (rtp_session_avpf_enabled(session) == TRUE) {
 			append_fb_packets(session, m);
 		}
 		/* Send the compound packet */
@@ -453,7 +453,7 @@ void compute_rtcp_interval(RtpSession *session) {
 	/* Compute target RTCP bandwidth in bits/s. */
 	rtcp_bw = 0.05f * session->target_upload_bandwidth;
 
-	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+	if (rtp_session_avpf_enabled(session) == TRUE) {
 		session->rtcp.send_algo.T_rr_interval = rtp_session_get_avpf_rr_interval(session) * 1000;
 		rtcp_min_time = session->rtcp.send_algo.Tmin;
 	} else {
@@ -522,7 +522,7 @@ static void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
 
 static void rtp_session_reschedule(RtpSession *session, uint64_t tc) {
 	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
-	if (rtp_session_is_avpf_enabled(session) == TRUE) {
+	if (rtp_session_avpf_enabled(session) == TRUE) {
 		sa->tp = tc;
 		sa->tn = tc + sa->T_rr;
 	}

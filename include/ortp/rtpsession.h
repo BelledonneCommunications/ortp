@@ -202,11 +202,16 @@ typedef struct OrtpRtcpXrStats {
 	uint32_t discarded_count;
 } OrtpRtcpXrStats;
 
+typedef struct _OrtpAddress{
+	struct sockaddr_storage addr;
+	socklen_t len;
+}OrtpAddress;
+
 typedef struct _OrtpStream {
 	ortp_socket_t socket;
 	int sockfamily;
 	int loc_port;
-	int rem_addrlen;
+	socklen_t rem_addrlen;
 	struct sockaddr_storage rem_addr;
 	struct _RtpTransport *tr;
 	mblk_t *cached_mp;
@@ -216,6 +221,7 @@ typedef struct _OrtpStream {
 	unsigned int recv_bytes; /* used for bandwidth estimation */
 	float upload_bw;
 	float download_bw;
+	OList *aux_destinations; /*list of OrtpAddress */
 } OrtpStream;
 
 typedef struct _RtpStream
@@ -385,6 +391,8 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 /*same as previous function, old name:*/
 ORTP_PUBLIC int rtp_session_set_remote_addr_and_port (RtpSession * session, const char * addr, int rtp_port, int rtcp_port);
 ORTP_PUBLIC int rtp_session_set_remote_addr(RtpSession *session,const char *addr, int port);
+ORTP_PUBLIC int rtp_session_add_aux_remote_addr_full(RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port);
+ORTP_PUBLIC void rtp_session_clear_aux_remote_addr(RtpSession * session);
 /* alternatively to the set_remote_addr() and set_local_addr(), an application can give
 a valid socket (potentially connect()ed )to be used by the RtpSession */
 ORTP_PUBLIC void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd);
@@ -526,6 +534,9 @@ ORTP_PUBLIC void rtp_session_send_rtcp_xr_stat_summary(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session);
 
 
+ORTP_PUBLIC bool_t rtp_session_avpf_enabled(RtpSession *session);
+ORTP_PUBLIC bool_t rtp_session_avpf_feature_enabled(RtpSession *session, unsigned char feature);
+ORTP_PUBLIC uint8_t rtp_session_get_avpf_rr_interval(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_pli(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_fir(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id);

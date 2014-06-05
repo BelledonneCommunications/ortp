@@ -1399,6 +1399,22 @@ void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev){
 	ortp_event_destroy(ev);
 }
 
+void ortp_stream_clear_aux_addresses(OrtpStream *os){
+	OList *elem;
+	for (elem=os->aux_destinations;elem!=NULL;elem=elem->next){
+		OrtpAddress *addr=(OrtpAddress*)elem->data;
+		ortp_free(addr);
+	}
+	os->aux_destinations=o_list_free(os->aux_destinations);
+}
+
+static void ortp_stream_uninit(OrtpStream *os){
+	if (os->cached_mp) {
+		freemsg(os->cached_mp);
+		os->cached_mp=NULL;
+	}
+	ortp_stream_clear_aux_addresses(os);
+}
 
 void rtp_session_uninit (RtpSession * session)
 {
@@ -1418,8 +1434,8 @@ void rtp_session_uninit (RtpSession * session)
 	wait_point_uninit(&session->snd.wp);
 	wait_point_uninit(&session->rcv.wp);
 	if (session->current_tev!=NULL) freemsg(session->current_tev);
-	if (session->rtp.gs.cached_mp!=NULL) freemsg(session->rtp.gs.cached_mp);
-	if (session->rtcp.gs.cached_mp!=NULL) freemsg(session->rtcp.gs.cached_mp);
+	ortp_stream_uninit(&session->rtp.gs);
+	ortp_stream_uninit(&session->rtcp.gs);
 	if (session->full_sdes != NULL)
 		freemsg(session->full_sdes);
 	if (session->minimal_sdes != NULL)

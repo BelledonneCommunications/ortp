@@ -46,7 +46,7 @@ OList * o_list_append(OList *elem, void * data){
 OList * o_list_free(OList *list){
 	OList *elem = list;
 	OList *tmp;
-	return_val_if_fail(list, list);
+	if (!list) return NULL;
 	while(elem->next!=NULL) {
 		tmp = elem;
 		elem = elem->next;
