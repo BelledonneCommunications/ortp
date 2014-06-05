@@ -63,7 +63,7 @@ typedef enum {
 
 
 // Helper functions
-static inline uint64_t get_timeval_in_millis() {
+static ORTP_INLINE uint64_t get_timeval_in_millis() {
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
 	uint32_t ret=(1000LL*t.tv_sec)+(t.tv_usec/1000LL);

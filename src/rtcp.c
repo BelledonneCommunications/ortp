@@ -220,24 +220,21 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	int loss_fraction=0;
 	RtpStream *stream=&session->rtp;
 	uint32_t delay_snc_last_sr=0;
-	uint32_t fl_cnpl;
 
 	/* compute the statistics */
 	if (stream->hwrcv_since_last_SR!=0){
 		int expected_packets=stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR;
 
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
-			/* If the test mode is enabled, replace the lost packet field with the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
+			/* If the test mode is enabled, replace the lost packet field with
+			the test vector value set by rtp_session_rtcp_set_lost_packet_value() */
 			packet_loss = session->lost_packets_test_vector;
-			if ( packet_loss < 0 )
-				packet_loss = 0;
-			/* The test value is the definite cumulative one, no need to increment it each time a packet is sent */
+			/* The test value is the definite cumulative one, no need to increment
+			it each time a packet is sent */
 			stream->stats.cum_packet_loss = packet_loss;
 		}else {
 			/* Normal mode */
 			packet_loss = expected_packets - stream->hwrcv_since_last_SR;
-			if ( packet_loss < 0 )
-				packet_loss = 0;
 			stream->stats.cum_packet_loss += packet_loss;
 		}
 		if (expected_packets>0){/*prevent division by zero and negative loss fraction*/
@@ -263,8 +260,11 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	}
 
 	b->ssrc=htonl(session->rcv.ssrc);
-	fl_cnpl=((loss_fraction&0xFF)<<24) | (stream->stats.cum_packet_loss & 0xFFFFFF);
-	b->fl_cnpl=htonl(fl_cnpl);
+
+
+	report_block_set_cum_packet_lost(b, stream->stats.cum_packet_loss);
+	report_block_set_fraction_lost(b, loss_fraction);
+
 	if ( session->flags & RTCP_OVERRIDE_JITTER ) {
 		/* If the test mode is enabled, replace the interarrival jitter field with the test vector value set by rtp_session_rtcp_set_jitter_value() */
 		b->interarrival_jitter = htonl( session->interarrival_jitter_test_vector );

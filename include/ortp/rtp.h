@@ -68,9 +68,10 @@ typedef struct rtp_stats
 	uint64_t hw_recv;		/* bytes of payload received */
 	uint64_t packet_recv;	/* number of packets received */
 	uint64_t outoftime;		/* number of packets that were received too late */
-	uint64_t cum_packet_loss; /* cumulative number of packet lost */
+	int64_t cum_packet_loss; /* cumulative number of packet lost */
 	uint64_t bad;			/* packets that did not appear to be RTP */
 	uint64_t discarded;		/* incoming packets discarded because the queue exceeds its max size */
+	uint64_t duplicated;	/* incoming packets duplicated */
 	uint64_t sent_rtcp_packets;	/* sent RTCP packets counter (only packets that embed a report block are considered) */
 } rtp_stats_t;
 
@@ -109,7 +110,7 @@ ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
 
 #define rtp_get_markbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->markbit)
 #define rtp_get_extbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->extbit)
-#define rtp_get_timestamp(mp)	(((rtp_header_t*)((mp)->b_rptr))->timestamp)	
+#define rtp_get_timestamp(mp)	(((rtp_header_t*)((mp)->b_rptr))->timestamp)
 #define rtp_get_seqnumber(mp)	(((rtp_header_t*)((mp)->b_rptr))->seq_number)
 #define rtp_get_payload_type(mp)	(((rtp_header_t*)((mp)->b_rptr))->paytype)
 #define rtp_get_ssrc(mp)		(((rtp_header_t*)((mp)->b_rptr))->ssrc)

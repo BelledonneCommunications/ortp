@@ -333,13 +333,13 @@ turnParseAtrRequestedTransport( char* body, unsigned int hdrLen,  TurnAtrRequest
 #define htonq(n) n
 #define ntohq(n) n
 #else /* little endian */
-static inline uint64_t
+static ORTP_INLINE uint64_t
 htonq (uint64_t v)
 {
   return htonl ((uint32_t) (v >> 32))
 	| (uint64_t) htonl ((uint32_t) v) << 32;
 }
-static inline uint64_t
+static ORTP_INLINE uint64_t
 ntohq (uint64_t v)
 {
   return ntohl ((uint32_t) (v >> 32))

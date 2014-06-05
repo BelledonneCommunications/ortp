@@ -106,26 +106,45 @@ typedef struct report_block
 	uint32_t delay_snc_last_sr; /*delay since last sr*/
 } report_block_t;
 
-#define report_block_get_ssrc(rb) \
-	ntohl((rb)->ssrc)
-#define report_block_get_fraction_lost(rb) \
-	(((uint32_t)ntohl((rb)->fl_cnpl))>>24)
-#define report_block_get_cum_packet_loss(rb) \
-	(((uint32_t)ntohl((rb)->fl_cnpl)) & 0xFFFFFF)
-#define report_block_get_high_ext_seq(rb) \
-	ntohl(((report_block_t*)(rb))->ext_high_seq_num_rec)
-#define report_block_get_interarrival_jitter(rb) \
-	ntohl(((report_block_t*)(rb))->interarrival_jitter)
-#define report_block_get_last_SR_time(rb) \
-	ntohl(((report_block_t*)(rb))->lsr)
-#define report_block_get_last_SR_delay(rb) \
-	ntohl(((report_block_t*)(rb))->delay_snc_last_sr)
+static ORTP_INLINE uint32_t report_block_get_ssrc(const report_block_t * rb) {
+	return ntohl(rb->ssrc);
+}
+static ORTP_INLINE uint32_t report_block_get_high_ext_seq(const report_block_t * rb) {
+	return ntohl(rb->ext_high_seq_num_rec);
+}
+static ORTP_INLINE uint32_t report_block_get_interarrival_jitter(const report_block_t * rb) {
+	return ntohl(rb->interarrival_jitter);
+}
 
-#define report_block_set_fraction_lost(rb,fl)\
-	((rb)->fl_cnpl)=htonl( (ntohl((rb)->fl_cnpl) & 0xFFFFFF) | (((fl) & 0xFF)<<24))
+static ORTP_INLINE uint32_t report_block_get_last_SR_time(const report_block_t * rb) {
+	return ntohl(rb->lsr);
+}
+static ORTP_INLINE uint32_t report_block_get_last_SR_delay(const report_block_t * rb) {
+	return ntohl(rb->delay_snc_last_sr);
+}
+static ORTP_INLINE uint32_t report_block_get_fraction_lost(const report_block_t * rb) {
+	return (ntohl(rb->fl_cnpl)>>24);
+}
+static ORTP_INLINE int32_t report_block_get_cum_packet_loss(const report_block_t * rb){
+	int cum_loss = ntohl(rb->fl_cnpl);
+	if (((cum_loss>>23)&1)==0)
+		return 0x00FFFFFF & cum_loss;
+	else
+		return 0xFF000000 | (cum_loss-0xFFFFFF-1);
+}
 
-#define report_block_set_cum_packet_lost(rb,cpl)\
-	((rb)->fl_cnpl)=htonl( (ntohl((rb)->fl_cnpl) & 0xFF000000) | (((cpl) & 0xFFFFFF)))
+static ORTP_INLINE void report_block_set_fraction_lost(report_block_t * rb, int fl){
+	rb->fl_cnpl = htonl( (ntohl(rb->fl_cnpl) & 0xFFFFFF) | (fl&0xFF)<<24);
+}
+
+static ORTP_INLINE void report_block_set_cum_packet_lost(report_block_t * rb, int64_t cpl) {
+	int clamp = (1<<24) + ((cpl>=0) ? (cpl>0x7FFFFF?0x7FFFFF:cpl) : (-cpl>0x800000?-0x800000:cpl));
+
+	rb->fl_cnpl=htonl(
+			(ntohl(rb->fl_cnpl) & 0xFF000000) |
+			(cpl >= 0 ? clamp&0x7FFFFF : clamp|0x800000)
+		);
+}
 
 /* SDES packets */
 
@@ -169,7 +188,7 @@ typedef struct rtcp_bye_reason
 	uint8_t len;
 	char content[1];
 } rtcp_bye_reason_t;
- 
+
 typedef struct rtcp_bye
 {
 	rtcp_common_header_t ch;
@@ -389,7 +408,7 @@ ORTP_PUBLIC bool_t rtcp_is_APP(const mblk_t *m);
 ORTP_PUBLIC int rtcp_APP_get_subtype(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_APP_get_ssrc(const mblk_t *m);
 /* name argument is supposed to be at least 4 characters (note: no '\0' written)*/
-ORTP_PUBLIC void rtcp_APP_get_name(const mblk_t *m, char *name); 
+ORTP_PUBLIC void rtcp_APP_get_name(const mblk_t *m, char *name);
 /* retrieve the data. when returning, data points directly into the mblk_t */
 ORTP_PUBLIC void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len);
 

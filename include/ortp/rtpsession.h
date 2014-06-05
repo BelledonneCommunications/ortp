@@ -320,6 +320,8 @@ struct _RtpSession
 	int dscp;
 	int multicast_ttl;
 	int multicast_loopback;
+	float duplication_ratio; /* Number of times a packet should be duplicated */
+	float duplication_left ; /* Remainder of the duplication ratio */
 	void * user_data;
 	/* FIXME: Should be a table for all session participants. */
 	struct timeval last_recv_time; /* Time of receiving the RTP/RTCP packet. */
@@ -329,7 +331,7 @@ struct _RtpSession
 	mblk_t *minimal_sdes;
 	mblk_t *full_sdes;
 	queue_t contributing_sources;
-	unsigned int lost_packets_test_vector;
+	int64_t lost_packets_test_vector;
 	unsigned int interarrival_jitter_test_vector;
 	unsigned int delay_test_vector;
 	float rtt;/*last round trip delay calculated*/
@@ -367,6 +369,7 @@ ORTP_PUBLIC uint32_t rtp_session_get_recv_ssrc(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_seq_number(RtpSession *session, uint16_t seq);
 ORTP_PUBLIC uint16_t rtp_session_get_seq_number(RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session);
+ORTP_PUBLIC void rtp_session_set_duplication_ratio(RtpSession *session, float ratio);
 
 ORTP_PUBLIC void rtp_session_enable_jitter_buffer(RtpSession *session , bool_t enabled);
 ORTP_PUBLIC bool_t rtp_session_jitter_buffer_enabled(const RtpSession *session);
@@ -519,7 +522,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
-ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const unsigned int value );
+ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int64_t value );
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_delay_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number);
