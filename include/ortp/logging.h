@@ -72,8 +72,10 @@ ORTP_PUBLIC int ortp_get_log_level_mask(void);
 #else
 #define CHECK_FORMAT_ARGS(m,n)
 #endif
-
-
+#ifdef __clang__
+/*in case of compile with -g static inline can produce this type of warning*/
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 #ifdef ORTP_DEBUG_MODE
 static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_debug(const char *fmt,...)
 {
