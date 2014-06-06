@@ -630,3 +630,58 @@ int rtp_session_bye(RtpSession *session, const char *reason) {
 
     return ret;
 }
+
+OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, int32_t first_seq){
+	OrtpLossRateEstimator *obj=ortp_malloc(sizeof(OrtpLossRateEstimator));
+	ortp_loss_rate_estimator_init(obj,min_packet_count_interval, first_seq);
+	return obj;
+}
+
+void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, int32_t first_seq){
+	memset(obj,0,sizeof(*obj));
+	obj->min_packet_count_interval=min_packet_count_interval;
+	obj->last_ext_seq=first_seq;
+}
+
+bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb){
+	int32_t cum_loss=report_block_get_cum_packet_loss(rb);
+	int32_t extseq=report_block_get_high_ext_seq(rb);
+	int32_t diff;
+	bool_t got_value=FALSE;
+	
+	if (obj->last_ext_seq==-1){
+		/*first report cannot be considered, since we don't know the interval it covers*/
+		obj->last_ext_seq=extseq;
+		obj->last_cum_loss=cum_loss;
+		return FALSE;
+	}
+	diff=extseq-obj->last_ext_seq;
+	if (diff<0 || diff>obj->min_packet_count_interval * 100){
+		ortp_warning("Suspected discontinuity in sequence numbering.");
+		obj->last_ext_seq=extseq;
+		obj->last_cum_loss=cum_loss;
+	}else if (diff>obj->min_packet_count_interval){
+		/*we have sufficient interval*/
+		int32_t new_losses=cum_loss-obj->last_cum_loss;
+		if (new_losses<0) new_losses=0; /*this can arrive if there are duplicates*/
+		obj->loss_rate=100.0*(float)new_losses/(float)diff;
+		/*update last values with current*/
+		obj->last_ext_seq=extseq;
+		obj->last_cum_loss=cum_loss;
+		got_value=TRUE;
+	}
+	
+	return got_value;
+	
+}
+
+float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj){
+	return obj->loss_rate;
+}
+
+void ortp_loss_rate_estimator_uninit(OrtpLossRateEstimator *obj){
+}
+
+void ortp_loss_rate_estimator_destroy(OrtpLossRateEstimator *obj){
+	ortp_free(obj);
+}

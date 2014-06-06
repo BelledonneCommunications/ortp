@@ -467,6 +467,26 @@ ORTP_PUBLIC rtcp_fb_rpsi_fci_t * rtcp_PSFB_rpsi_get_fci(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m);
 
 
+typedef struct OrtpLossRateEstimator{
+	int min_packet_count_interval;
+	int32_t last_cum_loss;
+	int32_t last_ext_seq;
+	float loss_rate;
+}OrtpLossRateEstimator;
+
+
+ORTP_PUBLIC OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, int32_t first_seq);
+
+ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, int32_t first_seq);
+
+ORTP_PUBLIC bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb);
+
+ORTP_PUBLIC float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj);
+
+ORTP_PUBLIC void ortp_loss_rate_estimator_uninit(OrtpLossRateEstimator *obj);
+
+ORTP_PUBLIC void ortp_loss_rate_estimator_destroy(OrtpLossRateEstimator *obj);
+
 #ifdef __cplusplus
 }
 #endif
