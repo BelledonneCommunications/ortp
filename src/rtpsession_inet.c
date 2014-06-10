@@ -718,7 +718,7 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 	struct sockaddr_storage *rtcp_saddr=&session->rtcp.gs.rem_addr;
 	socklen_t *rtcp_saddr_len=&session->rtcp.gs.rem_addrlen;
 	OrtpAddress *aux_rtp=NULL,*aux_rtcp=NULL;
-	
+
 	if (is_aux){
 		aux_rtp=ortp_malloc0(sizeof(OrtpAddress));
 		rtp_saddr=&aux_rtp->addr;
@@ -986,7 +986,7 @@ static void log_send_error(RtpSession *session, const char *type, mblk_t *m, str
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error;
 	ortp_socket_t sockfd=session->rtp.gs.socket;
-	
+
 	if (rtp_session_using_transport(session, rtp)){
 		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
@@ -1021,7 +1021,7 @@ rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
 	socklen_t destlen=session->rtp.gs.rem_addrlen;
 	OList *elem=NULL;
-	
+
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1052,7 +1052,7 @@ rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error=0;
 	ortp_socket_t sockfd=session->rtcp.gs.socket;
-	
+
 	if (rtp_session_using_transport(session, rtcp)){
 			error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0,
 			destaddr, destlen);
@@ -1105,7 +1105,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 			OrtpAddress *addr=(OrtpAddress*)elem->data;
 			rtp_session_rtcp_sendto(session,m,(struct sockaddr*)&addr->addr,addr->len,TRUE);
 		}
-		
+
 	}else ortp_message("Not sending rtcp report, rtcp disabled.");
 	freemsg (m);
 	return error;
@@ -1118,10 +1118,7 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	struct iovec   iov;
 	struct msghdr  msghdr;
 	struct cmsghdr *cmsghdr;
-	struct {
-			struct cmsghdr cm;
-			char control[512];
-		} control;
+	char control[512];
 	memset(&msghdr, 0, sizeof(msghdr));
 	memset(&iov, 0, sizeof(iov));
 	iov.iov_base = msg->b_wptr;
