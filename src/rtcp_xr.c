@@ -227,7 +227,7 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 		if (lq_qi < 0) {
 			block->mos_lq = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
 		} else {
-			block->mos_lq = (uint8_t)(qi * 10);
+			block->mos_lq = (uint8_t)(lq_qi * 10);
 			if (block->mos_lq < 10) block->mos_lq = 10;
 		}
 		if (qi < 0) {
