@@ -138,7 +138,7 @@ static ORTP_INLINE void report_block_set_fraction_lost(report_block_t * rb, int 
 }
 
 static ORTP_INLINE void report_block_set_cum_packet_lost(report_block_t * rb, int64_t cpl) {
-	int clamp = (1<<24) + ((cpl>=0) ? (cpl>0x7FFFFF?0x7FFFFF:cpl) : (-cpl>0x800000?-0x800000:cpl));
+	uint32_t clamp = (uint32_t)((1<<24) + ((cpl>=0) ? (cpl>0x7FFFFF?0x7FFFFF:cpl) : (-cpl>0x800000?-0x800000:cpl)));
 
 	rb->fl_cnpl=htonl(
 			(ntohl(rb->fl_cnpl) & 0xFF000000) |
