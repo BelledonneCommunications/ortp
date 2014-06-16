@@ -1488,7 +1488,7 @@ void rtp_session_uninit (RtpSession * session)
 }
 
 /**
- * Sets the number of packets containg a new SSRC that will trigger the
+ * Sets the number of packets containing a new SSRC that will trigger the
  * "ssrc_changed" callback.
 **/
 void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets){
@@ -1497,7 +1497,7 @@ void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets)
 
 /**
  * Resynchronize to the incoming RTP streams.
- * This can be useful to handle discoutinuous timestamps.
+ * This can be useful to handle discontinuous timestamps.
  * For example, call this function from the timestamp_jump signal handler.
  * @param session the rtp session
 **/
@@ -1506,6 +1506,13 @@ void rtp_session_resync(RtpSession *session){
 	rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 	jitter_control_init(&session->rtp.jittctl,-1,NULL);
+
+	/* Since multiple streams can share the same session (fixed RTCP port for example),
+	RTCP values might be erroneous (number of packets received is computed
+	over all streams, ...). There should be only one stream per RTP session*/
+	ortp_warning("rtp_session_resync: resetting highest_seq_number_received which "
+		"might be due to 2 streams running on the same session, leading in wrong RTCP values");
+	session->rtp.hwrcv_extseq = 0;
 }
 
 /**
