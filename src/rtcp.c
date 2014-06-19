@@ -454,7 +454,7 @@ void compute_rtcp_interval(RtpSession *session) {
 	rtcp_bw = 0.05f * session->target_upload_bandwidth;
 
 	if (rtp_session_avpf_enabled(session) == TRUE) {
-		session->rtcp.send_algo.T_rr_interval = rtp_session_get_avpf_rr_interval(session) * 1000;
+		session->rtcp.send_algo.T_rr_interval = rtp_session_get_avpf_rr_interval(session);
 		rtcp_min_time = session->rtcp.send_algo.Tmin;
 	} else {
 		rtcp_min_time = session->rtcp.send_algo.T_rr_interval;
