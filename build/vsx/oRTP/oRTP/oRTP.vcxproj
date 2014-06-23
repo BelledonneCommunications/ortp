@@ -116,7 +116,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;$(ProjectDir)..\..\..\..\..\srtp\include;$(ProjectDir)..\..\..\..\..\srtp\crypto\include;$(ProjectDir)..\..\..\..\..\srtp\build\windows\srtp\srtp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;$(ProjectDir)..\..\..\..\..\..\srtp\include;$(ProjectDir)..\..\..\..\..\..\srtp\crypto\include;$(ProjectDir)..\..\..\..\..\..\srtp\build\windows\srtp\srtp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_DEBUG;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;UNICODE;_UNICODE;HAVE_SRTP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
@@ -140,7 +140,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;$(ProjectDir)..\..\..\..\..\srtp\include;$(ProjectDir)..\..\..\..\..\srtp\crypto\include;$(ProjectDir)..\..\..\..\..\srtp\build\windows\srtp\srtp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\..\include;$(ProjectDir)..\..\..\..\..\..\srtp\include;$(ProjectDir)..\..\..\..\..\..\srtp\crypto\include;$(ProjectDir)..\..\..\..\..\..\srtp\build\windows\srtp\srtp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;NDEBUG;_CRT_SECURE_NO_WARNINGS;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions>_USRDLL;NDEBUG;HAVE_SRTP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>true</StringPooling>
@@ -236,7 +236,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\..\srtp\build\windows\srtp\srtp\srtp.vcxproj">
+    <ProjectReference Include="..\..\..\..\..\..\srtp\build\windows\srtp\srtp\srtp.vcxproj">
       <Project>{b4b96bc4-2b72-4964-98e4-7fd048a43363}</Project>
     </ProjectReference>
   </ItemGroup>
