@@ -14,7 +14,7 @@ if(ORTP_ENABLE_SRTP)
 endif(ORTP_ENABLE_SRTP)
 
 if(WIN32)
-	include_directories(build/vsx/oRTP/oRTP)
+	include_directories(build/wp8/oRTP)
 endif(WIN32)
 
 add_subdirectory(include)
