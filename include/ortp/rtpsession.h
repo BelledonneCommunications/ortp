@@ -335,6 +335,7 @@ struct _RtpSession
 	unsigned int interarrival_jitter_test_vector;
 	unsigned int delay_test_vector;
 	float rtt;/*last round trip delay calculated*/
+	int cum_loss;
 	OrtpNetworkSimulatorCtx *net_sim_ctx;
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
@@ -369,6 +370,7 @@ ORTP_PUBLIC uint32_t rtp_session_get_recv_ssrc(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_seq_number(RtpSession *session, uint16_t seq);
 ORTP_PUBLIC uint16_t rtp_session_get_seq_number(RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session);
+ORTP_PUBLIC int rtp_session_get_cum_loss(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_duplication_ratio(RtpSession *session, float ratio);
 
 ORTP_PUBLIC void rtp_session_enable_jitter_buffer(RtpSession *session , bool_t enabled);

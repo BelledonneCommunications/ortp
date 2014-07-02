@@ -475,9 +475,9 @@ typedef struct OrtpLossRateEstimator{
 }OrtpLossRateEstimator;
 
 
-ORTP_PUBLIC OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, int32_t first_seq);
+ORTP_PUBLIC OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, struct _RtpSession *session);
 
-ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, int32_t first_seq);
+ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, struct _RtpSession *session);
 
 ORTP_PUBLIC bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb);
 

@@ -631,16 +631,19 @@ int rtp_session_bye(RtpSession *session, const char *reason) {
     return ret;
 }
 
-OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, int32_t first_seq){
+OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, RtpSession *session){
 	OrtpLossRateEstimator *obj=ortp_malloc(sizeof(OrtpLossRateEstimator));
-	ortp_loss_rate_estimator_init(obj,min_packet_count_interval, first_seq);
+	ortp_loss_rate_estimator_init(obj,min_packet_count_interval, session);
 	return obj;
 }
 
-void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, int32_t first_seq){
+void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, RtpSession *session){
 	memset(obj,0,sizeof(*obj));
 	obj->min_packet_count_interval=min_packet_count_interval;
-	obj->last_ext_seq=first_seq;
+	obj->last_ext_seq=rtp_session_get_seq_number(session);
+	obj->last_cum_loss=rtp_session_get_cum_loss(session);
+	printf("ortp_loss_rate_estimator_process_report_block %d ------------------- %d (%d)\n", obj->last_ext_seq, obj->last_cum_loss,
+		rtp_session_get_rcv_ext_seq_number(session));
 }
 
 bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb){
@@ -648,7 +651,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 	int32_t extseq=report_block_get_high_ext_seq(rb);
 	int32_t diff;
 	bool_t got_value=FALSE;
-	
+
 	if (obj->last_ext_seq==-1){
 		/*first report cannot be considered, since we don't know the interval it covers*/
 		obj->last_ext_seq=extseq;
@@ -656,6 +659,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		return FALSE;
 	}
 	diff=extseq-obj->last_ext_seq;
+
 	if (diff<0 || diff>obj->min_packet_count_interval * 100){
 		ortp_warning("Suspected discontinuity in sequence numbering.");
 		obj->last_ext_seq=extseq;
@@ -669,10 +673,14 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
 		got_value=TRUE;
+
+		if (obj->loss_rate>100.f){
+			ortp_fatal("Loss rate MUST NOT be greater than 100%%");
+		}
 	}
-	
+
 	return got_value;
-	
+
 }
 
 float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj){

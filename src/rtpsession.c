@@ -620,6 +620,12 @@ uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session){
 	return session->rtp.hwrcv_extseq;
 }
 
+/**
+ * Returns the latest cumulative loss value computed
+ **/
+int rtp_session_get_cum_loss(RtpSession *session){
+	return session->cum_loss;
+}
 
 /**
  *	Sets the SSRC for the outgoing stream.
