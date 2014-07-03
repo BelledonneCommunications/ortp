@@ -642,8 +642,6 @@ void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_co
 	obj->min_packet_count_interval=min_packet_count_interval;
 	obj->last_ext_seq=rtp_session_get_seq_number(session);
 	obj->last_cum_loss=rtp_session_get_cum_loss(session);
-	printf("ortp_loss_rate_estimator_process_report_block %d ------------------- %d (%d)\n", obj->last_ext_seq, obj->last_cum_loss,
-		rtp_session_get_rcv_ext_seq_number(session));
 }
 
 bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb){
