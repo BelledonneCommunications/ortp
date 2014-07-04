@@ -1231,7 +1231,8 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, uint32_t
 	uint32_t approx_ntp=(curntp>>16) & 0xFFFFFFFF;
 	/*ortp_message("rtt approx_ntp=%u, lrr=%u, dlrr=%u",approx_ntp,lrr,dlrr);*/
 	if (lrr!=0 && dlrr!=0){
-		double rtt_frac=approx_ntp-lrr-dlrr;
+		/*we cast to int32_t to check for crazy RTT time (negative)*/
+		double rtt_frac=(int32_t)(approx_ntp-lrr-dlrr);
 		if (rtt_frac>=0){
 			rtt_frac/=65536.0;
 
