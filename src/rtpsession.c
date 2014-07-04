@@ -1519,6 +1519,9 @@ void rtp_session_resync(RtpSession *session){
 	ortp_warning("rtp_session_resync: resetting highest_seq_number_received which "
 		"might be due to 2 streams running on the same session, leading in wrong RTCP values");
 	session->rtp.hwrcv_extseq = 0;
+	session->rtp.hwrcv_since_last_SR = 0;
+	session->rtp.hwrcv_seq_at_last_SR = 0;
+
 }
 
 /**
