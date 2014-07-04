@@ -659,7 +659,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 	diff=extseq-obj->last_ext_seq;
 
 	if (diff<0 || diff>obj->min_packet_count_interval * 100){
-		ortp_warning("Suspected discontinuity in sequence numbering.");
+		ortp_warning("ortp_loss_rate_estimator_process %p: Suspected discontinuity in sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
 	}else if (diff>obj->min_packet_count_interval){
@@ -673,7 +673,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		got_value=TRUE;
 
 		if (obj->loss_rate>100.f){
-			ortp_fatal("Loss rate MUST NOT be greater than 100%%");
+			ortp_error("ortp_loss_rate_estimator_process %p: Loss rate MUST NOT be greater than 100%%", obj);
 		}
 	}
 
