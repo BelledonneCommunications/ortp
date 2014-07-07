@@ -224,8 +224,8 @@ rtp_session_init (RtpSession * session, int mode)
 	JBParameters jbp;
 	if (session == NULL)
 	{
-	    ortp_debug("rtp_session_init: Invalid paramter (session=NULL)");
-	    return;
+		ortp_debug("rtp_session_init: Invalid paramter (session=NULL)");
+		return;
 	}
 	memset (session, 0, sizeof (RtpSession));
 	session->mode = (RtpSessionMode) mode;
@@ -317,10 +317,10 @@ rtp_session_new (int mode)
 	session = (RtpSession *) ortp_malloc (sizeof (RtpSession));
 	if (session == NULL)
 	{
-	    ortp_error("rtp_session_new: Memory allocation failed");
-	    return NULL;
+		ortp_error("rtp_session_new: Memory allocation failed");
+		return NULL;
 	}
-      rtp_session_init (session, mode);
+	rtp_session_init (session, mode);
 	return session;
 }
 
@@ -553,7 +553,7 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned 
 **/
 int
 rtp_session_signal_connect (RtpSession * session, const char *signal_name,
-			    RtpCallback cb, unsigned long user_data)
+				RtpCallback cb, unsigned long user_data)
 {
 	OList *elem;
 	for (elem=session->signal_tables;elem!=NULL;elem=o_list_next(elem)){
@@ -562,7 +562,7 @@ rtp_session_signal_connect (RtpSession * session, const char *signal_name,
 			return rtp_signal_table_add(s,cb,user_data);
 		}
 	}
-	ortp_warning ("rtp_session_signal_connect: inexistant signal %s",signal_name);
+	ortp_warning ("rtp_session_signal_connect: inexistent signal %s",signal_name);
 	return -1;
 }
 
@@ -886,8 +886,8 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		wait_point_lock(&session->snd.wp);
 		packet_time =
 			rtp_session_ts_to_time (session,
-				     send_ts -
-				     session->rtp.snd_ts_offset) +
+					 send_ts -
+					 session->rtp.snd_ts_offset) +
 					session->rtp.snd_time_offset;
 		/*ortp_message("rtp_session_send_with_ts: packet_time=%i time=%i",packet_time,sched->time_);*/
 		if (TIME_IS_STRICTLY_NEWER_THAN (packet_time, sched->time_))
@@ -1141,7 +1141,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 
 	goto end;
 
-      end:
+	  end:
 	if (mp != NULL)
 	{
 		int msgsize = msgdsize (mp);	/* evaluate how much bytes (including header) is received by app */
@@ -1188,8 +1188,8 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		wait_point_lock(&session->rcv.wp);
 		packet_time =
 			rtp_session_ts_to_time (session,
-				     user_ts -
-				     session->rtp.rcv_query_ts_offset) +
+					 user_ts -
+					 session->rtp.rcv_query_ts_offset) +
 			session->rtp.rcv_time_offset;
 		ortp_debug ("rtp_session_recvm_with_ts: packet_time=%i, time=%i",packet_time, sched->time_);
 
@@ -1245,7 +1245,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
  *
 **/
 int rtp_session_recv_with_ts (RtpSession * session, uint8_t * buffer,
-			       int len, uint32_t ts, int * have_more){
+				   int len, uint32_t ts, int * have_more){
 	mblk_t *mp=NULL;
 	int plen,blen=0;
 	*have_more=0;
@@ -1455,7 +1455,7 @@ void rtp_session_uninit (RtpSession * session)
 
 #if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
 	if (session->rtp.QoSFlowID != 0)
-    {
+	{
 		OSVERSIONINFOEX ovi;
 		memset(&ovi, 0, sizeof(ovi));
 		ovi.dwOSVersionInfoSize = sizeof(ovi);
@@ -1483,13 +1483,13 @@ void rtp_session_uninit (RtpSession * session)
 				session->rtp.QoSFlowID=0;
 			}
 		}
-    }
+	}
 
-    if (session->rtp.QoSHandle != NULL)
-    {
-        QOSCloseHandle(session->rtp.QoSHandle);
+	if (session->rtp.QoSHandle != NULL)
+	{
+		QOSCloseHandle(session->rtp.QoSHandle);
 		session->rtp.QoSHandle=NULL;
-    }
+	}
 #endif
 }
 
@@ -1513,12 +1513,15 @@ void rtp_session_resync(RtpSession *session){
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 	jitter_control_init(&session->rtp.jittctl,-1,NULL);
 
-	/* Since multiple streams can share the same session (fixed RTCP port for example),
+	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed
 	over all streams, ...). There should be only one stream per RTP session*/
-	ortp_warning("rtp_session_resync: resetting highest_seq_number_received which "
-		"might be due to 2 streams running on the same session, leading in wrong RTCP values");
+	ortp_warning("rtp_session_resync[%p]: resetting RTCP data which might be wrong "
+		"due to 2 streams running on the same session", session);
 	session->rtp.hwrcv_extseq = 0;
+	session->rtp.hwrcv_since_last_SR = 0;
+	session->rtp.hwrcv_seq_at_last_SR = 0;
+	rtp_session_unset_flag(session, RTP_SESSION_RECV_SEQ_INIT);
 }
 
 /**
@@ -1872,7 +1875,7 @@ rtp_session_get_last_recv_time(RtpSession *session, struct timeval *tv)
 #ifdef PERF
 	ortp_error("rtp_session_get_last_recv_time() feature disabled.");
 #else
-    	*tv = session->last_recv_time;
+	*tv = session->last_recv_time;
 #endif
 }
 

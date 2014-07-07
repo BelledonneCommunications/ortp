@@ -41,7 +41,8 @@ typedef enum {
 	RTP_SESSION_USING_TRANSPORT=1<<10,
 	RTCP_OVERRIDE_LOST_PACKETS=1<<11,
 	RTCP_OVERRIDE_JITTER=1<<12,
-	RTCP_OVERRIDE_DELAY=1<<13
+	RTCP_OVERRIDE_DELAY=1<<13,
+	RTP_SESSION_RECV_SEQ_INIT=1<<14,
 }RtpSessionFlags;
 
 #define rtp_session_using_transport(s, stream) (((s)->flags & RTP_SESSION_USING_TRANSPORT) && (s->stream.gs.tr != 0))

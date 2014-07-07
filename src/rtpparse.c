@@ -252,13 +252,18 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			extseq->split.lo=rtp->seq_number;
 			extseq->split.hi++;
 		}
-		/* the first sequence number received should be initialized at the beginning, so that the first receiver reports contains valid loss rate*/
-		if (stats->packet_recv==1){
+
+		/* the first sequence number received should be initialized at the beginning
+		or at any resync, so that the first receiver reports contains valid loss rate*/
+		if (!(session->flags & RTP_SESSION_RECV_SEQ_INIT)){
+			rtp_session_set_flag(session, RTP_SESSION_RECV_SEQ_INIT);
 			rtpstream->hwrcv_seq_at_last_SR=rtp->seq_number-1;
-			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary = rtp->seq_number-1;
-			session->rtcp_xr_stats.first_rcv_seq = extseq->one;
+			session->rtcp_xr_stats.rcv_seq_at_last_stat_summary=rtp->seq_number-1;
 		}
-		session->rtcp_xr_stats.last_rcv_seq = extseq->one;
+		if (stats->packet_recv==1){
+			session->rtcp_xr_stats.first_rcv_seq=extseq->one;
+		}
+		session->rtcp_xr_stats.last_rcv_seq=extseq->one;
 	}
 
 	/* check for possible telephone events */
