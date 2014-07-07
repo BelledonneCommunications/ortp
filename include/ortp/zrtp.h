@@ -33,7 +33,7 @@ typedef struct OrtpZrtpParams {
 
 typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 
-ORTP_PUBLIC bool_t ortp_zrtp_available();
+ORTP_PUBLIC bool_t ortp_zrtp_available(void);
 
 ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
 /**
