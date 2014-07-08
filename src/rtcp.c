@@ -246,6 +246,23 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			loss_fraction=0;
 		}
 	}
+<<<<<<< master
+=======
+	ortp_debug("report_block_init[%p]:\n"
+		"\texpected_packets=%d=%u-%u\n"
+		"\thwrcv_since_last_SR=%u\n"
+		"\tpacket_loss=%d\n"
+		"\tcum_packet_loss=%ld\n"
+		"\tloss_fraction=%f%%\n"
+		, session
+		, stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR, stream->hwrcv_extseq, stream->hwrcv_seq_at_last_SR
+		, stream->hwrcv_since_last_SR
+		, packet_loss
+		, (long)stream->stats.cum_packet_loss
+		, loss_fraction/2.56
+	);
+
+>>>>>>> local
 	/* reset them */
 	stream->hwrcv_since_last_SR=0;
 	stream->hwrcv_seq_at_last_SR=stream->hwrcv_extseq;
