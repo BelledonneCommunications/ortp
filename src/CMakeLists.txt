@@ -1,3 +1,36 @@
+############################################################################
+# CMakeLists.txt
+# Copyright (C) 2014  Belledonne Communications, Grenoble France
+#
+############################################################################
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+############################################################################
+
+set(LIBS ${CMAKE_THREAD_LIBS_INIT})
+if(HAVE_RT)
+	list(APPEND LIBS rt)
+endif()
+if(SRTP_FOUND)
+	list(APPEND LIBS ${SRTP_LIBRARIES})
+endif()
+if(BZRTP_FOUND)
+	list(APPEND LIBS ${BZRTP_LIBRARIES})
+endif()
+
 set(SOURCE_FILES
 	avprofile.c
 	b64.c
@@ -31,33 +64,34 @@ set(SOURCE_FILES
 )
 
 if(WIN32)
-set(SOURCE_FILES
-	${SOURCE_FILES}
-	dll_entry.c
-)
-endif(WIN32)
+	list(APPEND SOURCE_FILES dll_entry.c)
+endif()
 
 add_definitions(
 	-DORTP_EXPORTS
 )
 
 if(WIN32)
-add_definitions(
-	-DWINDOWS_NATIVE
-)
+	add_definitions(-DWINDOWS_NATIVE)
+	list(APPEND LIBS ws2_32 delayimp Winmm Qwave)
+endif()
 
-set(LIBS ws2_32 delayimp Winmm)
-endif(WIN32)
-
-if(ORTP_ENABLE_SRTP)
-	add_definitions(-DHAVE_SRTP)
-	list(APPEND LIBS ${LIBSRTP})
-endif(ORTP_ENABLE_SRTP)
-
-add_library(ortp SHARED ${SOURCE_FILES})
-set_target_properties(ortp PROPERTIES VERSION 0.23.0 SOVERSION 9)
-
-target_link_libraries(ortp ${LIBS})
+if(ENABLE_STATIC)
+	add_library(ortp STATIC ${SOURCE_FILES})
+	target_link_libraries(ortp ${LIBS})
+else()
+	add_library(ortp SHARED ${SOURCE_FILES})
+	set_target_properties(ortp PROPERTIES VERSION ${ORTP_VERSION} SOVERSION ${ORTP_SO_VERSION})
+	target_link_libraries(ortp ${LIBS})
+	if(MSVC)
+		if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+			install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/ortp.pdb
+				DESTINATION bin
+				PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+			)
+		endif()
+	endif()
+endif()
 
 install(TARGETS ortp
 	RUNTIME DESTINATION bin
@@ -66,11 +100,6 @@ install(TARGETS ortp
 	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
 
-if(WIN32)
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/ortp.pdb
-	DESTINATION bin
-	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-)
+if(ENABLE_TESTS)
+	add_subdirectory(tests)
 endif()
-endif(WIN32)

@@ -18,9 +18,7 @@
 */
 
 
-#ifdef _MSC_VER
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 #include "ortp/ortp.h"

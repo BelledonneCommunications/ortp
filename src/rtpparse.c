@@ -18,6 +18,10 @@
 */
 
 
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
+
 #include "ortp/ortp.h"
 #include "jitterctl.h"
 #include "utils.h"

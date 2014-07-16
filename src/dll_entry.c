@@ -1,7 +1,5 @@
 
-#ifdef WIN32
-#include "ortp-config-win32.h"
-#else
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 #include "ortp/ortp.h"	
