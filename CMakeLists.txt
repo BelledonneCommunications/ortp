@@ -55,6 +55,7 @@ if(ENABLE_ZRTP)
 		set(ENABLE_ZRTP OFF CACHE BOOL "Build oRTP with the ZRTP transport support." FORCE)
 	endif()
 endif()
+find_package(Doxygen)
 
 
 include(CheckCSourceCompiles)
@@ -186,3 +187,13 @@ add_definitions(-DHAVE_CONFIG_H)
 
 add_subdirectory(include)
 add_subdirectory(src)
+
+if(DOXYGEN_FOUND)
+	set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
+	add_custom_target(html-doc ALL
+		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen
+		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
+	install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
+		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/oRTP-${ORTP_VERSION}")
+endif()
