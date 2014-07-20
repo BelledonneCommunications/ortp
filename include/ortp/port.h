@@ -121,10 +121,14 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #include <ws2tcpip.h>
 
 #ifdef _MSC_VER
+#ifdef ORTP_STATIC
+#define ORTP_PUBLIC
+#else
 #ifdef ORTP_EXPORTS
 #define ORTP_PUBLIC	__declspec(dllexport)
 #else 
 #define ORTP_PUBLIC	__declspec(dllimport)
+#endif
 #endif
 #pragma push_macro("_WINSOCKAPI_")
 #ifndef _WINSOCKAPI_

@@ -1,0 +1,73 @@
+############################################################################
+# FindORTP.txt
+# Copyright (C) 2014  Belledonne Communications, Grenoble France
+#
+############################################################################
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+############################################################################
+#
+# - Find the oRTP include file and library
+#
+#  ORTP_FOUND - system has oRTP
+#  ORTP_INCLUDE_DIRS - the oRTP include directory
+#  ORTP_LIBRARIES - The libraries needed to use oRTP
+#  ORTP_CFLAGS - The cflags needed to use oRTP
+
+find_package(SRTP)
+find_package(BZRTP)
+
+set(_ORTP_ROOT_PATHS
+	${WITH_ORTP}
+	${CMAKE_INSTALL_PREFIX}
+)
+
+find_path(ORTP_INCLUDE_DIRS
+	NAMES ortp/ortp.h
+	HINTS _ORTP_ROOT_PATHS
+	PATH_SUFFIXES include
+)
+
+if(ORTP_INCLUDE_DIRS)
+	set(HAVE_ORTP_ORTP_H 1)
+endif()
+
+find_library(ORTP_LIBRARIES
+	NAMES ortp
+	HINTS ${_ORTP_ROOT_PATHS}
+	PATH_SUFFIXES bin lib
+)
+
+if(SRTP_FOUND)
+	list(APPEND ORTP_INCLUDE_DIRS ${SRTP_INCLUDE_DIRS})
+	list(APPEND ORTP_LIBRARIES ${SRTP_LIBRARIES})
+endif()
+if(BZRTP_FOUND)
+	list(APPEND ORTP_INCLUDE_DIRS ${BZRTP_INCLUDE_DIRS})
+	list(APPEND ORTP_LIBRARIES ${BZRTP_LIBRARIES})
+endif()
+list(APPEND ORTP_LIBRARIES ws2_32 delayimp Winmm Qwave)
+list(REMOVE_DUPLICATES ORTP_INCLUDE_DIRS)
+list(REMOVE_DUPLICATES ORTP_LIBRARIES)
+set(ORTP_CPPFLAGS @ORTP_CPPFLAGS@)
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(ORTP
+	DEFAULT_MSG
+	ORTP_INCLUDE_DIRS ORTP_LIBRARIES
+)
+
+mark_as_advanced(ORTP_INCLUDE_DIRS ORTP_LIBRARIES ORTP_CFLAGS)

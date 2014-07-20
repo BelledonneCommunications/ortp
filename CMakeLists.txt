@@ -25,10 +25,10 @@ project(ORTP C)
 
 
 set(ORTP_MAJOR_VERSION "0")
-set(ORTP_MINOR_VERSION 23)
-set(ORTP_MICRO_VERSION 0)
+set(ORTP_MINOR_VERSION "23")
+set(ORTP_MICRO_VERSION "0")
 set(ORTP_VERSION "${ORTP_MAJOR_VERSION}.${ORTP_MINOR_VERSION}.${ORTP_MICRO_VERSION}")
-set(ORTP_SO_VERSION 9)
+set(ORTP_SO_VERSION "9")
 
 
 option(ENABLE_STATIC "Build static library (default is shared library)." NO)
@@ -149,6 +149,7 @@ if(WORDS_BIGENDIAN)
 	set(ORTP_BIGENDIAN 1)
 endif()
 
+
 include_directories(
 	include/
 	src/
@@ -168,6 +169,9 @@ endif()
 if(SRTP_FOUND)
 	set(HAVE_SRTP 1)
 endif()
+if(ENABLE_STATIC)
+	set(ORTP_STATIC 1)
+endif()
 if(ENABLE_PERF)
 	set(PERF 1)
 endif()
@@ -181,12 +185,27 @@ if(CMAKE_USE_PTHREADS_INIT)
 	set(ORTP_DEFAULT_THREAD_STACK_SIZE ${WITH_THREAD_STACK_SIZE})
 endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp-config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/ortp-config.h)
-set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/config.h PROPERTIES GENERATED ON)
+set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/ortp-config.h PROPERTIES GENERATED ON)
 add_definitions(-DHAVE_CONFIG_H)
 
 
 add_subdirectory(include)
 add_subdirectory(src)
+
+
+set(ORTP_CPPFLAGS )
+if(ORTP_STATIC)
+	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
+endif()
+if(SRTP_FOUND)
+	list(APPEND ORTP_CPPFLAGS "-DORTP_HAVE_SRTP")
+endif()
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/FindORTP.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake
+	DESTINATION share/cmake/Modules
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+)
+
 
 if(DOXYGEN_FOUND)
 	set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
