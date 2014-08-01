@@ -132,10 +132,10 @@ ORTP_PUBLIC size_t msgdsize(const mblk_t *mp);
 ORTP_PUBLIC void msgpullup(mblk_t *mp,size_t len);
 
 /* duplicates a single message, but with buffer included */
-ORTP_PUBLIC mblk_t *copyb(mblk_t *mp);
+ORTP_PUBLIC mblk_t *copyb(const mblk_t *mp);
 
 /* duplicates a complex message with buffer included */
-ORTP_PUBLIC mblk_t *copymsg(mblk_t *mp);
+ORTP_PUBLIC mblk_t *copymsg(const mblk_t *mp);
 
 ORTP_PUBLIC mblk_t * appendb(mblk_t *mp, const char *data, size_t size, bool_t pad);
 ORTP_PUBLIC void msgappend(mblk_t *mp, const char *data, size_t size, bool_t pad);
