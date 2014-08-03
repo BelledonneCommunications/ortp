@@ -33,7 +33,7 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC /* avoid redefinition... */
-#ifndef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #include <QOS2.h>
 #endif
 #endif
@@ -1451,7 +1451,7 @@ void rtp_session_uninit (RtpSession * session)
 	if (session->net_sim_ctx)
 		ortp_network_simulator_destroy(session->net_sim_ctx);
 
-#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
+#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	if (session->rtp.QoSFlowID != 0)
 	{
 		OSVERSIONINFOEX ovi;

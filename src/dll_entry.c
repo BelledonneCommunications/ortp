@@ -7,10 +7,10 @@
 typedef struct __STRUCT_SHARED_DATA__
 {
 	DWORD				m_nReference;
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ULONGLONG			m_ullStartTime;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	DWORD				m_dwStartTime;
+#else
+	ULONGLONG			m_ullStartTime;
 #endif
 	BOOL				m_bInitialize;
 
@@ -27,7 +27,7 @@ extern DWORD dwoRTPLogLevel;
 
 #define	SHMEMSIZE	sizeof(SHARED_DATA)
 
-#ifdef WINAPI_FAMILY_PHONE_APP
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 static SHARED_DATA		sharedData;
 #endif
 static	LPSHARED_DATA	lpSharedData;
@@ -61,10 +61,7 @@ BOOL WINAPI DllMain(
 				return FALSE;
 			}
 
-#ifdef WINAPI_FAMILY_PHONE_APP
-			fInit = TRUE;
-			lpSharedData = &sharedData;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
             // Create a named file mapping object. 
             hMapObject = CreateFileMapping( INVALID_HANDLE_VALUE,	// use paging file
 											NULL,					// default security attributes
@@ -88,6 +85,9 @@ BOOL WINAPI DllMain(
 															0);             // default: map entire file
             if (lpSharedData == NULL) 
                 return FALSE; 
+#else
+			fInit = TRUE;
+			lpSharedData = &sharedData;
 #endif
  
             // Initialize memory if this is the first process.
@@ -100,10 +100,10 @@ BOOL WINAPI DllMain(
 				OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - Initializing module\n");
 #endif
 
-#ifdef WINAPI_FAMILY_PHONE_APP
-				lpSharedData->m_ullStartTime = GetTickCount64();
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 				lpSharedData->m_dwStartTime	= GetTickCount();
+#else
+				lpSharedData->m_ullStartTime = GetTickCount64();
 #endif
 				lpSharedData->m_nReference	= 1;
 				lpSharedData->m_bInitialize = FALSE;
@@ -164,7 +164,7 @@ BOOL WINAPI DllMain(
 					ortp_exit();
 					UnregisterLog(&dwoRTPLogLevel, "LOG_ORTP");
 
-#ifndef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 					// Unmap shared memory from the process's address space. 
 					UnmapViewOfFile(lpSharedData);
 					lpSharedData = NULL;

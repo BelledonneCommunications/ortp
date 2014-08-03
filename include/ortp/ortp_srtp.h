@@ -21,7 +21,7 @@
 #define ortp_srtp_h
 
 #if defined(HAVE_SRTP) || defined(ORTP_HAVE_SRTP)
-#	if defined(ANDROID) || defined(WINAPI_FAMILY_PHONE_APP)
+#	if defined(ANDROID) || !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 // Android and Windows phone don't use make install
 #	include <srtp.h>
 #	else

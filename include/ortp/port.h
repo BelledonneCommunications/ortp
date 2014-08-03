@@ -130,6 +130,10 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #define ORTP_PUBLIC	__declspec(dllimport)
 #endif
 #endif
+#if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION)
+// Only use with x being WINAPI_PARTITION_DESKTOP to test if building on desktop
+#define WINAPI_FAMILY_PARTITION(x) 1
+#endif
 #pragma push_macro("_WINSOCKAPI_")
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -156,12 +160,12 @@ ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #define random		rand
 
 typedef SOCKET ortp_socket_t;
-#ifdef WINAPI_FAMILY_PHONE_APP
-typedef CONDITION_VARIABLE ortp_cond_t;
-typedef SRWLOCK ortp_mutex_t;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 typedef HANDLE ortp_cond_t;
 typedef HANDLE ortp_mutex_t;
+#else
+typedef CONDITION_VARIABLE ortp_cond_t;
+typedef SRWLOCK ortp_mutex_t;
 #endif
 typedef HANDLE ortp_thread_t;
 
