@@ -75,6 +75,9 @@ typedef pthread_cond_t ortp_cond_t;
 
 #define ORTP_PUBLIC
 #define ORTP_INLINE			inline
+
+#define WINAPI_FAMILY_PARTITION(x) 1
+
 #ifdef __cplusplus
 extern "C"
 {
