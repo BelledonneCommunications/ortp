@@ -84,7 +84,8 @@ extern "C"
 #endif
 
 int __ortp_thread_join(ortp_thread_t thread, void **ptr);
-int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg);
+int __ortp_thread_create(ortp_thread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg);
+unsigned long __ortp_thread_self(void);
 
 #ifdef __cplusplus
 }
@@ -92,6 +93,7 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 
 #define ortp_thread_create	__ortp_thread_create
 #define ortp_thread_join	__ortp_thread_join
+#define ortp_thread_self	__ortp_thread_self
 #define ortp_thread_exit	pthread_exit
 #define ortp_mutex_init		pthread_mutex_init
 #define ortp_mutex_lock		pthread_mutex_lock
@@ -175,6 +177,7 @@ typedef HANDLE ortp_thread_t;
 
 #define ortp_thread_create	WIN_thread_create
 #define ortp_thread_join	WIN_thread_join
+#define ortp_thread_self	WIN_thread_self
 #define ortp_thread_exit(arg)
 #define ortp_mutex_init		WIN_mutex_init
 #define ortp_mutex_lock		WIN_mutex_lock
@@ -198,6 +201,7 @@ ORTP_PUBLIC int WIN_mutex_unlock(ortp_mutex_t *mutex);
 ORTP_PUBLIC int WIN_mutex_destroy(ortp_mutex_t *mutex);
 ORTP_PUBLIC int WIN_thread_create(ortp_thread_t *t, void *attr_unused, void *(*func)(void*), void *arg);
 ORTP_PUBLIC int WIN_thread_join(ortp_thread_t thread, void **unused);
+ORTP_PUBLIC unsigned long WIN_thread_self(void);
 ORTP_PUBLIC int WIN_cond_init(ortp_cond_t *cond, void *attr_unused);
 ORTP_PUBLIC int WIN_cond_wait(ortp_cond_t * cond, ortp_mutex_t * mutex);
 ORTP_PUBLIC int WIN_cond_signal(ortp_cond_t * cond);

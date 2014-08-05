@@ -183,7 +183,7 @@ int __ortp_thread_join(ortp_thread_t thread, void **ptr){
 	return err;
 }
 
-int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg){
+int __ortp_thread_create(ortp_thread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg){
 	pthread_attr_t my_attr;
 	pthread_attr_init(&my_attr);
 	if (attr)
@@ -193,6 +193,10 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 		pthread_attr_setstacksize(&my_attr, ORTP_DEFAULT_THREAD_STACK_SIZE);
 #endif
 	return pthread_create(thread, &my_attr, routine, arg);
+}
+
+unsigned long __ortp_thread_self(void) {
+	return (unsigned long)pthread_self();
 }
 
 #endif
@@ -270,6 +274,10 @@ int WIN_thread_join(ortp_thread_t thread_h, void **unused)
 		CloseHandle(thread_h);
 	}
 	return 0;
+}
+
+unsigned long WIN_thread_self(void) {
+	return (unsigned long)GetCurrentThreadId();
 }
 
 int WIN_cond_init(ortp_cond_t *cond, void *attr)
