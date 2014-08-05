@@ -123,6 +123,11 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION)
+// Only use with x being WINAPI_PARTITION_DESKTOP to test if building on desktop
+#define WINAPI_FAMILY_PARTITION(x) 1
+#endif
+
 #ifdef _MSC_VER
 #ifdef ORTP_STATIC
 #define ORTP_PUBLIC
@@ -132,10 +137,6 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 #else 
 #define ORTP_PUBLIC	__declspec(dllimport)
 #endif
-#endif
-#if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION)
-// Only use with x being WINAPI_PARTITION_DESKTOP to test if building on desktop
-#define WINAPI_FAMILY_PARTITION(x) 1
 #endif
 #pragma push_macro("_WINSOCKAPI_")
 #ifndef _WINSOCKAPI_
