@@ -163,7 +163,9 @@ void ortp_logv_flush(void) {
 
 void ortp_logv(int level, const char *fmt, va_list args) {
 	if ((ortp_logv_out != NULL) && ortp_log_level_enabled(level)) {
-		if ((__log_thread_id == 0) || (__log_thread_id == ortp_thread_self())) {
+		if (__log_thread_id == 0) {
+			ortp_logv_out(level, fmt, args);
+		} else if (__log_thread_id == ortp_thread_self()) {
 			ortp_logv_flush();
 			ortp_logv_out(level, fmt, args);
 		} else {
