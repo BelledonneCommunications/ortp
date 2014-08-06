@@ -25,7 +25,7 @@
 #  ORTP_FOUND - system has oRTP
 #  ORTP_INCLUDE_DIRS - the oRTP include directory
 #  ORTP_LIBRARIES - The libraries needed to use oRTP
-#  ORTP_CFLAGS - The cflags needed to use oRTP
+#  ORTP_CPPFLAGS - The cflags needed to use oRTP
 
 find_package(SRTP)
 find_package(BZRTP)
@@ -72,4 +72,4 @@ find_package_handle_standard_args(ORTP
 	ORTP_INCLUDE_DIRS ORTP_LIBRARIES
 )
 
-mark_as_advanced(ORTP_INCLUDE_DIRS ORTP_LIBRARIES ORTP_CFLAGS)
+mark_as_advanced(ORTP_INCLUDE_DIRS ORTP_LIBRARIES ORTP_CPPFLAGS)
