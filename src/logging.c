@@ -145,10 +145,14 @@ void _ortp_logv_flush(int dummy, ...) {
 	ortp_mutex_lock(&__log_stored_messages_mutex);
 	for (elem = __log_stored_messages_list; elem != NULL; elem = o_list_next(elem)) {
 		ortp_stored_log_t *l = (ortp_stored_log_t *)elem->data;
+#ifdef WIN32
+		ortp_logv_out(l->level, l->msg, empty_va_list);
+#else
 		va_list cap;
 		va_copy(cap, empty_va_list);
 		ortp_logv_out(l->level, l->msg, cap);
 		va_end(cap);
+#endif
 		ortp_free(l->msg);
 		ortp_free(l);
 	}
