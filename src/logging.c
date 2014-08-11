@@ -140,10 +140,14 @@ typedef struct {
 
 void _ortp_logv_flush(int dummy, ...) {
 	OList *elem;
+	OList *msglist;
 	va_list empty_va_list;
 	va_start(empty_va_list, dummy);
 	ortp_mutex_lock(&__log_stored_messages_mutex);
-	for (elem = __log_stored_messages_list; elem != NULL; elem = o_list_next(elem)) {
+	msglist = __log_stored_messages_list;
+	__log_stored_messages_list = NULL;
+	ortp_mutex_unlock(&__log_stored_messages_mutex);
+	for (elem = msglist; elem != NULL; elem = o_list_next(elem)) {
 		ortp_stored_log_t *l = (ortp_stored_log_t *)elem->data;
 #ifdef WIN32
 		ortp_logv_out(l->level, l->msg, empty_va_list);
@@ -156,8 +160,7 @@ void _ortp_logv_flush(int dummy, ...) {
 		ortp_free(l->msg);
 		ortp_free(l);
 	}
-	__log_stored_messages_list = o_list_free(__log_stored_messages_list);
-	ortp_mutex_unlock(&__log_stored_messages_mutex);
+	o_list_free(msglist);
 	va_end(empty_va_list);
 }
 
