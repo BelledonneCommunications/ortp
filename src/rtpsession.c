@@ -1506,10 +1506,13 @@ void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets)
  * @param session the rtp session
 **/
 void rtp_session_resync(RtpSession *session){
+	int ptindex=rtp_session_get_recv_payload_type(session);
+	PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,ptindex);
+	
 	flushq (&session->rtp.rq, FLUSHALL);
 	rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
-	jitter_control_init(&session->rtp.jittctl,-1,NULL);
+	jitter_control_init(&session->rtp.jittctl,-1,pt);
 
 	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed
