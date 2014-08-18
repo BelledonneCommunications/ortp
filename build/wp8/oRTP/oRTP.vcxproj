@@ -54,7 +54,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\..\..\include;$(ProjectDir)..\..\..\..\..\srtp\include;$(ProjectDir)..\..\..\..\..\srtp\crypto\include;$(ProjectDir)..\..\..\..\..\srtp\build\wp8\srtp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_CRT_SECURE_NO_WARNINGS;_UNICODE;UNICODE;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;HAVE_SRTP;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32;_WINDLL;_USRDLL;_CRT_SECURE_NO_WARNINGS;_UNICODE;UNICODE;ORTP_INET6;WIN32;ORTP_EXPORTS;WINDOWS_NATIVE;HAVE_SRTP;ORTP_VERSION="0.23.0";ORTP_MAJOR_VERSION=0;ORTP_MINOR_VERSION=23;ORTP_MICRO_VERSION=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>false</CompileAsWinRT>
