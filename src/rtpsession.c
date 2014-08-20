@@ -1517,8 +1517,6 @@ void rtp_session_resync(RtpSession *session){
 	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed
 	over all streams, ...). There should be only one stream per RTP session*/
-	ortp_warning("rtp_session_resync[%p]: resetting RTCP data which might be wrong "
-		"due to 2 streams running on the same session", session);
 	session->rtp.hwrcv_extseq = 0;
 	session->rtp.hwrcv_since_last_SR = 0;
 	session->rtp.hwrcv_seq_at_last_SR = 0;
