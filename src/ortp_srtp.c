@@ -201,13 +201,13 @@ static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr
 ortp_socket_t
 srtp_getsocket(RtpTransport *t)
 {
-  return t->session->rtp.gs.socket;
+	return t->session->rtp.gs.socket;
 }
 
 ortp_socket_t
 srtcp_getsocket(RtpTransport *t)
 {
-  return t->session->rtcp.gs.socket;
+	return t->session->rtcp.gs.socket;
 }
 
 /**
@@ -444,6 +444,11 @@ int srtp_transport_new(void *i, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	return -1;
 }
 
+int srtp_transport_modifier_new(void *i, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ){
+	ortp_error("srtp_transport_modifier_new: oRTP has not been compiled with SRTP support.");
+	return -1;
+}
+
 bool_t ortp_srtp_supported(void){
 	return FALSE;
 }
@@ -477,5 +482,7 @@ void ortp_srtp_shutdown(void){
 void srtp_transport_destroy(RtpTransport *tp){
 }
 
+void srtp_transport_modifier_destroy(RtpTransportModifier *tp){
+}
 #endif
 
