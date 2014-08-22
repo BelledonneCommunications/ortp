@@ -77,5 +77,4 @@ void rtp_session_send_regular_rtcp_packet_and_reschedule(RtpSession *session, ui
 void rtp_session_send_fb_rtcp_packet_and_reschedule(RtpSession *session);
 
 void ortp_stream_clear_aux_addresses(OrtpStream *os);
-
 #endif

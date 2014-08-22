@@ -21,7 +21,7 @@
 #define ortp_srtp_h
 
 #if defined(HAVE_SRTP) || defined(ORTP_HAVE_SRTP)
-#	if defined(ANDROID) || !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if defined(ANDROID) || !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 // Android and Windows phone don't use make install
 #	include <srtp.h>
 #	else
@@ -70,6 +70,12 @@ ORTP_PUBLIC bool_t ortp_srtp_supported(void);
 ORTP_PUBLIC int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
 ORTP_PUBLIC void srtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
+
+ORTP_PUBLIC int srtp_transport_modifier_new(srtp_t srtp, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt );
+ORTP_PUBLIC void srtp_transport_modifier_destroy(RtpTransportModifier *tp);
+
+ORTP_PUBLIC void srtp_transport_destroy(RtpTransport *tp);
+ORTP_PUBLIC int srtp_transport_modifier_new(srtp_t srtp, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt );
 
 ORTP_PUBLIC void ortp_srtp_shutdown(void);
 

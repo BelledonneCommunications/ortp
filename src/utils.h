@@ -38,6 +38,7 @@ struct _OList {
 
 
 #define o_list_next(elem) ((elem)->next)
+#define o_list_prev(elem) ((elem)->prev)
 
 OList * o_list_append(OList *elem, void * data);
 OList * o_list_remove(OList *list, void *data);

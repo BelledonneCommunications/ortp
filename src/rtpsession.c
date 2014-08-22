@@ -1508,7 +1508,7 @@ void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets)
 void rtp_session_resync(RtpSession *session){
 	int ptindex=rtp_session_get_recv_payload_type(session);
 	PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,ptindex);
-	
+
 	flushq (&session->rtp.rq, FLUSHALL);
 	rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
@@ -1935,4 +1935,115 @@ void rtp_session_process (RtpSession * session, uint32_t time, RtpScheduler *sch
 
 void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes) {
 	session->reuseaddr=yes;
+}
+
+
+typedef struct _MetaRtpTransportImpl
+{
+	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
+	OList *modifiers;
+	RtpTransport *endpoint;
+	bool_t has_set_session;
+} MetaRtpTransportImpl;
+
+ortp_socket_t meta_rtp_transport_getsocket(RtpTransport *t) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	return m->endpoint->t_getsocket(m->endpoint);
+}
+
+void meta_rtp_set_session(MetaRtpTransportImpl *m){
+	OList *elem;
+	m->endpoint->session=m->session;
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->session=m->session;
+	}
+	m->has_set_session=TRUE;
+}
+
+int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
+	int error;
+	OList *elem;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(m);
+	}
+
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->t_process_on_send(rtm,&msg);
+	}
+	error=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
+
+	return error;
+}
+
+int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
+	int ret;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	OList *elem=m->modifiers;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(m);
+	}
+
+
+	/*recv has to be done in reverse order*/
+	while (elem->next) elem=elem->next;
+
+	ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
+	if (ret>0){
+		for (;elem!=NULL;elem=o_list_prev(elem)){
+			RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+			rtm->t_process_on_receive(rtm,&msg);
+		}
+	}
+	return ret;
+}
+
+void  meta_rtp_transport_close(RtpTransport *t, void *user_data) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)user_data;
+	m->endpoint->t_close(m->endpoint,m->endpoint->data);
+}
+
+int meta_rtp_transport_new(RtpTransport **t, RtpTransport *endpoint, unsigned modifiers_count, ...) {
+	va_list arguments;
+	MetaRtpTransportImpl *m;
+
+	if (!t || !endpoint){
+		return 1;
+	}
+
+	(*t)=ortp_new0(RtpTransport,1);
+	m=(*t)->data=ortp_new0(MetaRtpTransportImpl,1);
+
+	(*t)->t_getsocket=meta_rtp_transport_getsocket;
+	(*t)->t_sendto=meta_rtp_transport_sendto;
+	(*t)->t_recvfrom=meta_rtp_transport_recvfrom;
+	(*t)->t_close=meta_rtp_transport_close;
+
+	m->endpoint=endpoint;
+	va_start(arguments,modifiers_count);
+	while (modifiers_count != 0){
+		o_list_append(m->modifiers, va_arg(arguments,RtpTransportModifier*));
+		modifiers_count--;
+	}
+	va_end(arguments);
+
+	return -1;
+}
+
+void meta_rtp_transport_destroy(RtpTransport *tp) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	OList *elem;
+
+	ortp_free(m->endpoint);
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		ortp_free(elem->data);
+	}
+	o_list_free(m->modifiers);
+
+	ortp_free(m);
+	ortp_free(tp);
 }
