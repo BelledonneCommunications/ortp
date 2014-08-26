@@ -192,6 +192,11 @@ void ortp_logv(int level, const char *fmt, va_list args) {
 static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	const char *lname="undef";
 	char *msg;
+	struct timeval tp;
+	struct timezone tz;
+	ortp_gettimeofday(&tp,&tz);
+	struct tm *lt = localtime(&tp.tv_sec);
+
 	if (__log_file==NULL) __log_file=stderr;
 	switch(lev){
 		case ORTP_DEBUG:
@@ -228,7 +233,7 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 		}
 	#endif
 #endif
-	fprintf(__log_file,"ortp-%s-%s" ENDLINE,lname,msg);
+	fprintf(__log_file,"%i-%i-%i %i:%i:%i:%.3i ortp-%s-%s" ENDLINE,1900+lt->tm_year,lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec,tp.tv_usec/1000, lname,msg);
 	fflush(__log_file);
 	ortp_free(msg);
 }
