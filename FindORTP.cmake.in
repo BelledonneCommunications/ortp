@@ -27,8 +27,12 @@
 #  ORTP_LIBRARIES - The libraries needed to use oRTP
 #  ORTP_CPPFLAGS - The cflags needed to use oRTP
 
-find_package(SRTP)
-find_package(BZRTP)
+if(@ENABLE_SRTP@)
+	find_package(SRTP)
+endif()
+if(@ENABLE_ZRTP@)
+	find_package(BZRTP)
+endif()
 
 set(_ORTP_ROOT_PATHS
 	${WITH_ORTP}
