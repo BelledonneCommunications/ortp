@@ -153,7 +153,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		*sock_family=res->ai_family;
 		err = bind (sock, res->ai_addr, res->ai_addrlen);
 		if (err != 0){
-			ortp_debug ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
+			ortp_error ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket (sock);
 			sock=-1;
 			continue;
@@ -307,7 +307,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 			session->rtcp.gs.socket=sock;
 			session->rtcp.gs.loc_port=rtcp_port;
 		}else {
-			ortp_debug("Could not create and bind rtcp socket.");
+			ortp_error("Could not create and bind rtcp socket for session [%p]",session);
 			return -1;
 		}
 
@@ -317,7 +317,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		rtp_session_set_multicast_loopback( session, -1 );
 		return 0;
 	}
-	ortp_debug("Could not bind RTP socket on port to %s port %i",addr,rtp_port);
+	ortp_error("Could not bind RTP socket to %s on port %i for session [%p]",addr,rtp_port,session);
 	return -1;
 }
 
