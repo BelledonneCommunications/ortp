@@ -23,7 +23,7 @@
 
 #include "ortp/logging.h"
 #include "utils.h"
-
+#include <time.h>
 
 static FILE *__log_file=0;
 static unsigned long __log_thread_id = 0;
@@ -193,9 +193,8 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	const char *lname="undef";
 	char *msg;
 	struct timeval tp;
-	struct timezone tz;
-	ortp_gettimeofday(&tp,&tz);
-	struct tm *lt = localtime(&tp.tv_sec);
+	ortp_gettimeofday(&tp,NULL);
+	struct tm *lt = localtime((const time_t*)&tp.tv_sec);
 
 	if (__log_file==NULL) __log_file=stderr;
 	switch(lev){
