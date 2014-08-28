@@ -193,8 +193,9 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	const char *lname="undef";
 	char *msg;
 	struct timeval tp;
+    struct tm *lt;
 	ortp_gettimeofday(&tp,NULL);
-	struct tm *lt = localtime((const time_t*)&tp.tv_sec);
+	lt = localtime((const time_t*)&tp.tv_sec);
 
 	if (__log_file==NULL) __log_file=stderr;
 	switch(lev){
