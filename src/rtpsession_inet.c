@@ -1163,7 +1163,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	if(ret >= 0) {
 		ret = bytes_received;
 #endif
-		msg->b_wptr+=ret;
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
 #if defined(ORTP_TIMESTAMP)
 			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SO_TIMESTAMP) {
@@ -1438,14 +1437,13 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
-			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
-		} else { error = rtp_session_rtp_recv_abstract(sockfd, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
+			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
+		} else {
+			error = rtp_session_rtp_recv_abstract(sockfd, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 		}
 		if (error > 0){
+			mp->b_wptr+=error;
+
 			/*if we use the network simulator, store packet source address for later use(otherwise it will be used immediately)*/
 			memcpy(&mp->src_addr,&remaddr,addrlen);
 			mp->src_addrlen = addrlen;
