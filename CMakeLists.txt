@@ -214,9 +214,16 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake
 if(DOXYGEN_FOUND)
 	set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
 	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
-	add_custom_target(html-doc ALL
-		${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen
-		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
+	file(GLOB DOC_INPUT_FILES
+		include/ortp/[^.]*.h
+		src/[^.]*.h
+		src/[^.]*.c
+	)
+	add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
+		COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen
+		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen ${DOC_INPUT_FILES}
+	)
+	add_custom_target(html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
 	install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
 		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/oRTP-${ORTP_VERSION}")
 endif()
