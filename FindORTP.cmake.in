@@ -68,7 +68,7 @@ if(WIN32)
 endif(WIN32)
 list(REMOVE_DUPLICATES ORTP_INCLUDE_DIRS)
 list(REMOVE_DUPLICATES ORTP_LIBRARIES)
-set(ORTP_CPPFLAGS @ORTP_CPPFLAGS@)
+set(ORTP_CPPFLAGS "@ORTP_CPPFLAGS@")
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(ORTP
