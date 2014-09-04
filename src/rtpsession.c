@@ -1942,12 +1942,17 @@ typedef struct _MetaRtpTransportImpl
 {
 	OList *modifiers;
 	RtpTransport *endpoint;
+	bool_t is_rtp;
 	bool_t has_set_session;
 } MetaRtpTransportImpl;
 
 ortp_socket_t meta_rtp_transport_getsocket(RtpTransport *t) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
-	return m->endpoint->t_getsocket(m->endpoint);
+
+	if (m->endpoint!=NULL){
+		return m->endpoint->t_getsocket(m->endpoint);
+	}
+	return (m->is_rtp ? t->session->rtp.gs.socket : t->session->rtcp.gs.socket);
 }
 
 void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
@@ -1990,7 +1995,7 @@ int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const s
 }
 
 int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
-	int ret;
+	int ret,prev_ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem=m->modifiers;
 
@@ -2009,12 +2014,28 @@ int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct
 	}else{
 		ret=rtp_session_rtp_recv_abstract(t->session->rtp.gs.socket,msg,flags,from,fromlen);
 	}
-	if (ret>0){
-		for (;elem!=NULL;elem=o_list_prev(elem)){
-			RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
-			rtm->t_process_on_receive(rtm,msg);
+	if (ret >= 0){
+		prev_ret=ret;
+		msg->b_wptr+=ret;
+	}else{
+		return ret;
+	}
+
+	for (;elem!=NULL;elem=o_list_prev(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+
+		ret = rtm->t_process_on_receive(rtm,msg);
+		if (ret>=0){
+			msg->b_wptr+=(ret-prev_ret);
+			prev_ret=ret;
+		}else{
+			// something went wrong in the modifier (failed to decrypt for instance)
+			break;
 		}
 	}
+
+	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
+	msg->b_wptr-=prev_ret;
 	return ret;
 }
 
@@ -2025,7 +2046,7 @@ void  meta_rtp_transport_close(RtpTransport *t, void *user_data) {
 	}
 }
 
-int meta_rtp_transport_new(RtpTransport **t, RtpTransport *endpoint, unsigned modifiers_count, ...) {
+int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...) {
 	va_list arguments;
 	MetaRtpTransportImpl *m;
 

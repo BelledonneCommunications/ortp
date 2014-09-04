@@ -568,11 +568,12 @@ ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
  * will pass through the list of modifiers given. First modifier in list will be first to modify the message
  * in send mode and last in receive mode.
  * @param[in] t #RtpTransport object that will be generated.
+ * @param[in] is_rtp Whether this object will be used for RTP packets or not.
  * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
  * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
  * @returns 0 if successful, -1 otherwise
 **/
-ORTP_PUBLIC int meta_rtp_transport_new(RtpTransport **t, RtpTransport *endpoint, unsigned modifiers_count, ...);
+ORTP_PUBLIC int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
 #ifdef __cplusplus
