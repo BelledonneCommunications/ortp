@@ -47,11 +47,12 @@
 static int _process_on_send(RtpSession* session,srtp_t srtp,mblk_t *m,bool_t is_rtp){
 	int slen;
 	err_status_t err;
-	rtp_header_t *header=(rtp_header_t*)m->b_rptr;
+	rtp_header_t *header=is_rtp?(rtp_header_t*)m->b_rptr:NULL;
+
 	slen=msgdsize(m);
 
 	/*only encrypt real RTP packets*/
-	if ((slen>RTP_FIXED_HEADER_SIZE && header->version==2)||!is_rtp){
+	if (!is_rtp||(slen>RTP_FIXED_HEADER_SIZE && header->version==2)){
 		/* enlarge the buffer for srtp to write its data */
 		msgpullup(m,slen+SRTP_PAD_BYTES);
 		err=is_rtp?srtp_protect(srtp,m->b_rptr,&slen):srtp_protect_rtcp(srtp,m->b_rptr,&slen);
@@ -113,29 +114,30 @@ static int _process_on_receive(RtpSession* session,srtp_t srtp,mblk_t *m,bool_t 
 	int slen;
 	uint32_t new_ssrc;
 	err_status_t srtp_err;
+
 	/* keep NON-RTP data unencrypted */
 	if (is_rtp){
-		rtp_header_t *rtp=(rtp_header_t*)m->b_wptr;
+		rtp_header_t *rtp=(rtp_header_t*)m->b_rptr;
 		if (err<RTP_FIXED_HEADER_SIZE || rtp->version!=2 )
 			return err;
 		new_ssrc=rtp->ssrc;
 	}else{
-		rtcp_common_header_t *rtcp=(rtcp_common_header_t*)m->b_wptr;
+		rtcp_common_header_t *rtcp=(rtcp_common_header_t*)m->b_rptr;
 		if (err<(sizeof(rtcp_common_header_t)+4) || rtcp->version!=2 )
 			return err;
-		new_ssrc=*(uint32_t*)(m->b_wptr+sizeof(rtcp_common_header_t));
+		new_ssrc=*(uint32_t*)(m->b_rptr+sizeof(rtcp_common_header_t));
 	}
 
 	slen=err;
-	srtp_err = is_rtp?srtp_unprotect(srtp,m->b_wptr,&slen):srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
-	if (srtp_err==err_status_no_ctx){
+	srtp_err = is_rtp?srtp_unprotect(srtp,m->b_rptr,&slen):srtp_unprotect_rtcp(srtp,m->b_rptr,&slen);
+	if (srtp_err==err_status_no_ctx) {
 		update_recv_stream(session,srtp,new_ssrc);
 		slen=err;
-		srtp_err = is_rtp?srtp_unprotect(srtp,m->b_wptr,&slen):srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
+		srtp_err = is_rtp?srtp_unprotect(srtp,m->b_rptr,&slen):srtp_unprotect_rtcp(srtp,m->b_rptr,&slen);
 	}
-	if (srtp_err==err_status_ok)
+	if (srtp_err==err_status_ok) {
 		return slen;
-	else {
+	} else {
 		ortp_error("srtp_unprotect%s() failed (%d)", is_rtp?"":"_rtcp", srtp_err);
 		return -1;
 	}
@@ -148,7 +150,7 @@ static int srtcp_process_on_receive(RtpTransportModifier *t, mblk_t *m){
 }
 static int _recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen,bool_t is_rtp){
 	int err=rtp_session_rtp_recv_abstract(is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,m,flags,from,fromlen);
-	if (err>0){
+	if (err>0) {
 		return _process_on_receive(t->session, (srtp_t)t->data,m, is_rtp, err);
 	}
 	return err;

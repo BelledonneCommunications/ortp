@@ -1973,7 +1973,7 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 }
 
 int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
-	int error;
+	int prev_ret=0,ret;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 
@@ -1983,15 +1983,23 @@ int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const s
 
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
-		rtm->t_process_on_send(rtm,msg);
+		ret = rtm->t_process_on_send(rtm,msg);
+
+		if (ret<0){
+			// something went wrong in the modifier (failed to encrypt for instance)
+			return ret;
+		}
+
+		msg->b_wptr+=(ret-prev_ret);
+		prev_ret=ret;
 	}
 	if (m->endpoint!=NULL){
-		error=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
+		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
-		error=sendto(t->session->rtp.gs.socket,msg->b_rptr,msgdsize(msg),flags,to,tolen);
+		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg->b_rptr,msgdsize(msg),flags,to,tolen);
 	}
 
-	return error;
+	return ret;
 }
 
 int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
@@ -2005,33 +2013,31 @@ int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct
 
 
 	if (elem!=NULL){
-		/*recv has to be done in reverse order*/
+		/*received packet must be treated in reversed order: first in last out*/
 		while (elem->next!=NULL) elem=elem->next;
 	}
 
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
 	}else{
-		ret=rtp_session_rtp_recv_abstract(t->session->rtp.gs.socket,msg,flags,from,fromlen);
+		ret=rtp_session_rtp_recv_abstract(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,from,fromlen);
 	}
-	if (ret >= 0){
-		prev_ret=ret;
-		msg->b_wptr+=ret;
-	}else{
+
+	if (ret < 0){
 		return ret;
 	}
+	prev_ret=ret;
+	msg->b_wptr+=ret;
 
 	for (;elem!=NULL;elem=o_list_prev(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
-
 		ret = rtm->t_process_on_receive(rtm,msg);
-		if (ret>=0){
-			msg->b_wptr+=(ret-prev_ret);
-			prev_ret=ret;
-		}else{
+		if (ret<0){
 			// something went wrong in the modifier (failed to decrypt for instance)
 			break;
 		}
+		msg->b_wptr+=(ret-prev_ret);
+		prev_ret=ret;
 	}
 
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
@@ -2062,10 +2068,11 @@ int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoi
 	(*t)->t_recvfrom=meta_rtp_transport_recvfrom;
 	(*t)->t_close=meta_rtp_transport_close;
 
+	m->is_rtp=is_rtp;
 	m->endpoint=endpoint;
 	va_start(arguments,modifiers_count);
 	while (modifiers_count != 0){
-		o_list_append(m->modifiers, va_arg(arguments,RtpTransportModifier*));
+		m->modifiers=o_list_append(m->modifiers, va_arg(arguments,RtpTransportModifier*));
 		modifiers_count--;
 	}
 	va_end(arguments);
@@ -2092,5 +2099,5 @@ void meta_rtp_transport_destroy(RtpTransport *tp) {
 
 void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
-	o_list_append(m->modifiers, tpm);
+	m->modifiers=o_list_append(m->modifiers, tpm);
 }
