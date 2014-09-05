@@ -1973,14 +1973,14 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 }
 
 int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
-	int prev_ret=0,ret;
+	int prev_ret,ret;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
 	}
-
+	prev_ret=msgdsize(msg);
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
 		ret = rtm->t_process_on_send(rtm,msg);
@@ -1989,7 +1989,6 @@ int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const s
 			// something went wrong in the modifier (failed to encrypt for instance)
 			return ret;
 		}
-
 		msg->b_wptr+=(ret-prev_ret);
 		prev_ret=ret;
 	}
