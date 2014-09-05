@@ -188,6 +188,7 @@ int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 		(*rtpt)->t_getsocket=srtp_getsocket;
 		(*rtpt)->t_sendto=srtp_sendto;
 		(*rtpt)->t_recvfrom=srtp_recvfrom;
+		(*rtpt)->t_destroy=srtp_transport_destroy;
 	}
 	if (rtcpt) {
 		(*rtcpt)=ortp_new0(RtpTransport,1);
@@ -195,6 +196,7 @@ int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 		(*rtcpt)->t_getsocket=srtcp_getsocket;
 		(*rtcpt)->t_sendto=srtcp_sendto;
 		(*rtcpt)->t_recvfrom=srtcp_recvfrom;
+		(*rtcpt)->t_destroy=srtp_transport_destroy;
 	}
 	return 0;
 }
@@ -209,12 +211,14 @@ int srtp_transport_modifier_new(srtp_t srtp, RtpTransportModifier **rtpt, RtpTra
 		(*rtpt)->data=srtp;
 		(*rtpt)->t_process_on_send=srtp_process_on_send;
 		(*rtpt)->t_process_on_receive=srtp_process_on_receive;
+		(*rtpt)->t_destroy=srtp_transport_modifier_destroy;
 	}
 	if (rtcpt) {
 		(*rtcpt)=ortp_new0(RtpTransportModifier,1);
 		(*rtcpt)->data=srtp;
 		(*rtcpt)->t_process_on_send=srtcp_process_on_send;
 		(*rtcpt)->t_process_on_receive=srtcp_process_on_receive;
+		(*rtcpt)->t_destroy=srtp_transport_modifier_destroy;
 	}
 	return 0;
 }

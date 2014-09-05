@@ -95,6 +95,11 @@ typedef struct _RtpTransportModifier
 	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
 	int  (*t_process_on_send)(struct _RtpTransportModifier *t, mblk_t *msg);
 	int  (*t_process_on_receive)(struct _RtpTransportModifier *t, mblk_t *msg);
+	/**
+	 * Mandatory callback responsible of freeing the #RtpTransportModifierAND the pointer.
+	 * @param[in] transport #RtpTransportModifier object to free.
+	 */
+	void  (*t_destroy)(struct _RtpTransportModifier *transport);
 } RtpTransportModifier;
 
 typedef struct _RtpTransport
@@ -105,6 +110,11 @@ typedef struct _RtpTransport
 	int  (*t_sendto)(struct _RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
 	int  (*t_recvfrom)(struct _RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 	void  (*t_close)(struct _RtpTransport *transport, void *userData);
+	/**
+	 * Mandatory callback responsible of freeing the #RtpTransport object AND the pointer.
+	 * @param[in] transport #RtpTransport object to free.
+	 */
+	void  (*t_destroy)(struct _RtpTransport *transport);
 }  RtpTransport;
 
 typedef struct _OrtpNetworkSimulatorParams{

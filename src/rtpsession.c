@@ -1360,12 +1360,19 @@ void rtp_session_release_sockets(RtpSession *session){
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
 
-	if (session->rtp.gs.tr && session->rtp.gs.tr->t_close)
-		session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+	if (session->rtp.gs.tr) {
+		if (session->rtp.gs.tr->t_close)
+			session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+		session->rtp.gs.tr->t_destroy(session->rtp.gs.tr);
+
+	}
 	session->rtp.gs.tr = 0;
 
-	if (session->rtcp.gs.tr && session->rtcp.gs.tr->t_close)
-		session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+	if (session->rtcp.gs.tr)  {
+		if (session->rtcp.gs.tr->t_close)
+			session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+		session->rtcp.gs.tr->t_destroy(session->rtcp.gs.tr);
+	}
 	session->rtcp.gs.tr = 0;
 
 	/* don't discard remote addresses, then can be preserved for next use.
@@ -2066,6 +2073,7 @@ int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoi
 	(*t)->t_sendto=meta_rtp_transport_sendto;
 	(*t)->t_recvfrom=meta_rtp_transport_recvfrom;
 	(*t)->t_close=meta_rtp_transport_close;
+	(*t)->t_destroy=meta_rtp_transport_destroy;
 
 	m->is_rtp=is_rtp;
 	m->endpoint=endpoint;
@@ -2084,11 +2092,12 @@ void meta_rtp_transport_destroy(RtpTransport *tp) {
 	OList *elem;
 
 	if (m->endpoint!=NULL){
-		ortp_free(m->endpoint);
+		m->endpoint->t_destroy(m->endpoint);
 	}
 
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
-		ortp_free(elem->data);
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->t_destroy(rtm);
 	}
 	o_list_free(m->modifiers);
 
