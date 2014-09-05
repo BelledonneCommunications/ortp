@@ -46,8 +46,6 @@ struct _OrtpZrtpContext{
 	srtp_t srtpSend;
 	srtp_t srtpRecv;
 	bzrtpContext_t *zrtpContext; // back link
-	RtpTransport rtpt;
-	RtpTransport rtcpt;
 	char *zidFilename;
 	char *peerURI;
 };
@@ -199,6 +197,7 @@ static int32_t ozrtp_srtpSecretsAvailable(void* clientData, bzrtpSrtpSecrets_t* 
 			return 1;
 		}
 	}
+
 	return 0;
 }
 
@@ -352,6 +351,12 @@ static int ozrtp_addExportedKeysInZidCache(void *clientData, uint8_t peerZid[12]
 
 /*** end of Callback functions implementations ***/
 
+static int ozrtp_rtp_process_on_send(struct _RtpTransportModifier *t, mblk_t *msg){
+	return 0;
+}
+static int ozrtp_rtcp_process_on_send(struct _RtpTransportModifier *t, mblk_t *msg)  {
+	return 0;
+}
 static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	int slen;
 	err_status_t err;
@@ -391,16 +396,19 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 	}
 	return -1;
 }
-
+static int ozrtp_rtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
+	return ozrtp_generic_sendto(rtp_stream,t,m,flags,to,tolen);
+}
 static int ozrtp_rtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	return ozrtp_generic_sendto(rtcp_stream,t,m,flags,to,tolen);
 }
 
-static int ozrtp_rtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
-	return ozrtp_generic_sendto(rtp_stream,t,m,flags,to,tolen);
+static int ozrtp_rtp_process_on_receive(struct _RtpTransportModifier *t, mblk_t *msg){
+	return 0;
 }
-
-
+static int ozrtp_rtcp_process_on_receive(struct _RtpTransportModifier *t, mblk_t *msg)  {
+	return 0;
+}
 static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
 	int rlen;
 
@@ -501,31 +509,71 @@ static OrtpZrtpContext* createUserData(bzrtpContext_t *context, OrtpZrtpParams *
 	return userData;
 }
 
-void ozrtp_transport_destroy(RtpTransport *tp){
-	printf("not implemented yet\n");
-	exit(1);
+static void ozrtp_transport_destroy(RtpTransport *tp){
+	ortp_free(tp);
+}
+static void ozrtp_transport_new(OrtpZrtpContext *ctx, RtpTransport **rtpt, RtpTransport **rtcpt){
+	(*rtpt)=ortp_new0(RtpTransport,1);
+	(*rtcpt)=ortp_new0(RtpTransport,1);
+
+	(*rtpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
+	(*rtpt)->t_getsocket=ozrtp_rtp_getsocket;
+	(*rtpt)->t_sendto=ozrtp_rtp_sendto;
+	(*rtpt)->t_recvfrom=ozrtp_rtp_recvfrom;
+	(*rtpt)->t_destroy=ozrtp_transport_destroy;
+
+	(*rtcpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
+	(*rtcpt)->t_getsocket=ozrtp_rtcp_getsocket;
+	(*rtcpt)->t_sendto=ozrtp_rtcp_sendto;
+	(*rtcpt)->t_recvfrom=ozrtp_rtcp_recvfrom;
+	(*rtcpt)->t_destroy=ozrtp_transport_destroy;
 }
 
+int ortp_zrtp_transport_modifier_new(OrtpZrtpContext* ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ) {
+	if (rtpt){
+		*rtpt=ortp_new0(RtpTransportModifier,1);
+		(*rtpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransportModifier structure */
+		(*rtpt)->t_process_on_send=ozrtp_rtp_process_on_send;
+		(*rtpt)->t_process_on_receive=ozrtp_rtp_process_on_receive;
+		(*rtpt)->t_destroy=ortp_zrtp_transport_modifier_destroy;
+	}
+	if (rtcpt){
+		*rtcpt=ortp_new0(RtpTransportModifier,1);
+		(*rtcpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransportModifier structure */
+		(*rtcpt)->t_process_on_send=ozrtp_rtcp_process_on_send;
+		(*rtcpt)->t_process_on_receive=ozrtp_rtcp_process_on_receive;
+		(*rtcpt)->t_destroy=ortp_zrtp_transport_modifier_destroy;
+	}
+	return 0;
+}
+
+static void ortp_zrtp_set_transport(bool_t use_rtp_modifier, OrtpZrtpContext *userData, RtpSession *s)  {
+	RtpTransport *rtpt=NULL,*rtcpt=NULL;
+	rtp_session_get_transports(s,&rtpt,&rtcpt);
+
+	if (use_rtp_modifier)  {
+		RtpTransportModifier *rtp_modifier, *rtcp_modifier;
+		ortp_zrtp_transport_modifier_new(userData, &rtp_modifier,&rtcp_modifier);
+		/*if transports are set, we assume they are meta transporters, otherwise create them*/
+		if (rtpt==NULL&&rtcpt==NULL){
+			meta_rtp_transport_new(&rtpt, TRUE, NULL, 0);
+			meta_rtp_transport_new(&rtcpt, FALSE, NULL, 0);
+		}
+		meta_rtp_transport_append_modifier(rtpt, rtp_modifier);
+		meta_rtp_transport_append_modifier(rtcpt, rtcp_modifier);
+	} else {
+		if (rtpt || rtcpt) {
+			ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
+		}
+
+		ozrtp_transport_new(userData, &rtpt, &rtcpt);
+	}
+	rtp_session_set_transports(s, rtpt, rtcpt);
+}
 static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, RtpSession *s) {
 	bzrtpContext_t *context=userData->zrtpContext;
 
-
-	if (s->rtp.gs.tr || s->rtcp.gs.tr)
-		ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
-
-	userData->rtpt.data=userData; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
-	userData->rtpt.t_getsocket=ozrtp_rtp_getsocket;
-	userData->rtpt.t_sendto=ozrtp_rtp_sendto;
-	userData->rtpt.t_recvfrom=ozrtp_rtp_recvfrom;
-	userData->rtpt.t_destroy=ozrtp_transport_destroy;
-
-	userData->rtcpt.data=userData; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
-	userData->rtcpt.t_getsocket=ozrtp_rtcp_getsocket;
-	userData->rtcpt.t_sendto=ozrtp_rtcp_sendto;
-	userData->rtcpt.t_recvfrom=ozrtp_rtcp_recvfrom;
-	userData->rtcpt.t_destroy=ozrtp_transport_destroy;
-
-	rtp_session_set_transports(s, &userData->rtpt, &userData->rtcpt);
+	ortp_zrtp_set_transport(FALSE, userData, s);
 
 	ortp_message("Starting ZRTP engine on session [%p]",s);
 	bzrtp_startChannelEngine(context, s->snd.ssrc);
@@ -608,6 +656,10 @@ void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s) {
 	bzrtp_resetRetransmissionTimer(ctx->zrtpContext,s->snd.ssrc);
 }
 
+
+void ortp_zrtp_transport_modifier_destroy(RtpTransportModifier *tp)  {
+	ortp_free(tp);
+}
 #else
 
 
@@ -626,6 +678,10 @@ void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
 void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s) {};
+int ortp_zrtp_transport_modifier_new(OrtpZrtpContext* ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ) {return 0;}
+void ortp_zrtp_transport_modifier_destroy(RtpTransportModifier *tp)  {}
 #endif
+
+
 
 

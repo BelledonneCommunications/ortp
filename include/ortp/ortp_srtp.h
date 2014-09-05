@@ -67,15 +67,17 @@ ORTP_PUBLIC err_status_t ortp_srtp_remove_stream(srtp_t session, uint32_t ssrc);
 ORTP_PUBLIC err_status_t ortp_crypto_get_random(uint8_t *tmp, int size);
 ORTP_PUBLIC bool_t ortp_srtp_supported(void);
 
+/**
+  * @deprecated Use srtp_transport_modifier_new() instead. Using #srtp_transport_new will prevent usage of multiple
+  * encryptions and/or custom packets transmission.
+*/
 ORTP_PUBLIC int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt );
 ORTP_PUBLIC void srtp_transport_destroy(RtpTransport *tp);
+
 ORTP_PUBLIC srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, uint32_t ssrc, const char* snd_key, const char* rcv_key);
 
 ORTP_PUBLIC int srtp_transport_modifier_new(srtp_t srtp, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt );
 ORTP_PUBLIC void srtp_transport_modifier_destroy(RtpTransportModifier *tp);
-
-ORTP_PUBLIC void srtp_transport_destroy(RtpTransport *tp);
-ORTP_PUBLIC int srtp_transport_modifier_new(srtp_t srtp, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt );
 
 ORTP_PUBLIC void ortp_srtp_shutdown(void);
 
