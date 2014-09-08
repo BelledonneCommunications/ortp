@@ -1437,12 +1437,9 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
-			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
-		} else { error = rtp_session_rtp_recv_abstract(sockfd, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
+			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
+		} else {
+			error = rtp_session_rtp_recv_abstract(sockfd, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 		}
 		if (error > 0){
 			mp->b_wptr+=error;

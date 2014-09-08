@@ -1360,12 +1360,19 @@ void rtp_session_release_sockets(RtpSession *session){
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
 
-	if (session->rtp.gs.tr && session->rtp.gs.tr->t_close)
-		session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+	if (session->rtp.gs.tr) {
+		if (session->rtp.gs.tr->t_close)
+			session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+		session->rtp.gs.tr->t_destroy(session->rtp.gs.tr);
+
+	}
 	session->rtp.gs.tr = 0;
 
-	if (session->rtcp.gs.tr && session->rtcp.gs.tr->t_close)
-		session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+	if (session->rtcp.gs.tr)  {
+		if (session->rtcp.gs.tr->t_close)
+			session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+		session->rtcp.gs.tr->t_destroy(session->rtcp.gs.tr);
+	}
 	session->rtcp.gs.tr = 0;
 
 	/* don't discard remote addresses, then can be preserved for next use.
@@ -1508,7 +1515,7 @@ void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets)
 void rtp_session_resync(RtpSession *session){
 	int ptindex=rtp_session_get_recv_payload_type(session);
 	PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,ptindex);
-	
+
 	flushq (&session->rtp.rq, FLUSHALL);
 	rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
@@ -1935,4 +1942,170 @@ void rtp_session_process (RtpSession * session, uint32_t time, RtpScheduler *sch
 
 void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes) {
 	session->reuseaddr=yes;
+}
+
+
+typedef struct _MetaRtpTransportImpl
+{
+	OList *modifiers;
+	RtpTransport *endpoint;
+	bool_t is_rtp;
+	bool_t has_set_session;
+} MetaRtpTransportImpl;
+
+ortp_socket_t meta_rtp_transport_getsocket(RtpTransport *t) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (m->endpoint!=NULL){
+		return m->endpoint->t_getsocket(m->endpoint);
+	}
+	return (m->is_rtp ? t->session->rtp.gs.socket : t->session->rtcp.gs.socket);
+}
+
+void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
+	OList *elem;
+	/*if session has not been set yet, do nothing*/
+	if (s==NULL){
+		return;
+	}
+
+	if (m->endpoint!=NULL){
+		m->endpoint->session=s;
+	}
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->session=s;
+	}
+	m->has_set_session=TRUE;
+}
+
+int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
+	int prev_ret,ret;
+	OList *elem;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(t->session,m);
+	}
+	prev_ret=msgdsize(msg);
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		ret = rtm->t_process_on_send(rtm,msg);
+
+		if (ret<0){
+			// something went wrong in the modifier (failed to encrypt for instance)
+			return ret;
+		}
+		msg->b_wptr+=(ret-prev_ret);
+		prev_ret=ret;
+	}
+	if (m->endpoint!=NULL){
+		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
+	}else{
+		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg->b_rptr,msgdsize(msg),flags,to,tolen);
+	}
+
+	return ret;
+}
+
+int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
+	int ret,prev_ret;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	OList *elem=m->modifiers;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(t->session,m);
+	}
+
+
+	if (elem!=NULL){
+		/*received packet must be treated in reversed order: first in last out*/
+		while (elem->next!=NULL) elem=elem->next;
+	}
+
+	if (m->endpoint!=NULL){
+		ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
+	}else{
+		ret=rtp_session_rtp_recv_abstract(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,from,fromlen);
+	}
+
+	if (ret < 0){
+		return ret;
+	}
+	prev_ret=ret;
+	msg->b_wptr+=ret;
+
+	for (;elem!=NULL;elem=o_list_prev(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		ret = rtm->t_process_on_receive(rtm,msg);
+		if (ret<0){
+			// something went wrong in the modifier (failed to decrypt for instance)
+			break;
+		}
+		msg->b_wptr+=(ret-prev_ret);
+		prev_ret=ret;
+	}
+
+	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
+	msg->b_wptr-=prev_ret;
+	return ret;
+}
+
+void  meta_rtp_transport_close(RtpTransport *t, void *user_data) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)user_data;
+	if (m->endpoint!=NULL){
+		m->endpoint->t_close(m->endpoint,m->endpoint->data);
+	}
+}
+
+int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...) {
+	va_list arguments;
+	MetaRtpTransportImpl *m;
+
+	if (!t){
+		return 1;
+	}
+
+	(*t)=ortp_new0(RtpTransport,1);
+	m=(*t)->data=ortp_new0(MetaRtpTransportImpl,1);
+
+	(*t)->t_getsocket=meta_rtp_transport_getsocket;
+	(*t)->t_sendto=meta_rtp_transport_sendto;
+	(*t)->t_recvfrom=meta_rtp_transport_recvfrom;
+	(*t)->t_close=meta_rtp_transport_close;
+	(*t)->t_destroy=meta_rtp_transport_destroy;
+
+	m->is_rtp=is_rtp;
+	m->endpoint=endpoint;
+	va_start(arguments,modifiers_count);
+	while (modifiers_count != 0){
+		m->modifiers=o_list_append(m->modifiers, va_arg(arguments,RtpTransportModifier*));
+		modifiers_count--;
+	}
+	va_end(arguments);
+
+	return -1;
+}
+
+void meta_rtp_transport_destroy(RtpTransport *tp) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	OList *elem;
+
+	if (m->endpoint!=NULL){
+		m->endpoint->t_destroy(m->endpoint);
+	}
+
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->t_destroy(rtm);
+	}
+	o_list_free(m->modifiers);
+
+	ortp_free(m);
+	ortp_free(tp);
+}
+
+void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	m->modifiers=o_list_append(m->modifiers, tpm);
 }
