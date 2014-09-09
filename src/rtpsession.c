@@ -2002,9 +2002,8 @@ int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const s
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
-		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg->b_rptr,msgdsize(msg),flags,to,tolen);
+		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)msg->b_rptr,msgdsize(msg),flags,to,tolen);
 	}
-
 	return ret;
 }
 
