@@ -327,6 +327,13 @@ int WIN_cond_destroy(ortp_cond_t * hCond)
 	return 0;
 }
 
+long int ortp_random(void){
+	if (sizeof(long)==4){
+		return ((uint32_t)rand())<<30 | ((uint32_t)rand())<<15 | ((uint32_t)rand());
+	}else{
+		return ((uint64_t)rand())<<60 ((uint64_t)rand())<<45 ((uint64_t)rand())<<30 | ((uint64_t)rand())<<15 | ((uint64_t)rand());
+	}
+}
 
 #if defined(_WIN32_WCE)
 #include <time.h>

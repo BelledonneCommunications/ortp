@@ -161,9 +161,11 @@ typedef __int16 int16_t;
 ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #endif
 
+ORTP_PUBLIC long int ortp_random(void);
+
 #define vsnprintf	_vsnprintf
 #define srandom		srand
-#define random		rand
+#define random		ortp_random
 
 typedef SOCKET ortp_socket_t;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
