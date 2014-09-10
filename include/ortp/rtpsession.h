@@ -132,6 +132,9 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	queue_t q;
 	queue_t latency_q;
 	struct timeval last_check;
+
+	int drop_by_congestion;
+	int drop_by_loss;
 }OrtpNetworkSimulatorCtx;
 
 typedef struct OrtpRtcpSendAlgorithm {
