@@ -1244,7 +1244,7 @@ static void compute_rtt_from_report_block(RtpSession *session, const struct time
 	uint32_t last_sr_time = report_block_get_last_SR_time(rb);
 	uint32_t sr_delay = report_block_get_last_SR_delay(rb);
 	compute_rtt(session, now, last_sr_time, sr_delay);
-	session->cum_loss = report_block_get_cum_packet_loss(rb);
+	session->cum_loss = report_block_get_cum_packet_lost(rb);
 }
 
 static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, const struct timeval *now) {

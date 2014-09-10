@@ -165,16 +165,17 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header) {
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 	ortp_log(ORTP_MESSAGE, "%s", header);
 	ortp_log(ORTP_MESSAGE, "-----------------------------------------------------------");
-	ortp_log(ORTP_MESSAGE, "sent                          %20"PRId64" packets", stats->packet_sent);
-	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->sent);
-	ortp_log(ORTP_MESSAGE, "received                      %20"PRId64" packets", stats->packet_recv);
-	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->hw_recv);
-	ortp_log(ORTP_MESSAGE, "incoming delivered to the app %20"PRId64" bytes  ", stats->recv);
-	ortp_log(ORTP_MESSAGE, "cumulative lost               %20"PRId64" packets", stats->cum_packet_loss);
-	ortp_log(ORTP_MESSAGE, "received too late             %20"PRId64" packets", stats->outoftime);
-	ortp_log(ORTP_MESSAGE, "bad formatted                 %20"PRId64" packets", stats->bad);
-	ortp_log(ORTP_MESSAGE, "discarded (queue overflow)    %20"PRId64" packets", stats->discarded);
-	ortp_log(ORTP_MESSAGE, "duplicated                    %20"PRId64" packets", stats->duplicated);
+	ortp_log(ORTP_MESSAGE, "sent                                 %10"PRId64" packets", stats->packet_sent);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" duplicated packets", stats->packet_dup_sent);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" bytes  ", stats->sent);
+	ortp_log(ORTP_MESSAGE, "received                             %10"PRId64" packets", stats->packet_recv);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" duplicated packets", stats->packet_dup_recv);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" bytes  ", stats->hw_recv);
+	ortp_log(ORTP_MESSAGE, "incoming delivered to the app        %10"PRId64" bytes  ", stats->recv);
+	ortp_log(ORTP_MESSAGE, "incoming cumulative lost             %10"PRId64" packets", stats->cum_packet_loss);
+	ortp_log(ORTP_MESSAGE, "incoming received too late           %10"PRId64" packets", stats->outoftime);
+	ortp_log(ORTP_MESSAGE, "incoming bad formatted               %10"PRId64" packets", stats->bad);
+	ortp_log(ORTP_MESSAGE, "incoming discarded (queue overflow)  %10"PRId64" packets", stats->discarded);
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 }
 

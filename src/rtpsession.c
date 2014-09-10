@@ -917,14 +917,21 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 			session->rtp.snd_seq++;
 		}
 		else
+		{
 			session->rtp.snd_seq=rtp->seq_number+1;
+		}
 		session->rtp.snd_last_ts = packet_ts;
+
+		stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
 
 		ortp_global_stats.sent += (1+(int)session->duplication_left) * packsize;
 		stream->stats.sent += (1+(int)session->duplication_left) * packsize;
-		stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
+
 		ortp_global_stats.packet_sent++;
 		stream->stats.packet_sent++;
+
+		stream->stats.packet_dup_sent+=(int)session->duplication_left;
+		ortp_global_stats.packet_sent+=(int)session->duplication_left;;
 	}
 
 	while (session->duplication_left>=1.f) {

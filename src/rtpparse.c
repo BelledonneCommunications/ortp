@@ -275,8 +275,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
 		stats->discarded+=discarded;
 		ortp_global_stats.discarded+=discarded;
-		stats->duplicated+=duplicate;
-		ortp_global_stats.duplicated+=duplicate;
+		stats->packet_dup_recv+=duplicate;
+		ortp_global_stats.packet_dup_recv+=duplicate;
 		session->rtcp_xr_stats.discarded_count += discarded;
 		session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 		return;
@@ -295,7 +295,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) {
 		/* detect timestamp important jumps in the future, to workaround stupid rtp senders */
 		if (RTP_TIMESTAMP_IS_NEWER_THAN(rtp->timestamp,session->rtp.rcv_last_ts+session->rtp.ts_jump)){
-			ortp_debug("rtp_parse: timestamp jump ?");
+			ortp_debug("rtp_parse: timestamp jump?");
 			rtp_signal_table_emit2(&session->on_timestamp_jump,(long)&rtp->timestamp);
 		}
 		else if (RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts,rtp->timestamp)){
@@ -322,8 +322,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
 	stats->discarded+=discarded;
 	ortp_global_stats.discarded+=discarded;
-	stats->duplicated+=duplicate;
-	ortp_global_stats.duplicated+=duplicate;
+	stats->packet_dup_recv+=duplicate;
+	ortp_global_stats.packet_dup_recv+=duplicate;
 	session->rtcp_xr_stats.discarded_count += discarded;
 	session->rtcp_xr_stats.dup_since_last_stat_summary += duplicate;
 	if ((discarded == 0) && (duplicate == 0)) {

@@ -656,11 +656,15 @@ void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_co
 	obj->min_packet_count_interval=min_packet_count_interval;
 	obj->last_ext_seq=rtp_session_get_seq_number(session);
 	obj->last_cum_loss=rtp_session_get_cum_loss(session);
+	obj->last_packet_sent_count=session->rtp.stats.packet_sent;
+	obj->last_dup_packet_sent_count=session->rtp.stats.packet_dup_sent;
 }
 
-bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb){
-	int32_t cum_loss=report_block_get_cum_packet_loss(rb);
+bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpStream *stream, const report_block_t *rb){
+	int32_t cum_loss=report_block_get_cum_packet_lost(rb);
 	int32_t extseq=report_block_get_high_ext_seq(rb);
+	int32_t diff_unique_outgoing=stream->stats.packet_sent-obj->last_packet_sent_count;
+	int32_t diff_total_outgoing=diff_unique_outgoing+stream->stats.packet_dup_sent-obj->last_dup_packet_sent_count;
 	int32_t diff;
 	bool_t got_value=FALSE;
 
@@ -676,19 +680,26 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		ortp_warning("ortp_loss_rate_estimator_process %p: Suspected discontinuity in sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
+		obj->last_packet_sent_count=stream->stats.packet_sent;
+		obj->last_dup_packet_sent_count=stream->stats.packet_dup_sent;
 	}else if (diff>obj->min_packet_count_interval){
 		/*we have sufficient interval*/
 		int32_t new_losses=cum_loss-obj->last_cum_loss;
-		if (new_losses<0) new_losses=0; /*this can arrive if there are duplicates*/
-		obj->loss_rate=100.0*(float)new_losses/(float)diff;
+		/*if we are using duplicates, they will not be visible in 'diff' variable.
+		But since we are the emitter, we can retrieve the total count of packet we
+		sent and use this value to compute the loss rate instead.*/
+		obj->loss_rate=100.0*(1. - MAX(0, (diff_unique_outgoing - new_losses) * 1.f / diff_total_outgoing));
+
 		/*update last values with current*/
-		obj->last_ext_seq=extseq;
-		obj->last_cum_loss=cum_loss;
 		got_value=TRUE;
 
 		if (obj->loss_rate>100.f){
 			ortp_error("ortp_loss_rate_estimator_process %p: Loss rate MUST NOT be greater than 100%%", obj);
 		}
+		obj->last_ext_seq=extseq;
+		obj->last_cum_loss=cum_loss;
+		obj->last_packet_sent_count=stream->stats.packet_sent;
+		obj->last_dup_packet_sent_count=stream->stats.packet_dup_sent;
 	}
 
 	return got_value;
