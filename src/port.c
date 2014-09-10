@@ -331,7 +331,7 @@ long int ortp_random(void){
 	if (sizeof(long)==4){
 		return ((uint32_t)rand())<<30 | ((uint32_t)rand())<<15 | ((uint32_t)rand());
 	}else{
-		return ((uint64_t)rand())<<60 ((uint64_t)rand())<<45 ((uint64_t)rand())<<30 | ((uint64_t)rand())<<15 | ((uint64_t)rand());
+		return ((uint64_t)rand())<<60 | ((uint64_t)rand())<<45 | ((uint64_t)rand())<<30 | ((uint64_t)rand())<<15 | ((uint64_t)rand());
 	}
 }
 
