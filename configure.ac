@@ -46,11 +46,29 @@ LT_INIT([win32-dll shared disable-static])
 gl_LD_OUTPUT_DEF
 
 AC_MSG_CHECKING([warning make an error on compilation])
+
 AC_ARG_ENABLE(strict,
-	[AS_HELP_STRING([--enable-strict], [Enable error on compilation warning (default=yes)])],
-	[wall_werror=$enableval],
-	[wall_werror=yes]
+	AC_HELP_STRING([--enable-strict], [Build with stricter options @<:@yes@:>@]),
+	[strictness="${enableval}"],
+	[strictness=yes]
 )
+
+STRICT_OPTIONS="-Wall -Wdeclaration-after-statement -Wuninitialized"
+
+#for clang
+
+case $CC in
+	*clang*)
+		STRICT_OPTIONS="$STRICT_OPTIONS -Qunused-arguments "
+	;;
+esac
+
+if test "$strictness" = "yes" ; then
+	STRICT_OPTIONS="$STRICT_OPTIONS -Werror"
+	CFLAGS="$CFLAGS -fno-strict-aliasing"
+fi
+
+
 
 AC_ARG_ENABLE(perf,
 	[AS_HELP_STRING([--enable-perf], [Disable costly features to reduce cpu consumtion (default=no)])],
@@ -123,7 +141,7 @@ case "$target" in
 esac
 
 case "$target_os" in
-	*hpux*) 
+	*hpux*)
 		hpux_host=yes
 		AC_DEFINE(NOCONNECT,1,[Defined if we should not use connect() on udp sockets])
 		CFLAGS="$CFLAGS -D_HPUX_SOURCE -D_XOPEN_SOURCE_EXTENDED -D_XOPEN_SOURCE=500 -D_POSIX_C_SOURCE=199506L"
@@ -165,7 +183,7 @@ if test "$GCC" != "yes" ; then
 		fi
 	fi
 else
-	CFLAGS="$CFLAGS -Wall"	
+	CFLAGS="$CFLAGS -Wall"
 fi
 
 build_scheduler=yes
@@ -305,7 +323,7 @@ AC_ARG_ENABLE(memcheck,
 	esac],
 	[memcheck_enabled=no]
 )
-				
+
 if test "$memcheck_enabled" = "yes" ; then
 	if test "$hpux_host" = "yes" ; then
 		AC_DEFINE(ENABLE_MEMCHECK,1,[Defined when memory leak checking if enabled])
@@ -332,7 +350,7 @@ dnl Checks for library functions.
 AC_CHECK_FUNCS(select socket strerror)
 
 if test $hpux_host = "yes" ; then
-dnl it seems 10 ms is too fast on hpux and it causes trouble 
+dnl it seems 10 ms is too fast on hpux and it causes trouble
 		posixtimer_interval=20000
 fi
 
@@ -340,10 +358,6 @@ AC_DEFINE_UNQUOTED(POSIXTIMER_INTERVAL,$posixtimer_interval,[Defines the periodi
 
 if test "$perf" = "yes" ; then
 	CFLAGS="$CFLAGS -DPERF"
-fi
-
-if test $GCC = yes && test $wall_werror = yes;  then
-	CFLAGS="$CFLAGS -Werror "
 fi
 
 AC_ARG_ENABLE(ssl-hmac,
@@ -355,7 +369,7 @@ AC_ARG_ENABLE(ssl-hmac,
 	esac],
 	[ssl_hmac_enabled=no]
 )
-				
+
 if test "$ssl_hmac_enabled" = "yes" ; then
 	AC_CHECK_HEADERS(openssl/hmac.h openssl/md5.h)
 	AC_CHECK_LIB(ssl,SSL_CTX_new,[SSL_LIBS="-lssl"])
