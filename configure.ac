@@ -53,7 +53,9 @@ AC_ARG_ENABLE(strict,
 	[strictness=yes]
 )
 
-STRICT_OPTIONS="-Wall -Wdeclaration-after-statement -Wuninitialized"
+STRICT_OPTIONS="-Wall -Wuninitialized"
+STRICT_OPTIONS_CC="-Wdeclaration-after-statement "
+STRICT_OPTIONS_CXX=""
 
 #for clang
 
@@ -78,7 +80,9 @@ if test "$strictness" = "yes" ; then
 	CFLAGS="$CFLAGS -fno-strict-aliasing"
 fi
 
-
+AC_SUBST(STRICT_OPTIONS)
+AC_SUBST(STRICT_OPTIONS_CC)
+AC_SUBST(STRICT_OPTIONS_CXX)
 
 AC_ARG_ENABLE(perf,
 	[AS_HELP_STRING([--enable-perf], [Disable costly features to reduce cpu consumtion (default=no)])],
