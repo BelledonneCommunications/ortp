@@ -162,11 +162,7 @@ typedef __int16 int16_t;
 ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #endif
 
-ORTP_PUBLIC long int ortp_random(void);
-
 #define vsnprintf	_vsnprintf
-#define srandom		srand
-#define random		ortp_random
 
 typedef SOCKET ortp_socket_t;
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -312,6 +308,7 @@ ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
 ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
 ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
+ORTP_PUBLIC unsigned int ortp_random(void);
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)

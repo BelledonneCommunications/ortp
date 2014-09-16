@@ -327,30 +327,6 @@ int WIN_cond_destroy(ortp_cond_t * hCond)
 	return 0;
 }
 
-long int ortp_random(void){
-	errno_t err;
-	if (sizeof(long)==4){
-		unsigned int value=0;
-		err=srand_r(&value);
-		if (err!=0){
-			ortp_fatal("srand_r() failed !");
-		}
-		return (long)value;
-	}else{
-		unsigned int value1=0;
-		unsigned int value2=0;
-		err=srand_r(&value1);
-		if (err!=0){
-			ortp_fatal("srand_r() failed !");
-		}
-		err=srand_r(&value2);
-		if (err!=0){
-			ortp_fatal("srand_r() failed !");
-		}
-		return ((long)value1) << 32 || ((long)value2);
-	}
-}
-
 #if defined(_WIN32_WCE)
 #include <time.h>
 
@@ -802,3 +778,71 @@ char* strtok_r(char *str, const char *delim, char **nextp){
 	return ret;
 }
 #endif
+
+
+#if defined(WIN32) && !defined(_MSC_VER)
+#include <wincrypt.h>
+static int ortp_wincrypto_random(unsigned int *rand_number){
+	static HCRYPTPROV hProv=(HCRYPTPROV)-1;
+	static int initd=0;
+	
+	if (!initd){
+		if (!CryptAcquireContext(&hProv,NULL,NULL,PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
+			ortp_error("ortp_wincrypto_random(): Could not acquire a windows crypto context");
+			return -1;
+		}
+		initd=TRUE;
+	}
+	if (hProv==(HCRYPTPROV)-1)
+		return -1;
+	
+	if (!CryptGenRandom(hProv,4,(BYTE*)rand_number)){
+		ortp_error("ortp_wincrypto_random(): CryptGenRandom() failed.");
+		return -1;
+	}
+	return 0;
+}
+#endif
+
+unsigned int ortp_random(void){
+#ifdef HAVE_ARC4RANDOM
+	return arc4random();
+#elif  defined(__linux) || defined(__APPLE__)
+	static int fd=-1;
+	if (fd==-1) fd=open("/dev/urandom",O_RDONLY);
+	if (fd!=-1){
+		unsigned int tmp;
+		if (read(fd,&tmp,4)!=4){
+			ortp_error("Reading /dev/urandom failed.");
+		}else return tmp;
+	}else ortp_error("Could not open /dev/urandom");
+#elif defined(WIN32)
+	static int initd=0;
+	unsigned int ret;
+#ifdef _MSC_VER
+	/*rand_s() is pretty nice and simple function but is not wrapped by mingw.*/
+	
+	if (rand_s(&ret)==0){
+		return ret;
+	}
+#else
+	if (ortp_wincrypto_random(&ret)==0){
+		return ret;
+	}
+#endif
+	/* Windows's rand() is unsecure but is used as a fallback*/
+	if (!initd) {
+		struct timeval tv;
+		ortp_gettimeofday(&tv,NULL);
+		srand((unsigned int)tv.tv_sec+tv.tv_usec);
+		initd=1;
+		ortp_warning("ortp: Random generator is using rand(), this is unsecure !");
+	}
+	return rand()<<16 | rand();
+#endif
+	/*fallback to UNIX random()*/
+#ifndef WIN32
+	return (unsigned int) random();
+#endif
+}
+
