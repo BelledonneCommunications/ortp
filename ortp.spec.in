@@ -47,7 +47,7 @@ develop programs using the oRTP library.
 # Must be non-empty
 %define ortp_arch_cflags -Wall
 %endif
-%define ortp_cflags %ortp_arch_cflags -Wall -g -pipe -pthread -O3 -fomit-frame-pointer -fno-schedule-insns -fschedule-insns2
+%define ortp_cflags %ortp_arch_cflags -Wall -g -pipe -pthread -O3 -fomit-frame-pointer -fno-schedule-insns -fschedule-insns2 -fno-strict-aliasing
 
 %prep
 %setup -q
