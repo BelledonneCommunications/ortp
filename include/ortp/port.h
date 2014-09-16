@@ -120,6 +120,7 @@ unsigned long __ortp_thread_self(void);
 /*********************************/
 
 #include <stdio.h>
+#define _CRT_RAND_S
 #include <stdlib.h>
 #include <stdarg.h>
 #include <winsock2.h>

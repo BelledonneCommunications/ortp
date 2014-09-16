@@ -47,9 +47,12 @@ RtpScheduler *__ortp_scheduler;
 extern void av_profile_init(RtpProfile *profile);
 
 static void init_random_number_generator(){
+#ifndef WIN32
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
 	srandom(t.tv_usec+t.tv_sec);
+#endif
+	/*on windows we're using rand_s, which doesn't require initialization*/
 }
 
 
@@ -116,7 +119,6 @@ void ortp_scheduler_init()
 
 	__ortp_scheduler=rtp_scheduler_new();
 	rtp_scheduler_start(__ortp_scheduler);
-	//sleep(1);
 }
 
 
@@ -126,6 +128,10 @@ void ortp_scheduler_init()
 **/
 void ortp_exit()
 {
+	if (ortp_initialized==0) {
+		ortp_warning("ortp_exit() called without prior call to ortp_init(), ignored.");
+		return;
+	}
 	ortp_initialized--;
 	if (ortp_initialized==0){
 		if (__ortp_scheduler!=NULL)

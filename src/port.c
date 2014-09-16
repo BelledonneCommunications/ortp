@@ -328,10 +328,26 @@ int WIN_cond_destroy(ortp_cond_t * hCond)
 }
 
 long int ortp_random(void){
+	errno_t err;
 	if (sizeof(long)==4){
-		return ((uint32_t)rand())<<30 | ((uint32_t)rand())<<15 | ((uint32_t)rand());
+		unsigned int value=0;
+		err=srand_r(&value);
+		if (err!=0){
+			ortp_fatal("srand_r() failed !");
+		}
+		return (long)value;
 	}else{
-		return ((uint64_t)rand())<<60 | ((uint64_t)rand())<<45 | ((uint64_t)rand())<<30 | ((uint64_t)rand())<<15 | ((uint64_t)rand());
+		unsigned int value1=0;
+		unsigned int value2=0;
+		err=srand_r(&value1);
+		if (err!=0){
+			ortp_fatal("srand_r() failed !");
+		}
+		err=srand_r(&value2);
+		if (err!=0){
+			ortp_fatal("srand_r() failed !");
+		}
+		return ((long)value1) << 32 || ((long)value2);
 	}
 }
 
