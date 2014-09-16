@@ -62,8 +62,7 @@ typedef enum {
 static ORTP_INLINE uint64_t get_timeval_in_millis() {
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
-	uint32_t ret=(1000LL*t.tv_sec)+(t.tv_usec/1000LL);
-	return ret;
+	return (1000LL*t.tv_sec)+(t.tv_usec/1000LL);
 }
 
 /* ZRTP library Callbacks implementation */
@@ -84,6 +83,7 @@ static ORTP_INLINE uint64_t get_timeval_in_millis() {
 */
 static int32_t ozrtp_sendDataZRTP (void *clientData, uint8_t* data, int32_t length ){
 
+	ssize_t bytesSent;
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
 	RtpSession *session = userData->session;
 	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
@@ -92,7 +92,7 @@ static int32_t ozrtp_sendDataZRTP (void *clientData, uint8_t* data, int32_t leng
 	ortp_message("ZRTP Send packet type %.8s", data+16);
 
 	// Send packet
-	ssize_t bytesSent = sendto(sockfd, (void*)data, length,0,destaddr,destlen);
+	bytesSent = sendto(sockfd, (void*)data, length,0,destaddr,destlen);
 	if (bytesSent == -1 || bytesSent < length) {
 		ortp_message("ZRTP sending data returned error %s", strerror(errno));
 		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d", (int)bytesSent, length);
@@ -411,10 +411,13 @@ static int ozrtp_rtcp_process_on_receive(struct _RtpTransportModifier *t, mblk_t
 }
 static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
 	int rlen;
+	uint32_t *magicField;
 
 	OrtpZrtpContext *userData = (OrtpZrtpContext*) t->data;
 	bzrtpContext_t *zrtpContext = userData->zrtpContext;
 	RtpSession *session = userData->session;
+	uint8_t* rtp;
+	int rtpVersion;
 
 
 	// send a timer tick to the zrtp engine
@@ -427,8 +430,8 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 		return rlen;
 	}
 
-	uint8_t* rtp = m->b_rptr;
-	int rtpVersion = ((rtp_header_t*)rtp)->version;
+	rtp = m->b_rptr;
+	rtpVersion = ((rtp_header_t*)rtp)->version;
 
 	// If plain or secured RTP
 	if (rtpVersion == 2) {
@@ -445,7 +448,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 	}
 
 	// if ZRTP packet, send to engine
-	uint32_t *magicField=(uint32_t *)(rtp + 4);
+	magicField=(uint32_t *)(rtp + 4);
 	if (rtpVersion==0 && ntohl(*magicField) == ZRTP_MAGIC_COOKIE) {
 		ortp_message("ZRTP Receive packet type %.8s", rtp+16);
 		bzrtp_processMessage(zrtpContext, session->snd.ssrc, rtp, rlen);
@@ -461,6 +464,8 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 	OrtpZrtpContext *userData = (OrtpZrtpContext*) t->data;
 	bzrtpContext_t *zrtpContext = userData->zrtpContext;
 	RtpSession *session = userData->session;
+	uint8_t *rtcp;
+	int version;
 
 
 	int rlen = rtp_session_rtp_recv_abstract(t->session->rtcp.gs.socket,m,flags,from,fromlen);
@@ -469,8 +474,8 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 		return rlen;
 	}
 
-	uint8_t *rtcp = m->b_wptr;
-	int version = ((rtcp_common_header_t *)rtcp)->version;
+	rtcp = m->b_wptr;
+	version = ((rtcp_common_header_t *)rtcp)->version;
 	if (version == 2 && userData->srtpRecv != NULL && bzrtp_isSecure(zrtpContext, session->snd.ssrc)) {
 		err_status_t err = srtp_unprotect_rtcp(userData->srtpRecv,m->b_wptr,&rlen);
 		if (err != err_status_ok) {
@@ -581,8 +586,10 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, R
 }
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
+	OrtpZrtpContext *userData;
+	bzrtpContext_t *context;
 	ortp_message("Creating ZRTP engine on session [%p]",s);
-	bzrtpContext_t *context = bzrtp_createBzrtpContext(s->snd.ssrc); /* create the zrtp context, provide the SSRC of first channel */
+	context = bzrtp_createBzrtpContext(s->snd.ssrc); /* create the zrtp context, provide the SSRC of first channel */
 	/* set callback functions */
 	bzrtp_setCallback(context, (int (*)())ozrtp_sendDataZRTP, ZRTP_CALLBACK_SENDDATA);
 	bzrtp_setCallback(context, (int (*)())ozrtp_srtpSecretsAvailable, ZRTP_CALLBACK_SRTPSECRETSAVAILABLE);
@@ -597,7 +604,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 		}
 	}
 	/* create and link user data */
-	OrtpZrtpContext *userData=createUserData(context, params);
+	userData=createUserData(context, params);
 	userData->session=s;
 
 	/* get the sip URI of peer and store it into the context to set it in the cache. Done only for the first channel as it is useless for the other ones which doesn't update the cache */
@@ -615,12 +622,13 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
 	int retval;
+	OrtpZrtpContext *userData;
 	if ((retval = bzrtp_addChannel(activeContext->zrtpContext, s->snd.ssrc)) != 0) {
 		ortp_warning("could't add stream: multistream not supported by peer %x", retval);
 	}
 
 	ortp_message("Initializing ZRTP context");
-	OrtpZrtpContext *userData=createUserData(activeContext->zrtpContext, params);
+	userData=createUserData(activeContext->zrtpContext, params);
 	userData->session=s;
 	bzrtp_setClientData(activeContext->zrtpContext, s->snd.ssrc, (void *)userData);
 
