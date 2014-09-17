@@ -160,39 +160,39 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		}
 #ifndef __hpux
 		switch (res->ai_family)
-		  {
-			case AF_INET:
-			  if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
+		{
+		case AF_INET:
+			if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
 			{
-				  struct ip_mreq mreq;
-			  mreq.imr_multiaddr.s_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr;
-			  mreq.imr_interface.s_addr = INADDR_ANY;
-			  err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (SOCKET_OPTION_VALUE) &mreq, sizeof(mreq));
-			  if (err < 0){
-				ortp_warning ("Fail to join address group: %s.", getSocketError());
-				close_socket (sock);
-				sock=-1;
-				continue;
+				struct ip_mreq mreq;
+				mreq.imr_multiaddr.s_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr;
+				mreq.imr_interface.s_addr = INADDR_ANY;
+				err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (SOCKET_OPTION_VALUE) &mreq, sizeof(mreq));
+				if (err < 0){
+					ortp_warning ("Fail to join address group: %s.", getSocketError());
+					close_socket (sock);
+					sock=-1;
+					continue;
 				}
 			}
-			  break;
-			case AF_INET6:
-			  if (IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) res->ai_addr)->sin6_addr)))
+		break;
+		case AF_INET6:
+			if IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) res->ai_addr)->sin6_addr))
 			{
-			  struct ipv6_mreq mreq;
-			  mreq.ipv6mr_multiaddr = ((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
-			  mreq.ipv6mr_interface = 0;
-			  err = setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (SOCKET_OPTION_VALUE)&mreq, sizeof(mreq));
-			  if (err < 0)
+				struct ipv6_mreq mreq;
+				mreq.ipv6mr_multiaddr = ((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
+				mreq.ipv6mr_interface = 0;
+				err = setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (SOCKET_OPTION_VALUE)&mreq, sizeof(mreq));
+				if (err < 0)
 				{
-				  ortp_warning ("Fail to join address group: %s.", getSocketError());
-				  close_socket (sock);
-				  sock=-1;
-				  continue;
+					ortp_warning ("Fail to join address group: %s.", getSocketError());
+					close_socket (sock);
+					sock=-1;
+					continue;
 				}
 			}
-			  break;
-		  }
+		break;
+		}
 #endif /*hpux*/
 		break;
 	}
