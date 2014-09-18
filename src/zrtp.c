@@ -35,7 +35,7 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
-#include <srtp/srtp.h>
+#include <srtp.h>
 #include <bzrtp/bzrtp.h>
 
 
