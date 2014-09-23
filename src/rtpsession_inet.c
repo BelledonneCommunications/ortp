@@ -80,6 +80,10 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 #	endif
 #endif
 
+#ifndef IN6_IS_ADDR_MULTICAST
+#define IN6_IS_ADDR_MULTICAST(i)	(((uint8_t *) (i))[0] == 0xff)
+#endif
+
 static int
 _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port, bool_t is_aux);
 
