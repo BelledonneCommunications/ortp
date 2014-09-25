@@ -2110,4 +2110,7 @@ void meta_rtp_transport_destroy(RtpTransport *tp) {
 void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
 	m->modifiers=o_list_append(m->modifiers, tpm);
+	if(m->has_set_session) {
+		tpm->session = tp->session;
+	}
 }
