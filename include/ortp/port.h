@@ -75,13 +75,17 @@ typedef pthread_cond_t ortp_cond_t;
 
 #define ORTP_PUBLIC
 #define ORTP_INLINE			inline
+
+#define WINAPI_FAMILY_PARTITION(x) 1
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
 int __ortp_thread_join(ortp_thread_t thread, void **ptr);
-int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg);
+int __ortp_thread_create(ortp_thread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg);
+unsigned long __ortp_thread_self(void);
 
 #ifdef __cplusplus
 }
@@ -89,6 +93,7 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 
 #define ortp_thread_create	__ortp_thread_create
 #define ortp_thread_join	__ortp_thread_join
+#define ortp_thread_self	__ortp_thread_self
 #define ortp_thread_exit	pthread_exit
 #define ortp_mutex_init		pthread_mutex_init
 #define ortp_mutex_lock		pthread_mutex_lock
@@ -115,16 +120,26 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 /*********************************/
 
 #include <stdio.h>
+#define _CRT_RAND_S
 #include <stdlib.h>
 #include <stdarg.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
+#if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION)
+// Only use with x being WINAPI_PARTITION_DESKTOP to test if building on desktop
+#define WINAPI_FAMILY_PARTITION(x) 1
+#endif
+
 #ifdef _MSC_VER
+#ifdef ORTP_STATIC
+#define ORTP_PUBLIC
+#else
 #ifdef ORTP_EXPORTS
 #define ORTP_PUBLIC	__declspec(dllexport)
 #else 
 #define ORTP_PUBLIC	__declspec(dllimport)
+#endif
 #endif
 #pragma push_macro("_WINSOCKAPI_")
 #ifndef _WINSOCKAPI_
@@ -148,21 +163,20 @@ ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #endif
 
 #define vsnprintf	_vsnprintf
-#define srandom		srand
-#define random		rand
 
 typedef SOCKET ortp_socket_t;
-#ifdef WINAPI_FAMILY_PHONE_APP
-typedef CONDITION_VARIABLE ortp_cond_t;
-typedef SRWLOCK ortp_mutex_t;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 typedef HANDLE ortp_cond_t;
 typedef HANDLE ortp_mutex_t;
+#else
+typedef CONDITION_VARIABLE ortp_cond_t;
+typedef SRWLOCK ortp_mutex_t;
 #endif
 typedef HANDLE ortp_thread_t;
 
 #define ortp_thread_create	WIN_thread_create
 #define ortp_thread_join	WIN_thread_join
+#define ortp_thread_self	WIN_thread_self
 #define ortp_thread_exit(arg)
 #define ortp_mutex_init		WIN_mutex_init
 #define ortp_mutex_lock		WIN_mutex_lock
@@ -186,6 +200,7 @@ ORTP_PUBLIC int WIN_mutex_unlock(ortp_mutex_t *mutex);
 ORTP_PUBLIC int WIN_mutex_destroy(ortp_mutex_t *mutex);
 ORTP_PUBLIC int WIN_thread_create(ortp_thread_t *t, void *attr_unused, void *(*func)(void*), void *arg);
 ORTP_PUBLIC int WIN_thread_join(ortp_thread_t thread, void **unused);
+ORTP_PUBLIC unsigned long WIN_thread_self(void);
 ORTP_PUBLIC int WIN_cond_init(ortp_cond_t *cond, void *attr_unused);
 ORTP_PUBLIC int WIN_cond_wait(ortp_cond_t * cond, ortp_mutex_t * mutex);
 ORTP_PUBLIC int WIN_cond_signal(ortp_cond_t * cond);
@@ -293,6 +308,7 @@ ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
 ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
 ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
+ORTP_PUBLIC unsigned int ortp_random(void);
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)

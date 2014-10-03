@@ -22,9 +22,7 @@
 #define _GNU_SOURCE
 #endif
 
-#if defined(WIN32) || defined(_WIN32_WCE)
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h" /*needed for HAVE_SYS_UIO_H and HAVE_ARC4RANDOM */
 #endif
 #include "ortp/ortp.h"
@@ -35,12 +33,12 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC
-#ifndef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #include <QOS2.h>
 #endif
 #endif
 
-#if (defined(WIN32) || defined(_WIN32_WCE)) && !defined(WINAPI_FAMILY_PHONE_APP)
+#if (defined(WIN32) || defined(_WIN32_WCE)) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #include <mswsock.h>
 #endif
 
@@ -80,6 +78,10 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 #	ifndef AI_V4MAPPED
 #	define AI_V4MAPPED 0x00000800
 #	endif
+#endif
+
+#ifndef IN6_IS_ADDR_MULTICAST
+#define IN6_IS_ADDR_MULTICAST(i)	(((uint8_t *) (i))[0] == 0xff)
 #endif
 
 static int
@@ -155,46 +157,46 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		*sock_family=res->ai_family;
 		err = bind (sock, res->ai_addr, res->ai_addrlen);
 		if (err != 0){
-			ortp_debug ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
+			ortp_error ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket (sock);
 			sock=-1;
 			continue;
 		}
 #ifndef __hpux
 		switch (res->ai_family)
-		  {
-			case AF_INET:
-			  if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
+		{
+		case AF_INET:
+			if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
 			{
-				  struct ip_mreq mreq;
-			  mreq.imr_multiaddr.s_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr;
-			  mreq.imr_interface.s_addr = INADDR_ANY;
-			  err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (SOCKET_OPTION_VALUE) &mreq, sizeof(mreq));
-			  if (err < 0){
-				ortp_warning ("Fail to join address group: %s.", getSocketError());
-				close_socket (sock);
-				sock=-1;
-				continue;
+				struct ip_mreq mreq;
+				mreq.imr_multiaddr.s_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr;
+				mreq.imr_interface.s_addr = INADDR_ANY;
+				err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (SOCKET_OPTION_VALUE) &mreq, sizeof(mreq));
+				if (err < 0){
+					ortp_warning ("Fail to join address group: %s.", getSocketError());
+					close_socket (sock);
+					sock=-1;
+					continue;
 				}
 			}
-			  break;
-			case AF_INET6:
-			  if (IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) res->ai_addr)->sin6_addr)))
+		break;
+		case AF_INET6:
+			if IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) res->ai_addr)->sin6_addr))
 			{
-			  struct ipv6_mreq mreq;
-			  mreq.ipv6mr_multiaddr = ((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
-			  mreq.ipv6mr_interface = 0;
-			  err = setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (SOCKET_OPTION_VALUE)&mreq, sizeof(mreq));
-			  if (err < 0)
+				struct ipv6_mreq mreq;
+				mreq.ipv6mr_multiaddr = ((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
+				mreq.ipv6mr_interface = 0;
+				err = setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (SOCKET_OPTION_VALUE)&mreq, sizeof(mreq));
+				if (err < 0)
 				{
-				  ortp_warning ("Fail to join address group: %s.", getSocketError());
-				  close_socket (sock);
-				  sock=-1;
-				  continue;
+					ortp_warning ("Fail to join address group: %s.", getSocketError());
+					close_socket (sock);
+					sock=-1;
+					continue;
 				}
 			}
-			  break;
-		  }
+		break;
+		}
 #endif /*hpux*/
 		break;
 	}
@@ -309,7 +311,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 			session->rtcp.gs.socket=sock;
 			session->rtcp.gs.loc_port=rtcp_port;
 		}else {
-			ortp_debug("Could not create and bind rtcp socket.");
+			ortp_error("Could not create and bind rtcp socket for session [%p]",session);
 			return -1;
 		}
 
@@ -319,7 +321,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		rtp_session_set_multicast_loopback( session, -1 );
 		return 0;
 	}
-	ortp_debug("Could not bind RTP socket on port to %s port %i",addr,rtp_port);
+	ortp_error("Could not bind RTP socket to %s on port %i for session [%p]",addr,rtp_port,session);
 	return -1;
 }
 
@@ -547,7 +549,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	// Don't do anything if socket hasn't been created yet
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
-#if (_WIN32_WINNT >= 0x0600) && !defined(WINAPI_FAMILY_PHONE_APP)
+#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	memset(&ovi, 0, sizeof(ovi));
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
 	GetVersionEx((LPOSVERSIONINFO) & ovi);
@@ -633,7 +635,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				ortp_error("Fail to set DSCP value on rtcp socket: %s",getSocketError());
 			}
 		}
-#if (_WIN32_WINNT >= 0x0600) && !defined(WINAPI_FAMILY_PHONE_APP)
+#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	}
 #endif
 	return retval;
@@ -1231,7 +1233,8 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, uint32_t
 	uint32_t approx_ntp=(curntp>>16) & 0xFFFFFFFF;
 	/*ortp_message("rtt approx_ntp=%u, lrr=%u, dlrr=%u",approx_ntp,lrr,dlrr);*/
 	if (lrr!=0 && dlrr!=0){
-		double rtt_frac=approx_ntp-lrr-dlrr;
+		/*we cast to int32_t to check for crazy RTT time (negative)*/
+		double rtt_frac=(int32_t)(approx_ntp-lrr-dlrr);
 		if (rtt_frac>=0){
 			rtt_frac/=65536.0;
 
@@ -1245,6 +1248,7 @@ static void compute_rtt_from_report_block(RtpSession *session, const struct time
 	uint32_t last_sr_time = report_block_get_last_SR_time(rb);
 	uint32_t sr_delay = report_block_get_last_SR_delay(rb);
 	compute_rtt(session, now, last_sr_time, sr_delay);
+	session->cum_loss = report_block_get_cum_packet_lost(rb);
 }
 
 static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, const struct timeval *now) {
@@ -1437,12 +1441,9 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
-			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
-		} else { error = rtp_session_rtp_recv_abstract(sockfd, mp, 0,
-				  (struct sockaddr *) &remaddr,
-				  &addrlen);
+			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
+		} else {
+			error = rtp_session_rtp_recv_abstract(sockfd, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 		}
 		if (error > 0){
 			mp->b_wptr+=error;

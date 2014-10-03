@@ -18,9 +18,7 @@
 */
 
 
-#ifdef _MSC_VER
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 #include "ortp/ortp.h"
@@ -49,9 +47,12 @@ RtpScheduler *__ortp_scheduler;
 extern void av_profile_init(RtpProfile *profile);
 
 static void init_random_number_generator(){
+#ifndef WIN32
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
 	srandom(t.tv_usec+t.tv_sec);
+#endif
+	/*on windows we're using rand_s, which doesn't require initialization*/
 }
 
 
@@ -118,7 +119,6 @@ void ortp_scheduler_init()
 
 	__ortp_scheduler=rtp_scheduler_new();
 	rtp_scheduler_start(__ortp_scheduler);
-	//sleep(1);
 }
 
 
@@ -128,6 +128,10 @@ void ortp_scheduler_init()
 **/
 void ortp_exit()
 {
+	if (ortp_initialized==0) {
+		ortp_warning("ortp_exit() called without prior call to ortp_init(), ignored.");
+		return;
+	}
 	ortp_initialized--;
 	if (ortp_initialized==0){
 		if (__ortp_scheduler!=NULL)
@@ -167,16 +171,17 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header) {
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 	ortp_log(ORTP_MESSAGE, "%s", header);
 	ortp_log(ORTP_MESSAGE, "-----------------------------------------------------------");
-	ortp_log(ORTP_MESSAGE, "sent                          %20"PRId64" packets", stats->packet_sent);
-	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->sent);
-	ortp_log(ORTP_MESSAGE, "received                      %20"PRId64" packets", stats->packet_recv);
-	ortp_log(ORTP_MESSAGE, "                              %20"PRId64" bytes  ", stats->hw_recv);
-	ortp_log(ORTP_MESSAGE, "incoming delivered to the app %20"PRId64" bytes  ", stats->recv);
-	ortp_log(ORTP_MESSAGE, "cumulative lost               %20"PRId64" packets", stats->cum_packet_loss);
-	ortp_log(ORTP_MESSAGE, "received too late             %20"PRId64" packets", stats->outoftime);
-	ortp_log(ORTP_MESSAGE, "bad formatted                 %20"PRId64" packets", stats->bad);
-	ortp_log(ORTP_MESSAGE, "discarded (queue overflow)    %20"PRId64" packets", stats->discarded);
-	ortp_log(ORTP_MESSAGE, "duplicated                    %20"PRId64" packets", stats->duplicated);
+	ortp_log(ORTP_MESSAGE, "sent                                 %10"PRId64" packets", stats->packet_sent);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" duplicated packets", stats->packet_dup_sent);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" bytes  ", stats->sent);
+	ortp_log(ORTP_MESSAGE, "received                             %10"PRId64" packets", stats->packet_recv);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" duplicated packets", stats->packet_dup_recv);
+	ortp_log(ORTP_MESSAGE, "                                     %10"PRId64" bytes  ", stats->hw_recv);
+	ortp_log(ORTP_MESSAGE, "incoming delivered to the app        %10"PRId64" bytes  ", stats->recv);
+	ortp_log(ORTP_MESSAGE, "incoming cumulative lost             %10"PRId64" packets", stats->cum_packet_loss);
+	ortp_log(ORTP_MESSAGE, "incoming received too late           %10"PRId64" packets", stats->outoftime);
+	ortp_log(ORTP_MESSAGE, "incoming bad formatted               %10"PRId64" packets", stats->bad);
+	ortp_log(ORTP_MESSAGE, "incoming discarded (queue overflow)  %10"PRId64" packets", stats->discarded);
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 }
 

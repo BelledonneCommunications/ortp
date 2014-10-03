@@ -53,19 +53,23 @@ ORTP_VAR_PUBLIC OrtpLogFunc ortp_logv_out;
 
 #define ortp_log_level_enabled(level)	(ortp_get_log_level_mask() & (level))
 
-#if !defined(WIN32) && !defined(_WIN32_WCE)
-#define ortp_logv(level,fmt,args) \
-{\
-	if (ortp_logv_out!=NULL && ortp_log_level_enabled(level)) \
-		ortp_logv_out(level,fmt,args);\
-	if ((level)==ORTP_FATAL) abort();\
-}while(0)
-#else
 ORTP_PUBLIC void ortp_logv(int level, const char *fmt, va_list args);
-#endif
+
+/**
+ * Flushes the log output queue.
+ * WARNING: Must be called from the thread that has been defined with ortp_set_log_thread_id().
+ */
+ORTP_PUBLIC void ortp_logv_flush(void);
 
 ORTP_PUBLIC void ortp_set_log_level_mask(int levelmask);
 ORTP_PUBLIC int ortp_get_log_level_mask(void);
+
+/**
+ * Tell oRTP the id of the thread used to output the logs.
+ * This is meant to output all the logs from the same thread to prevent deadlock problems at the application level.
+ * @param[in] thread_id The id of the thread that will output the logs (can be obtained using ortp_thread_self()).
+ */
+ORTP_PUBLIC void ortp_set_log_thread_id(unsigned long thread_id);
 
 #ifdef __GNUC__
 #define CHECK_FORMAT_ARGS(m,n) __attribute__((format(printf,m,n)))

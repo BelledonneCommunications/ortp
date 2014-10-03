@@ -17,9 +17,7 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if defined(WIN32) || defined(_WIN32_WCE)
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 
@@ -90,17 +88,7 @@ RtpTimer posix_timer={	0,
 							
 #else //WIN32
 
-#ifdef WINAPI_FAMILY_PHONE_APP
-
-#include "winrttimer.h"
-
-RtpTimer posix_timer={	0,
-						winrt_timer_init,
-						winrt_timer_do,
-						winrt_timer_close,
-						{0, TIME_INTERVAL * 1000}};
-
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -183,6 +171,16 @@ RtpTimer posix_timer={	0,
 						win_timer_do,
 						win_timer_close,
 						{0,TIME_INTERVAL * 1000}};
+
+#else
+
+#include "winrttimer.h"
+
+RtpTimer posix_timer={	0,
+						winrt_timer_init,
+						winrt_timer_do,
+						winrt_timer_close,
+						{0, TIME_INTERVAL * 1000}};
 
 #endif
 

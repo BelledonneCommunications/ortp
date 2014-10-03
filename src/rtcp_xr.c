@@ -160,6 +160,7 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 	block->bh.length = htons(8);
 	block->ssrc = htonl(rtp_session_get_recv_ssrc(session));
 	block->gmin = RTCP_XR_GMIN;
+	block->reserved2 = 0;
 
 	// Fill RX config
 	block->rx_config = 0;

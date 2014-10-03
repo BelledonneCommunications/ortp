@@ -17,6 +17,10 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
+
 #include "ortp/str_utils.h"
 
 
@@ -266,7 +270,7 @@ void msgpullup(mblk_t *mp,size_t len)
 }
 
 
-mblk_t *copyb(mblk_t *mp)
+mblk_t *copyb(const mblk_t *mp)
 {
 	mblk_t *newm;
 	int len=(int) (mp->b_wptr-mp->b_rptr);
@@ -277,7 +281,7 @@ mblk_t *copyb(mblk_t *mp)
 	return newm;
 }
 
-mblk_t *copymsg(mblk_t *mp)
+mblk_t *copymsg(const mblk_t *mp)
 {
 	mblk_t *newm=0,*m;
 	m=newm=copyb(mp);

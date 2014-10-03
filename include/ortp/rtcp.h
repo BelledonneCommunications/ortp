@@ -125,7 +125,7 @@ static ORTP_INLINE uint32_t report_block_get_last_SR_delay(const report_block_t 
 static ORTP_INLINE uint32_t report_block_get_fraction_lost(const report_block_t * rb) {
 	return (ntohl(rb->fl_cnpl)>>24);
 }
-static ORTP_INLINE int32_t report_block_get_cum_packet_loss(const report_block_t * rb){
+static ORTP_INLINE int32_t report_block_get_cum_packet_lost(const report_block_t * rb){
 	int cum_loss = ntohl(rb->fl_cnpl);
 	if (((cum_loss>>23)&1)==0)
 		return 0x00FFFFFF & cum_loss;
@@ -364,11 +364,12 @@ typedef struct rtcp_app{
 } rtcp_app_t;
 
 struct _RtpSession;
+struct _RtpStream;
 ORTP_PUBLIC void rtp_session_rtcp_process_send(struct _RtpSession *s);
 ORTP_PUBLIC void rtp_session_rtcp_process_recv(struct _RtpSession *s);
 
 
-#define RTCP_DEFAULT_REPORT_INTERVAL 5 /* in seconds */
+#define RTCP_DEFAULT_REPORT_INTERVAL 5000 /* in milliseconds */
 
 
 /* packet parsing api */
@@ -472,14 +473,42 @@ typedef struct OrtpLossRateEstimator{
 	int32_t last_cum_loss;
 	int32_t last_ext_seq;
 	float loss_rate;
+	/**
+	* Total number of outgoing duplicate packets on last
+	* #ortp_loss_rate_estimator_process_report_block iteration.
+	**/
+	int32_t last_dup_packet_sent_count;
+	/**
+	* Total number of outgoing unique packets on last
+	* #ortp_loss_rate_estimator_process_report_block iteration.
+	**/
+	int32_t last_packet_sent_count;
 }OrtpLossRateEstimator;
 
 
-ORTP_PUBLIC OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, int32_t first_seq);
+ORTP_PUBLIC OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, struct _RtpSession *session);
 
-ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, int32_t first_seq);
+ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, struct _RtpSession *session);
 
-ORTP_PUBLIC bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const report_block_t *rb);
+
+/**
+ * Process an incoming report block to compute loss rate. It tries to compute
+ * loss rate, depending on the previous report block. It may fails if the two
+ * reports are too close or if a discontinuity occurred. You should NOT use
+ * loss rate field of the report block directly (see below).
+ * This estimator is useful for two reasons: first, on AVPF session, multiple
+ * reports can be received in a short period and loss_rate contained in these
+ * reports is unreliable. Secondly, it computes the loss rate using the
+ * cumulative loss factor which allows us to take into consideration duplicates
+ * packets as well.
+ * @param[in] obj #OrtpLossRateEstimator object.
+ * @param[in] stream #RtpStream stream in which the report block to consider belongs.
+ * @param[in] rb Report block to analyze.
+ * @return TRUE if a new loss rate estimation is ready, FALSE otherwise.
+ */
+ORTP_PUBLIC bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
+																 const struct _RtpStream *stream,
+																 const report_block_t *rb);
 
 ORTP_PUBLIC float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj);
 

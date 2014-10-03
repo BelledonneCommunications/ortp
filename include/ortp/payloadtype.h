@@ -60,7 +60,7 @@ extern "C"{
 
 struct _PayloadTypeAvpfParams {
 	unsigned char features; /**< A bitmask of PAYLOAD_TYPE_AVPF_* macros. */
-	unsigned char trr_interval; /**< The interval in seconds between regular RTCP packets. */
+	uint16_t trr_interval; /**< The interval in milliseconds between regular RTCP packets. */
 };
 
 struct _PayloadType
@@ -152,6 +152,7 @@ ORTP_VAR_PUBLIC PayloadType payload_type_aaceld_22k;
 ORTP_VAR_PUBLIC PayloadType payload_type_aaceld_44k;
 ORTP_VAR_PUBLIC PayloadType payload_type_opus;
 ORTP_VAR_PUBLIC PayloadType payload_type_isac;
+ORTP_VAR_PUBLIC PayloadType payload_type_gsm_efr;
 
 /* video */
 ORTP_VAR_PUBLIC PayloadType payload_type_mpv;

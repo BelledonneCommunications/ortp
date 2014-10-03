@@ -17,9 +17,7 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if defined(_MSC_VER)  && (defined(WIN32) || defined(_WIN32_WCE))
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 
@@ -37,7 +35,7 @@
 #undef PACKAGE_STRING
 #undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
-#include <srtp/srtp.h>
+#include <srtp.h>
 #include <bzrtp/bzrtp.h>
 
 
@@ -48,8 +46,6 @@ struct _OrtpZrtpContext{
 	srtp_t srtpSend;
 	srtp_t srtpRecv;
 	bzrtpContext_t *zrtpContext; // back link
-	RtpTransport rtpt;
-	RtpTransport rtcpt;
 	char *zidFilename;
 	char *peerURI;
 };
@@ -66,8 +62,7 @@ typedef enum {
 static ORTP_INLINE uint64_t get_timeval_in_millis() {
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
-	uint32_t ret=(1000LL*t.tv_sec)+(t.tv_usec/1000LL);
-	return ret;
+	return (1000LL*t.tv_sec)+(t.tv_usec/1000LL);
 }
 
 /* ZRTP library Callbacks implementation */
@@ -88,6 +83,7 @@ static ORTP_INLINE uint64_t get_timeval_in_millis() {
 */
 static int32_t ozrtp_sendDataZRTP (void *clientData, uint8_t* data, int32_t length ){
 
+	ssize_t bytesSent;
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
 	RtpSession *session = userData->session;
 	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
@@ -96,7 +92,7 @@ static int32_t ozrtp_sendDataZRTP (void *clientData, uint8_t* data, int32_t leng
 	ortp_message("ZRTP Send packet type %.8s", data+16);
 
 	// Send packet
-	ssize_t bytesSent = sendto(sockfd, (void*)data, length,0,destaddr,destlen);
+	bytesSent = sendto(sockfd, (void*)data, length,0,destaddr,destlen);
 	if (bytesSent == -1 || bytesSent < length) {
 		ortp_message("ZRTP sending data returned error %s", strerror(errno));
 		ortp_error("zrtp_sendDataZRTP: sent only %d bytes out of %d", (int)bytesSent, length);
@@ -136,7 +132,7 @@ static int32_t ozrtp_srtpSecretsAvailable(void* clientData, bzrtpSrtpSecrets_t* 
 	if (part==ZRTP_SRTP_SECRETS_FOR_RECEIVER) {
 		srtp_policy_t receiverPolicy;
 		memset(&receiverPolicy,0,sizeof(receiverPolicy));
-		
+
 		if (secrets->authTagAlgo == ZRTP_AUTHTAG_HS32){
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&receiverPolicy.rtp);
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&receiverPolicy.rtcp);
@@ -150,13 +146,13 @@ static int32_t ozrtp_srtpSecretsAvailable(void* clientData, bzrtpSrtpSecrets_t* 
 
 		/* add the encryption keys to the receiving context */
 		srtpCreateStatus = srtp_create(&userData->srtpRecv, NULL);
-		receiverPolicy.ssrc.type = ssrc_any_inbound; 
+		receiverPolicy.ssrc.type = ssrc_any_inbound;
 		receiverPolicy.key = ortp_malloc0((secrets->peerSrtpKeyLength+secrets->peerSrtpSaltLength+16)*sizeof(uint8_t)); /* +16 is for padding, why exactly? TODO */
 		memcpy(receiverPolicy.key, secrets->peerSrtpKey, secrets->peerSrtpKeyLength);
 		memcpy(receiverPolicy.key + secrets->peerSrtpKeyLength, secrets->peerSrtpSalt, secrets->peerSrtpSaltLength);
 		addStreamStatus=srtp_add_stream(userData->srtpRecv, &receiverPolicy);
 		ortp_free(receiverPolicy.key);
-	
+
 		if (srtpCreateStatus != err_status_ok) {
 			ortp_error("ZRTP Error %u during creation of SRTP context for receiver",srtpCreateStatus);
 			return 1;
@@ -171,7 +167,7 @@ static int32_t ozrtp_srtpSecretsAvailable(void* clientData, bzrtpSrtpSecrets_t* 
 	if (part==ZRTP_SRTP_SECRETS_FOR_SENDER) {
 		srtp_policy_t senderPolicy;
 		memset(&senderPolicy,0,sizeof(senderPolicy));
-		
+
 		if (secrets->authTagAlgo == ZRTP_AUTHTAG_HS32){
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&senderPolicy.rtp);
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&senderPolicy.rtcp);
@@ -191,7 +187,7 @@ static int32_t ozrtp_srtpSecretsAvailable(void* clientData, bzrtpSrtpSecrets_t* 
 		memcpy(senderPolicy.key + secrets->selfSrtpKeyLength, secrets->selfSrtpSalt, secrets->selfSrtpSaltLength);
 		addStreamStatus=srtp_add_stream(userData->srtpSend, &senderPolicy);
 		ortp_free(senderPolicy.key);
-	
+
 		if (srtpCreateStatus != err_status_ok) {
 			ortp_error("ZRTP Error %u during creation of SRTP context for sender",srtpCreateStatus);
 		return 1;
@@ -201,6 +197,7 @@ static int32_t ozrtp_srtpSecretsAvailable(void* clientData, bzrtpSrtpSecrets_t* 
 			return 1;
 		}
 	}
+
 	return 0;
 }
 
@@ -285,7 +282,7 @@ static int ozrtp_startSrtpSession(void *clientData, char* sas, int32_t verified 
 static int ozrtp_loadCache(void *clientData, uint8_t** output, uint32_t *outputSize) {
 	/* get filename from ClientData */
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
-	char *filename = userData->zidFilename; 
+	char *filename = userData->zidFilename;
 	FILE *CACHEFD = fopen(filename, "r+");
 	if (CACHEFD == NULL) { /* file doesn't seem to exist, try to create it */
 		CACHEFD = fopen(filename, "w");
@@ -311,7 +308,7 @@ static int ozrtp_loadCache(void *clientData, uint8_t** output, uint32_t *outputS
 static int ozrtp_writeCache(void *clientData, uint8_t* input, uint32_t inputSize) {
 	/* get filename from ClientData */
 	OrtpZrtpContext *userData = (OrtpZrtpContext *)clientData;
-	char *filename = userData->zidFilename; 
+	char *filename = userData->zidFilename;
 
 	FILE *CACHEFD = fopen(filename, "w+");
 	int retval = fwrite(input, 1, inputSize, CACHEFD);
@@ -354,6 +351,12 @@ static int ozrtp_addExportedKeysInZidCache(void *clientData, uint8_t peerZid[12]
 
 /*** end of Callback functions implementations ***/
 
+static int ozrtp_rtp_process_on_send(struct _RtpTransportModifier *t, mblk_t *msg){
+	return 0;
+}
+static int ozrtp_rtcp_process_on_send(struct _RtpTransportModifier *t, mblk_t *msg)  {
+	return 0;
+}
 static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	int slen;
 	err_status_t err;
@@ -393,22 +396,28 @@ static int ozrtp_generic_sendto(stream_type stream, RtpTransport *t, mblk_t *m, 
 	}
 	return -1;
 }
-
+static int ozrtp_rtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
+	return ozrtp_generic_sendto(rtp_stream,t,m,flags,to,tolen);
+}
 static int ozrtp_rtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
 	return ozrtp_generic_sendto(rtcp_stream,t,m,flags,to,tolen);
 }
 
-static int ozrtp_rtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
-	return ozrtp_generic_sendto(rtp_stream,t,m,flags,to,tolen);
+static int ozrtp_rtp_process_on_receive(struct _RtpTransportModifier *t, mblk_t *msg){
+	return 0;
 }
-
-
+static int ozrtp_rtcp_process_on_receive(struct _RtpTransportModifier *t, mblk_t *msg)  {
+	return 0;
+}
 static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
 	int rlen;
+	uint32_t *magicField;
 
 	OrtpZrtpContext *userData = (OrtpZrtpContext*) t->data;
 	bzrtpContext_t *zrtpContext = userData->zrtpContext;
 	RtpSession *session = userData->session;
+	uint8_t* rtp;
+	int rtpVersion;
 
 
 	// send a timer tick to the zrtp engine
@@ -421,8 +430,8 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 		return rlen;
 	}
 
-	uint8_t* rtp = m->b_rptr;
-	int rtpVersion = ((rtp_header_t*)rtp)->version;
+	rtp = m->b_rptr;
+	rtpVersion = ((rtp_header_t*)rtp)->version;
 
 	// If plain or secured RTP
 	if (rtpVersion == 2) {
@@ -439,7 +448,7 @@ static int ozrtp_rtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sock
 	}
 
 	// if ZRTP packet, send to engine
-	uint32_t *magicField=(uint32_t *)(rtp + 4);
+	magicField=(uint32_t *)(rtp + 4);
 	if (rtpVersion==0 && ntohl(*magicField) == ZRTP_MAGIC_COOKIE) {
 		ortp_message("ZRTP Receive packet type %.8s", rtp+16);
 		bzrtp_processMessage(zrtpContext, session->snd.ssrc, rtp, rlen);
@@ -455,6 +464,8 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 	OrtpZrtpContext *userData = (OrtpZrtpContext*) t->data;
 	bzrtpContext_t *zrtpContext = userData->zrtpContext;
 	RtpSession *session = userData->session;
+	uint8_t *rtcp;
+	int version;
 
 
 	int rlen = rtp_session_rtp_recv_abstract(t->session->rtcp.gs.socket,m,flags,from,fromlen);
@@ -463,8 +474,8 @@ static int ozrtp_rtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct soc
 		return rlen;
 	}
 
-	uint8_t *rtcp = m->b_wptr;
-	int version = ((rtcp_common_header_t *)rtcp)->version;
+	rtcp = m->b_wptr;
+	version = ((rtcp_common_header_t *)rtcp)->version;
 	if (version == 2 && userData->srtpRecv != NULL && bzrtp_isSecure(zrtpContext, session->snd.ssrc)) {
 		err_status_t err = srtp_unprotect_rtcp(userData->srtpRecv,m->b_wptr,&rlen);
 		if (err != err_status_ok) {
@@ -503,24 +514,71 @@ static OrtpZrtpContext* createUserData(bzrtpContext_t *context, OrtpZrtpParams *
 	return userData;
 }
 
+static void ozrtp_transport_destroy(RtpTransport *tp){
+	ortp_free(tp);
+}
+static void ozrtp_transport_new(OrtpZrtpContext *ctx, RtpTransport **rtpt, RtpTransport **rtcpt){
+	(*rtpt)=ortp_new0(RtpTransport,1);
+	(*rtcpt)=ortp_new0(RtpTransport,1);
+
+	(*rtpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
+	(*rtpt)->t_getsocket=ozrtp_rtp_getsocket;
+	(*rtpt)->t_sendto=ozrtp_rtp_sendto;
+	(*rtpt)->t_recvfrom=ozrtp_rtp_recvfrom;
+	(*rtpt)->t_destroy=ozrtp_transport_destroy;
+
+	(*rtcpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
+	(*rtcpt)->t_getsocket=ozrtp_rtcp_getsocket;
+	(*rtcpt)->t_sendto=ozrtp_rtcp_sendto;
+	(*rtcpt)->t_recvfrom=ozrtp_rtcp_recvfrom;
+	(*rtcpt)->t_destroy=ozrtp_transport_destroy;
+}
+
+int ortp_zrtp_transport_modifier_new(OrtpZrtpContext* ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ) {
+	if (rtpt){
+		*rtpt=ortp_new0(RtpTransportModifier,1);
+		(*rtpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransportModifier structure */
+		(*rtpt)->t_process_on_send=ozrtp_rtp_process_on_send;
+		(*rtpt)->t_process_on_receive=ozrtp_rtp_process_on_receive;
+		(*rtpt)->t_destroy=ortp_zrtp_transport_modifier_destroy;
+	}
+	if (rtcpt){
+		*rtcpt=ortp_new0(RtpTransportModifier,1);
+		(*rtcpt)->data=ctx; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransportModifier structure */
+		(*rtcpt)->t_process_on_send=ozrtp_rtcp_process_on_send;
+		(*rtcpt)->t_process_on_receive=ozrtp_rtcp_process_on_receive;
+		(*rtcpt)->t_destroy=ortp_zrtp_transport_modifier_destroy;
+	}
+	return 0;
+}
+
+static void ortp_zrtp_set_transport(bool_t use_rtp_modifier, OrtpZrtpContext *userData, RtpSession *s)  {
+	RtpTransport *rtpt=NULL,*rtcpt=NULL;
+	rtp_session_get_transports(s,&rtpt,&rtcpt);
+
+	if (use_rtp_modifier)  {
+		RtpTransportModifier *rtp_modifier, *rtcp_modifier;
+		ortp_zrtp_transport_modifier_new(userData, &rtp_modifier,&rtcp_modifier);
+		/*if transports are set, we assume they are meta transporters, otherwise create them*/
+		if (rtpt==NULL&&rtcpt==NULL){
+			meta_rtp_transport_new(&rtpt, TRUE, NULL, 0);
+			meta_rtp_transport_new(&rtcpt, FALSE, NULL, 0);
+		}
+		meta_rtp_transport_append_modifier(rtpt, rtp_modifier);
+		meta_rtp_transport_append_modifier(rtcpt, rtcp_modifier);
+	} else {
+		if (rtpt || rtcpt) {
+			ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
+		}
+
+		ozrtp_transport_new(userData, &rtpt, &rtcpt);
+	}
+	rtp_session_set_transports(s, rtpt, rtcpt);
+}
 static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, RtpSession *s) {
 	bzrtpContext_t *context=userData->zrtpContext;
 
-
-	if (s->rtp.gs.tr || s->rtcp.gs.tr)
-		ortp_warning("Overwriting rtp or rtcp transport with ZRTP one");
-
-	userData->rtpt.data=userData; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
-	userData->rtpt.t_getsocket=ozrtp_rtp_getsocket;
-	userData->rtpt.t_sendto=ozrtp_rtp_sendto;
-	userData->rtpt.t_recvfrom=ozrtp_rtp_recvfrom;
-
-	userData->rtcpt.data=userData; /* back link to get access to the other fields of the OrtoZrtpContext from the RtpTransport structure */
-	userData->rtcpt.t_getsocket=ozrtp_rtcp_getsocket;
-	userData->rtcpt.t_sendto=ozrtp_rtcp_sendto;
-	userData->rtcpt.t_recvfrom=ozrtp_rtcp_recvfrom;
-
-	rtp_session_set_transports(s, &userData->rtpt, &userData->rtcpt);
+	ortp_zrtp_set_transport(FALSE, userData, s);
 
 	ortp_message("Starting ZRTP engine on session [%p]",s);
 	bzrtp_startChannelEngine(context, s->snd.ssrc);
@@ -528,8 +586,10 @@ static OrtpZrtpContext* ortp_zrtp_configure_context(OrtpZrtpContext *userData, R
 }
 
 OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
+	OrtpZrtpContext *userData;
+	bzrtpContext_t *context;
 	ortp_message("Creating ZRTP engine on session [%p]",s);
-	bzrtpContext_t *context = bzrtp_createBzrtpContext(s->snd.ssrc); /* create the zrtp context, provide the SSRC of first channel */
+	context = bzrtp_createBzrtpContext(s->snd.ssrc); /* create the zrtp context, provide the SSRC of first channel */
 	/* set callback functions */
 	bzrtp_setCallback(context, (int (*)())ozrtp_sendDataZRTP, ZRTP_CALLBACK_SENDDATA);
 	bzrtp_setCallback(context, (int (*)())ozrtp_srtpSecretsAvailable, ZRTP_CALLBACK_SRTPSECRETSAVAILABLE);
@@ -544,7 +604,7 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 		}
 	}
 	/* create and link user data */
-	OrtpZrtpContext *userData=createUserData(context, params);
+	userData=createUserData(context, params);
 	userData->session=s;
 
 	/* get the sip URI of peer and store it into the context to set it in the cache. Done only for the first channel as it is useless for the other ones which doesn't update the cache */
@@ -555,19 +615,20 @@ OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params){
 	}
 
 	bzrtp_setClientData(context, s->snd.ssrc, (void *)userData);
-	
+
 	bzrtp_initBzrtpContext(context); /* init is performed only when creating the first channel context */
 	return ortp_zrtp_configure_context(userData,s);
 }
 
 OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeContext, RtpSession *s, OrtpZrtpParams *params) {
 	int retval;
+	OrtpZrtpContext *userData;
 	if ((retval = bzrtp_addChannel(activeContext->zrtpContext, s->snd.ssrc)) != 0) {
 		ortp_warning("could't add stream: multistream not supported by peer %x", retval);
 	}
 
 	ortp_message("Initializing ZRTP context");
-	OrtpZrtpContext *userData=createUserData(activeContext->zrtpContext, params);
+	userData=createUserData(activeContext->zrtpContext, params);
 	userData->session=s;
 	bzrtp_setClientData(activeContext->zrtpContext, s->snd.ssrc, (void *)userData);
 
@@ -578,7 +639,7 @@ bool_t ortp_zrtp_available(){return TRUE;}
 
 
 void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){
-	bzrtp_SASVerified(ctx->zrtpContext); 
+	bzrtp_SASVerified(ctx->zrtpContext);
 }
 
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){
@@ -603,6 +664,10 @@ void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s) {
 	bzrtp_resetRetransmissionTimer(ctx->zrtpContext,s->snd.ssrc);
 }
 
+
+void ortp_zrtp_transport_modifier_destroy(RtpTransportModifier *tp)  {
+	ortp_free(tp);
+}
 #else
 
 
@@ -621,6 +686,10 @@ void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx){}
 void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx){}
 void ortp_zrtp_reset_transmition_timer(OrtpZrtpContext* ctx, RtpSession *s) {};
+int ortp_zrtp_transport_modifier_new(OrtpZrtpContext* ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ) {return 0;}
+void ortp_zrtp_transport_modifier_destroy(RtpTransportModifier *tp)  {}
 #endif
+
+
 
 

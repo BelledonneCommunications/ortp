@@ -49,7 +49,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>..\..\..\win32-bin\include;..\..\include;..\..\include\ortp;..\..\src;..\..\build\win32native\include;..\..\build\vsx\ortp\ortp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;_DEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;_DEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -79,7 +79,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <AdditionalIncludeDirectories>..\..\..\win32-bin\include;..\..\include;..\..\include\ortp;..\..\src;..\..\build\win32native\include;..\..\build\vsx\ortp\ortp;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;NDEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_DEPRECATE;ORTP_INET6;WIN32;NDEBUG;_WINDOWS;_USRDLL;ORTP_EXPORTS;WINDOW_NATIVE;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -145,7 +145,7 @@
     <ClInclude Include="..\..\include\ortp\event.h" />
     <ClInclude Include="..\..\src\jitterctl.h" />
     <ClInclude Include="..\..\include\ortp\logging.h" />
-    <ClInclude Include="..\..\src\ortp-config-win32.h" />
+    <ClInclude Include="ortp-config.h" />
     <ClInclude Include="..\..\include\ortp\ortp.h" />
     <ClInclude Include="..\..\include\ortp\ortp_srtp.h" />
     <ClInclude Include="..\..\include\ortp\payloadtype.h" />

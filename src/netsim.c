@@ -31,6 +31,10 @@ static OrtpNetworkSimulatorCtx* simulator_ctx_new(void){
 }
 
 void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
+	int drop_by_flush=sim->latency_q.q_mcount+sim->q.q_mcount;
+	ortp_message("Network simulation: destroyed. %d packets dropped by loss, %d "
+		"packets dropped by congestion, %d packets flushed."
+		, sim->drop_by_loss, sim->drop_by_congestion, drop_by_flush);
 	flushq(&sim->latency_q,0);
 	flushq(&sim->q,0);
 	ortp_free(sim);
@@ -39,14 +43,22 @@ void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
 void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
 	if (params->enabled){
-		if (sim==NULL) sim=simulator_ctx_new();
+		if (sim==NULL)
+			sim=simulator_ctx_new();
+		sim->drop_by_congestion=sim->drop_by_loss=0;
 		sim->params=*params;
 		if (sim->params.max_bandwidth && sim->params.max_buffer_size==0) {
 			sim->params.max_buffer_size=sim->params.max_bandwidth;
-			ortp_message("Max buffer size not set for RTP session [%p], using [%i]",session,sim->params.max_buffer_size);
+			ortp_message("Network simulation: Max buffer size not set for RTP session [%p], using [%i]",session,sim->params.max_buffer_size);
 		}
 
 		session->net_sim_ctx=sim;
+
+		ortp_message("Network simulation: enabled with params latency=%d, loss_rate=%f, max_bandwidth=%f, max_buffer_size=%d"
+					, params->latency
+					, params->loss_rate
+					, params->max_bandwidth
+					, params->max_buffer_size);
 	}else{
 		if (sim!=NULL) ortp_network_simulator_destroy(sim);
 		session->net_sim_ctx=NULL;
@@ -117,6 +129,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 		if (output){
 			bits=(msgdsize(output)+overhead)*8;
 			sim->qsize-=bits;
+			sim->drop_by_congestion++;
 			freemsg(output);
 		}
 	}
@@ -149,6 +162,7 @@ static mblk_t *simulate_loss_rate(RtpSession *session, mblk_t *input, int rate){
 	if(rrate >= rate) {
 		return input;
 	}
+	session->net_sim_ctx->drop_by_loss++;
 	freemsg(input);
 	return NULL;
 }

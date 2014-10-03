@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#ifdef WINAPI_FAMILY_PHONE_APP
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
 #using <Windows.winmd>
 

@@ -17,16 +17,14 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#if defined(_MSC_VER)  && (defined(WIN32) || defined(_WIN32_WCE))
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 #include "ortp/ortp.h"
 
-#undef PACKAGE_NAME 
+#undef PACKAGE_NAME
 #undef PACKAGE_STRING
-#undef PACKAGE_TARNAME 
+#undef PACKAGE_TARNAME
 #undef PACKAGE_VERSION
 
 #include "ortp/ortp_srtp.h"
@@ -35,7 +33,7 @@
 
 #ifdef HAVE_SRTP
 
-#if defined(ANDROID) || defined(WINAPI_FAMILY_PHONE_APP)
+#if defined(ANDROID) || !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 // Android and Windows phone don't use make install
 #include <srtp_priv.h>
 #else
@@ -46,25 +44,47 @@
 
 #define SRTP_PAD_BYTES (SRTP_MAX_TRAILER_LEN + 4)
 
-static int srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
-	srtp_t srtp=(srtp_t)t->data;
+static int _process_on_send(RtpSession* session,srtp_t srtp,mblk_t *m,bool_t is_rtp){
 	int slen;
 	err_status_t err;
-	rtp_header_t *header=(rtp_header_t*)m->b_rptr;
-	/* enlarge the buffer for srtp to write its data */
+	rtp_header_t *header=is_rtp?(rtp_header_t*)m->b_rptr:NULL;
+
 	slen=msgdsize(m);
-	
+
 	/*only encrypt real RTP packets*/
-	if (slen>RTP_FIXED_HEADER_SIZE && header->version==2){
+	if (!is_rtp||(slen>RTP_FIXED_HEADER_SIZE && header->version==2)){
+		/* enlarge the buffer for srtp to write its data */
 		msgpullup(m,slen+SRTP_PAD_BYTES);
-		err=srtp_protect(srtp,m->b_rptr,&slen);
+		err=is_rtp?srtp_protect(srtp,m->b_rptr,&slen):srtp_protect_rtcp(srtp,m->b_rptr,&slen);
 		if (err==err_status_ok){
-			return sendto(t->session->rtp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+			return slen;
 		}
-		ortp_error("srtp_protect() failed (%d)", err);
-	}else return sendto(t->session->rtp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
-	
+		ortp_error("srtp_protect%s() failed (%d)", is_rtp?"":"_rtcp", err);
+	}else if (is_rtp){
+		return slen;
+	}
 	return -1;
+}
+
+static int srtp_process_on_send(RtpTransportModifier *t, mblk_t *m){
+	return _process_on_send(t->session,(srtp_t)t->data, m,TRUE);
+}
+static int srtcp_process_on_send(RtpTransportModifier *t, mblk_t *m){
+	return _process_on_send(t->session,(srtp_t)t->data, m,FALSE);
+}
+static int _sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen, bool_t is_rtp){
+	int slen=_process_on_send(t->session,(srtp_t)t->data, m,is_rtp);
+
+	if (slen>=0){
+		return sendto(is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
+	}
+	return slen;
+}
+static int srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
+	return _sendto(t,m,flags,to,tolen,TRUE);
+}
+static int srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
+	return _sendto(t,m,flags,to,tolen,FALSE);
 }
 
 static srtp_stream_ctx_t * find_other_ssrc(srtp_t srtp, uint32_t ssrc){
@@ -79,7 +99,7 @@ static srtp_stream_ctx_t * find_other_ssrc(srtp_t srtp, uint32_t ssrc){
 * The ssrc_any_inbound feature of the libsrtp is not working good.
 * It cannot be changed dynamically nor removed.
 * As a result we prefer not to use it, but instead the recv stream is configured with a dummy SSRC value.
-* When the first packet arrives, or when the SSRC changes, then we change the ssrc value inside the srtp stream context, 
+* When the first packet arrives, or when the SSRC changes, then we change the ssrc value inside the srtp stream context,
 * so that the stream that was configured with the dummy SSRC value becomes now fully valid.
 */
 static void update_recv_stream(RtpSession *session, srtp_t srtp, uint32_t new_ssrc){
@@ -90,93 +110,67 @@ static void update_recv_stream(RtpSession *session, srtp_t srtp, uint32_t new_ss
 	}
 }
 
-static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
-	srtp_t srtp=(srtp_t)t->data;
-	int err;
+static int _process_on_receive(RtpSession* session,srtp_t srtp,mblk_t *m,bool_t is_rtp, int err){
 	int slen;
-	
-	err=rtp_session_rtp_recv_abstract(t->session->rtp.gs.socket,m,flags,from,fromlen);
-	if (err>0){
-		err_status_t srtp_err;
-		/* keep NON-RTP data unencrypted */
-		rtp_header_t *rtp=(rtp_header_t*)m->b_wptr;
+	uint32_t new_ssrc;
+	err_status_t srtp_err;
+
+	/* keep NON-RTP data unencrypted */
+	if (is_rtp){
+		rtp_header_t *rtp=(rtp_header_t*)m->b_rptr;
 		if (err<RTP_FIXED_HEADER_SIZE || rtp->version!=2 )
 			return err;
-			
-		slen=err;
-		srtp_err = srtp_unprotect(srtp,m->b_wptr,&slen);
-		if (srtp_err==err_status_no_ctx){
-			update_recv_stream(t->session,srtp,rtp->ssrc);
-			slen=err;
-			srtp_err = srtp_unprotect(srtp,m->b_wptr,&slen);
-		}
-		if (srtp_err==err_status_ok)
-			return slen;
-		else {
-			ortp_error("srtp_unprotect() failed (%d)", srtp_err);
-			return -1;
-		}
-	}
-	return err;
-}
-
-static int srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
-	srtp_t srtp=(srtp_t)t->data;
-	int slen;
-	err_status_t srtp_err;
-	slen=msgdsize(m);
-	/* enlarge the buffer for srtp to write its data */
-	msgpullup(m,slen+SRTP_PAD_BYTES);
-	srtp_err=srtp_protect_rtcp(srtp,m->b_rptr,&slen);
-	if (srtp_err==err_status_ok){
-		return sendto(t->session->rtcp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
-	}
-	ortp_error("srtp_protect_rtcp() failed (%d)", srtp_err);
-	return -1;
-}
-
-static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
-	srtp_t srtp=(srtp_t)t->data;
-	int err;
-	int slen;
-	err=rtp_session_rtp_recv_abstract(t->session->rtcp.gs.socket,m,flags,from,fromlen);
-	if (err>0){
-		err_status_t srtp_err;
-		uint32_t new_ssrc;
-		/* keep NON-RTP data unencrypted */
-		rtcp_common_header_t *rtcp=(rtcp_common_header_t*)m->b_wptr;
+		new_ssrc=rtp->ssrc;
+	}else{
+		rtcp_common_header_t *rtcp=(rtcp_common_header_t*)m->b_rptr;
 		if (err<(sizeof(rtcp_common_header_t)+4) || rtcp->version!=2 )
 			return err;
-			
+		new_ssrc=*(uint32_t*)(m->b_rptr+sizeof(rtcp_common_header_t));
+	}
 
+	slen=err;
+	srtp_err = is_rtp?srtp_unprotect(srtp,m->b_rptr,&slen):srtp_unprotect_rtcp(srtp,m->b_rptr,&slen);
+	if (srtp_err==err_status_no_ctx) {
+		update_recv_stream(session,srtp,new_ssrc);
 		slen=err;
-		srtp_err=srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
-		if (srtp_err==err_status_no_ctx){
-			new_ssrc=*(uint32_t*)(m->b_wptr+sizeof(rtcp_common_header_t));
-			update_recv_stream(t->session,srtp,new_ssrc);
-			slen=err;
-			srtp_err=srtp_unprotect_rtcp(srtp,m->b_wptr,&slen);
-		}
-		if (srtp_err==err_status_ok)
-			return slen;
-		else {
-			ortp_error("srtp_unprotect_rtcp() failed (%d)", srtp_err);
-			return -1;
-		}
+		srtp_err = is_rtp?srtp_unprotect(srtp,m->b_rptr,&slen):srtp_unprotect_rtcp(srtp,m->b_rptr,&slen);
+	}
+	if (srtp_err==err_status_ok) {
+		return slen;
+	} else {
+		ortp_error("srtp_unprotect%s() failed (%d)", is_rtp?"":"_rtcp", srtp_err);
+		return -1;
+	}
+}
+static int srtp_process_on_receive(RtpTransportModifier *t, mblk_t *m){
+	return _process_on_receive(t->session,(srtp_t)t->data, m,TRUE,msgdsize(m));
+}
+static int srtcp_process_on_receive(RtpTransportModifier *t, mblk_t *m){
+	return _process_on_receive(t->session,(srtp_t)t->data, m,FALSE,msgdsize(m));
+}
+static int _recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen,bool_t is_rtp){
+	int err=rtp_session_rtp_recv_abstract(is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,m,flags,from,fromlen);
+	if (err>0) {
+		return _process_on_receive(t->session, (srtp_t)t->data,m, is_rtp, err);
 	}
 	return err;
 }
-
-ortp_socket_t 
-srtp_getsocket(RtpTransport *t)
-{
-  return t->session->rtp.gs.socket;
+static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
+	return _recvfrom(t,m,flags,from,fromlen,TRUE);
+}
+static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
+	return _recvfrom(t,m,flags,from,fromlen,FALSE);
 }
 
-ortp_socket_t 
-srtcp_getsocket(RtpTransport *t)
+
+ortp_socket_t srtp_getsocket(RtpTransport *t)
 {
-  return t->session->rtcp.gs.socket;
+	return t->session->rtp.gs.socket;
+}
+
+ortp_socket_t srtcp_getsocket(RtpTransport *t)
+{
+	return t->session->rtcp.gs.socket;
 }
 
 /**
@@ -185,7 +179,7 @@ srtcp_getsocket(RtpTransport *t)
  * This function creates a RtpTransport object to be used to the RtpSession using
  * rtp_session_set_transport().
  * @srtp: the srtp_t session to be used
- * 
+ *
 **/
 int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	if (rtpt) {
@@ -194,6 +188,7 @@ int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 		(*rtpt)->t_getsocket=srtp_getsocket;
 		(*rtpt)->t_sendto=srtp_sendto;
 		(*rtpt)->t_recvfrom=srtp_recvfrom;
+		(*rtpt)->t_destroy=srtp_transport_destroy;
 	}
 	if (rtcpt) {
 		(*rtcpt)=ortp_new0(RtpTransport,1);
@@ -201,6 +196,7 @@ int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
 		(*rtcpt)->t_getsocket=srtcp_getsocket;
 		(*rtcpt)->t_sendto=srtcp_sendto;
 		(*rtcpt)->t_recvfrom=srtcp_recvfrom;
+		(*rtcpt)->t_destroy=srtp_transport_destroy;
 	}
 	return 0;
 }
@@ -209,11 +205,34 @@ void srtp_transport_destroy(RtpTransport *tp){
 	ortp_free(tp);
 }
 
+int srtp_transport_modifier_new(srtp_t srtp, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ){
+	if (rtpt) {
+		(*rtpt)=ortp_new0(RtpTransportModifier,1);
+		(*rtpt)->data=srtp;
+		(*rtpt)->t_process_on_send=srtp_process_on_send;
+		(*rtpt)->t_process_on_receive=srtp_process_on_receive;
+		(*rtpt)->t_destroy=srtp_transport_modifier_destroy;
+	}
+	if (rtcpt) {
+		(*rtcpt)=ortp_new0(RtpTransportModifier,1);
+		(*rtcpt)->data=srtp;
+		(*rtcpt)->t_process_on_send=srtcp_process_on_send;
+		(*rtcpt)->t_process_on_receive=srtcp_process_on_receive;
+		(*rtcpt)->t_destroy=srtp_transport_modifier_destroy;
+	}
+	return 0;
+}
+
+
+void srtp_transport_modifier_destroy(RtpTransportModifier *tp){
+	ortp_free(tp);
+}
+
 static int srtp_init_done=0;
 
 err_status_t ortp_srtp_init(void)
 {
-	
+
 	err_status_t st=0;
 	ortp_message("srtp init");
 	if (!srtp_init_done) {
@@ -268,7 +287,7 @@ bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ortp_srtp_
 	int key_size;
 	err_status_t err;
 	unsigned b64_key_length = strlen(b64_key);
-		
+
 	switch (suite) {
 		case AES_128_SHA1_32:
 			crypto_policy_set_aes_cm_128_hmac_sha1_32(&policy->rtp);
@@ -310,18 +329,18 @@ bool_t ortp_init_srtp_policy(srtp_t srtp, srtp_policy_t* policy, enum ortp_srtp_
 		ortp_free(key);
 		return FALSE;
 	}
-	
+
 	policy->ssrc = ssrc;
 	policy->key = key;
 	policy->next = NULL;
-	
+
 	err = ortp_srtp_add_stream(srtp, policy);
 	if (err != err_status_ok) {
 		ortp_error("Failed to add stream to srtp session (%d)", err);
 		ortp_free(key);
 		return FALSE;
 	}
-	
+
 	ortp_free(key);
 	return TRUE;
 }
@@ -335,7 +354,7 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 {
 	err_status_t err;
 	srtp_t session;
-		
+
 	err = ortp_srtp_create(&session, NULL);
 	if (err != err_status_ok) {
 		ortp_error("Failed to create srtp session (%d)", err);
@@ -346,10 +365,10 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 	{
 		ssrc_t incoming_ssrc;
 		srtp_policy_t policy;
-		
+
 		memset(&policy, 0, sizeof(srtp_policy_t));
 		incoming_ssrc.type = ssrc_any_inbound;
-		
+
 		if (!ortp_init_srtp_policy(session, &policy, suite, incoming_ssrc, rcv_key)) {
 			ortp_srtp_dealloc(session);
 			return NULL;
@@ -359,19 +378,19 @@ srtp_t ortp_srtp_create_configure_session(enum ortp_srtp_crypto_suite_t suite, u
 	{
 		ssrc_t outgoing_ssrc;
 		srtp_policy_t policy;
-		
+
 		memset(&policy, 0, sizeof(srtp_policy_t));
-		
+
 		policy.allow_repeat_tx=1; /*this is necessary to allow telephone-event to be sent 3 times for end of dtmf packet.*/
 		outgoing_ssrc.type = ssrc_specific;
 		outgoing_ssrc.value = ssrc;
-		
+
 		if (!ortp_init_srtp_policy(session, &policy, suite, outgoing_ssrc, snd_key)) {
 			ortp_srtp_dealloc(session);
 			return NULL;
 		}
 	}
-	
+
 	return session;
 }
 
@@ -389,6 +408,11 @@ err_status_t ortp_crypto_get_random(uint8_t *tmp, int size)
 
 int srtp_transport_new(void *i, RtpTransport **rtpt, RtpTransport **rtcpt ){
 	ortp_error("srtp_transport_new: oRTP has not been compiled with SRTP support.");
+	return -1;
+}
+
+int srtp_transport_modifier_new(void *i, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ){
+	ortp_error("srtp_transport_modifier_new: oRTP has not been compiled with SRTP support.");
 	return -1;
 }
 
@@ -425,5 +449,6 @@ void ortp_srtp_shutdown(void){
 void srtp_transport_destroy(RtpTransport *tp){
 }
 
+void srtp_transport_modifier_destroy(RtpTransportModifier *tp){
+}
 #endif
-

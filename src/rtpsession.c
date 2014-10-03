@@ -18,9 +18,7 @@
 */
 
 
-#if defined(WIN32) || defined(_WIN32_WCE)
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 
@@ -35,7 +33,7 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC /* avoid redefinition... */
-#ifndef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #include <QOS2.h>
 #endif
 #endif
@@ -93,11 +91,7 @@ extern void rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts,
 
 
 static uint32_t uint32_t_random(){
-#ifdef HAVE_ARC4RANDOM
-	return arc4random();
-#else
-	return random();
-#endif
+	return ortp_random();
 }
 
 
@@ -224,8 +218,8 @@ rtp_session_init (RtpSession * session, int mode)
 	JBParameters jbp;
 	if (session == NULL)
 	{
-	    ortp_debug("rtp_session_init: Invalid paramter (session=NULL)");
-	    return;
+		ortp_debug("rtp_session_init: Invalid paramter (session=NULL)");
+		return;
 	}
 	memset (session, 0, sizeof (RtpSession));
 	session->mode = (RtpSessionMode) mode;
@@ -292,7 +286,7 @@ rtp_session_init (RtpSession * session, int mode)
 	rtp_session_set_jitter_buffer_params(session,&jbp);
 	rtp_session_set_time_jump_limit(session,5000);
 	rtp_session_enable_rtcp(session,TRUE);
-	rtp_session_set_rtcp_report_interval(session,RTCP_DEFAULT_REPORT_INTERVAL*1000);
+	rtp_session_set_rtcp_report_interval(session,RTCP_DEFAULT_REPORT_INTERVAL);
 	session->recv_buf_size = UDP_MAX_SIZE;
 	session->symmetric_rtp = FALSE;
 	session->permissive=FALSE;
@@ -317,10 +311,10 @@ rtp_session_new (int mode)
 	session = (RtpSession *) ortp_malloc (sizeof (RtpSession));
 	if (session == NULL)
 	{
-	    ortp_error("rtp_session_new: Memory allocation failed");
-	    return NULL;
+		ortp_error("rtp_session_new: Memory allocation failed");
+		return NULL;
 	}
-      rtp_session_init (session, mode);
+	rtp_session_init (session, mode);
 	return session;
 }
 
@@ -553,7 +547,7 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned 
 **/
 int
 rtp_session_signal_connect (RtpSession * session, const char *signal_name,
-			    RtpCallback cb, unsigned long user_data)
+				RtpCallback cb, unsigned long user_data)
 {
 	OList *elem;
 	for (elem=session->signal_tables;elem!=NULL;elem=o_list_next(elem)){
@@ -562,7 +556,7 @@ rtp_session_signal_connect (RtpSession * session, const char *signal_name,
 			return rtp_signal_table_add(s,cb,user_data);
 		}
 	}
-	ortp_warning ("rtp_session_signal_connect: inexistant signal %s",signal_name);
+	ortp_warning ("rtp_session_signal_connect: inexistent signal %s",signal_name);
 	return -1;
 }
 
@@ -620,6 +614,12 @@ uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session){
 	return session->rtp.hwrcv_extseq;
 }
 
+/**
+ * Returns the latest cumulative loss value computed
+ **/
+int rtp_session_get_cum_loss(RtpSession *session){
+	return session->cum_loss;
+}
 
 /**
  *	Sets the SSRC for the outgoing stream.
@@ -880,8 +880,8 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		wait_point_lock(&session->snd.wp);
 		packet_time =
 			rtp_session_ts_to_time (session,
-				     send_ts -
-				     session->rtp.snd_ts_offset) +
+					 send_ts -
+					 session->rtp.snd_ts_offset) +
 					session->rtp.snd_time_offset;
 		/*ortp_message("rtp_session_send_with_ts: packet_time=%i time=%i",packet_time,sched->time_);*/
 		if (TIME_IS_STRICTLY_NEWER_THAN (packet_time, sched->time_))
@@ -913,14 +913,21 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 			session->rtp.snd_seq++;
 		}
 		else
+		{
 			session->rtp.snd_seq=rtp->seq_number+1;
+		}
 		session->rtp.snd_last_ts = packet_ts;
+
+		stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
 
 		ortp_global_stats.sent += (1+(int)session->duplication_left) * packsize;
 		stream->stats.sent += (1+(int)session->duplication_left) * packsize;
-		stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
+
 		ortp_global_stats.packet_sent++;
 		stream->stats.packet_sent++;
+
+		stream->stats.packet_dup_sent+=(int)session->duplication_left;
+		ortp_global_stats.packet_sent+=(int)session->duplication_left;;
 	}
 
 	while (session->duplication_left>=1.f) {
@@ -1135,7 +1142,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 
 	goto end;
 
-      end:
+	  end:
 	if (mp != NULL)
 	{
 		int msgsize = msgdsize (mp);	/* evaluate how much bytes (including header) is received by app */
@@ -1182,8 +1189,8 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		wait_point_lock(&session->rcv.wp);
 		packet_time =
 			rtp_session_ts_to_time (session,
-				     user_ts -
-				     session->rtp.rcv_query_ts_offset) +
+					 user_ts -
+					 session->rtp.rcv_query_ts_offset) +
 			session->rtp.rcv_time_offset;
 		ortp_debug ("rtp_session_recvm_with_ts: packet_time=%i, time=%i",packet_time, sched->time_);
 
@@ -1239,7 +1246,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
  *
 **/
 int rtp_session_recv_with_ts (RtpSession * session, uint8_t * buffer,
-			       int len, uint32_t ts, int * have_more){
+				   int len, uint32_t ts, int * have_more){
 	mblk_t *mp=NULL;
 	int plen,blen=0;
 	*have_more=0;
@@ -1356,12 +1363,19 @@ void rtp_session_release_sockets(RtpSession *session){
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
 
-	if (session->rtp.gs.tr && session->rtp.gs.tr->t_close)
-		session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+	if (session->rtp.gs.tr) {
+		if (session->rtp.gs.tr->t_close)
+			session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+		session->rtp.gs.tr->t_destroy(session->rtp.gs.tr);
+
+	}
 	session->rtp.gs.tr = 0;
 
-	if (session->rtcp.gs.tr && session->rtcp.gs.tr->t_close)
-		session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+	if (session->rtcp.gs.tr)  {
+		if (session->rtcp.gs.tr->t_close)
+			session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+		session->rtcp.gs.tr->t_destroy(session->rtcp.gs.tr);
+	}
 	session->rtcp.gs.tr = 0;
 
 	/* don't discard remote addresses, then can be preserved for next use.
@@ -1447,9 +1461,9 @@ void rtp_session_uninit (RtpSession * session)
 	if (session->net_sim_ctx)
 		ortp_network_simulator_destroy(session->net_sim_ctx);
 
-#if (_WIN32_WINNT >= 0x0600) && !WINAPI_FAMILY_APP
+#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	if (session->rtp.QoSFlowID != 0)
-    {
+	{
 		OSVERSIONINFOEX ovi;
 		memset(&ovi, 0, sizeof(ovi));
 		ovi.dwOSVersionInfoSize = sizeof(ovi);
@@ -1477,18 +1491,18 @@ void rtp_session_uninit (RtpSession * session)
 				session->rtp.QoSFlowID=0;
 			}
 		}
-    }
+	}
 
-    if (session->rtp.QoSHandle != NULL)
-    {
-        QOSCloseHandle(session->rtp.QoSHandle);
+	if (session->rtp.QoSHandle != NULL)
+	{
+		QOSCloseHandle(session->rtp.QoSHandle);
 		session->rtp.QoSHandle=NULL;
-    }
+	}
 #endif
 }
 
 /**
- * Sets the number of packets containg a new SSRC that will trigger the
+ * Sets the number of packets containing a new SSRC that will trigger the
  * "ssrc_changed" callback.
 **/
 void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets){
@@ -1497,15 +1511,26 @@ void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets)
 
 /**
  * Resynchronize to the incoming RTP streams.
- * This can be useful to handle discoutinuous timestamps.
+ * This can be useful to handle discontinuous timestamps.
  * For example, call this function from the timestamp_jump signal handler.
  * @param session the rtp session
 **/
 void rtp_session_resync(RtpSession *session){
+	int ptindex=rtp_session_get_recv_payload_type(session);
+	PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,ptindex);
+
 	flushq (&session->rtp.rq, FLUSHALL);
 	rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
-	jitter_control_init(&session->rtp.jittctl,-1,NULL);
+	jitter_control_init(&session->rtp.jittctl,-1,pt);
+
+	/* Since multiple streams might share the same session (fixed RTCP port for example),
+	RTCP values might be erroneous (number of packets received is computed
+	over all streams, ...). There should be only one stream per RTP session*/
+	session->rtp.hwrcv_extseq = 0;
+	session->rtp.hwrcv_since_last_SR = 0;
+	session->rtp.hwrcv_seq_at_last_SR = 0;
+	rtp_session_unset_flag(session, RTP_SESSION_RECV_SEQ_INIT);
 }
 
 /**
@@ -1859,7 +1884,7 @@ rtp_session_get_last_recv_time(RtpSession *session, struct timeval *tv)
 #ifdef PERF
 	ortp_error("rtp_session_get_last_recv_time() feature disabled.");
 #else
-    	*tv = session->last_recv_time;
+	*tv = session->last_recv_time;
 #endif
 }
 
@@ -1920,4 +1945,172 @@ void rtp_session_process (RtpSession * session, uint32_t time, RtpScheduler *sch
 
 void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes) {
 	session->reuseaddr=yes;
+}
+
+
+typedef struct _MetaRtpTransportImpl
+{
+	OList *modifiers;
+	RtpTransport *endpoint;
+	bool_t is_rtp;
+	bool_t has_set_session;
+} MetaRtpTransportImpl;
+
+ortp_socket_t meta_rtp_transport_getsocket(RtpTransport *t) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (m->endpoint!=NULL){
+		return m->endpoint->t_getsocket(m->endpoint);
+	}
+	return (m->is_rtp ? t->session->rtp.gs.socket : t->session->rtcp.gs.socket);
+}
+
+void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
+	OList *elem;
+	/*if session has not been set yet, do nothing*/
+	if (s==NULL){
+		return;
+	}
+
+	if (m->endpoint!=NULL){
+		m->endpoint->session=s;
+	}
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->session=s;
+	}
+	m->has_set_session=TRUE;
+}
+
+int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
+	int prev_ret,ret;
+	OList *elem;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(t->session,m);
+	}
+	prev_ret=msgdsize(msg);
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		ret = rtm->t_process_on_send(rtm,msg);
+
+		if (ret<0){
+			// something went wrong in the modifier (failed to encrypt for instance)
+			return ret;
+		}
+		msg->b_wptr+=(ret-prev_ret);
+		prev_ret=ret;
+	}
+	if (m->endpoint!=NULL){
+		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
+	}else{
+		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)msg->b_rptr,msgdsize(msg),flags,to,tolen);
+	}
+	return ret;
+}
+
+int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
+	int ret,prev_ret;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	OList *elem=m->modifiers;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(t->session,m);
+	}
+
+
+	if (elem!=NULL){
+		/*received packet must be treated in reversed order: first in last out*/
+		while (elem->next!=NULL) elem=elem->next;
+	}
+
+	if (m->endpoint!=NULL){
+		ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
+	}else{
+		ret=rtp_session_rtp_recv_abstract(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,from,fromlen);
+	}
+
+	if (ret < 0){
+		return ret;
+	}
+	prev_ret=ret;
+	msg->b_wptr+=ret;
+
+	for (;elem!=NULL;elem=o_list_prev(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		ret = rtm->t_process_on_receive(rtm,msg);
+		if (ret<0){
+			// something went wrong in the modifier (failed to decrypt for instance)
+			break;
+		}
+		msg->b_wptr+=(ret-prev_ret);
+		prev_ret=ret;
+	}
+
+	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
+	msg->b_wptr-=prev_ret;
+	return ret;
+}
+
+void  meta_rtp_transport_close(RtpTransport *t, void *user_data) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)user_data;
+	if (m->endpoint!=NULL){
+		m->endpoint->t_close(m->endpoint,m->endpoint->data);
+	}
+}
+
+int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...) {
+	va_list arguments;
+	MetaRtpTransportImpl *m;
+
+	if (!t){
+		return 1;
+	}
+
+	(*t)=ortp_new0(RtpTransport,1);
+	m=(*t)->data=ortp_new0(MetaRtpTransportImpl,1);
+
+	(*t)->t_getsocket=meta_rtp_transport_getsocket;
+	(*t)->t_sendto=meta_rtp_transport_sendto;
+	(*t)->t_recvfrom=meta_rtp_transport_recvfrom;
+	(*t)->t_close=meta_rtp_transport_close;
+	(*t)->t_destroy=meta_rtp_transport_destroy;
+
+	m->is_rtp=is_rtp;
+	m->endpoint=endpoint;
+	va_start(arguments,modifiers_count);
+	while (modifiers_count != 0){
+		m->modifiers=o_list_append(m->modifiers, va_arg(arguments,RtpTransportModifier*));
+		modifiers_count--;
+	}
+	va_end(arguments);
+
+	return -1;
+}
+
+void meta_rtp_transport_destroy(RtpTransport *tp) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	OList *elem;
+
+	if (m->endpoint!=NULL){
+		m->endpoint->t_destroy(m->endpoint);
+	}
+
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		rtm->t_destroy(rtm);
+	}
+	o_list_free(m->modifiers);
+
+	ortp_free(m);
+	ortp_free(tp);
+}
+
+void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	m->modifiers=o_list_append(m->modifiers, tpm);
+	if(m->has_set_session) {
+		tpm->session = tp->session;
+	}
 }

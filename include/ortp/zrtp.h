@@ -33,9 +33,14 @@ typedef struct OrtpZrtpParams {
 
 typedef struct _OrtpZrtpContext OrtpZrtpContext ;
 
-ORTP_PUBLIC bool_t ortp_zrtp_available();
+ORTP_PUBLIC bool_t ortp_zrtp_available(void);
 
+/**
+  * @deprecated Use ortp_zrtp_transport_modifier_new() instead. Using #srtp_transport_new will prevent usage of multiple
+  * encryptions and/or custom packets transmission.
+*/
 ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_context_new(RtpSession *s, OrtpZrtpParams *params);
+ORTP_PUBLIC void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
 /**
  * can be used to give more time for establishing zrtp session
  * */
@@ -46,7 +51,10 @@ ORTP_PUBLIC OrtpZrtpContext* ortp_zrtp_multistream_new(OrtpZrtpContext* activeCo
 ORTP_PUBLIC void ortp_zrtp_sas_verified(OrtpZrtpContext* ctx);
 ORTP_PUBLIC void ortp_zrtp_sas_reset_verified(OrtpZrtpContext* ctx);
 
-ORTP_PUBLIC void ortp_zrtp_context_destroy(OrtpZrtpContext *ctx);
+
+
+ORTP_PUBLIC int ortp_zrtp_transport_modifier_new(OrtpZrtpContext* ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt );
+ORTP_PUBLIC void ortp_zrtp_transport_modifier_destroy(RtpTransportModifier *tp);
 
 
 #ifdef __cplusplus

@@ -564,6 +564,17 @@ PayloadType payload_type_amrwb={
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
+PayloadType payload_type_gsm_efr={
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(8000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(12200),
+	MIME_TYPE ("GSM-EFR"),
+	CHANNELS(1)
+};
+
 PayloadType payload_type_mp4v={
 	TYPE(PAYLOAD_VIDEO),
 	CLOCK_RATE(90000),

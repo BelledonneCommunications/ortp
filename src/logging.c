@@ -17,11 +17,18 @@
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
 
 #include "ortp/logging.h"
-
+#include "utils.h"
+#include <time.h>
 
 static FILE *__log_file=0;
+static unsigned long __log_thread_id = 0;
+static OList *__log_stored_messages_list = NULL;
+static ortp_mutex_t __log_stored_messages_mutex;
 
 /**
  *@param file a FILE pointer where to output the ortp logs.
@@ -57,6 +64,16 @@ void ortp_set_log_level_mask(int levelmask){
 
 int ortp_get_log_level_mask(void) {
 	return __ortp_log_mask;
+}
+
+void ortp_set_log_thread_id(unsigned long thread_id) {
+	if (thread_id == 0) {
+		ortp_logv_flush();
+		ortp_mutex_destroy(&__log_stored_messages_mutex);
+	} else {
+		ortp_mutex_init(&__log_stored_messages_mutex, NULL);
+	}
+	__log_thread_id = thread_id;
 }
 
 char * ortp_strdup_vprintf(const char *fmt, va_list ap)
@@ -116,20 +133,80 @@ char *ortp_strdup_printf(const char *fmt,...){
 #define ENDLINE "\n"
 #endif
 
-#if	defined(WIN32) || defined(_WIN32_WCE)
-void ortp_logv(int level, const char *fmt, va_list args)
-{
-	if (ortp_logv_out!=NULL && ortp_log_level_enabled(level))
-		ortp_logv_out(level,fmt,args);
+typedef struct {
+	int level;
+	char *msg;
+} ortp_stored_log_t;
+
+void _ortp_logv_flush(int dummy, ...) {
+	OList *elem;
+	OList *msglist;
+	va_list empty_va_list;
+	va_start(empty_va_list, dummy);
+	ortp_mutex_lock(&__log_stored_messages_mutex);
+	msglist = __log_stored_messages_list;
+	__log_stored_messages_list = NULL;
+	ortp_mutex_unlock(&__log_stored_messages_mutex);
+	for (elem = msglist; elem != NULL; elem = o_list_next(elem)) {
+		ortp_stored_log_t *l = (ortp_stored_log_t *)elem->data;
+#ifdef WIN32
+		ortp_logv_out(l->level, l->msg, empty_va_list);
+#else
+		va_list cap;
+		va_copy(cap, empty_va_list);
+		ortp_logv_out(l->level, l->msg, cap);
+		va_end(cap);
+#endif
+		ortp_free(l->msg);
+		ortp_free(l);
+	}
+	o_list_free(msglist);
+	va_end(empty_va_list);
+}
+
+void ortp_logv_flush(void) {
+	_ortp_logv_flush(0);
+}
+
+void ortp_logv(int level, const char *fmt, va_list args) {
+	if ((ortp_logv_out != NULL) && ortp_log_level_enabled(level)) {
+		if (__log_thread_id == 0) {
+			ortp_logv_out(level, fmt, args);
+		} else if (__log_thread_id == ortp_thread_self()) {
+			ortp_logv_flush();
+			ortp_logv_out(level, fmt, args);
+		} else {
+			ortp_stored_log_t *l = ortp_new(ortp_stored_log_t, 1);
+			l->level = level;
+			l->msg = ortp_strdup_vprintf(fmt, args);
+			ortp_mutex_lock(&__log_stored_messages_mutex);
+			__log_stored_messages_list = o_list_append(__log_stored_messages_list, l);
+			ortp_mutex_unlock(&__log_stored_messages_mutex);
+		}
+	}
 #if !defined(_WIN32_WCE)
-	if ((level)==ORTP_FATAL) abort();
+	if (level == ORTP_FATAL) abort();
 #endif
 }
-#endif
 
 static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	const char *lname="undef";
 	char *msg;
+	struct timeval tp;
+	struct tm *lt;
+#ifndef WIN32
+	struct tm tmbuf;
+#endif
+	time_t tt;
+	ortp_gettimeofday(&tp,NULL);
+	tt = (time_t)tp.tv_sec;
+
+#ifdef WIN32
+	lt = localtime(&tt);
+#else
+	lt = localtime_r(&tt,&tmbuf);
+#endif
+
 	if (__log_file==NULL) __log_file=stderr;
 	switch(lev){
 		case ORTP_DEBUG:
@@ -166,7 +243,7 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 		}
 	#endif
 #endif
-	fprintf(__log_file,"ortp-%s-%s" ENDLINE,lname,msg);
+	fprintf(__log_file,"%i-%.2i-%.2i %.2i:%.2i:%.2i:%.3i ortp-%s-%s" ENDLINE,1900+lt->tm_year,lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec,(int)(tp.tv_usec/1000), lname,msg);
 	fflush(__log_file);
 	ortp_free(msg);
 }

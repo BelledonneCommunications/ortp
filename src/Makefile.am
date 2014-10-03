@@ -1,11 +1,15 @@
 
-EXTRA_DIST=ortp-config-win32.h dll_entry.c master system winrttimer.cpp winrttimer.h
+EXTRA_DIST=dll_entry.c master system winrttimer.cpp winrttimer.h
 
 AM_CPPFLAGS=\
+	$(STRICT_OPTIONS) \
+	$(STRICT_OPTIONS_CXX) \
 	-I$(top_srcdir)/include/ \
-	-I$(top_srcdir) 
+	-I$(top_srcdir)
 
 AM_CFLAGS=\
+	$(STRICT_OPTIONS) \
+	$(STRICT_OPTIONS_CC) \
 	$(PTHREAD_CFLAGS) \
 	$(TRUESPEECH_CFLAGS) \
 	$(SRTP_CFLAGS)

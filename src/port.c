@@ -19,9 +19,7 @@
 */
 
 
-#if defined(WIN32) || defined(_WIN32_WCE)
-#include "ortp-config-win32.h"
-#elif HAVE_CONFIG_H
+#ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 #include "ortp/logging.h"
@@ -185,7 +183,7 @@ int __ortp_thread_join(ortp_thread_t thread, void **ptr){
 	return err;
 }
 
-int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg){
+int __ortp_thread_create(ortp_thread_t *thread, pthread_attr_t *attr, void * (*routine)(void*), void *arg){
 	pthread_attr_t my_attr;
 	pthread_attr_init(&my_attr);
 	if (attr)
@@ -197,42 +195,46 @@ int __ortp_thread_create(pthread_t *thread, pthread_attr_t *attr, void * (*routi
 	return pthread_create(thread, &my_attr, routine, arg);
 }
 
+unsigned long __ortp_thread_self(void) {
+	return (unsigned long)pthread_self();
+}
+
 #endif
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 
 int WIN_mutex_init(ortp_mutex_t *mutex, void *attr)
 {
-#ifdef WINAPI_FAMILY_PHONE_APP
-	InitializeSRWLock(mutex);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	*mutex=CreateMutex(NULL, FALSE, NULL);
+#else
+	InitializeSRWLock(mutex);
 #endif
 	return 0;
 }
 
 int WIN_mutex_lock(ortp_mutex_t * hMutex)
 {
-#ifdef WINAPI_FAMILY_PHONE_APP
-	AcquireSRWLockExclusive(hMutex);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	WaitForSingleObject(*hMutex, INFINITE); /* == WAIT_TIMEOUT; */
+#else
+	AcquireSRWLockExclusive(hMutex);
 #endif
 	return 0;
 }
 
 int WIN_mutex_unlock(ortp_mutex_t * hMutex)
 {
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ReleaseSRWLockExclusive(hMutex);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	ReleaseMutex(*hMutex);
+#else
+	ReleaseSRWLockExclusive(hMutex);
 #endif
 	return 0;
 }
 
 int WIN_mutex_destroy(ortp_mutex_t * hMutex)
 {
-#ifndef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	CloseHandle(*hMutex);
 #endif
 	return 0;
@@ -274,35 +276,39 @@ int WIN_thread_join(ortp_thread_t thread_h, void **unused)
 	return 0;
 }
 
+unsigned long WIN_thread_self(void) {
+	return (unsigned long)GetCurrentThreadId();
+}
+
 int WIN_cond_init(ortp_cond_t *cond, void *attr)
 {
-#ifdef WINAPI_FAMILY_PHONE_APP
-	InitializeConditionVariable(cond);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	*cond=CreateEvent(NULL, FALSE, FALSE, NULL);
+#else
+	InitializeConditionVariable(cond);
 #endif
 	return 0;
 }
 
 int WIN_cond_wait(ortp_cond_t* hCond, ortp_mutex_t * hMutex)
 {
-#ifdef WINAPI_FAMILY_PHONE_APP
-	SleepConditionVariableSRW(hCond, hMutex, INFINITE, 0);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	//gulp: this is not very atomic ! bug here ?
 	WIN_mutex_unlock(hMutex);
 	WaitForSingleObject(*hCond, INFINITE);
 	WIN_mutex_lock(hMutex);
+#else
+	SleepConditionVariableSRW(hCond, hMutex, INFINITE, 0);
 #endif
 	return 0;
 }
 
 int WIN_cond_signal(ortp_cond_t * hCond)
 {
-#ifdef WINAPI_FAMILY_PHONE_APP
-	WakeConditionVariable(hCond);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	SetEvent(*hCond);
+#else
+	WakeConditionVariable(hCond);
 #endif
 	return 0;
 }
@@ -315,12 +321,11 @@ int WIN_cond_broadcast(ortp_cond_t * hCond)
 
 int WIN_cond_destroy(ortp_cond_t * hCond)
 {
-#ifndef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	CloseHandle(*hCond);
 #endif
 	return 0;
 }
-
 
 #if defined(_WIN32_WCE)
 #include <time.h>
@@ -522,10 +527,7 @@ static HANDLE event=NULL;
 
 /* portable named pipes */
 ortp_pipe_t ortp_server_pipe_create(const char *name){
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ortp_error("%s not supported!", __FUNCTION__);
-	return INVALID_HANDLE_VALUE;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	ortp_pipe_t h;
 	char *pipename=make_pipe_name(name);
 	h=CreateNamedPipe(pipename,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
@@ -536,6 +538,9 @@ ortp_pipe_t ortp_server_pipe_create(const char *name){
 	}
 	if (event==NULL) event=CreateEvent(NULL,TRUE,FALSE,NULL);
 	return h;
+#else
+	ortp_error("%s not supported!", __FUNCTION__);
+	return INVALID_HANDLE_VALUE;
 #endif
 }
 
@@ -545,10 +550,7 @@ even if nobody connects to the pipe.
 ortp_server_pipe_close() makes this function to exit.
 */
 ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ortp_error("%s not supported!", __FUNCTION__);
-	return INVALID_HANDLE_VALUE;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	OVERLAPPED ol;
 	DWORD undef;
 	HANDLE handles[2];
@@ -564,34 +566,34 @@ ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
 	}
 	CloseHandle(ol.hEvent);
 	return INVALID_HANDLE_VALUE;
+#else
+	ortp_error("%s not supported!", __FUNCTION__);
+	return INVALID_HANDLE_VALUE;
 #endif
 }
 
 int ortp_server_pipe_close_client(ortp_pipe_t server){
-#ifdef WINAPI_FAMILY_PHONE_APP
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+	return DisconnectNamedPipe(server)==TRUE ? 0 : -1;
+#else
 	ortp_error("%s not supported!", __FUNCTION__);
 	return -1;
-#else
-	return DisconnectNamedPipe(server)==TRUE ? 0 : -1;
 #endif
 }
 
 int ortp_server_pipe_close(ortp_pipe_t spipe){
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ortp_error("%s not supported!", __FUNCTION__);
-	return -1;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	SetEvent(event);
 	//CancelIoEx(spipe,NULL); /*vista only*/
 	return CloseHandle(spipe);
+#else
+	ortp_error("%s not supported!", __FUNCTION__);
+	return -1;
 #endif
 }
 
 ortp_pipe_t ortp_client_pipe_connect(const char *name){
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ortp_error("%s not supported!", __FUNCTION__);
-	return INVALID_HANDLE_VALUE;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	char *pipename=make_pipe_name(name);
 	ortp_pipe_t hpipe = CreateFile(
 		 pipename,   // pipe name
@@ -604,6 +606,9 @@ ortp_pipe_t ortp_client_pipe_connect(const char *name){
 		 NULL);          // no template file
 	ortp_free(pipename);
 	return hpipe;
+#else
+	ortp_error("%s not supported!", __FUNCTION__);
+	return INVALID_HANDLE_VALUE;
 #endif
 }
 
@@ -637,10 +642,7 @@ typedef struct MapInfo{
 static OList *maplist=NULL;
 
 void *ortp_shm_open(unsigned int keyid, int size, int create){
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ortp_error("%s not supported!", __FUNCTION__);
-	return NULL;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	HANDLE h;
 	char name[64];
 	void *buf;
@@ -679,13 +681,14 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 		ortp_error("MapViewOfFile failed");
 	}
 	return buf;
+#else
+	ortp_error("%s not supported!", __FUNCTION__);
+	return NULL;
 #endif
 }
 
 void ortp_shm_close(void *mem){
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ortp_error("%s not supported!", __FUNCTION__);
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	OList *elem;
 	for(elem=maplist;elem!=NULL;elem=elem->next){
 		MapInfo *i=(MapInfo*)elem->data;
@@ -698,6 +701,8 @@ void ortp_shm_close(void *mem){
 		}
 	}
 	ortp_error("No shared memory at %p was found.",mem);
+#else
+	ortp_error("%s not supported!", __FUNCTION__);
 #endif
 }
 
@@ -712,11 +717,7 @@ void ortp_shm_close(void *mem){
 
 void ortp_get_cur_time(ortpTimeSpec *ret){
 #if defined(_WIN32_WCE) || defined(WIN32)
-#ifdef WINAPI_FAMILY_PHONE_APP
-	ULONGLONG timemillis = GetTickCount64();
-	ret->tv_sec = timemillis / 1000;
-	ret->tv_nsec = (timemillis % 1000) * 1000000LL;
-#else
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();
@@ -725,6 +726,10 @@ void ortp_get_cur_time(ortpTimeSpec *ret){
 #	endif
 	ret->tv_sec=timemillis/1000;
 	ret->tv_nsec=(timemillis%1000)*1000000LL;
+#else
+	ULONGLONG timemillis = GetTickCount64();
+	ret->tv_sec = timemillis / 1000;
+	ret->tv_nsec = (timemillis % 1000) * 1000000LL;
 #endif
 #elif defined(__MACH__) && defined(__GNUC__) && (__GNUC__ >= 3)
 	struct timeval tv;
@@ -773,3 +778,71 @@ char* strtok_r(char *str, const char *delim, char **nextp){
 	return ret;
 }
 #endif
+
+
+#if defined(WIN32) && !defined(_MSC_VER)
+#include <wincrypt.h>
+static int ortp_wincrypto_random(unsigned int *rand_number){
+	static HCRYPTPROV hProv=(HCRYPTPROV)-1;
+	static int initd=0;
+	
+	if (!initd){
+		if (!CryptAcquireContext(&hProv,NULL,NULL,PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
+			ortp_error("ortp_wincrypto_random(): Could not acquire a windows crypto context");
+			return -1;
+		}
+		initd=TRUE;
+	}
+	if (hProv==(HCRYPTPROV)-1)
+		return -1;
+	
+	if (!CryptGenRandom(hProv,4,(BYTE*)rand_number)){
+		ortp_error("ortp_wincrypto_random(): CryptGenRandom() failed.");
+		return -1;
+	}
+	return 0;
+}
+#endif
+
+unsigned int ortp_random(void){
+#ifdef HAVE_ARC4RANDOM
+	return arc4random();
+#elif  defined(__linux) || defined(__APPLE__)
+	static int fd=-1;
+	if (fd==-1) fd=open("/dev/urandom",O_RDONLY);
+	if (fd!=-1){
+		unsigned int tmp;
+		if (read(fd,&tmp,4)!=4){
+			ortp_error("Reading /dev/urandom failed.");
+		}else return tmp;
+	}else ortp_error("Could not open /dev/urandom");
+#elif defined(WIN32)
+	static int initd=0;
+	unsigned int ret;
+#ifdef _MSC_VER
+	/*rand_s() is pretty nice and simple function but is not wrapped by mingw.*/
+	
+	if (rand_s(&ret)==0){
+		return ret;
+	}
+#else
+	if (ortp_wincrypto_random(&ret)==0){
+		return ret;
+	}
+#endif
+	/* Windows's rand() is unsecure but is used as a fallback*/
+	if (!initd) {
+		struct timeval tv;
+		ortp_gettimeofday(&tv,NULL);
+		srand((unsigned int)tv.tv_sec+tv.tv_usec);
+		initd=1;
+		ortp_warning("ortp: Random generator is using rand(), this is unsecure !");
+	}
+	return rand()<<16 | rand();
+#endif
+	/*fallback to UNIX random()*/
+#ifndef WIN32
+	return (unsigned int) random();
+#endif
+}
+

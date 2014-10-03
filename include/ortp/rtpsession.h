@@ -89,14 +89,32 @@ typedef struct _WaitPoint
 	bool_t wakeup;
 } WaitPoint;
 
+typedef struct _RtpTransportModifier
+{
+	void *data;
+	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
+	int  (*t_process_on_send)(struct _RtpTransportModifier *t, mblk_t *msg);
+	int  (*t_process_on_receive)(struct _RtpTransportModifier *t, mblk_t *msg);
+	/**
+	 * Mandatory callback responsible of freeing the #RtpTransportModifierAND the pointer.
+	 * @param[in] transport #RtpTransportModifier object to free.
+	 */
+	void  (*t_destroy)(struct _RtpTransportModifier *transport);
+} RtpTransportModifier;
+
 typedef struct _RtpTransport
 {
 	void *data;
+	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
 	ortp_socket_t (*t_getsocket)(struct _RtpTransport *t);
 	int  (*t_sendto)(struct _RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
 	int  (*t_recvfrom)(struct _RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
-	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
 	void  (*t_close)(struct _RtpTransport *transport, void *userData);
+	/**
+	 * Mandatory callback responsible of freeing the #RtpTransport object AND the pointer.
+	 * @param[in] transport #RtpTransport object to free.
+	 */
+	void  (*t_destroy)(struct _RtpTransport *transport);
 }  RtpTransport;
 
 typedef struct _OrtpNetworkSimulatorParams{
@@ -114,6 +132,9 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	queue_t q;
 	queue_t latency_q;
 	struct timeval last_check;
+
+	int drop_by_congestion;
+	int drop_by_loss;
 }OrtpNetworkSimulatorCtx;
 
 typedef struct OrtpRtcpSendAlgorithm {
@@ -335,6 +356,7 @@ struct _RtpSession
 	unsigned int interarrival_jitter_test_vector;
 	unsigned int delay_test_vector;
 	float rtt;/*last round trip delay calculated*/
+	int cum_loss;
 	OrtpNetworkSimulatorCtx *net_sim_ctx;
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
@@ -369,6 +391,7 @@ ORTP_PUBLIC uint32_t rtp_session_get_recv_ssrc(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_seq_number(RtpSession *session, uint16_t seq);
 ORTP_PUBLIC uint16_t rtp_session_get_seq_number(RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_rcv_ext_seq_number(RtpSession *session);
+ORTP_PUBLIC int rtp_session_get_cum_loss(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_duplication_ratio(RtpSession *session, float ratio);
 
 ORTP_PUBLIC void rtp_session_enable_jitter_buffer(RtpSession *session , bool_t enabled);
@@ -536,7 +559,7 @@ ORTP_PUBLIC void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session);
 
 ORTP_PUBLIC bool_t rtp_session_avpf_enabled(RtpSession *session);
 ORTP_PUBLIC bool_t rtp_session_avpf_feature_enabled(RtpSession *session, unsigned char feature);
-ORTP_PUBLIC uint8_t rtp_session_get_avpf_rr_interval(RtpSession *session);
+ORTP_PUBLIC uint16_t rtp_session_get_avpf_rr_interval(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_pli(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_fir(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id);
@@ -552,6 +575,20 @@ ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
 
 ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
+/**
+ * #RtpTransport object which can handle multiples security protocols. You can for instance use this object
+ * to use both sRTP and tunnel transporter. #mblk_t messages received and sent from the endpoint
+ * will pass through the list of modifiers given. First modifier in list will be first to modify the message
+ * in send mode and last in receive mode.
+ * @param[in] t #RtpTransport object that will be generated.
+ * @param[in] is_rtp Whether this object will be used for RTP packets or not.
+ * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
+ * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
+ * @returns 0 if successful, -1 otherwise
+**/
+ORTP_PUBLIC int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
+ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
+ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
 #ifdef __cplusplus
 }
 #endif
