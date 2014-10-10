@@ -107,7 +107,6 @@
     <ClInclude Include="..\..\..\include\ortp\telephonyevents.h" />
     <ClInclude Include="..\..\..\include\ortp\zrtp.h" />
     <ClInclude Include="..\..\..\src\jitterctl.h" />
-    <ClInclude Include="..\..\..\src\ortp-config-win32.h" />
     <ClInclude Include="..\..\..\src\rtpsession_priv.h" />
     <ClInclude Include="..\..\..\src\rtptimer.h" />
     <ClInclude Include="..\..\..\src\scheduler.h" />
