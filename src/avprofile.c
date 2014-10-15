@@ -23,11 +23,11 @@
 #include <ortp/ortp.h>
 #include <ortp/rtcp.h>
 
-char offset127=127; 
-char offset0xD5=(char)0xD5; 
+char offset127=127;
+char offset0xD5=(char)0xD5;
 char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 
-/* 
+/*
  * IMPORTANT : some compiler don't support the tagged-field syntax. Those
  * macros are there to trap the problem This means that if you want to keep
  * portability, payload types must be defined with their fields in the right
@@ -457,7 +457,7 @@ void av_profile_init(RtpProfile *profile)
 	rtp_profile_set_payload(profile,32,&payload_type_mpv);
 	rtp_profile_set_payload(profile,34,&payload_type_h263);
 }
-	
+
 /* these are extra payload types that can be used dynamically */
 PayloadType payload_type_lpc1015={
 	TYPE(PAYLOAD_AUDIO_PACKETIZED),
@@ -525,7 +525,7 @@ PayloadType payload_type_ilbc={
 	BITS_PER_SAMPLE(0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH(0),
-	NORMAL_BITRATE(13300), /* the minimum, with 30ms frames */ 
+	NORMAL_BITRATE(13300), /* the minimum, with 30ms frames */
 	MIME_TYPE("iLBC"),
 	CHANNELS(1),
 	RECV_FMTP(NULL),
@@ -620,7 +620,7 @@ PayloadType payload_type_evrcb0={
 	NO_AVPF,
 	FLAGS(0)
 };
- 
+
 PayloadType payload_type_h263_1998={
 	TYPE(PAYLOAD_VIDEO),
 	CLOCK_RATE(90000),
@@ -846,6 +846,21 @@ PayloadType payload_type_silk_swb={
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
+PayloadType payload_type_aaceld_16k={
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(16000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(24000),
+	MIME_TYPE("mpeg4-generic"),
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	NO_AVPF,
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
+};
+
 PayloadType payload_type_aaceld_22k={
 	TYPE(PAYLOAD_AUDIO_PACKETIZED),
 	CLOCK_RATE(22050),
@@ -861,9 +876,39 @@ PayloadType payload_type_aaceld_22k={
 	FLAGS(PAYLOAD_TYPE_IS_VBR)
 };
 
+PayloadType payload_type_aaceld_32k={
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(32000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(48000),
+	MIME_TYPE("mpeg4-generic"),
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	NO_AVPF,
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
+};
+
 PayloadType payload_type_aaceld_44k={
 	TYPE(PAYLOAD_AUDIO_PACKETIZED),
 	CLOCK_RATE(44100),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(64000),
+	MIME_TYPE("mpeg4-generic"),
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	NO_AVPF,
+	FLAGS(PAYLOAD_TYPE_IS_VBR)
+};
+
+PayloadType payload_type_aaceld_48k={
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(48000),
 	BITS_PER_SAMPLE(0),
 	ZERO_PATTERN(NULL),
 	PATTERN_LENGTH(0),
