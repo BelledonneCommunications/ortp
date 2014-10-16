@@ -227,3 +227,25 @@ if(DOXYGEN_FOUND)
 	install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
 		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/oRTP-${ORTP_VERSION}")
 endif()
+
+
+
+
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${prefix}/bin)
+set(libdir ${prefix}/lib)
+set(includedir ${prefix}/include)
+set(ORTP_PKGCONFIG_VERSION "${ORTP_VERSION}")
+set(ORTPDEPS_LIBS )
+if(SRTP_FOUND)
+	list(APPEND ORTPDEPS_LIBS "-lsrtp")
+endif()
+if(BZRTP_FOUND)
+	# WARNING: this is not sufficient because bzrtd needs dependent libs (polarssl, xml..)
+	# we should list all these from the findpackage(BZRTP) instead of just having -lbzrtp 
+	list(APPEND ORTPDEPS_LIBS "-lbzrtp")
+endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION lib/pkgconfig)
+
