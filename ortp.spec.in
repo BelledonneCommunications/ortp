@@ -5,18 +5,25 @@
 # Default is optimized for Pentium IV but will execute on Pentium II &
 # later (i686).
 
+# These 2 lines are here because we can build the RPM for flexisip, in which 
+# case we prefix the entire installation so that we don't break compatibility
+# with the user's libs.
+# To compile with bc prefix, use rpmbuild -ba --with bc [SPEC]
+%define 		pkg_name 	%{?_with_bc:bc-ortp}%{!?_with_bc:ortp}
+%{?_with_bc: %define 	_prefix		/opt/belledonne-communications}
+
 %ifarch %ix86
 %define		ortp_cpu	pentium4
 %endif
 
 Summary:	Real-time Transport Protocol Stack
-Name:		ortp
+Name:		%pkg_name
 Version:	@ORTP_PKGCONFIG_VERSION@
 Release:	%(git describe --tags --abbrev=40 | sed -rn 's/^.*-([0-9]+)-g[a-z0-9]{40}$/\1/p' || echo '1')%{?dist}
 License:	LGPL
 Group:		Applications/Communications
 URL:		http://linphone.org/ortp/
-Source0:	%{name}-@ORTP_PKGCONFIG_VERSION@.tar.gz
+Source0:	ortp-%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
 %ifarch %ix86
 BuildArch:	i686
@@ -50,7 +57,7 @@ develop programs using the oRTP library.
 %define ortp_cflags %ortp_arch_cflags -Wall -g -pipe -pthread -O3 -fomit-frame-pointer -fno-schedule-insns -fschedule-insns2 -fno-strict-aliasing
 
 %prep
-%setup -q
+%setup -qn ortp-%{version}
 
 %build
 %configure \
