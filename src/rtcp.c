@@ -645,19 +645,21 @@ int rtp_session_bye(RtpSession *session, const char *reason) {
     return ret;
 }
 
-OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, RtpSession *session){
+OrtpLossRateEstimator * ortp_loss_rate_estimator_new(int min_packet_count_interval, uint64_t min_time_ms_interval, RtpSession *session){
 	OrtpLossRateEstimator *obj=ortp_malloc(sizeof(OrtpLossRateEstimator));
-	ortp_loss_rate_estimator_init(obj,min_packet_count_interval, session);
+	ortp_loss_rate_estimator_init(obj,min_packet_count_interval, min_time_ms_interval, session);
 	return obj;
 }
 
-void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, RtpSession *session){
+void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_count_interval, uint64_t min_time_ms_interval, RtpSession *session){
 	memset(obj,0,sizeof(*obj));
 	obj->min_packet_count_interval=min_packet_count_interval;
 	obj->last_ext_seq=rtp_session_get_seq_number(session);
 	obj->last_cum_loss=rtp_session_get_cum_loss(session);
 	obj->last_packet_sent_count=session->rtp.stats.packet_sent;
 	obj->last_dup_packet_sent_count=session->rtp.stats.packet_dup_sent;
+	obj->min_time_ms_interval=min_time_ms_interval;
+	obj->last_estimate_time_ms=(uint64_t)-1;
 }
 
 bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpStream *stream, const report_block_t *rb){
@@ -666,23 +668,25 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 	int32_t diff_unique_outgoing=stream->stats.packet_sent-obj->last_packet_sent_count;
 	int32_t diff_total_outgoing=diff_unique_outgoing+stream->stats.packet_dup_sent-obj->last_dup_packet_sent_count;
 	int32_t diff;
+	uint64_t curtime;
 	bool_t got_value=FALSE;
 
-	if (obj->last_ext_seq==-1){
+	if (obj->last_ext_seq==-1 || obj->last_estimate_time_ms==(uint64_t)-1){
 		/*first report cannot be considered, since we don't know the interval it covers*/
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
+		obj->last_estimate_time_ms=ortp_get_cur_time_ms();
 		return FALSE;
 	}
 	diff=extseq-obj->last_ext_seq;
-
+	curtime=ortp_get_cur_time_ms();
 	if (diff<0 || diff>obj->min_packet_count_interval * 100){
 		ortp_warning("ortp_loss_rate_estimator_process %p: Suspected discontinuity in sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
 		obj->last_packet_sent_count=stream->stats.packet_sent;
 		obj->last_dup_packet_sent_count=stream->stats.packet_dup_sent;
-	}else if (diff>obj->min_packet_count_interval){
+	}else if (diff>obj->min_packet_count_interval && curtime-obj->last_estimate_time_ms>=obj->min_time_ms_interval){
 		/*we have sufficient interval*/
 		int32_t new_losses=cum_loss-obj->last_cum_loss;
 		/*if we are using duplicates, they will not be visible in 'diff' variable.
@@ -692,6 +696,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 
 		/*update last values with current*/
 		got_value=TRUE;
+		obj->last_estimate_time_ms=curtime;
 
 		if (obj->loss_rate>100.f){
 			ortp_error("ortp_loss_rate_estimator_process %p: Loss rate MUST NOT be greater than 100%%", obj);
@@ -701,7 +706,6 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		obj->last_packet_sent_count=stream->stats.packet_sent;
 		obj->last_dup_packet_sent_count=stream->stats.packet_dup_sent;
 	}
-
 	return got_value;
 
 }
