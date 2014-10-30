@@ -60,7 +60,8 @@ LOCAL_SRC_FILES := \
 LOCAL_CFLAGS += \
 	-DORTP_INET6 \
 	-UHAVE_CONFIG_H \
-	-include ortp_AndroidConfig.h
+	-include ortp_AndroidConfig.h \
+	-Werror -Wall -Wno-error=strict-aliasing -Wuninitialized
 
 
 ifeq ($(BUILD_ZRTP), 1)
@@ -81,5 +82,7 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/build/android
 
 LOCAL_LDLIBS += -lpthread
+LOCAL_CPPFLAGS = $(LOCAL_CLFAGS)
+LOCAL_CFLAGS += -Wdeclaration-after-statement
 
 include $(BUILD_STATIC_LIBRARY)
