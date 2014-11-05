@@ -86,13 +86,12 @@ rm -rf $RPM_BUILD_ROOT
 
 %files devel
 %defattr(-,root,root,-)
-%doc doc/html/*
+%doc %{_docdir}/ortp-%{version}/html/*
 %{_libdir}/*.la
 %{_libdir}/*.a
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/*.pc
 %{_includedir}
-%{_docdir}
 
 %changelog
 * Tue Oct 25 2005 Francois-Xavier Kowalski <fix@hp.com>
