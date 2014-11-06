@@ -173,16 +173,16 @@ void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s,int type, i
 }
 
 mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
-    mblk_t *mp = allocb(sizeof(rtcp_common_header_t), 0);
+	mblk_t *mp = allocb(sizeof(rtcp_common_header_t), 0);
 	rtcp_common_header_t *rtcp;
-    mblk_t *tmp;
+	mblk_t *tmp;
 	mblk_t *m = mp;
 	mblk_t *sdes;
 	queue_t *q;
 	int rc = 0;
 
 	sdes = (full == TRUE) ? session->full_sdes : session->minimal_sdes;
-    rtcp = (rtcp_common_header_t *)mp->b_wptr;
+	rtcp = (rtcp_common_header_t *)mp->b_wptr;
 	mp->b_wptr += sizeof(rtcp_common_header_t);
 
 	/* Concatenate all sdes chunks. */
