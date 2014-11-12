@@ -129,7 +129,7 @@ char *ortp_strdup_printf(const char *fmt,...){
 
 char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
 	char *ret;
-	unsigned long dstlen, relen;
+	unsigned long dstlen, retlen;
 	
 	ret=ortp_strdup_vprintf(fmt, ap);
 	dstlen = strlen(dst);
