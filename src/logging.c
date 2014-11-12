@@ -129,9 +129,11 @@ char *ortp_strdup_printf(const char *fmt,...){
 
 char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
 	char *ret;
+	unsigned long dstlen, relen;
+	
 	ret=ortp_strdup_vprintf(fmt, ap);
-	unsigned long dstlen = strlen(dst);
-	unsigned long retlen = strlen(ret);
+	dstlen = strlen(dst);
+	retlen = strlen(ret);
 
 	if ((dst = ortp_realloc(dst, dstlen+retlen+1)) != NULL){
 		strncat(dst,ret,retlen);
