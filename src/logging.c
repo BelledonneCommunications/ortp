@@ -108,12 +108,12 @@ char * ortp_strdup_vprintf(const char *fmt, va_list ap)
 			size *= 2;	/* twice the old size */
 		if ((np = (char *) ortp_realloc (p, size)) == NULL)
 		  {
-		    free(p);
-		    return NULL;
+			free(p);
+			return NULL;
 		  }
 		else
 		  {
-		    p = np;
+			p = np;
 		  }
 	}
 }
@@ -123,6 +123,32 @@ char *ortp_strdup_printf(const char *fmt,...){
 	va_list args;
 	va_start (args, fmt);
 	ret=ortp_strdup_vprintf(fmt, args);
+	va_end (args);
+	return ret;
+}
+
+char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
+	char *ret;
+	ret=ortp_strdup_vprintf(fmt, ap);
+	unsigned long dstlen = strlen(dst);
+	unsigned long retlen = strlen(ret);
+
+	if ((dst = ortp_realloc(dst, dstlen+retlen+1)) != NULL){
+		strncat(dst,ret,retlen);
+		dst[dstlen+retlen] = '\0';
+		ortp_free(ret);
+		return dst;
+	} else {
+		ortp_free(ret);
+		return NULL;
+	}
+}
+
+char *ortp_strcat_printf(char* dst, const char *fmt,...){
+	char *ret;
+	va_list args;
+	va_start (args, fmt);
+	ret=ortp_strcat_vprintf(dst, fmt, args);
 	va_end (args);
 	return ret;
 }
@@ -230,8 +256,8 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	msg=ortp_strdup_vprintf(fmt,args);
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
 	#ifndef _UNICODE
-        OutputDebugStringA(msg);
-        OutputDebugStringA("\r\n");
+		OutputDebugStringA(msg);
+		OutputDebugStringA("\r\n");
 	#else
 		{
 			int len=strlen(msg);

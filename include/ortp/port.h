@@ -137,7 +137,7 @@ unsigned long __ortp_thread_self(void);
 #else
 #ifdef ORTP_EXPORTS
 #define ORTP_PUBLIC	__declspec(dllexport)
-#else 
+#else
 #define ORTP_PUBLIC	__declspec(dllimport)
 #endif
 #endif
@@ -303,6 +303,8 @@ ORTP_PUBLIC int set_non_blocking_socket(ortp_socket_t sock);
 ORTP_PUBLIC char *ortp_strndup(const char *str,int n);
 ORTP_PUBLIC char *ortp_strdup_printf(const char *fmt,...);
 ORTP_PUBLIC char *ortp_strdup_vprintf(const char *fmt, va_list ap);
+ORTP_PUBLIC char *ortp_strcat_printf(char *dst, const char *fmt,...);
+ORTP_PUBLIC char *ortp_strcat_vprintf(char *dst, const char *fmt, va_list ap);
 
 ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
