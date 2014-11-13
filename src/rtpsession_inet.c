@@ -106,8 +106,9 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	if (*port==0) reuse_addr=FALSE;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_UNSPEC;
+	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
+	hints.ai_flags = AI_NUMERICSERV;
 	snprintf(num, sizeof(num), "%d",*port);
 	err = getaddrinfo(addr,num, &hints, &res0);
 	if (err!=0) {
@@ -733,12 +734,13 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
+	hints.ai_flags = AI_NUMERICSERV;
+	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
 
 	snprintf(num, sizeof(num), "%d", rtp_port);
 	err = getaddrinfo(rtp_addr, num, &hints, &res0);
 	if (err) {
-		ortp_warning ("Error in socket address: %s", gai_strerror(err));
+		ortp_warning("Error in socket address (hints.ai_family=%i, hints.ai_flags=%i): %s", hints.ai_family, hints.ai_flags, gai_strerror(err));
 		err=-1;
 		goto end;
 	}
