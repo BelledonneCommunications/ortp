@@ -78,6 +78,9 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 #	ifndef AI_V4MAPPED
 #	define AI_V4MAPPED 0x00000800
 #	endif
+#	ifndef AI_ALL
+#	define AI_ALL 0x0
+#	endif
 #endif
 
 #ifndef IN6_IS_ADDR_MULTICAST
@@ -735,7 +738,14 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_NUMERICSERV;
-	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
+#ifndef ANDROID
+	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED | AI_ALL : 0;
+#else
+	/*
+	 * Bionic has a crappy implementation of getaddrinfo() that doesn't support the AI_V4MAPPED flag.
+	 * However since linux kernel is very tolerant, you can pass an IPv4 sockaddr to sendto without causing problem.
+	 */
+#endif
 
 	snprintf(num, sizeof(num), "%d", rtp_port);
 	err = getaddrinfo(rtp_addr, num, &hints, &res0);
@@ -777,7 +787,9 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = hints.ai_family==AF_INET6 ? AI_V4MAPPED : 0;
+#ifndef ANDROID
+	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED | AI_ALL : 0;
+#endif
 	snprintf(num, sizeof(num), "%d", rtcp_port);
 	err = getaddrinfo(rtcp_addr, num, &hints, &res0);
 	if (err) {
