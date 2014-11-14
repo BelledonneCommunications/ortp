@@ -23,10 +23,11 @@ if HAVE_DOXYGEN
 pkgdocdir=$(docdir)/$(PACKAGE)-$(VERSION)
 doc_htmldir=$(pkgdocdir)/html
 
+pkgdoc_DATA = README AUTHORS ChangeLog COPYING
 doc_html_DATA = $(top_builddir)/doc/html/html.tar
 
-$(doc_html_DATA): $(top_builddir)/doc/html/index.html
-	cd $(top_builddir)/doc/html/ && tar cf html.tar *
+$(top_builddir)/doc/html/html.tar: $(top_builddir)/doc/html/index.html
+	cd $(top_builddir)/doc/html/ && rm -f html.tar && tar cf html.tar *
 
 $(top_builddir)/doc/html/index.html: $(SOURCES) ortp.doxygen Makefile.am
 	rm -rf doc
