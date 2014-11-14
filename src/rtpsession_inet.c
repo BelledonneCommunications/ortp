@@ -111,7 +111,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = AI_NUMERICSERV;
+
 	snprintf(num, sizeof(num), "%d",*port);
 	err = getaddrinfo(addr,num, &hints, &res0);
 	if (err!=0) {
@@ -737,7 +737,6 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
 	hints.ai_socktype = SOCK_DGRAM;
-	hints.ai_flags = AI_NUMERICSERV;
 #ifndef ANDROID
 	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED | AI_ALL : 0;
 #else
