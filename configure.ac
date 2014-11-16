@@ -296,31 +296,6 @@ else
 	SRTP_LIBS=
 fi
 
-
-
-dnl check for libzrtp support (RFC 6189: Media Path Key Agreement for Unicast Secure RTP)
-AC_ARG_ENABLE(zrtp,
-	[AS_HELP_STRING([--enable-zrtp], [Turn on or off compilation of zrtp (default=no)])],
-	[case "${enableval}" in
-		yes)	zrtp=true ;;
-		no)	zrtp=false ;;
-		*)	AC_MSG_ERROR(bad value ${enableval} for --enable-zrtp) ;;
-	esac],
-	[zrtp=false]
-)
-
-if test "$zrtp" = "true" ; then
-	PKG_CHECK_MODULES(LIBBZRTP, libbzrtp >= 0.0.0)
-	if test "$have_srtp" = "no" ; then
-		AC_MSG_ERROR("ZRTP requires SRTP")
-	fi
-	AC_DEFINE(HAVE_zrtp, 1, [Defined when zrtp support is compiled])
-else
-	echo "ZRTP compilation is disabled."
-fi
-AM_CONDITIONAL(LIBBZRTP,test x$zrtp != xfalse)
-
-
 if test $debug_enabled = "yes"; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_DEBUG_MODE"
 	CFLAGS=`echo $CFLAGS | sed 's/-O.//'`
@@ -394,8 +369,8 @@ fi
 
 AC_SUBST(SSL_LIBS)
 
-ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SRTP_LIBS $SSL_LIBS $LIBBZRTP_LIBS"
-ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $SRTP_CFLAGS $LIBBZRTP_CFLAGS"
+ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SRTP_LIBS $SSL_LIBS"
+ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $SRTP_CFLAGS"
 CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs
 

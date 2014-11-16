@@ -45,15 +45,9 @@ libortp_la_SOURCES=	str_utils.c 	\
 			stun.c stun_udp.c \
 			ortp_srtp.c \
 			b64.c \
-			zrtp.c \
 			netsim.c
 
-if LIBBZRTP
-AM_CFLAGS+= $(LIBBZRTP_CFLAGS)
-AM_LDFLAGS+= $(LIBBZRTP_LDFLAGS)
-endif
-
-libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS) $(LIBBZRTP_LIBS)
+libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS)
 
 libortp_la_LDFLAGS= -version-info $(LIBORTP_SO_VERSION) -no-undefined
 

@@ -787,6 +787,21 @@ mblk_t * rtp_session_create_packet(RtpSession *session,int header_size, const ui
 	return mp;
 }
 
+
+/**
+ * Create a packet already including headers
+ */
+mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, int packet_size) {
+	mblk_t *mp;
+
+	mp=allocb(packet_size,BPRI_MED);
+	if (packet_size){
+		memcpy(mp->b_wptr,packet,packet_size);
+		mp->b_wptr+=packet_size;
+	}
+	return mp;
+}
+
 /**
  *	Creates a new rtp packet using the given payload buffer (no copy). The header will be allocated separetely.
  *  In the header, ssrc and payload_type according to the session's
@@ -2002,6 +2017,56 @@ int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const s
 		msg->b_wptr+=(ret-prev_ret);
 		prev_ret=ret;
 	}
+	if (m->endpoint!=NULL){
+		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
+	}else{
+		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)msg->b_rptr,msgdsize(msg),flags,to,tolen);
+	}
+	return ret;
+}
+
+/**
+ * allow a modifier to inject a packet wich will be treated by successive modifiers
+ */
+int meta_rtp_transport_modifier_inject_packet(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags) {
+	int prev_ret,ret;
+	OList *elem;
+	struct sockaddr *to;
+	socklen_t tolen;
+	bool_t packetInjected = FALSE;
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(t->session,m);
+	}
+
+	/* get back socket from transport session */
+	to=(struct sockaddr*)&t->session->rtp.gs.rem_addr;
+	tolen=t->session->rtp.gs.rem_addrlen;
+
+	prev_ret=msgdsize(msg);
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+
+		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
+		if (packetInjected == TRUE) {
+			RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+			ret = rtm->t_process_on_send(rtm,msg);
+
+			if (ret<0){
+				// something went wrong in the modifier (failed to encrypt for instance)
+				return ret;
+			}
+			msg->b_wptr+=(ret-prev_ret);
+			prev_ret=ret;
+		}
+
+		/* check if we must inject the packet */
+		if (elem->data == tpm) {
+			packetInjected = TRUE;
+		}
+
+	}
+
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
