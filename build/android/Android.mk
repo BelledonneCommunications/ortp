@@ -54,8 +54,7 @@ LOCAL_SRC_FILES := \
 	src/stun_udp.c \
 	src/ortp_srtp.c \
 	src/b64.c \
-	src/netsim.c \
-	src/zrtp.c
+	src/netsim.c
 
 LOCAL_CFLAGS += \
 	-DORTP_INET6 \
@@ -63,12 +62,6 @@ LOCAL_CFLAGS += \
 	-include ortp_AndroidConfig.h \
 	-Werror -Wall -Wno-error=strict-aliasing -Wuninitialized
 
-
-ifeq ($(BUILD_ZRTP), 1)
-LOCAL_STATIC_LIBRARIES += libbzrtp
-LOCAL_CFLAGS += -DHAVE_zrtp
-LOCAL_C_INCLUDES += $(ZRTP_C_INCLUDE)
-endif #ZRTP
 
 ifeq ($(BUILD_SRTP), 1)
 LOCAL_STATIC_LIBRARIES += libsrtp

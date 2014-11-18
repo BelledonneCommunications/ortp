@@ -105,7 +105,6 @@
     <ClInclude Include="..\..\..\include\ortp\stun.h" />
     <ClInclude Include="..\..\..\include\ortp\stun_udp.h" />
     <ClInclude Include="..\..\..\include\ortp\telephonyevents.h" />
-    <ClInclude Include="..\..\..\include\ortp\zrtp.h" />
     <ClInclude Include="..\..\..\src\jitterctl.h" />
     <ClInclude Include="..\..\..\src\rtpsession_priv.h" />
     <ClInclude Include="..\..\..\src\rtptimer.h" />
@@ -147,7 +146,6 @@
       <CompileAsWinRT>true</CompileAsWinRT>
       <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
-    <ClCompile Include="..\..\..\src\zrtp.c" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Windows">

@@ -27,9 +27,6 @@ endif()
 if(SRTP_FOUND)
 	list(APPEND LIBS ${SRTP_LIBRARIES})
 endif()
-if(BZRTP_FOUND)
-	list(APPEND LIBS ${BZRTP_LIBRARIES})
-endif()
 
 set(SOURCE_FILES
 	avprofile.c
@@ -60,7 +57,6 @@ set(SOURCE_FILES
 	stun_udp.c
 	telephonyevents.c
 	utils.c
-	zrtp.c
 )
 
 if(WIN32)
