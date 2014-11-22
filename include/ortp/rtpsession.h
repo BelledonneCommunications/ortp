@@ -117,12 +117,16 @@ typedef struct _RtpTransport
 	void  (*t_destroy)(struct _RtpTransport *transport);
 }  RtpTransport;
 
+
 typedef struct _OrtpNetworkSimulatorParams{
 	int enabled;
 	float max_bandwidth; /*IP bandwidth, in bit/s*/
 	int max_buffer_size; /*Max number of bit buffered before being discarded*/
-	float loss_rate;
+	float loss_rate; /*Percentage*/
 	uint32_t latency; /*Packet transmission delay, in ms*/
+	float consecutive_loss_probability;/* a probablity of having a subsequent loss after a loss occured, in a 0-1 range.*/
+	float jitter_density; /*Probablity density of a jitter event*/
+	float jitter_strength; /*percentage of max_bandwidth */
 }OrtpNetworkSimulatorParams;
 
 typedef struct _OrtpNetworkSimulatorCtx{
@@ -132,9 +136,11 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	queue_t q;
 	queue_t latency_q;
 	struct timeval last_check;
-
+	int consecutive_drops;
+	int drops_to_ignore;
 	int drop_by_congestion;
 	int drop_by_loss;
+	bool_t in_jitter_event;
 }OrtpNetworkSimulatorCtx;
 
 typedef struct OrtpRtcpSendAlgorithm {

@@ -47,18 +47,33 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 			sim=simulator_ctx_new();
 		sim->drop_by_congestion=sim->drop_by_loss=0;
 		sim->params=*params;
+		
+		if (sim->params.jitter_density>0 && sim->params.jitter_strength>0 && sim->params.max_bandwidth==0){
+			sim->params.max_bandwidth=1024000;
+			ortp_message("Network simulation: jitter requested but max_bandwidth is not set. Using default value of %f bits/s.",
+				sim->params.max_bandwidth);
+		}
 		if (sim->params.max_bandwidth && sim->params.max_buffer_size==0) {
 			sim->params.max_buffer_size=sim->params.max_bandwidth;
 			ortp_message("Network simulation: Max buffer size not set for RTP session [%p], using [%i]",session,sim->params.max_buffer_size);
 		}
-
 		session->net_sim_ctx=sim;
 
-		ortp_message("Network simulation: enabled with params latency=%d, loss_rate=%f, max_bandwidth=%f, max_buffer_size=%d"
-					, params->latency
-					, params->loss_rate
-					, params->max_bandwidth
-					, params->max_buffer_size);
+		ortp_message("Network simulation: enabled with params"
+				"\tlatency=%d\n"
+				"\tloss_rate=%f\n"
+				"\tconsecutive_loss_probability=%f\n"
+				"\tmax_bandwidth=%f\n"
+				"\tmax_buffer_size=%d\n"
+				"\tjitter_density=%f\n"
+				"\tjitter_strength=%f\n",
+				params->latency,
+				params->loss_rate,
+				params->consecutive_loss_probability,
+				params->max_bandwidth,
+				params->max_buffer_size,
+				params->jitter_density,
+				params->jitter_strength);
 	}else{
 		if (sim!=NULL) ortp_network_simulator_destroy(sim);
 		session->net_sim_ctx=NULL;
@@ -98,7 +113,29 @@ static mblk_t * simulate_latency(RtpSession *session, mblk_t *input){
 	return NULL;
 }
 
-static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
+static int simulate_jitter_by_bit_budget_reduction(OrtpNetworkSimulatorCtx *sim, int64_t elapsed){
+	unsigned int r=ortp_random()%1000;
+	float threshold;
+	int budget_adjust=0;
+	
+	if (sim->in_jitter_event){
+		threshold=500;
+	}else{ 
+		threshold=(int64_t)sim->params.jitter_density*(int64_t)1000*elapsed/(int64_t)1000000LL;
+	}
+	if (r<(int)threshold){
+		float strength_rand=sim->params.jitter_strength * (ortp_random()%1000)/1000;
+		sim->in_jitter_event=TRUE;
+		budget_adjust=-((int64_t)sim->params.max_bandwidth*(int64_t)strength_rand/(int64_t)100)*elapsed/(int64_t)1000000LL;
+		ortp_message("jitter in progress... bit_budget_adjustement=%i",budget_adjust);
+	}else if (sim->in_jitter_event){
+		ortp_message("jitter ended.");
+		sim->in_jitter_event=FALSE;
+	}
+	return budget_adjust;
+}
+
+static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *input){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
 	struct timeval current;
 	int64_t elapsed;
@@ -115,6 +152,7 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	/*update the budget */
 	elapsed=elapsed_us(&sim->last_check,&current);
 	sim->bit_budget+=(elapsed*(int64_t)sim->params.max_bandwidth)/1000000LL;
+	sim->bit_budget+=simulate_jitter_by_bit_budget_reduction(sim,elapsed);
 	sim->last_check=current;
 	/* queue the packet for sending*/
 	if (input){
@@ -152,17 +190,28 @@ static mblk_t *simulate_bandwidth_limit(RtpSession *session, mblk_t *input){
 	return output;
 }
 
-static mblk_t *simulate_loss_rate(RtpSession *session, mblk_t *input, int rate){
+static mblk_t *simulate_loss_rate(OrtpNetworkSimulatorCtx *net_sim_ctx, mblk_t *input){
 	int rrate;
-#ifdef HAVE_ARC4RANDOM
-	rrate = arc4random_uniform(101);
-#else
-	rrate = rand() % 101;
-#endif
-	if(rrate >= rate) {
+	float loss_rate=net_sim_ctx->params.loss_rate;
+
+	/*in order to simulate bursts of dropped packets, take into account a different probability after a loss occured*/
+	if (net_sim_ctx->consecutive_drops>0){
+		loss_rate=net_sim_ctx->params.consecutive_loss_probability*100.0;
+	}
+	
+	rrate = ortp_random() % 101;
+	
+	if (rrate >= loss_rate) {
+		net_sim_ctx->drops_to_ignore=net_sim_ctx->consecutive_drops;
+		net_sim_ctx->consecutive_drops=0;
 		return input;
 	}
-	session->net_sim_ctx->drop_by_loss++;
+	if (net_sim_ctx->drops_to_ignore>0){
+		net_sim_ctx->drops_to_ignore--;
+		return input;
+	}
+	net_sim_ctx->consecutive_drops++;
+	net_sim_ctx->drop_by_loss++;
 	freemsg(input);
 	return NULL;
 }
@@ -183,10 +232,10 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 	}
 
 	if (sim->params.max_bandwidth>0){
-		om=simulate_bandwidth_limit(session,om);
+		om=simulate_bandwidth_limit_and_jitter(session,om);
 	}
 	if (sim->params.loss_rate>0 && om){
-		om=simulate_loss_rate(session,om, sim->params.loss_rate);
+		om=simulate_loss_rate(sim,om);
 	}
 	/*finally when releasing the packet from the simulator, reset the reserved1 space to default,
 	since it will be used by mediastreamer later*/
