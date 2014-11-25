@@ -271,6 +271,8 @@ typedef struct _RtpStream
 	uint32_t rcv_ts_offset;  /* the first stream timestamp */
 	uint32_t rcv_query_ts_offset;	/* the first user timestamp asked by the application */
 	uint32_t rcv_last_ts;	/* the last stream timestamp got by the application */
+	uint16_t rcv_last_seq;	/* the last stream sequence number got by the application*/
+	uint16_t pad;
 	uint32_t rcv_last_app_ts; /* the last application timestamp asked by the application */
 	uint32_t rcv_last_ret_ts; /* the timestamp of the last sample returned (only for continuous audio)*/
 	uint32_t hwrcv_extseq; /* last received on socket extended sequence number */

@@ -223,7 +223,9 @@ static mblk_t *simulate_loss_rate(OrtpNetworkSimulatorCtx *net_sim_ctx, mblk_t *
 		net_sim_ctx->drops_to_ignore--;
 		return input;
 	}
-	net_sim_ctx->consecutive_drops++;
+	if (net_sim_ctx->params.consecutive_loss_probability>0){
+		net_sim_ctx->consecutive_drops++;
+	}
 	net_sim_ctx->drop_by_loss++;
 	freemsg(input);
 	return NULL;

@@ -95,9 +95,6 @@ static uint32_t uint32_t_random(){
 }
 
 
-#define RTP_SEQ_IS_GREATER(seq1,seq2)\
-	((uint16_t)((uint16_t)(seq1) - (uint16_t)(seq2))< (uint16_t)(1<<15))
-
 /* put an rtp packet in queue. It is called by rtp_parse()
    A return value of -1 means the packet was a duplicate, 0 means the packet was ok */
 int rtp_putq(queue_t *q, mblk_t *mp)
@@ -126,7 +123,7 @@ int rtp_putq(queue_t *q, mblk_t *mp)
 			ortp_debug("rtp_putq: duplicated message.");
 			freemsg(mp);
 			return -1;
-		}else if (RTP_SEQ_IS_GREATER(rtp->seq_number,tmprtp->seq_number)){
+		}else if (RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number,tmprtp->seq_number)){
 
 			insq(q,tmp->b_next,mp);
 			return 0;
@@ -1157,7 +1154,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 
 	goto end;
 
-	  end:
+	end:
 	if (mp != NULL)
 	{
 		int msgsize = msgdsize (mp);	/* evaluate how much bytes (including header) is received by app */
@@ -1185,6 +1182,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is %u",packet_ts,rtp->timestamp);*/
 		}
 		session->rtp.rcv_last_ts = packet_ts;
+		session->rtp.rcv_last_seq = rtp->seq_number;
 		if (!(session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)){
 			rtp_session_set_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 		}
@@ -1567,6 +1565,7 @@ void rtp_session_reset (RtpSession * session)
 	session->rtp.rcv_ts_offset = 0;
 	session->rtp.rcv_query_ts_offset = 0;
 	session->rtp.rcv_last_ts = 0;
+	session->rtp.rcv_last_seq = 0;
 	session->rtp.rcv_last_app_ts = 0;
 	session->rtp.hwrcv_extseq = 0;
 	session->rtp.hwrcv_since_last_SR=0;
