@@ -125,7 +125,7 @@ typedef struct _OrtpNetworkSimulatorParams{
 	float loss_rate; /*Percentage*/
 	uint32_t latency; /*Packet transmission delay, in ms*/
 	float consecutive_loss_probability;/* a probablity of having a subsequent loss after a loss occured, in a 0-1 range.*/
-	float jitter_density; /*Probablity density of a jitter event*/
+	float jitter_burst_density; /*density of gap/bursts events. A value of 1 means one gap/burst per second approximately*/
 	float jitter_strength; /*percentage of max_bandwidth */
 }OrtpNetworkSimulatorParams;
 
@@ -136,6 +136,7 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	queue_t q;
 	queue_t latency_q;
 	struct timeval last_check;
+	uint64_t last_jitter_event;
 	int consecutive_drops;
 	int drops_to_ignore;
 	int drop_by_congestion;
