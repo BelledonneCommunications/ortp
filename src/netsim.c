@@ -202,19 +202,19 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 
 static mblk_t *simulate_loss_rate(OrtpNetworkSimulatorCtx *net_sim_ctx, mblk_t *input){
 	int rrate;
-	float loss_rate=net_sim_ctx->params.loss_rate;
+	float loss_rate=net_sim_ctx->params.loss_rate*10.0;
 
 	/*in order to simulate bursts of dropped packets, take into account a different probability after a loss occured*/
 	if (net_sim_ctx->consecutive_drops>0){
-		loss_rate=net_sim_ctx->params.consecutive_loss_probability*100.0;
+		loss_rate=net_sim_ctx->params.consecutive_loss_probability*1000.0;
 	}
 	
-	rrate = ortp_random() % 101;
-	
+	rrate = ortp_random() % 1000;
+
 	if (rrate >= loss_rate) {
 		if (net_sim_ctx->consecutive_drops){
 			/*after a burst of lost packets*/
-			net_sim_ctx->drops_to_ignore=net_sim_ctx->consecutive_drops;
+			net_sim_ctx->drops_to_ignore=net_sim_ctx->consecutive_drops - ((net_sim_ctx->consecutive_drops*net_sim_ctx->params.loss_rate)/100);
 			net_sim_ctx->consecutive_drops=0;
 		}
 		return input;
