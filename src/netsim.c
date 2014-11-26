@@ -32,9 +32,16 @@ static OrtpNetworkSimulatorCtx* simulator_ctx_new(void){
 
 void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
 	int drop_by_flush=sim->latency_q.q_mcount+sim->q.q_mcount;
-	ortp_message("Network simulation: destroyed. %d packets dropped by loss, %d "
-		"packets dropped by congestion, %d packets flushed."
-		, sim->drop_by_loss, sim->drop_by_congestion, drop_by_flush);
+	if (sim->total_count>0){
+		ortp_message("Network simulation: destroyed. Statistics are:"
+			"%d/%d(%.1f%%, param=%.1f) packets dropped by loss, "
+			"%d/%d(%.1f%%) packets dropped by congestion, "
+			"%d/%d(%.1f%%) packets flushed."
+			, sim->drop_by_loss, sim->total_count, sim->drop_by_loss*100.f/sim->total_count, sim->params.loss_rate
+			, sim->drop_by_congestion, sim->total_count, sim->drop_by_congestion*100.f/sim->total_count
+			, drop_by_flush, sim->total_count, drop_by_flush*100.f/sim->total_count
+		);
+	}
 	flushq(&sim->latency_q,0);
 	flushq(&sim->q,0);
 	ortp_free(sim);
@@ -45,9 +52,8 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 	if (params->enabled){
 		if (sim==NULL)
 			sim=simulator_ctx_new();
-		sim->drop_by_congestion=sim->drop_by_loss=0;
+		sim->drop_by_congestion=sim->drop_by_loss=sim->total_count=0;
 		sim->params=*params;
-		
 		if (sim->params.jitter_burst_density>0 && sim->params.jitter_strength>0 && sim->params.max_bandwidth==0){
 			sim->params.max_bandwidth=1024000;
 			ortp_message("Network simulation: jitter requested but max_bandwidth is not set. Using default value of %f bits/s.",
@@ -59,14 +65,14 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 		}
 		session->net_sim_ctx=sim;
 
-		ortp_message("Network simulation: enabled with params"
+		ortp_message("Network simulation: enabled with the following parameters:\n"
 				"\tlatency=%d\n"
-				"\tloss_rate=%f\n"
-				"\tconsecutive_loss_probability=%f\n"
-				"\tmax_bandwidth=%f\n"
+				"\tloss_rate=%.1f\n"
+				"\tconsecutive_loss_probability=%.1f\n"
+				"\tmax_bandwidth=%.1f\n"
 				"\tmax_buffer_size=%d\n"
-				"\tjitter_density=%f\n"
-				"\tjitter_strength=%f\n",
+				"\tjitter_density=%.1f\n"
+				"\tjitter_strength=%.1f\n",
 				params->latency,
 				params->loss_rate,
 				params->consecutive_loss_probability,
@@ -118,11 +124,11 @@ static int simulate_jitter_by_bit_budget_reduction(OrtpNetworkSimulatorCtx *sim,
 	float threshold,score;
 	int budget_adjust=0;
 	uint64_t now=ortp_get_cur_time_ms();
-	
+
 	if (sim->last_jitter_event==0){
 		sim->last_jitter_event=ortp_get_cur_time_ms();
 	}
-	
+
 	if (sim->in_jitter_event){
 		threshold=100;
 		score=(float)r;
@@ -208,7 +214,7 @@ static mblk_t *simulate_loss_rate(OrtpNetworkSimulatorCtx *net_sim_ctx, mblk_t *
 	if (net_sim_ctx->consecutive_drops>0){
 		loss_rate=net_sim_ctx->params.consecutive_loss_probability*1000.0;
 	}
-	
+
 	rrate = ortp_random() % 1000;
 
 	if (rrate >= loss_rate) {
@@ -239,6 +245,7 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 
 	/*while packet is stored in network simulator queue, keep its type in reserved1 space*/
 	if (om != NULL){
+		sim->total_count++;
 		om->reserved1 = *is_rtp_packet;
 	}
 

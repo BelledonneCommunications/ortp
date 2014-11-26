@@ -141,6 +141,7 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	int drops_to_ignore;
 	int drop_by_congestion;
 	int drop_by_loss;
+	int total_count; /*total number of packets gone through the simulator*/
 	bool_t in_jitter_event;
 }OrtpNetworkSimulatorCtx;
 
