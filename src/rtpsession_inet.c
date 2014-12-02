@@ -948,7 +948,7 @@ void rtp_session_flush_sockets(RtpSession *session){
 
 #ifdef USE_SENDMSG
 #define MAX_IOV 30
-static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_len){
+static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
 	int error;
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
@@ -972,6 +972,18 @@ static int rtp_sendmsg(int sock,mblk_t *m, struct sockaddr *rem_addr, int addr_l
 }
 #endif
 
+int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
+	int error;
+#ifdef USE_SENDMSG
+	error=rtp_sendmsg(sockfd,m,destaddr,destlen);
+#else
+	if (m->b_cont!=NULL)
+		msgpullup(m,-1);
+	error = sendto (sockfd, (char*)m->b_rptr, (int) (m->b_wptr - m->b_rptr),
+		0,destaddr,destlen);
+#endif
+	return error;
+}
 
 static void update_sent_bytes(OrtpStream *os, int nbytes) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
@@ -1005,14 +1017,7 @@ static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct socka
 	if (rtp_session_using_transport(session, rtp)){
 		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
-#ifdef USE_SENDMSG
-		error=rtp_sendmsg(sockfd,m,destaddr,destlen);
-#else
-		if (m->b_cont!=NULL)
-			msgpullup(m,-1);
-		error = sendto (sockfd, (char*)m->b_rptr, (int) (m->b_wptr - m->b_rptr),
-			0,destaddr,destlen);
-#endif
+		error=_ortp_sendto(sockfd,m,0,destaddr,destlen);
 	}
 	if (!is_aux){
 		/*errors to auxiliary destinations are not notified*/

@@ -1996,7 +1996,7 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 	m->has_set_session=TRUE;
 }
 
-int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
+int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
 	int prev_ret,ret;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
@@ -2019,7 +2019,7 @@ int  meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const s
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
-		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)msg->b_rptr,msgdsize(msg),flags,to,tolen);
+		ret=_ortp_sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,to,tolen);
 	}
 	return ret;
 }
