@@ -46,29 +46,6 @@ int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, unsigned long use
 	return -1;
 }
 
-void rtp_signal_table_emit(RtpSignalTable *table)
-{
-	int i,c;
-	
-	for (i=0,c=0;c<table->count;i++){
-		if (table->callback[i]!=NULL){
-			c++;	/*I like it*/
-			table->callback[i](table->session,table->user_data[i]);
-		}
-	}
-}
-
-void rtp_signal_table_emit2(RtpSignalTable *table,unsigned long arg)
-{
-	int i,c;
-	
-	for (i=0,c=0;c<table->count;i++){
-		if (table->callback[i]!=NULL){
-			c++;	/*I like it*/
-			table->callback[i](table->session,arg,table->user_data[i]);
-		}
-	}
-}
 
 void rtp_signal_table_emit3(RtpSignalTable *table, unsigned long arg1, unsigned long arg2)
 {
@@ -80,6 +57,16 @@ void rtp_signal_table_emit3(RtpSignalTable *table, unsigned long arg1, unsigned 
 			table->callback[i](table->session,arg1,arg2,table->user_data[i]);
 		}
 	}
+}
+
+void rtp_signal_table_emit(RtpSignalTable *table)
+{
+	return rtp_signal_table_emit3(table, NULL, NULL);
+}
+
+void rtp_signal_table_emit2(RtpSignalTable *table,unsigned long arg)
+{
+	return rtp_signal_table_emit3(table, arg, NULL);
 }
 
 int rtp_signal_table_remove_by_callback(RtpSignalTable *table,RtpCallback cb)
