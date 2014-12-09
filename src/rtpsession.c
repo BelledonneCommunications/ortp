@@ -544,7 +544,7 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned 
 **/
 int
 rtp_session_signal_connect (RtpSession * session, const char *signal_name,
-				RtpCallback cb, unsigned long user_data)
+				RtpCallback cb, void *user_data)
 {
 	OList *elem;
 	for (elem=session->signal_tables;elem!=NULL;elem=o_list_next(elem)){

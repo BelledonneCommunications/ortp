@@ -31,7 +31,7 @@ void rtp_signal_table_init(RtpSignalTable *table,RtpSession *session, const char
 	session->signal_tables=o_list_append(session->signal_tables,(void*)table);
 }
 
-int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, unsigned long user_data)
+int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data)
 {
 	int i;
 	
@@ -61,12 +61,12 @@ void rtp_signal_table_emit3(RtpSignalTable *table, unsigned long arg1, unsigned 
 
 void rtp_signal_table_emit(RtpSignalTable *table)
 {
-	return rtp_signal_table_emit3(table, NULL, NULL);
+	return rtp_signal_table_emit3(table, 0, 0);
 }
 
 void rtp_signal_table_emit2(RtpSignalTable *table,unsigned long arg)
 {
-	return rtp_signal_table_emit3(table, arg, NULL);
+	return rtp_signal_table_emit3(table, arg, 0);
 }
 
 int rtp_signal_table_remove_by_callback(RtpSignalTable *table,RtpCallback cb)

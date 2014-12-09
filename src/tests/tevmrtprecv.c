@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
 		p_channel_id[i] = i;
 		/* register for telephony events */
-		rtp_session_signal_connect(session[i],"telephone-event",(RtpCallback)recv_tev_cb,(long)&p_channel_id[i]);
+		rtp_session_signal_connect(session[i],"telephone-event",(RtpCallback)recv_tev_cb,&p_channel_id[i]);
 
 		port+=2;
 	}
