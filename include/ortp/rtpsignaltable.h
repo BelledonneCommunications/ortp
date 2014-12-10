@@ -22,12 +22,12 @@
 
 #define RTP_CALLBACK_TABLE_MAX_ENTRIES	5
 
-typedef void (*RtpCallback)(struct _RtpSession *, ...);
+typedef void (*RtpCallback)(struct _RtpSession *, unsigned long arg1, unsigned long arg2, void* userdata);
 
 struct _RtpSignalTable
 {
 	RtpCallback callback[RTP_CALLBACK_TABLE_MAX_ENTRIES];
-	unsigned long user_data[RTP_CALLBACK_TABLE_MAX_ENTRIES];
+	void * user_data[RTP_CALLBACK_TABLE_MAX_ENTRIES];
 	struct _RtpSession *session;
 	const char *signal_name;
 	int count;
@@ -37,7 +37,7 @@ typedef struct _RtpSignalTable RtpSignalTable;
 
 void rtp_signal_table_init(RtpSignalTable *table,struct _RtpSession *session, const char *signal_name);
 
-int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, unsigned long user_data);
+int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data);
 
 void rtp_signal_table_emit(RtpSignalTable *table);
 

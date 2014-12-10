@@ -43,7 +43,7 @@ static char *help="usage: test_tevrecv	filename loc_port\n";
 
 int dtmf_count=0;
 
-void recv_tev_cb(RtpSession *session,int type,long user_data)
+void recv_tev_cb(RtpSession *session,unsigned long type, unsigned long dummy, void* user_data)
 {
 	printf("Receiving telephony event:%i\n",type);
 	if (type<16) printf("This is dtmf %c\n",dtmf_tab[type]);

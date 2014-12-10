@@ -58,7 +58,7 @@ static char *help="usage: tevmrtprecv	file_prefix local_port number_of_streams \
 #define STREAMS_COUNT 1000
 
 
-void recv_tev_cb(RtpSession *session,int type,long user_data)
+void recv_tev_cb(RtpSession *session,unsigned long type, unsigned long dummy, void* user_data)
 {
         //printf("Receiving telephony event:%i\n",type);
         if (type<16) printf("This is dtmf %c on channel %d\n",dtmf_tab[type],*(int *)user_data);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 
 		p_channel_id[i] = i;
 		/* register for telephony events */
-		rtp_session_signal_connect(session[i],"telephone-event",(RtpCallback)recv_tev_cb,(long)&p_channel_id[i]);
+		rtp_session_signal_connect(session[i],"telephone-event",(RtpCallback)recv_tev_cb,&p_channel_id[i]);
 
 		port+=2;
 	}
