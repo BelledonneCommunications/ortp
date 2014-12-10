@@ -39,6 +39,7 @@ struct _OrtpEventData{
 	union {
 		int telephone_event;
 		int payload_type;
+		bool_t dtls_stream_encrypted;
 		bool_t zrtp_stream_encrypted;
 		struct _ZrtpSas{
 			char sas[5]; // 4 characters
@@ -72,6 +73,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ICE_GATHERING_FINISHED		10
 #define ORTP_EVENT_ICE_LOSING_PAIRS_COMPLETED		11
 #define ORTP_EVENT_ICE_RESTART_NEEDED			12
+#define ORTP_EVENT_DTLS_ENCRYPTION_CHANGED		13
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
