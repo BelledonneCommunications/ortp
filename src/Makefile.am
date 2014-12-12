@@ -42,7 +42,6 @@ libortp_la_SOURCES=	str_utils.c 	\
 			utils.c utils.h \
 			rtcpparse.c \
 			event.c \
-			stun.c stun_udp.c \
 			ortp_srtp.c \
 			b64.c \
 			netsim.c
