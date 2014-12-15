@@ -130,6 +130,17 @@ void rtp_session_set_source_description(RtpSession *session, const char *cname,
 	const char *tool, const char *note) {
 	mblk_t *m;
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
+	if (strlen(cname)>255) {
+		/*
+		 * rfc3550,
+		 * 6.5 SDES: Source Description RTCP Packet
+		 * ...
+		 * Note that the text can be no longer than 255 octets,
+		 *
+		 * */
+		ortp_warning("Cname [%s] too long for session [%p]",cname,session);
+	}
+
 	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note);
 	if (session->full_sdes != NULL)
 		freemsg(session->full_sdes);
