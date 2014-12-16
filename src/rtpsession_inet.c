@@ -921,28 +921,9 @@ void rtp_session_get_transports(RtpSession *session, RtpTransport **rtptr, RtpTr
  *
 **/
 void rtp_session_flush_sockets(RtpSession *session){
-	unsigned char trash[4096];
-	struct sockaddr_storage from;
-
-	socklen_t fromlen=sizeof(from);
-	if (rtp_session_using_transport(session, rtp))
-		{
-		mblk_t *trashmp=esballoc(trash,sizeof(trash),0,NULL);
-
-		while (session->rtp.gs.tr->t_recvfrom(session->rtp.gs.tr,trashmp,0,(struct sockaddr *)&from,&fromlen)>0){};
-
-		if (session->rtcp.gs.tr)
-			while (session->rtcp.gs.tr->t_recvfrom(session->rtcp.gs.tr,trashmp,0,(struct sockaddr *)&from,&fromlen)>0){};
-			freemsg(trashmp);
-			return;
-		}
-
-	if (session->rtp.gs.socket!=(ortp_socket_t)-1){
-		while (recvfrom(session->rtp.gs.socket,(char*)trash,sizeof(trash),0,(struct sockaddr *)&from,&fromlen)>0){};
-	}
-	if (session->rtcp.gs.socket!=(ortp_socket_t)-1){
-		while (recvfrom(session->rtcp.gs.socket,(char*)trash,sizeof(trash),0,(struct sockaddr*)&from,&fromlen)>0){};
-	}
+	rtp_session_set_flag(session, RTP_SESSION_FLUSH);
+	rtp_session_rtp_recv(session, 0);
+	rtp_session_unset_flag(session, RTP_SESSION_FLUSH);
 }
 
 
