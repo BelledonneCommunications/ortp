@@ -429,8 +429,8 @@ ORTP_PUBLIC void rtp_session_clear_aux_remote_addr(RtpSession * session);
 /* alternatively to the set_remote_addr() and set_local_addr(), an application can give
 a valid socket (potentially connect()ed )to be used by the RtpSession */
 ORTP_PUBLIC void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd);
-ORTP_PUBLIC void rtp_session_set_transports(RtpSession *session, RtpTransport *rtptr, RtpTransport *rtcptr);
-ORTP_PUBLIC void rtp_session_get_transports(RtpSession *session, RtpTransport **rtptr, RtpTransport **rtcptr);
+
+ORTP_PUBLIC void rtp_session_get_transports(const RtpSession *session, RtpTransport **rtptr, RtpTransport **rtcptr);
 /*those methods are provided for people who wants to send non-RTP messages using the RTP/RTCP sockets */
 ORTP_PUBLIC ortp_socket_t rtp_session_get_rtp_socket(const RtpSession *session);
 ORTP_PUBLIC ortp_socket_t rtp_session_get_rtcp_socket(const RtpSession *session);
@@ -586,19 +586,28 @@ ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
 
 ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
+
+ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags);
 /**
- * #RtpTransport object which can handle multiples security protocols. You can for instance use this object
- * to use both sRTP and tunnel transporter. #mblk_t messages received and sent from the endpoint
- * will pass through the list of modifiers given. First modifier in list will be first to modify the message
- * in send mode and last in receive mode.
- * @param[in] t #RtpTransport object that will be generated.
- * @param[in] is_rtp Whether this object will be used for RTP packets or not.
- * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
- * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
- * @returns 0 if successful, -1 otherwise
+ * FIXME johan
 **/
-ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags);
-ORTP_PUBLIC int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
+ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags,const struct sockaddr *to, socklen_t tolen) ;
+
+/**
+ * get endpoint if any
+ * @param[in] t #RtpTransport object.
+ * @return #rtpEndpoint
+ *
+ * */
+ORTP_PUBLIC RtpTransport* meta_rtp_transport_get_endpoint(const RtpTransport *transport);
+/**
+ * set endpoint
+ * @param[in] t #RtpTransport object.
+ * @param[in] t #RtpEndpoint.
+ *
+ * */
+ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTransport *endpoint);
+
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
 #ifdef __cplusplus

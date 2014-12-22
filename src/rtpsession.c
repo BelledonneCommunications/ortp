@@ -38,6 +38,17 @@
 #endif
 #endif
 
+/**
+ * #RtpTransport object which can handle multiples security protocols. You can for instance use this object
+ * to use both sRTP and tunnel transporter. #mblk_t messages received and sent from the endpoint
+ * will pass through the list of modifiers given. First modifier in list will be first to modify the message
+ * in send mode and last in receive mode.
+ * @param[in] is_rtp Whether this object will be used for RTP packets or not.
+ * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
+ * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
+ * @returns #RtpTransport object that will be generated or NULL.
+**/
+RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
 
 
 /* this function initialize all session parameter's that depend on the payload type */
@@ -289,6 +300,10 @@ rtp_session_init (RtpSession * session, int mode)
 	session->permissive=FALSE;
 	session->reuseaddr=TRUE;
 	msgb_allocator_init(&session->allocator);
+	/*set default rtptransport*/
+	rtp_session_set_transports(	session
+								,meta_rtp_transport_new(TRUE,NULL, 0)
+								,meta_rtp_transport_new(FALSE,NULL, 0));
 }
 
 
@@ -1445,6 +1460,8 @@ static void ortp_stream_uninit(OrtpStream *os){
 
 void rtp_session_uninit (RtpSession * session)
 {
+	RtpTransport *rtp_meta_transport = NULL;
+	RtpTransport *rtcp_meta_transport = NULL;
 	/* first of all remove the session from the scheduler */
 	if (session->flags & RTP_SESSION_SCHEDULED)
 	{
@@ -1473,6 +1490,12 @@ void rtp_session_uninit (RtpSession * session)
 
 	if (session->net_sim_ctx)
 		ortp_network_simulator_destroy(session->net_sim_ctx);
+
+	rtp_session_get_transports(session,&rtp_meta_transport,&rtcp_meta_transport);
+	if (rtp_meta_transport)
+		meta_rtp_transport_destroy(rtp_meta_transport);
+	if (rtcp_meta_transport)
+		meta_rtp_transport_destroy(rtcp_meta_transport);
 
 #if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	if (session->rtp.QoSFlowID != 0)
@@ -2027,12 +2050,9 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 /**
  * allow a modifier to inject a packet wich will be treated by successive modifiers
  */
-int meta_rtp_transport_modifier_inject_packet(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags) {
-	int prev_ret,ret;
-	OList *elem;
+int meta_rtp_transport_modifier_inject_packet(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags) {
 	struct sockaddr *to;
 	socklen_t tolen;
-	bool_t packetInjected = FALSE;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 
 	if (!m->has_set_session){
@@ -2042,6 +2062,20 @@ int meta_rtp_transport_modifier_inject_packet(RtpTransport *t, RtpTransportModif
 	/* get back socket from transport session */
 	to=(struct sockaddr*)&t->session->rtp.gs.rem_addr;
 	tolen=t->session->rtp.gs.rem_addrlen;
+	return meta_rtp_transport_modifier_inject_packet_to(t,tpm,msg,flags,to,tolen);
+}
+/**
+ * allow a modifier to inject a packet wich will be treated by successive modifiers
+ */
+int meta_rtp_transport_modifier_inject_packet_to(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags,const struct sockaddr *to, socklen_t tolen) {
+	int prev_ret,ret;
+	OList *elem;
+	bool_t packetInjected = tpm?FALSE:TRUE; /*if no modifier, start from the begening*/
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+
+	if (!m->has_set_session){
+		meta_rtp_set_session(t->session,m);
+	}
 
 	prev_ret=msgdsize(msg);
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
@@ -2124,22 +2158,19 @@ void  meta_rtp_transport_close(RtpTransport *t, void *user_data) {
 	}
 }
 
-int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...) {
+RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...) {
 	va_list arguments;
 	MetaRtpTransportImpl *m;
+	RtpTransport *t = ortp_new0(RtpTransport,1);
 
-	if (!t){
-		return 1;
-	}
+	t=ortp_new0(RtpTransport,1);
+	m=t->data=ortp_new0(MetaRtpTransportImpl,1);
 
-	(*t)=ortp_new0(RtpTransport,1);
-	m=(*t)->data=ortp_new0(MetaRtpTransportImpl,1);
-
-	(*t)->t_getsocket=meta_rtp_transport_getsocket;
-	(*t)->t_sendto=meta_rtp_transport_sendto;
-	(*t)->t_recvfrom=meta_rtp_transport_recvfrom;
-	(*t)->t_close=meta_rtp_transport_close;
-	(*t)->t_destroy=meta_rtp_transport_destroy;
+	t->t_getsocket=meta_rtp_transport_getsocket;
+	t->t_sendto=meta_rtp_transport_sendto;
+	t->t_recvfrom=meta_rtp_transport_recvfrom;
+	t->t_close=meta_rtp_transport_close;
+	t->t_destroy=meta_rtp_transport_destroy;
 
 	m->is_rtp=is_rtp;
 	m->endpoint=endpoint;
@@ -2150,7 +2181,18 @@ int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoi
 	}
 	va_end(arguments);
 
-	return -1;
+	return t;
+}
+
+RtpTransport* meta_rtp_transport_get_endpoint(const RtpTransport *transport) {
+	return transport->data ? ((MetaRtpTransportImpl *)transport->data)->endpoint:NULL;
+}
+
+void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTransport *endpoint) {
+	if (transport->data) {
+		((MetaRtpTransportImpl *)transport->data)->endpoint=endpoint;
+	} else
+		ortp_error("Cannot set endpoint [%p] on rtp transport [%p]",transport,endpoint);
 }
 
 void meta_rtp_transport_destroy(RtpTransport *tp) {

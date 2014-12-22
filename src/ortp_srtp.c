@@ -47,22 +47,29 @@
 static int _process_on_send(RtpSession* session,srtp_t srtp,mblk_t *m,bool_t is_rtp){
 	int slen;
 	err_status_t err;
-	rtp_header_t *header=is_rtp?(rtp_header_t*)m->b_rptr:NULL;
+	rtp_header_t *rtp_header=is_rtp?(rtp_header_t*)m->b_rptr:NULL;
+	rtcp_common_header_t *rtcp_header=!is_rtp?(rtcp_common_header_t*)m->b_rptr:NULL;
 
 	slen=msgdsize(m);
 
-	/*only encrypt real RTP packets*/
-	if (!is_rtp||(slen>RTP_FIXED_HEADER_SIZE && header->version==2)){
+	if (rtp_header && (slen>RTP_FIXED_HEADER_SIZE && rtp_header->version==2)) {
 		/* enlarge the buffer for srtp to write its data */
 		msgpullup(m,slen+SRTP_PAD_BYTES);
-		err=is_rtp?srtp_protect(srtp,m->b_rptr,&slen):srtp_protect_rtcp(srtp,m->b_rptr,&slen);
-		if (err==err_status_ok){
-			return slen;
-		}
-		ortp_error("srtp_protect%s() failed (%d)", is_rtp?"":"_rtcp", err);
-	}else if (is_rtp){
+		err=srtp_protect(srtp,m->b_rptr,&slen);
+
+	} else if (rtcp_header && (slen>RTP_FIXED_HEADER_SIZE && rtcp_header->version==2)) {
+		/* enlarge the buffer for srtp to write its data */
+		msgpullup(m,slen+SRTP_PAD_BYTES);
+		err=srtp_protect_rtcp(srtp,m->b_rptr,&slen);
+
+	} else {
+		/*ignoring non rtp/rtcp packets*/
 		return slen;
 	}
+	if (err==err_status_ok){
+		return slen;
+	}
+	ortp_error("srtp_protect%s() failed (%d)", is_rtp?"":"_rtcp", err);
 	return -1;
 }
 
@@ -71,20 +78,6 @@ static int srtp_process_on_send(RtpTransportModifier *t, mblk_t *m){
 }
 static int srtcp_process_on_send(RtpTransportModifier *t, mblk_t *m){
 	return _process_on_send(t->session,(srtp_t)t->data, m,FALSE);
-}
-static int _sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen, bool_t is_rtp){
-	int slen=_process_on_send(t->session,(srtp_t)t->data, m,is_rtp);
-
-	if (slen>=0){
-		return sendto(is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)m->b_rptr,slen,flags,to,tolen);
-	}
-	return slen;
-}
-static int srtp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
-	return _sendto(t,m,flags,to,tolen,TRUE);
-}
-static int srtcp_sendto(RtpTransport *t, mblk_t *m, int flags, const struct sockaddr *to, socklen_t tolen){
-	return _sendto(t,m,flags,to,tolen,FALSE);
 }
 
 static srtp_stream_ctx_t * find_other_ssrc(srtp_t srtp, uint32_t ssrc){
@@ -148,20 +141,6 @@ static int srtp_process_on_receive(RtpTransportModifier *t, mblk_t *m){
 static int srtcp_process_on_receive(RtpTransportModifier *t, mblk_t *m){
 	return _process_on_receive(t->session,(srtp_t)t->data, m,FALSE,msgdsize(m));
 }
-static int _recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen,bool_t is_rtp){
-	int err=rtp_session_rtp_recv_abstract(is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,m,flags,from,fromlen);
-	if (err>0) {
-		return _process_on_receive(t->session, (srtp_t)t->data,m, is_rtp, err);
-	}
-	return err;
-}
-static int srtp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
-	return _recvfrom(t,m,flags,from,fromlen,TRUE);
-}
-static int srtcp_recvfrom(RtpTransport *t, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen){
-	return _recvfrom(t,m,flags,from,fromlen,FALSE);
-}
-
 
 ortp_socket_t srtp_getsocket(RtpTransport *t)
 {
@@ -173,33 +152,6 @@ ortp_socket_t srtcp_getsocket(RtpTransport *t)
 	return t->session->rtcp.gs.socket;
 }
 
-/**
- * Creates a pair of Secure-RTP/Secure-RTCP RtpTransport's.
- * oRTP relies on libsrtp (see http://srtp.sf.net ) for secure RTP encryption.
- * This function creates a RtpTransport object to be used to the RtpSession using
- * rtp_session_set_transport().
- * @srtp: the srtp_t session to be used
- *
-**/
-int srtp_transport_new(srtp_t srtp, RtpTransport **rtpt, RtpTransport **rtcpt ){
-	if (rtpt) {
-		(*rtpt)=ortp_new0(RtpTransport,1);
-		(*rtpt)->data=srtp;
-		(*rtpt)->t_getsocket=srtp_getsocket;
-		(*rtpt)->t_sendto=srtp_sendto;
-		(*rtpt)->t_recvfrom=srtp_recvfrom;
-		(*rtpt)->t_destroy=srtp_transport_destroy;
-	}
-	if (rtcpt) {
-		(*rtcpt)=ortp_new0(RtpTransport,1);
-		(*rtcpt)->data=srtp;
-		(*rtcpt)->t_getsocket=srtcp_getsocket;
-		(*rtcpt)->t_sendto=srtcp_sendto;
-		(*rtcpt)->t_recvfrom=srtcp_recvfrom;
-		(*rtcpt)->t_destroy=srtp_transport_destroy;
-	}
-	return 0;
-}
 
 void srtp_transport_destroy(RtpTransport *tp){
 	ortp_free(tp);
