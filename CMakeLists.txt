@@ -34,19 +34,11 @@ set(ORTP_SO_VERSION "9")
 option(ENABLE_STATIC "Build static library (default is shared library)." NO)
 option(ENABLE_NTP_TIMESTAMP "Turn on NTP timestamping on packet reception." NO)
 option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increase performance." NO)
-option(ENABLE_SRTP "Build oRTP with the SRTP transport support." YES)
 option(ENABLE_TESTS "Enable compilation of test programs." NO)
 set(CACHE WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_PREFIX_PATH}/share/cmake/Modules)
-if(ENABLE_SRTP)
-	find_package(SRTP)
-	if(NOT SRTP_FOUND)
-		message(WARNING "Could not find SRTP library, oRTP will be compiled without SRTP support.")
-		set(ENABLE_SRTP OFF CACHE BOOL "Build oRTP with the SRTP transport support." FORCE)
-	endif()
-endif()
 find_package(Doxygen)
 
 
@@ -147,17 +139,11 @@ include_directories(
 	src/
 	${CMAKE_CURRENT_BINARY_DIR}
 )
-if(SRTP_FOUND)
-	include_directories(${SRTP_INCLUDE_DIRS})
-endif()
 if(MSVC)
 	include_directories(${CMAKE_PREFIX_PATH}/include/MSVC)
 endif()
 
 
-if(SRTP_FOUND)
-	set(HAVE_SRTP 1)
-endif()
 if(ENABLE_STATIC)
 	set(ORTP_STATIC 1)
 endif()
@@ -197,9 +183,6 @@ set(ORTP_CPPFLAGS )
 if(ORTP_STATIC)
 	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
 endif()
-if(SRTP_FOUND)
-	list(APPEND ORTP_CPPFLAGS "-DORTP_HAVE_SRTP")
-endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/FindORTP.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake @ONLY)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake
 	DESTINATION share/cmake/Modules
@@ -233,9 +216,6 @@ set(libdir ${prefix}/lib)
 set(includedir ${prefix}/include)
 set(ORTP_PKGCONFIG_VERSION "${ORTP_VERSION}")
 set(ORTPDEPS_LIBS )
-if(SRTP_FOUND)
-	list(APPEND ORTPDEPS_LIBS "-lsrtp")
-endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION lib/pkgconfig)

@@ -24,9 +24,6 @@ set(LIBS ${CMAKE_THREAD_LIBS_INIT})
 if(HAVE_RT)
 	list(APPEND LIBS rt)
 endif()
-if(SRTP_FOUND)
-	list(APPEND LIBS ${SRTP_LIBRARIES})
-endif()
 
 set(SOURCE_FILES
 	avprofile.c
@@ -36,7 +33,6 @@ set(SOURCE_FILES
 	logging.c
 	netsim.c
 	ortp.c
-	ortp_srtp.c
 	payloadtype.c
 	port.c
 	posixtimer.c

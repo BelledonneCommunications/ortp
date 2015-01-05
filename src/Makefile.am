@@ -11,8 +11,7 @@ AM_CFLAGS=\
 	$(STRICT_OPTIONS) \
 	$(STRICT_OPTIONS_CC) \
 	$(PTHREAD_CFLAGS) \
-	$(TRUESPEECH_CFLAGS) \
-	$(SRTP_CFLAGS)
+	$(TRUESPEECH_CFLAGS)
 
 AM_LDFLAGS=$(PTHREAD_LDFLAGS)
 
@@ -43,11 +42,10 @@ libortp_la_SOURCES=	str_utils.c 	\
 			rtcpparse.c \
 			event.c \
 			stun.c stun_udp.c \
-			ortp_srtp.c \
 			b64.c \
 			netsim.c
 
-libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SRTP_LIBS) $(SSL_LIBS)
+libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SSL_LIBS)
 
 libortp_la_LDFLAGS= -version-info $(LIBORTP_SO_VERSION) -no-undefined
 
