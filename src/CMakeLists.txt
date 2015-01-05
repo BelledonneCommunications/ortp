@@ -49,8 +49,6 @@ set(SOURCE_FILES
 	scheduler.c
 	sessionset.c
 	str_utils.c
-	stun.c
-	stun_udp.c
 	telephonyevents.c
 	utils.c
 )
