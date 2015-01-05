@@ -287,6 +287,9 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		rtp_session_update_payload_type(session,rtp->paytype);
 	}
 
+	/* Drop the packets while the RTP_SESSION_FLUSH flag is set. */
+	if (session->flags & RTP_SESSION_FLUSH) return;
+
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
 
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);

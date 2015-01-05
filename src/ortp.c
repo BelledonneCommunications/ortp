@@ -31,15 +31,6 @@ rtp_stats_t ortp_global_stats;
 int ortp_allocations=0;
 #endif
 
-
-#ifdef HAVE_SRTP
-#undef PACKAGE_NAME
-#undef PACKAGE_STRING
-#undef PACKAGE_TARNAME
-#undef PACKAGE_VERSION
-#include "ortp/ortp_srtp.h"
-#endif
-
 RtpScheduler *__ortp_scheduler;
 
 
@@ -90,9 +81,6 @@ void ortp_init()
 	ortp_global_stats_reset();
 	init_random_number_generator();
 
-#ifdef HAVE_SRTP
-	ortp_srtp_init();
-#endif
 	ortp_message("oRTP-" ORTP_VERSION " initialized.");
 }
 
@@ -139,9 +127,6 @@ void ortp_exit()
 			rtp_scheduler_destroy(__ortp_scheduler);
 			__ortp_scheduler=NULL;
 		}
-#ifdef HAVE_SRTP
-		ortp_srtp_shutdown();
-#endif
 	}
 }
 

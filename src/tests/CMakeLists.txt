@@ -22,32 +22,32 @@
 
 set(RTPSEND_SOURCES rtpsend.c)
 add_executable(rtpsend ${RTPSEND_SOURCES})
-target_link_libraries(rtpsend ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(rtpsend ortp)
 
 set(RTPRECV_SOURCES rtprecv.c)
 add_executable(rtprecv ${RTPRECV_SOURCES})
-target_link_libraries(rtprecv ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(rtprecv ortp)
 
 set(MRTPSEND_SOURCES mrtpsend.c)
 add_executable(mrtpsend ${MRTPSEND_SOURCES})
-target_link_libraries(mrtpsend ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(mrtpsend ortp)
 
 set(MRTPRECV_SOURCES mrtprecv.c)
 add_executable(mrtprecv ${RTPRECV_SOURCES})
-target_link_libraries(mrtprecv ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(mrtprecv ortp)
 
 set(TEST_TIMER_SOURCES test_timer.c)
 add_executable(test_timer ${TEST_TIMER_SOURCES})
-target_link_libraries(test_timer ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(test_timer ortp)
 
 set(TEVRTPSEND_SOURCES tevrtpsend.c)
 add_executable(tevrtpsend ${TEVRTPSEND_SOURCES})
-target_link_libraries(tevrtpsend ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(tevrtpsend ortp)
 
 set(TEVRTPRECV_SOURCES tevrtprecv.c)
 add_executable(tevrtprecv ${TEVRTPRECV_SOURCES})
-target_link_libraries(tevrtprecv ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(tevrtprecv ortp)
 
 set(RTPSEND_STUPID_SOURCES rtpsend_stupid.c)
 add_executable(rtpsend_stupid ${RTPSEND_STUPID_SOURCES})
-target_link_libraries(rtpsend_stupid ${SRTP_LIBRARIES} ${ZRTP_LIBRARIES} ortp)
+target_link_libraries(rtpsend_stupid ortp)

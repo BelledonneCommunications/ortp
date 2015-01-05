@@ -29,4 +29,4 @@ endif
 AM_CPPFLAGS=-I$(top_srcdir)/include/
 AM_CFLAGS=-D_ORTP_SOURCE $(PTHREAD_CFLAGS) 
 AM_LDFLAGS=$(PTHREAD_LDFLAGS)
-LDADD=$(top_builddir)/src/libortp.la $(SRTP_LIBS) $(SSL_LIBS) $(LIBZRTPCPP_LIBS)
+LDADD=$(top_builddir)/src/libortp.la $(SSL_LIBS)

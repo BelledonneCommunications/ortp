@@ -129,18 +129,6 @@ AC_ARG_ENABLE(debug,
 	[debug_enabled=no]
 )
 
-
-AC_ARG_ENABLE(broken_srtp,
-	[AS_HELP_STRING([--enable-broken-srtp], [Skip some sanity test (default=no)])],
-	[case "${enableval}" in
-		yes)	test_for_broken_srtp=no;;
-		no)	test_for_broken_srtp=yes;;
-		*)	AC_MSG_ERROR("Bad value for --enable-broken-srtp");;
-	esac],
-	[test_for_broken_srtp=yes]
-)
-
-
 hpux_host=no
 posixtimer_interval=10000
 PTHREAD_LDFLAGS=
@@ -236,66 +224,6 @@ if test "$rt_enabled" = "yes" ; then
 fi
 
 
-dnl check for libsrtp support (secure rtp)
-AC_ARG_WITH(srtp,
-	AC_HELP_STRING([--with-srtp], [Set prefix where libsrtp can be found or "none" to disable (ex:/usr or /usr/local) [[default=/usr]]]),
-	[srtp_prefix=$withval],
-	[srtp_prefix=/usr]
-)
-if test "${srtp_prefix}" != "none" ; then
-	if test "${srtp_prefix}" != "/usr" || test "$mingw_found" = "yes" ; then
-		SRTP_CFLAGS="-I${srtp_prefix}/include -I${srtp_prefix}/include/srtp"
-		SRTP_LIBS="-L${srtp_prefix}/lib"
-	fi
-	SRTP_LIBS="$SRTP_LIBS -lsrtp"
-
-	dnl check srtp headers
-	have_srtp=no
-	CPPFLAGS_save=$CPPFLAGS
-	CPPFLAGS="$CPPFLAGS $SRTP_CFLAGS"
-	AC_CHECK_HEADER([srtp/srtp.h],have_srtp_headers=yes)
-	CPPFLAGS=$CPPFLAGS_save
-
-	dnl check for srtp lib
-	LDFLAGS_save=$LDFLAGS
-	LDFLAGS="$LDFLAGS $SRTP_LIBS"
-	LIBS_save=$LIBS
-	AC_CHECK_LIB(srtp,srtp_init,have_srtp_lib=yes)
-	AC_CHECK_LIB(srtp,srtp_shutdown,[AC_DEFINE([HAVE_SRTP_SHUTDOWN],1,[Defined when srtp_shutdown() exists.])])
-	LDFLAGS=$LDFLAGS_save
-	LIBS=$LIBS_save
-
-	if test "$have_srtp_headers$have_srtp_lib" = "yesyes" ; then
-		have_srtp=yes
-		if test "$test_for_broken_srtp" = yes; then
-			LDFLAGS_save=$LDFLAGS
-			LDFLAGS="$LDFLAGS $SRTP_LIBS"
-			LIBS_save=$LIBS
-			AC_CHECK_LIB(srtp,sha1_update,[
-			AC_MSG_ERROR([This libsrtp version exports symbols conflicting with polar ssl, resulting in a bad execution path.
-			 Please use the one from git://git.linphone.org/srtp.git
-			 You could also track resolution of defect on https://github.com/cisco/libsrtp/issues/28
-			 If you are not linking against polar ssl, you may prefer to skip this test with --enable-broken-srtp
-			])], have_srtp=yes)
-			LDFLAGS=$LDFLAGS_save
-			LIBS=$LIBS_save
-		fi
-		AC_DEFINE(HAVE_SRTP, 1, [Defined when srtp support is compiled])
-		ORTP_DEFS="$ORTP_DEFS -DORTP_HAVE_SRTP"
-	else
-		AC_MSG_NOTICE([Could not find libsrtp headers or lib, cryto transport disabled.])
-		SRTP_CFLAGS=
-		SRTP_LIBS=
-	fi
-
-	AC_SUBST(SRTP_CFLAGS)
-	AC_SUBST(SRTP_LIBS)
-else
-	have_srtp=no
-	SRTP_CFLAGS=
-	SRTP_LIBS=
-fi
-
 if test $debug_enabled = "yes"; then
 	ORTP_DEFS="$ORTP_DEFS -DORTP_DEBUG_MODE"
 	CFLAGS=`echo $CFLAGS | sed 's/-O.//'`
@@ -369,8 +297,8 @@ fi
 
 AC_SUBST(SSL_LIBS)
 
-ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SRTP_LIBS $SSL_LIBS"
-ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $SRTP_CFLAGS"
+ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SSL_LIBS"
+ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS"
 CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs
 

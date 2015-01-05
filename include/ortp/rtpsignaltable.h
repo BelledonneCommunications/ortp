@@ -22,7 +22,7 @@
 
 #define RTP_CALLBACK_TABLE_MAX_ENTRIES	5
 
-typedef void (*RtpCallback)(struct _RtpSession *, unsigned long arg1, unsigned long arg2, void* userdata);
+typedef void (*RtpCallback)(struct _RtpSession *, unsigned long arg1, unsigned long arg2, unsigned long userdata);
 
 struct _RtpSignalTable
 {
