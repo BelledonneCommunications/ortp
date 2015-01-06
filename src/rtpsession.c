@@ -2060,8 +2060,13 @@ int meta_rtp_transport_modifier_inject_packet(const RtpTransport *t, RtpTranspor
 	}
 
 	/* get back socket from transport session */
-	to=(struct sockaddr*)&t->session->rtp.gs.rem_addr;
-	tolen=t->session->rtp.gs.rem_addrlen;
+	if (m->is_rtp) {
+		to=(struct sockaddr*)&t->session->rtp.gs.rem_addr;
+		tolen=t->session->rtp.gs.rem_addrlen;
+	} else { 
+		to=(struct sockaddr*)&t->session->rtcp.gs.rem_addr;
+		tolen=t->session->rtcp.gs.rem_addrlen;
+	}
 	return meta_rtp_transport_modifier_inject_packet_to(t,tpm,msg,flags,to,tolen);
 }
 /**
