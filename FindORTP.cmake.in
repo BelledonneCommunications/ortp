@@ -27,13 +27,6 @@
 #  ORTP_LIBRARIES - The libraries needed to use oRTP
 #  ORTP_CPPFLAGS - The cflags needed to use oRTP
 
-if(@ENABLE_SRTP@)
-	find_package(SRTP)
-endif()
-if(@ENABLE_ZRTP@)
-	find_package(BZRTP)
-endif()
-
 set(_ORTP_ROOT_PATHS
 	${WITH_ORTP}
 	${CMAKE_INSTALL_PREFIX}
@@ -55,14 +48,6 @@ find_library(ORTP_LIBRARIES
 	PATH_SUFFIXES bin lib
 )
 
-if(SRTP_FOUND)
-	list(APPEND ORTP_INCLUDE_DIRS ${SRTP_INCLUDE_DIRS})
-	list(APPEND ORTP_LIBRARIES ${SRTP_LIBRARIES})
-endif()
-if(BZRTP_FOUND)
-	list(APPEND ORTP_INCLUDE_DIRS ${BZRTP_INCLUDE_DIRS})
-	list(APPEND ORTP_LIBRARIES ${BZRTP_LIBRARIES})
-endif()
 if(WIN32)
 	list(APPEND ORTP_LIBRARIES ws2_32 delayimp Winmm Qwave)
 endif(WIN32)
