@@ -595,7 +595,7 @@ ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
  * @param[in] is_rtp Whether this object will be used for RTP packets or not.
  * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
  * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
- * @returns 0 if successful, -1 otherwise
+ * @return 0 if successful, -1 otherwise
 **/
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags);
 ORTP_PUBLIC int meta_rtp_transport_new(RtpTransport **t, bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
