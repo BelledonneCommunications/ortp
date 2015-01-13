@@ -589,7 +589,15 @@ ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags);
 /**
- * FIXME johan
+ * #RtpTransport object which can handle multiples security protocols. You can for instance use this object
+ * to use both sRTP and tunnel transporter. #mblk_t messages received and sent from the endpoint
+ * will pass through the list of modifiers given. First modifier in list will be first to modify the message
+ * in send mode and last in receive mode.
+ * @param[in] t #RtpTransport object that will be generated.
+ * @param[in] is_rtp Whether this object will be used for RTP packets or not.
+ * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
+ * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
+ * @return 0 if successful, -1 otherwise
 **/
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags,const struct sockaddr *to, socklen_t tolen) ;
 
