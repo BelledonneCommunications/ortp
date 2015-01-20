@@ -140,6 +140,9 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 if(MSVC)
+	if(NOT HAVE_INTTYPES_H)
+		include_directories(${PROJECT_SOURCE_DIR}/build/wp8/ortp)
+	endif()
 	include_directories(${CMAKE_PREFIX_PATH}/include/MSVC)
 endif()
 
