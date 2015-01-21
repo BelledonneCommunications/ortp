@@ -234,8 +234,6 @@ rtp_session_init (RtpSession * session, int mode)
 		rtp_session_set_source_description(session,"unknown@unknown",NULL,NULL,
 				NULL,NULL,"oRTP-" ORTP_VERSION,NULL);
 	}
-	session->snd.telephone_events_pt=-1;	/* not defined a priori */
-	session->rcv.telephone_events_pt=-1;	/* not defined a priori */
 	rtp_session_set_profile (session, &av_profile); /*the default profile to work with */
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
@@ -919,8 +917,7 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		/* We are probably trying to send a STUN packet so don't change its content. */
 	} else {
 		rtp->timestamp=packet_ts;
-		if (session->snd.telephone_events_pt==rtp->paytype)
-		{
+		if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)){
 			rtp->seq_number = session->rtp.snd_seq;
 			session->rtp.snd_seq++;
 		}

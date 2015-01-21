@@ -60,7 +60,6 @@ extern "C" {
 ORTP_PUBLIC int rtp_session_telephone_events_supported(RtpSession *session);
 ORTP_PUBLIC int rtp_session_send_telephone_events_supported(RtpSession *session);
 ORTP_PUBLIC int rtp_session_recv_telephone_events_supported(RtpSession *session);
-
 ORTP_PUBLIC mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start);
 
 ORTP_PUBLIC int rtp_session_add_telephone_event(RtpSession *session,

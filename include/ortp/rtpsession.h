@@ -325,7 +325,6 @@ struct _RtpSession
 		int pt;
 		unsigned int ssrc;
 		WaitPoint wp;
-		int telephone_events_pt;	/* the payload type used for telephony events */
 	} snd,rcv;
 	unsigned int inc_ssrc_candidate;
 	int inc_same_ssrc_count;
