@@ -98,7 +98,7 @@ static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen
 	return TRUE;
 }
 
-static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_family, bool_t reuse_addr){
+static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_family, bool_t reuse_addr,struct sockaddr_storage* bound_addr,socklen_t *bound_addr_len){
 	int err;
 	int optval = 1;
 	ortp_socket_t sock=-1;
@@ -181,6 +181,8 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 					close_socket (sock);
 					sock=-1;
 					continue;
+				} else {
+					ortp_message ("RTP socket [%i] has joined address group [%s]",sock, addr);
 				}
 			}
 		break;
@@ -197,6 +199,8 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 					close_socket (sock);
 					sock=-1;
 					continue;
+				} else {
+					ortp_message ("RTP socket 6 [%i] has joined address group [%s]",sock, addr);
 				}
 			}
 		break;
@@ -204,6 +208,9 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 #endif /*hpux*/
 		break;
 	}
+	memcpy(bound_addr,res0->ai_addr,res0->ai_addrlen);
+	*bound_addr_len=res0->ai_addrlen;
+
 	freeaddrinfo(res0);
 
 #if defined(WIN32) || defined(_WIN32_WCE)
@@ -302,14 +309,14 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 	}
 	/* try to bind the rtp port */
 
-	sock=create_and_bind(addr,&rtp_port,&sockfamily,session->reuseaddr);
+	sock=create_and_bind(addr,&rtp_port,&sockfamily,session->reuseaddr,&session->rtp.gs.loc_addr,&session->rtp.gs.loc_addrlen);
 	if (sock!=-1){
 		set_socket_sizes(sock,session->rtp.snd_socket_size,session->rtp.rcv_socket_size);
 		session->rtp.gs.sockfamily=sockfamily;
 		session->rtp.gs.socket=sock;
 		session->rtp.gs.loc_port=rtp_port;
 		/*try to bind rtcp port */
-		sock=create_and_bind(addr,&rtcp_port,&sockfamily,session->reuseaddr);
+		sock=create_and_bind(addr,&rtcp_port,&sockfamily,session->reuseaddr,&session->rtcp.gs.loc_addr,&session->rtcp.gs.loc_addrlen);
 		if (sock!=(ortp_socket_t)-1){
 			session->rtcp.gs.sockfamily=sockfamily;
 			session->rtcp.gs.socket=sock;

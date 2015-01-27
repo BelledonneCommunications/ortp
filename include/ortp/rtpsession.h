@@ -242,6 +242,8 @@ typedef struct _OrtpStream {
 	int loc_port;
 	socklen_t rem_addrlen;
 	struct sockaddr_storage rem_addr;
+	socklen_t loc_addrlen;
+	struct sockaddr_storage loc_addr;
 	struct _RtpTransport *tr;
 	mblk_t *cached_mp;
 	struct timeval send_bw_start; /* used for bandwidth estimation */

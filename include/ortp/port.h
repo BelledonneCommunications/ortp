@@ -359,6 +359,9 @@ ORTP_PUBLIC void ortp_shm_close(void *memory);
    #define ORTP_VAR_PUBLIC    extern
 #endif
 
+#ifndef IN6_IS_ADDR_MULTICAST
+#define IN6_IS_ADDR_MULTICAST(i)	(((uint8_t *) (i))[0] == 0xff)
+#endif
 
 /*define __ios when we are compiling for ios.
  The TARGET_OS_IPHONE macro is stupid, it is defined to 0 when compiling on mac os x.
