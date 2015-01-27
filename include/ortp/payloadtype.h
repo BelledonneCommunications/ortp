@@ -125,6 +125,7 @@ ORTP_VAR_PUBLIC PayloadType payload_type_lpc1016;
 ORTP_VAR_PUBLIC PayloadType payload_type_g729;
 ORTP_VAR_PUBLIC PayloadType payload_type_g7231;
 ORTP_VAR_PUBLIC PayloadType payload_type_g7221;
+ORTP_VAR_PUBLIC PayloadType payload_type_cn;
 ORTP_VAR_PUBLIC PayloadType payload_type_g726_40;
 ORTP_VAR_PUBLIC PayloadType payload_type_g726_32;
 ORTP_VAR_PUBLIC PayloadType payload_type_g726_24;

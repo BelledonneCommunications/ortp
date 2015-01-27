@@ -217,6 +217,21 @@ PayloadType payload_type_g7231={
 	FLAGS(0)
 };
 
+PayloadType payload_type_cn={
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(8000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(8000),
+	MIME_TYPE("CN"),
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	NO_AVPF,
+	FLAGS(0)
+};
+
 PayloadType payload_type_g729={
 	TYPE(PAYLOAD_AUDIO_PACKETIZED),
 	CLOCK_RATE(8000),
@@ -452,6 +467,7 @@ void av_profile_init(RtpProfile *profile)
 	rtp_profile_set_payload(profile,9,&payload_type_g722);
 	rtp_profile_set_payload(profile,10,&payload_type_l16_stereo);
 	rtp_profile_set_payload(profile,11,&payload_type_l16_mono);
+	rtp_profile_set_payload(profile,13,&payload_type_cn);
 	rtp_profile_set_payload(profile,18,&payload_type_g729);
 	rtp_profile_set_payload(profile,31,&payload_type_h261);
 	rtp_profile_set_payload(profile,32,&payload_type_mpv);
