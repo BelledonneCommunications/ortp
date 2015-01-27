@@ -44,6 +44,7 @@ extern "C"{
 #define	PAYLOAD_TYPE_USER_FLAG_1 (1<<5)
 #define	PAYLOAD_TYPE_USER_FLAG_2 (1<<6)
 #define	PAYLOAD_TYPE_USER_FLAG_3 (1<<7)
+#define	PAYLOAD_TYPE_USER_FLAG_4 (1<<8)
 /* ask for more if you need*/
 
 #define PAYLOAD_AUDIO_CONTINUOUS 0
@@ -93,7 +94,7 @@ typedef struct _PayloadTypeAvpfParams PayloadTypeAvpfParams;
 
 
 ORTP_PUBLIC PayloadType *payload_type_new(void);
-ORTP_PUBLIC PayloadType *payload_type_clone(PayloadType *payload);
+ORTP_PUBLIC PayloadType *payload_type_clone(const PayloadType *payload);
 ORTP_PUBLIC char *payload_type_get_rtpmap(PayloadType *pt);
 ORTP_PUBLIC void payload_type_destroy(PayloadType *pt);
 ORTP_PUBLIC void payload_type_set_recv_fmtp(PayloadType *pt, const char *fmtp);

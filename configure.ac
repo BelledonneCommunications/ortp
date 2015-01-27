@@ -2,6 +2,12 @@ dnl Process this file with autoconf to produce a configure script.
 AC_INIT([ortp],[0.23.0])
 AC_CANONICAL_SYSTEM
 
+case $INSTALL in
+        *ginstall*)
+                INSTALL="$INSTALL -C"
+        ;;
+esac
+
 dnl Source packaging numbers
 ORTP_MAJOR_VERSION=$(echo $PACKAGE_VERSION | cut -d. -f1)
 ORTP_MINOR_VERSION=$(echo $PACKAGE_VERSION | cut -d. -f2)

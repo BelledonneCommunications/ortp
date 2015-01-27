@@ -270,7 +270,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	}
 
 	/* check for possible telephone events */
-	if (rtp->paytype==session->rcv.telephone_events_pt){
+	if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)){
 		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
 		stats->discarded+=discarded;
 		ortp_global_stats.discarded+=discarded;
@@ -288,7 +288,10 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	}
 
 	/* Drop the packets while the RTP_SESSION_FLUSH flag is set. */
-	if (session->flags & RTP_SESSION_FLUSH) return;
+	if (session->flags & RTP_SESSION_FLUSH) {
+		freemsg(mp);
+		return;
+	}
 
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
 

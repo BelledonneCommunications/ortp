@@ -83,4 +83,6 @@ void ortp_stream_clear_aux_addresses(OrtpStream *os);
  * */
 void rtp_session_set_transports(RtpSession *session, RtpTransport *rtptr, RtpTransport *rtcptr);
 
+ORTP_PUBLIC bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt);
+
 #endif

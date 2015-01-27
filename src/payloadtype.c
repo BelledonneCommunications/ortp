@@ -45,7 +45,7 @@ PayloadType *payload_type_new()
 }
 
 
-PayloadType *payload_type_clone(PayloadType *payload)
+PayloadType *payload_type_clone(const PayloadType *payload)
 {
 	PayloadType *newpayload=(PayloadType *)ortp_new0(PayloadType,1);
 	memcpy(newpayload,payload,sizeof(PayloadType));

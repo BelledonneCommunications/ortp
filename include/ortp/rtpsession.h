@@ -242,6 +242,8 @@ typedef struct _OrtpStream {
 	int loc_port;
 	socklen_t rem_addrlen;
 	struct sockaddr_storage rem_addr;
+	socklen_t loc_addrlen;
+	struct sockaddr_storage loc_addr;
 	struct _RtpTransport *tr;
 	mblk_t *cached_mp;
 	struct timeval send_bw_start; /* used for bandwidth estimation */
@@ -325,7 +327,6 @@ struct _RtpSession
 		int pt;
 		unsigned int ssrc;
 		WaitPoint wp;
-		int telephone_events_pt;	/* the payload type used for telephony events */
 	} snd,rcv;
 	unsigned int inc_ssrc_candidate;
 	int inc_same_ssrc_count;

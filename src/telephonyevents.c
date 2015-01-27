@@ -44,10 +44,12 @@ PayloadType	payload_type_telephone_event={
 int rtp_session_telephone_events_supported(RtpSession *session)
 {
 	/* search for a telephony event payload in the current profile */
-	session->snd.telephone_events_pt=rtp_profile_get_payload_number_from_mime(session->snd.profile,"telephone-event");
-	session->rcv.telephone_events_pt=rtp_profile_get_payload_number_from_mime(session->rcv.profile,"telephone-event");
-	/*printf("Telephone event pt is %i\n",session->telephone_events_pt);*/
-	return session->snd.telephone_events_pt;
+	return rtp_profile_get_payload_number_from_mime(session->snd.profile,"telephone-event");
+}
+
+bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt_num){
+	PayloadType *pt=rtp_profile_get_payload(prof, pt_num);
+	return pt && strcasecmp(pt->mime_type,"telephone-event")==0;
 }
 
 
@@ -61,9 +63,7 @@ int rtp_session_telephone_events_supported(RtpSession *session)
 int rtp_session_send_telephone_events_supported(RtpSession *session)
 {
 	/* search for a telephony event payload in the current profile */
-	session->snd.telephone_events_pt=rtp_profile_get_payload_number_from_mime(session->snd.profile,"telephone-event");
-	/*printf("Telephone event pt is %i\n",session->telephone_events_pt);*/
-	return session->snd.telephone_events_pt;
+	return rtp_profile_get_payload_number_from_mime(session->snd.profile,"telephone-event");
 }
 
 /**
@@ -75,9 +75,7 @@ int rtp_session_send_telephone_events_supported(RtpSession *session)
 **/int rtp_session_recv_telephone_events_supported(RtpSession *session)
 {
 	/* search for a telephony event payload in the current profile */
-	session->rcv.telephone_events_pt=rtp_profile_get_payload_number_from_mime(session->rcv.profile,"telephone-event");
-	/*printf("Telephone event pt is %i\n",session->telephone_events_pt);*/
-	return session->snd.telephone_events_pt;
+	return rtp_profile_get_payload_number_from_mime(session->rcv.profile,"telephone-event");
 }
 
 
@@ -97,8 +95,9 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
 {
 	mblk_t *mp;
 	rtp_header_t *rtp;
-	
-	return_val_if_fail(session->snd.telephone_events_pt!=-1,NULL);
+	PayloadType *cur_pt=rtp_profile_get_payload(session->snd.profile, rtp_session_get_send_payload_type(session));
+	int tev_pt=rtp_profile_find_payload_number(session->snd.profile, "telephone-event", cur_pt ? cur_pt->clock_rate : 8000, 1);
+	return_val_if_fail(tev_pt!=-1,NULL);
 	
 	mp=allocb(RTP_FIXED_HEADER_SIZE+TELEPHONY_EVENTS_ALLOCATED_SIZE,BPRI_MED);
 	if (mp==NULL) return NULL;
@@ -113,7 +112,7 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
 	/*seq number set later, when packet is sended */
 	
 	/*set the payload type */
-	rtp->paytype=session->snd.telephone_events_pt;
+	rtp->paytype=tev_pt;
 	
 	/*copy the payload */
 	mp->b_wptr+=RTP_FIXED_HEADER_SIZE;
@@ -310,7 +309,7 @@ int rtp_session_read_telephone_event(RtpSession *session,
 	telephone_event_t *tev;
 	rtp_header_t *hdr=(rtp_header_t*)packet->b_rptr;
 	unsigned char *payload;
-	if (hdr->paytype!=session->rcv.telephone_events_pt) return 0;  /* this is not tel ev.*/
+	if (rtp_profile_is_telephone_event(session->rcv.profile, hdr->paytype)) return 0;  /* this is not tel ev.*/
 	datasize=rtp_get_payload(packet,&payload);
 	tev=*tab=(telephone_event_t*)payload;
 	/* convert from network to host order what should be */
