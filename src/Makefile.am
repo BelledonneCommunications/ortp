@@ -17,32 +17,34 @@ AM_LDFLAGS=$(PTHREAD_LDFLAGS)
 
 lib_LTLIBRARIES = libortp.la
 
-libortp_la_SOURCES=	str_utils.c 	\
-			port.c \
-			logging.c \
-			rtpparse.c  \
-			rtpsession.c \
-			rtpsession_inet.c \
-			rtpsession_priv.h \
-			jitterctl.c jitterctl.h \
-			rtpsignaltable.c  \
-			rtptimer.c	rtptimer.h \
-			posixtimer.c \
-			ortp.c \
-			scheduler.c scheduler.h \
+libortp_la_SOURCES=	\
 			avprofile.c  \
-			sessionset.c  \
-			telephonyevents.c  \
+			b64.c \
+			event.c \
+			extremum.c \
+			jitterctl.c jitterctl.h \
+			logging.c \
+			netsim.c \
+			ortp.c \
 			payloadtype.c \
-			rtpprofile.c \
+			port.c \
+			posixtimer.c \
 			rtcp.c \
 			rtcp_fb.c \
 			rtcp_xr.c \
-			utils.c utils.h \
 			rtcpparse.c \
-			event.c \
-			b64.c \
-			netsim.c
+			rtpparse.c  \
+			rtpprofile.c \
+			rtpsession.c \
+			rtpsession_inet.c \
+			rtpsession_priv.h \
+			rtpsignaltable.c  \
+			rtptimer.c	rtptimer.h \
+			scheduler.c scheduler.h \
+			sessionset.c  \
+			str_utils.c 	\
+			telephonyevents.c  \
+			utils.c utils.h
 
 libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SSL_LIBS)
 

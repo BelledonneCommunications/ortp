@@ -157,6 +157,23 @@ ORTP_PUBLIC void msgb_allocator_init(msgb_allocator_t *pa);
 ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, size_t size);
 ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 
+/**
+ * Utility object to determine a maximum or minimum (but not both at the same
+ * time), of a signal during a sliding period of time.
+ */
+typedef struct _ortp_extremum{
+	float current_extremum;
+	uint64_t extremum_time;
+	float last_stable;
+	int period;
+}ortp_extremum;
+
+ORTP_PUBLIC void ortp_extremum_reset(ortp_extremum *obj);
+ORTP_PUBLIC void ortp_extremum_init(ortp_extremum *obj, int period);
+ORTP_PUBLIC void ortp_extremum_record_min(ortp_extremum *obj, uint64_t curtime, float value);
+ORTP_PUBLIC void ortp_extremum_record_max(ortp_extremum *obj, uint64_t curtime, float value);
+ORTP_PUBLIC float ortp_extremum_get_current(ortp_extremum *obj);
+
 #ifdef __cplusplus
 }
 #endif

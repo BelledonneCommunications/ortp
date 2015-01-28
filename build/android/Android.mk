@@ -27,33 +27,34 @@ LOCAL_MODULE := libortp
 
 
 LOCAL_SRC_FILES := \
-	src/str_utils.c	\
-	src/port.c \
-	src/logging.c \
-	src/rtpparse.c \
-	src/rtpsession.c \
-	src/rtpsession_inet.c \
-	src/jitterctl.c \
-	src/rtpsignaltable.c  \
-	src/rtptimer.c \
-	src/posixtimer.c \
-	src/ortp.c \
-	src/scheduler.c \
 	src/avprofile.c \
-	src/sessionset.c \
-	src/telephonyevents.c \
+	src/b64.c \
+	src/event.c \
+	src/extremum.c \
+	src/jitterctl.c \
+	src/logging.c \
+	src/netsim.c \
+	src/ortp.c \
 	src/payloadtype.c \
-	src/rtpprofile.c \
+	src/port.c \
+	src/posixtimer.c \
 	src/rtcp.c \
 	src/rtcp_fb.c \
 	src/rtcp_xr.c \
-	src/utils.c \
 	src/rtcpparse.c \
-	src/event.c \
+	src/rtpparse.c \
+	src/rtpprofile.c \
+	src/rtpsession.c \
+	src/rtpsession_inet.c \
+	src/rtpsignaltable.c  \
+	src/rtptimer.c \
+	src/scheduler.c \
+	src/sessionset.c \
+	src/str_utils.c	\
 	src/stun.c \
 	src/stun_udp.c \
-	src/b64.c \
-	src/netsim.c
+	src/telephonyevents.c \
+	src/utils.c
 
 LOCAL_CFLAGS += \
 	-DORTP_INET6 \

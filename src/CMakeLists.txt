@@ -29,6 +29,7 @@ set(SOURCE_FILES
 	avprofile.c
 	b64.c
 	event.c
+	extremum.c
 	jitterctl.c
 	logging.c
 	netsim.c
