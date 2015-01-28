@@ -79,7 +79,6 @@ typedef struct _JitterControl
 	int clock_rate;
 	bool_t adaptive;
 	bool_t enabled;
-	ortp_extremum *buffer_extremum;
 } JitterControl;
 
 typedef struct _WaitPoint
