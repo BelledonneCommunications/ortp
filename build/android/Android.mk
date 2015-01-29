@@ -51,8 +51,6 @@ LOCAL_SRC_FILES := \
 	src/scheduler.c \
 	src/sessionset.c \
 	src/str_utils.c	\
-	src/stun.c \
-	src/stun_udp.c \
 	src/telephonyevents.c \
 	src/utils.c
 
