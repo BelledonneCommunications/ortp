@@ -61,12 +61,6 @@ LOCAL_CFLAGS += \
 	-Werror -Wall -Wno-error=strict-aliasing -Wuninitialized
 
 
-ifeq ($(BUILD_SRTP), 1)
-LOCAL_STATIC_LIBRARIES += libsrtp
-LOCAL_C_INCLUDES += $(SRTP_C_INCLUDE)
-LOCAL_CFLAGS += -DHAVE_SRTP -DHAVE_SRTP_SHUTDOWN
-endif #SRTP
-
 LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH) \
 	$(LOCAL_PATH)/include \
