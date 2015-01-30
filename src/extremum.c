@@ -31,20 +31,15 @@ void ortp_extremum_init(ortp_extremum *obj, int period){
 	obj->period=period;
 }
 
-static void extremum_set_new(ortp_extremum *obj, const char* kind){
-	obj->last_stable=obj->current_extremum;
-	/*ortp_message("New %s value : %f",kind,obj->last_stable);*/
-}
 
 static void extremum_check_init(ortp_extremum *obj, uint64_t curtime, float value, const char *kind){
 	if (obj->extremum_time!=(uint64_t)-1){
 		if (curtime-obj->extremum_time>obj->period){
 			/*last extremum is too old, drop it*/
-			extremum_set_new(obj,kind);
-			obj->extremum_time=(uint64_t)-1;
+			obj->current_extremum=value;
+			obj->extremum_time=curtime;
 		}
-	}
-	if (obj->extremum_time==(uint64_t)-1){
+	}else {
 		obj->current_extremum=value;
 		obj->extremum_time=curtime;
 	}
@@ -55,9 +50,6 @@ void ortp_extremum_record_min(ortp_extremum *obj, uint64_t curtime, float value)
 	if (value<obj->current_extremum){
 		obj->current_extremum=value;
 		obj->extremum_time=curtime;
-		if (value<obj->last_stable){
-			extremum_set_new(obj,"min");
-		}
 	}
 }
 
@@ -66,13 +58,10 @@ void ortp_extremum_record_max(ortp_extremum *obj, uint64_t curtime, float value)
 	if (value>obj->current_extremum){
 		obj->current_extremum=value;
 		obj->extremum_time=curtime;
-		if (value>obj->last_stable){
-			extremum_set_new(obj,"max");
-		}
 	}
 }
 
 float ortp_extremum_get_current(ortp_extremum *obj){
-	return obj->last_stable;
+	return obj->current_extremum;
 }
 
