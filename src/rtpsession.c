@@ -2164,8 +2164,6 @@ RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsi
 	va_list arguments;
 	MetaRtpTransportImpl *m;
 	RtpTransport *t = ortp_new0(RtpTransport,1);
-
-	t=ortp_new0(RtpTransport,1);
 	m=t->data=ortp_new0(MetaRtpTransportImpl,1);
 
 	t->t_getsocket=meta_rtp_transport_getsocket;
