@@ -139,9 +139,39 @@ void payload_type_destroy(PayloadType *pt)
 	ortp_free(pt);
 }
 
+
+static const char *find_param_occurence_of(const char *fmtp, const char *param){
+	const char *pos=fmtp;
+	do{
+		pos=strstr(pos,param);
+		if (pos){
+			/*check that the occurence found is not a subword of a parameter name*/
+			if (pos==fmtp) break;
+			if (pos[-1]==';' || pos[-1]==' '){
+				break;
+			}
+			pos+=strlen(param);
+		}
+	}while(pos!=NULL);
+	return pos;
+}
+
+static const char *find_last_param_occurence_of(const char *fmtp, const char *param){
+	const char *pos=fmtp;
+	const char *lastpos=NULL;
+	do{
+		pos=find_param_occurence_of(pos,param);
+		if (pos) {
+			lastpos=pos;
+			pos+=strlen(param);
+		}
+	}while(pos!=NULL);
+	return lastpos;
+}
 /**
  * Parses a fmtp string such as "profile=0;level=10", finds the value matching
  * parameter param_name, and writes it into result. 
+ * If a parameter name is found multiple times, only the value of the last occurence is returned.
  * Despite fmtp strings are not used anywhere within oRTP, this function can
  * be useful for people using RTP streams described from SDP.
  * @param fmtp the fmtp line (format parameters)
@@ -151,7 +181,7 @@ void payload_type_destroy(PayloadType *pt)
  * @return TRUE if the parameter was found, else FALSE.
 **/ 
 bool_t fmtp_get_value(const char *fmtp, const char *param_name, char *result, size_t result_len){
-	const char *pos=strstr(fmtp,param_name);
+	const char *pos=find_last_param_occurence_of(fmtp,param_name);
 	memset(result, '\0', result_len);
 	if (pos){
 		const char *equal=strchr(pos,'=');

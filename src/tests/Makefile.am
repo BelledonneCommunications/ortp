@@ -2,7 +2,7 @@ SUBDIRS=win_receiver win_sender
 
 if ENABLE_TESTS
 
-noinst_PROGRAMS=rtpsend rtprecv mrtpsend mrtprecv test_timer rtpmemtest tevrtpsend tevrtprecv tevmrtprecv rtpsend_stupid
+noinst_PROGRAMS=rtpsend rtprecv mrtpsend mrtprecv test_timer rtpmemtest tevrtpsend tevrtprecv tevmrtprecv rtpsend_stupid fmtp_parse
 
 rtpsend_SOURCES=rtpsend.c
 
@@ -23,6 +23,8 @@ tevrtprecv_SOURCES=tevrtprecv.c
 tevmrtprecv_SOURCES=tevmrtprecv.c
 
 rtpsend_stupid_SOURCES=rtpsend_stupid.c
+
+fmtp_parse_SOURCES=fmtpparse.c
 
 endif
 

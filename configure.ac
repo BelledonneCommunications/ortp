@@ -309,7 +309,7 @@ CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs
 
 
-AC_ARG_ENABLE(tests_enabled,
+AC_ARG_ENABLE(tests,
 	[AS_HELP_STRING([--disable-tests], [Disable compilation of tests])],
 	[case "${enableval}" in
 		yes)	tests_enabled=true ;;
@@ -318,7 +318,7 @@ AC_ARG_ENABLE(tests_enabled,
 	esac],
 	[tests_enabled=false]
 )
-AM_CONDITIONAL(ENABLE_TESTS, test x$tests_enabled = xyes)
+AM_CONDITIONAL(ENABLE_TESTS, test x$tests_enabled = xtrue)
 
 case "$target_os" in
 	*linux*)
