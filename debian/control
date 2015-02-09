@@ -6,7 +6,6 @@ Uploaders: Samuel Mimram <smimram@debian.org>, Kilian Krause <kilian@debian.org>
 Build-Depends: debhelper (>= 8),
  autoconf, automake, autotools-dev, libtool, pkg-config, intltool,
  libglib2.0-dev, 
- libsrtp-dev [!hurd-any !sparc],
  doxygen
 Standards-Version: 3.9.1
 Homepage: http://www.linphone.org/
@@ -32,8 +31,7 @@ Description: Real-time Transport Protocol stack
 Package: libortp-dev
 Section: libdevel
 Architecture: any
-Depends: ${misc:Depends}, libortp9 (= ${binary:Version}),
- libsrtp0-dev [!hurd-any !sparc]
+Depends: ${misc:Depends}, libortp9 (= ${binary:Version})
 Conflicts: libortp7-dev
 Description: Real-time Transport Protocol stack
  This library implements the RFC1889 (RTP) with a easy to use API with high
