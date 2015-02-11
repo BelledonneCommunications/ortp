@@ -58,6 +58,7 @@ LOCAL_CFLAGS += \
 	-DORTP_INET6 \
 	-UHAVE_CONFIG_H \
 	-include ortp_AndroidConfig.h \
+	-DHAVE_PTHREADS \
 	-Werror -Wall -Wno-error=strict-aliasing -Wuninitialized
 
 
@@ -66,7 +67,6 @@ LOCAL_C_INCLUDES += \
 	$(LOCAL_PATH)/include \
 	$(LOCAL_PATH)/build/android
 
-LOCAL_LDLIBS += -lpthread
 LOCAL_CPPFLAGS = $(LOCAL_CLFAGS)
 LOCAL_CFLAGS += -Wdeclaration-after-statement
 
