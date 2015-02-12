@@ -173,6 +173,10 @@ ORTP_PUBLIC void ortp_extremum_init(ortp_extremum *obj, int period);
 ORTP_PUBLIC void ortp_extremum_record_min(ortp_extremum *obj, uint64_t curtime, float value);
 ORTP_PUBLIC void ortp_extremum_record_max(ortp_extremum *obj, uint64_t curtime, float value);
 ORTP_PUBLIC float ortp_extremum_get_current(ortp_extremum *obj);
+/**
+ * Unlike ortp_extremum_get_current() which can be very fluctuating, ortp_extremum_get_previous() returns the extremum found for the previous period.
+**/
+ORTP_PUBLIC float ortp_extremum_get_previous(ortp_extremum *obj);
 
 #ifdef __cplusplus
 }
