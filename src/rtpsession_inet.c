@@ -79,7 +79,7 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 #	define AI_V4MAPPED 0x00000800
 #	endif
 #	ifndef AI_ALL
-#	define AI_ALL 0x0
+#	define AI_ALL 0x00000100
 #	endif
 #endif
 
