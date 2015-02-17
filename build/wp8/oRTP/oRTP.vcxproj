@@ -92,7 +92,6 @@
     <ClInclude Include="..\..\..\include\ortp\event.h" />
     <ClInclude Include="..\..\..\include\ortp\logging.h" />
     <ClInclude Include="..\..\..\include\ortp\ortp.h" />
-    <ClInclude Include="..\..\..\include\ortp\ortp_srtp.h" />
     <ClInclude Include="..\..\..\include\ortp\payloadtype.h" />
     <ClInclude Include="..\..\..\include\ortp\port.h" />
     <ClInclude Include="..\..\..\include\ortp\rtcp.h" />
@@ -102,8 +101,6 @@
     <ClInclude Include="..\..\..\include\ortp\rtpsignaltable.h" />
     <ClInclude Include="..\..\..\include\ortp\sessionset.h" />
     <ClInclude Include="..\..\..\include\ortp\str_utils.h" />
-    <ClInclude Include="..\..\..\include\ortp\stun.h" />
-    <ClInclude Include="..\..\..\include\ortp\stun_udp.h" />
     <ClInclude Include="..\..\..\include\ortp\telephonyevents.h" />
     <ClInclude Include="..\..\..\src\jitterctl.h" />
     <ClInclude Include="..\..\..\src\rtpsession_priv.h" />
@@ -117,11 +114,11 @@
     <ClCompile Include="..\..\..\src\b64.c" />
     <ClCompile Include="..\..\..\src\dll_entry.c" />
     <ClCompile Include="..\..\..\src\event.c" />
+    <ClCompile Include="..\..\..\src\extremum.c" />
     <ClCompile Include="..\..\..\src\jitterctl.c" />
     <ClCompile Include="..\..\..\src\logging.c" />
     <ClCompile Include="..\..\..\src\netsim.c" />
     <ClCompile Include="..\..\..\src\ortp.c" />
-    <ClCompile Include="..\..\..\src\ortp_srtp.c" />
     <ClCompile Include="..\..\..\src\payloadtype.c" />
     <ClCompile Include="..\..\..\src\port.c" />
     <ClCompile Include="..\..\..\src\posixtimer.c" />
@@ -138,8 +135,6 @@
     <ClCompile Include="..\..\..\src\scheduler.c" />
     <ClCompile Include="..\..\..\src\sessionset.c" />
     <ClCompile Include="..\..\..\src\str_utils.c" />
-    <ClCompile Include="..\..\..\src\stun.c" />
-    <ClCompile Include="..\..\..\src\stun_udp.c" />
     <ClCompile Include="..\..\..\src\telephonyevents.c" />
     <ClCompile Include="..\..\..\src\utils.c" />
     <ClCompile Include="..\..\..\src\winrttimer.cpp">
