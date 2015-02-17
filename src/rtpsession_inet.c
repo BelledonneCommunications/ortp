@@ -98,6 +98,58 @@ static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen
 	return TRUE;
 }
 
+static int set_multicast_group(ortp_socket_t sock, const char *addr){
+#ifndef __hpux
+	struct addrinfo hints, *res;
+	int err;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+
+	err = getaddrinfo(addr,"0", &hints, &res);
+	if (err!=0) {
+		ortp_warning ("Error in getaddrinfo on (addr=%s): %s", addr, gai_strerror(err));
+		return -1;
+	}
+	
+	switch (res->ai_family){
+		case AF_INET:
+			if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
+			{
+				struct ip_mreq mreq;
+				mreq.imr_multiaddr.s_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr;
+				mreq.imr_interface.s_addr = INADDR_ANY;
+				err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (SOCKET_OPTION_VALUE) &mreq, sizeof(mreq));
+				if (err < 0){
+					ortp_warning ("Fail to join address group: %s.", getSocketError());
+				} else {
+					ortp_message ("RTP socket [%i] has joined address group [%s]",sock, addr);
+				}
+			}
+		break;
+		case AF_INET6:
+			if IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) res->ai_addr)->sin6_addr))
+			{
+				struct ipv6_mreq mreq;
+				mreq.ipv6mr_multiaddr = ((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
+				mreq.ipv6mr_interface = 0;
+				err = setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (SOCKET_OPTION_VALUE)&mreq, sizeof(mreq));
+				if (err < 0 ){
+					ortp_warning ("Fail to join address group: %s.", getSocketError());
+				} else {
+					ortp_message ("RTP socket 6 [%i] has joined address group [%s]",sock, addr);
+				}
+			}
+		break;
+	}
+	freeaddrinfo(res);
+	return 0;
+#else
+	return -1;
+#endif
+}
+
 static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_family, bool_t reuse_addr,struct sockaddr_storage* bound_addr,socklen_t *bound_addr_len){
 	int err;
 	int optval = 1;
@@ -132,7 +184,17 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 				ortp_warning ("Fail to set rtp address reusable: %s.", getSocketError());
 			}
 		}
+		/*enable dual stack operation, default is enabled on unix, disabled on windows.*/
+		if (res->ai_family==AF_INET6){
+			optval=0;
+			err=setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char*)&optval, sizeof(optval));
+			if (err < 0){
+				ortp_warning ("Fail to IPV6_V6ONLY: %s.",getSocketError());
+			}
+		}
+		
 #if defined(ORTP_TIMESTAMP)
+		optval=1;
 		err = setsockopt (sock, SOL_SOCKET, SO_TIMESTAMP,
 			(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
 		if (err < 0)
@@ -141,6 +203,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		}
 #endif
 		err = 0;
+		optval=1;
 		switch (res->ai_family) {
 			default:
 			case AF_INET:
@@ -166,46 +229,8 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 			sock=-1;
 			continue;
 		}
-#ifndef __hpux
-		switch (res->ai_family)
-		{
-		case AF_INET:
-			if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
-			{
-				struct ip_mreq mreq;
-				mreq.imr_multiaddr.s_addr = ((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr;
-				mreq.imr_interface.s_addr = INADDR_ANY;
-				err = setsockopt(sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, (SOCKET_OPTION_VALUE) &mreq, sizeof(mreq));
-				if (err < 0){
-					ortp_warning ("Fail to join address group: %s.", getSocketError());
-					close_socket (sock);
-					sock=-1;
-					continue;
-				} else {
-					ortp_message ("RTP socket [%i] has joined address group [%s]",sock, addr);
-				}
-			}
-		break;
-		case AF_INET6:
-			if IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) res->ai_addr)->sin6_addr))
-			{
-				struct ipv6_mreq mreq;
-				mreq.ipv6mr_multiaddr = ((struct sockaddr_in6 *) res->ai_addr)->sin6_addr;
-				mreq.ipv6mr_interface = 0;
-				err = setsockopt(sock, IPPROTO_IPV6, IPV6_JOIN_GROUP, (SOCKET_OPTION_VALUE)&mreq, sizeof(mreq));
-				if (err < 0)
-				{
-					ortp_warning ("Fail to join address group: %s.", getSocketError());
-					close_socket (sock);
-					sock=-1;
-					continue;
-				} else {
-					ortp_message ("RTP socket 6 [%i] has joined address group [%s]",sock, addr);
-				}
-			}
-		break;
-		}
-#endif /*hpux*/
+		/*compatibility mode. New applications should use rtp_session_set_multicast_group() instead*/
+		set_multicast_group(sock, addr);
 		break;
 	}
 	memcpy(bound_addr,res0->ai_addr,res0->ai_addrlen);
@@ -330,12 +355,24 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		rtp_session_set_dscp( session, -1 );
 		rtp_session_set_multicast_ttl( session, -1 );
 		rtp_session_set_multicast_loopback( session, -1 );
+		ortp_message("RtpSession bound to [%s] ports [%i] [%i]", addr, rtp_port, rtcp_port);
 		return 0;
 	}
 	ortp_error("Could not bind RTP socket to %s on port %i for session [%p]",addr,rtp_port,session);
 	return -1;
 }
 
+
+int rtp_session_join_multicast_group(RtpSession *session, const char *ip){
+	int err;
+	if (session->rtp.gs.socket==(ortp_socket_t)-1){
+		ortp_error("rtp_session_set_multicast_group() must be done only on bound sockets, use rtp_session_set_local_addr() first");
+		return -1;
+	}
+	err=set_multicast_group(session->rtp.gs.socket,ip);
+	set_multicast_group(session->rtcp.gs.socket,ip);
+	return err;
+}
 
 /**
  *rtp_session_set_pktinfo:
