@@ -81,6 +81,9 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 #	ifndef AI_ALL
 #	define AI_ALL 0x00000100
 #	endif
+#	ifndef IPV6_V6ONLY
+#	define IPV6_V6ONLY 27
+#	endif
 #endif
 
 #ifndef IN6_IS_ADDR_MULTICAST
