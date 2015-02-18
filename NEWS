@@ -1,4 +1,9 @@
-Feb 20, 2014: ortp-0.23.0
+Feb 18, 2015: ortp-0.24.0
+	- RTCP send algorithm as describe in RFC3550
+	- RTCP XR (RFC3611)
+	- RTCP send algorithm as describe in RFC4585: AVPF streams
+
+Feb 19, 2014: ortp-0.23.0
 	- network simulator improvements
 	- updated to use ZRTPCPP>=4.0 
 	- security bugfixes
