@@ -2114,15 +2114,10 @@ int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct
 	int ret,prev_ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem=m->modifiers;
+	OList *last_elem=NULL;
 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
-	}
-
-
-	if (elem!=NULL){
-		/*received packet must be treated in reversed order: first in last out*/
-		while (elem->next!=NULL) elem=elem->next;
 	}
 
 	if (m->endpoint!=NULL){
@@ -2131,14 +2126,24 @@ int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct
 		ret=rtp_session_rtp_recv_abstract(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,from,fromlen);
 	}
 
+	/*received packet must be treated in reversed order: first in last out
+	 * ,take the opportunity of the schedule to go to the end of the list*/
+	for (;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		/*invoke on schedule on every modifier*/
+		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
+		last_elem=elem;
+	}
+
+
 	if (ret < 0){
 		return ret;
 	}
 	prev_ret=ret;
 	msg->b_wptr+=ret;
 
-	for (;elem!=NULL;elem=o_list_prev(elem)){
-		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+	for (;last_elem!=NULL;last_elem=o_list_prev(last_elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)last_elem->data;
 		ret = rtm->t_process_on_receive(rtm,msg);
 		if (ret<0){
 			// something went wrong in the modifier (failed to decrypt for instance)
