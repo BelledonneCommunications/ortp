@@ -186,6 +186,15 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 			{
 				ortp_warning ("Fail to set rtp address reusable: %s.", getSocketError());
 			}
+#ifndef WIN32
+			/*SO_REUSEPORT is required on mac and ios especially for doing multicast*/
+			err = setsockopt (sock, SOL_SOCKET, SO_REUSEPORT,
+					(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
+			if (err < 0)
+			{
+				ortp_warning ("Fail to set rtp port reusable: %s.", getSocketError());
+			}
+#endif
 		}
 		/*enable dual stack operation, default is enabled on unix, disabled on windows.*/
 		if (res->ai_family==AF_INET6){
