@@ -2142,6 +2142,10 @@ int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct
 	prev_ret=ret;
 	msg->b_wptr+=ret;
 
+	/*store recv addr for futur use*/
+	memcpy(&msg->src_addr,from,*fromlen);
+	msg->src_addrlen = *fromlen;
+
 	for (;last_elem!=NULL;last_elem=o_list_prev(last_elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)last_elem->data;
 		ret = rtm->t_process_on_receive(rtm,msg);
