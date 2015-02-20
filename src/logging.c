@@ -285,7 +285,7 @@ static slog2_buffer_set_config_t slog2_buffer_config;
 static slog2_buffer_t slog2_buffer_handle[2];
 
 void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args) {
-	uint8_t severity;
+	uint8_t severity = SLOG2_DEBUG1;
 	uint8_t buffer_idx = 1;
 
 	if (slog2_registered != TRUE) {
