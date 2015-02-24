@@ -83,6 +83,6 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv);
 
 bool_t ortp_stream_is_ipv6(OrtpStream *os);
 
-int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m,  int flags, const struct sockaddr *destaddr, socklen_t destlen);
-
+int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m,  int flags, const struct sockaddr *destaddr, socklen_t destlen);
+int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 #endif

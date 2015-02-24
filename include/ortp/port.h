@@ -310,6 +310,8 @@ ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
 ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
 ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
+ORTP_PUBLIC void ortp_sleep_ms(int ms);
+ORTP_PUBLIC void ortp_sleep_until(const ortpTimeSpec *ts);
 ORTP_PUBLIC unsigned int ortp_random(void);
 
 /* portable named pipes  and shared memory*/

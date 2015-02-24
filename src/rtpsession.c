@@ -2039,7 +2039,7 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
-		ret=_ortp_sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,to,tolen);
+		ret=_rtp_session_sendto(t->session, m->is_rtp,msg,flags,to,tolen);
 	}
 	return ret;
 }
@@ -2105,7 +2105,7 @@ int meta_rtp_transport_modifier_inject_packet_to(const RtpTransport *t, RtpTrans
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
-		ret=sendto(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,(void*)msg->b_rptr,msgdsize(msg),flags,to,tolen);
+		ret=_rtp_session_sendto(t->session, m->is_rtp,msg,flags,to,tolen);
 	}
 	return ret;
 }
@@ -2142,9 +2142,9 @@ int  meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct
 	prev_ret=ret;
 	msg->b_wptr+=ret;
 
-	/*store recv addr for futur use*/
-	memcpy(&msg->src_addr,from,*fromlen);
-	msg->src_addrlen = *fromlen;
+	/*store recv addr for use by modifiers*/
+	memcpy(&msg->net_addr,from,*fromlen);
+	msg->net_addrlen = *fromlen;
 
 	for (;last_elem!=NULL;last_elem=o_list_prev(last_elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)last_elem->data;

@@ -118,24 +118,35 @@ typedef struct _RtpTransport
 	void  (*t_destroy)(struct _RtpTransport *transport);
 }  RtpTransport;
 
+typedef enum _OrtpNetworkSimulatorMode{
+	OrtpNetworkSimulatorInbound,/**<simulation is applied when receiving packets*/
+	OrtpNetworkSimulatorOutbound, /**<simulation is applied to sent packets*/
+	OrtpNetworkSimulatorOutboundControlled /**<simulation is applied to sent packets according to sent timestamp 
+				set in the timestamp field of mblk_t, which is definied only with -DORTP_TIMESTAMP */
+}OrtpNetworkSimulatorMode;
 
+/**
+ * Structure describing the network simulator parameters
+**/
 typedef struct _OrtpNetworkSimulatorParams{
-	int enabled;
-	float max_bandwidth; /*IP bandwidth, in bit/s*/
-	int max_buffer_size; /*Max number of bit buffered before being discarded*/
-	float loss_rate; /*Percentage*/
-	uint32_t latency; /*Packet transmission delay, in ms*/
-	float consecutive_loss_probability;/* a probablity of having a subsequent loss after a loss occured, in a 0-1 range.*/
-	float jitter_burst_density; /*density of gap/bursts events. A value of 1 means one gap/burst per second approximately*/
-	float jitter_strength; /*percentage of max_bandwidth */
+	int enabled; /**<Whether simulation is enabled or off.*/
+	float max_bandwidth; /**<IP bandwidth, in bit/s*/
+	int max_buffer_size; /**<Max number of bit buffered before being discarded*/
+	float loss_rate; /**<Percentage of lost packets*/
+	uint32_t latency; /**<Packet transmission delay, in ms*/
+	float consecutive_loss_probability;/**< a probablity of having a subsequent loss after a loss occured, in a 0-1 range. Useful to simulate burst of lost packets*/
+	float jitter_burst_density; /**<density of gap/bursts events. A value of 1 means one gap/burst per second approximately*/
+	float jitter_strength; /**<percentage of max_bandwidth artifically consumed during bursts events*/
+	OrtpNetworkSimulatorMode mode; /**<whether simulation is applied to inboud or outbound stream.*/
 }OrtpNetworkSimulatorParams;
 
 typedef struct _OrtpNetworkSimulatorCtx{
 	OrtpNetworkSimulatorParams params;
 	int bit_budget;
 	int qsize;
-	queue_t q;
+	queue_t q;/*queue used for simulating bandwidth limit*/
 	queue_t latency_q;
+	queue_t send_q; /*used only for OrtpNetworkSimulatorOutbound direction*/
 	struct timeval last_check;
 	uint64_t last_jitter_event;
 	int consecutive_drops;
@@ -143,7 +154,10 @@ typedef struct _OrtpNetworkSimulatorCtx{
 	int drop_by_congestion;
 	int drop_by_loss;
 	int total_count; /*total number of packets gone through the simulator*/
+	ortp_mutex_t mutex;
+	ortp_thread_t thread;
 	bool_t in_jitter_event;
+	bool_t thread_started;
 }OrtpNetworkSimulatorCtx;
 
 typedef struct OrtpRtcpSendAlgorithm {
@@ -559,6 +573,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
+
 ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int64_t value );
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_delay_value(RtpSession *session, const unsigned int value );

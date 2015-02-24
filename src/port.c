@@ -101,10 +101,7 @@ char * ortp_strdup(const char *tmp){
  * ioctlsocket on Win32.
  * int retrun the result of the system method
  */
-int set_non_blocking_socket (ortp_socket_t sock)
-{
-
-
+int set_non_blocking_socket (ortp_socket_t sock){
 #if	!defined(_WIN32) && !defined(_WIN32_WCE)
 	return fcntl (sock, F_SETFL, O_NONBLOCK);
 #else
@@ -756,6 +753,56 @@ uint64_t ortp_get_cur_time_ms(void) {
 	ortpTimeSpec ts;
 	ortp_get_cur_time(&ts);
 	return (ts.tv_sec * 1000LL) + ((ts.tv_nsec + 500000LL) / 1000000LL);
+}
+
+void ortp_sleep_ms(int ms){
+#ifdef WIN32
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+	Sleep(ms);
+#else
+	HANDLE sleepEvent = CreateEventEx(NULL, NULL, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
+	if (!sleepEvent) return;
+	WaitForSingleObjectEx(sleepEvent, ms, FALSE);
+	CloseHandle(sleepEvent);
+#endif
+#else
+	struct timespec ts;
+	ts.tv_sec=0;
+	ts.tv_nsec=ms*1000000LL;
+	nanosleep(&ts,NULL);
+#endif
+}
+
+void ortp_sleep_until(const ortpTimeSpec *ts){
+#ifdef __linux
+	struct timespec rq;
+	rq.tv_sec=ts->tv_sec;
+	rq.tv_nsec=ts->tv_nsec;
+	while (clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &rq, NULL)==-1 && errno==EINTR){
+	}
+#else
+	ortpTimeSpec current;
+	ortpTimeSpec diff;
+	ortp_get_cur_time(&current);
+	diff.tv_sec=ts->tv_sec-current.tv_sec;
+	diff.tv_nsec=ts->tv_nsec-current.tv_nsec;
+	if (diff.tv_nsec<0){
+		diff.tv_nsec+=1000000000LL;
+		diff.tv_sec-=1;
+	}
+#	ifdef WIN32
+		ortp_sleep_ms((diff.tv_sec * 1000LL) + (diff.tv_nsec/1000000LL));
+#	else
+	{
+		struct timespec dur,rem;
+		dur.tv_sec=diff.tv_sec;
+		dur.tv_nsec=diff.tv_nsec;
+		while (nanosleep(&dur,&rem)==-1 && errno==EINTR){
+			dur=rem;
+		};
+	}
+#	endif
+#endif
 }
 
 #if defined(_WIN32) && !defined(_MSC_VER)

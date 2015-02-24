@@ -23,10 +23,14 @@
 #include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
 
+static void rtp_session_schedule_outbound_network_simulator(RtpSession *session, ortpTimeSpec *sleep_until);
+
 static OrtpNetworkSimulatorCtx* simulator_ctx_new(void){
 	OrtpNetworkSimulatorCtx *ctx=(OrtpNetworkSimulatorCtx*)ortp_malloc0(sizeof(OrtpNetworkSimulatorCtx));
 	qinit(&ctx->latency_q);
 	qinit(&ctx->q);
+	qinit(&ctx->send_q);
+	ortp_mutex_init(&ctx->mutex,NULL);
 	return ctx;
 }
 
@@ -44,7 +48,76 @@ void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
 	}
 	flushq(&sim->latency_q,0);
 	flushq(&sim->q,0);
+	flushq(&sim->send_q,0);
+	if (sim->thread_started){
+		sim->thread_started=FALSE;
+		ortp_thread_join(sim->thread, NULL);
+	}
+	ortp_mutex_destroy(&sim->mutex);
 	ortp_free(sim);
+}
+
+static void set_high_prio(){
+#ifndef WIN32
+	const char *sched_pref=getenv("ORTP_SIMULATOR_SCHED_POLICY");
+	int policy=SCHED_OTHER;
+	struct sched_param param;
+	int result=0;
+	char* env_prio_c=NULL;
+	int min_prio, max_prio, env_prio;
+		
+	if (sched_pref && strcasecmp(sched_pref,"SCHED_RR")==0){
+		policy=SCHED_RR;
+	}else if (sched_pref && strcasecmp(sched_pref,"SCHED_FIFO")==0){
+		policy=SCHED_FIFO;
+	}
+
+	memset(&param,0,sizeof(param));
+
+	min_prio = sched_get_priority_min(policy);
+	max_prio = sched_get_priority_max(policy);
+	env_prio_c = getenv("ORTP_SIMULATOR_SCHED_PRIO");
+
+	env_prio = (env_prio_c == NULL)?max_prio:atoi(env_prio_c);
+
+	env_prio = MAX(MIN(env_prio, max_prio), min_prio);
+
+	param.sched_priority=env_prio;
+	if((result=pthread_setschedparam(pthread_self(),policy, &param))) {
+		ortp_warning("Ortp simulator: set pthread_setschedparam failed: %s",strerror(result));
+	} else {
+		ortp_message("Priority set to %i and value (%i)",
+				policy, param.sched_priority);
+	}
+#endif
+}
+
+static void * outboud_simulator_thread(void *ctx){
+	RtpSession *session=(RtpSession*)ctx;
+	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
+	ortpTimeSpec sleep_until;
+	set_high_prio();
+	
+	while(sim->thread_started){
+		sleep_until.tv_sec=0;
+		sleep_until.tv_nsec=0;
+		rtp_session_schedule_outbound_network_simulator(session, &sleep_until);
+		if (sleep_until.tv_sec!=0 || sleep_until.tv_nsec!=0 ) ortp_sleep_until(&sleep_until);
+		else ortp_sleep_ms(1);
+	}
+	return NULL;
+}
+
+static const char *simulator_mode_to_string(OrtpNetworkSimulatorMode mode){
+	switch(mode){
+		case OrtpNetworkSimulatorInbound:
+			return "Inbound";
+		case OrtpNetworkSimulatorOutbound:
+			return "Outbound";
+		case OrtpNetworkSimulatorOutboundControlled:
+			return "OutboundControlled";
+	}
+	return "invalid";
 }
 
 void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params){
@@ -63,6 +136,10 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 			sim->params.max_buffer_size=sim->params.max_bandwidth;
 			ortp_message("Network simulation: Max buffer size not set for RTP session [%p], using [%i]",session,sim->params.max_buffer_size);
 		}
+		if (params->mode==OrtpNetworkSimulatorOutbound && !sim->thread_started){
+			sim->thread_started=TRUE;
+			ortp_thread_create(&sim->thread, NULL, outboud_simulator_thread, session);
+		}
 		session->net_sim_ctx=sim;
 
 		ortp_message("Network simulation: enabled with the following parameters:\n"
@@ -72,17 +149,20 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 				"\tmax_bandwidth=%.1f\n"
 				"\tmax_buffer_size=%d\n"
 				"\tjitter_density=%.1f\n"
-				"\tjitter_strength=%.1f\n",
+				"\tjitter_strength=%.1f\n"
+				"\tmode=%s\n",
 				params->latency,
 				params->loss_rate,
 				params->consecutive_loss_probability,
 				params->max_bandwidth,
 				params->max_buffer_size,
 				params->jitter_burst_density,
-				params->jitter_strength);
+				params->jitter_strength,
+				simulator_mode_to_string(params->mode)
+    			);
 	}else{
-		if (sim!=NULL) ortp_network_simulator_destroy(sim);
 		session->net_sim_ctx=NULL;
+		if (sim!=NULL) ortp_network_simulator_destroy(sim);
 	}
 }
 
@@ -110,7 +190,6 @@ static mblk_t * simulate_latency(RtpSession *session, mblk_t *input){
 		if (TIME_IS_NEWER_THAN(current_ts, output->reserved2)){
 			output->reserved2=0;
 			getq(&sim->latency_q);
-
 			/*return the first dequeued packet*/
 			return output;
 		}
@@ -266,5 +345,89 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 		om->reserved1 = 0;
 	}
 	return om;
+}
+
+static void rtp_session_schedule_outbound_network_simulator(RtpSession *session, ortpTimeSpec *sleep_until){
+	mblk_t *om;
+	int count=0;
+	bool_t is_rtp_packet;
+	
+	if (!session->net_sim_ctx)
+		return;
+	
+	if (!session->net_sim_ctx->params.enabled)
+		return;
+	
+	if (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound){
+		sleep_until->tv_sec=0;
+		sleep_until->tv_nsec=0;
+		ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		while((om=getq(&session->net_sim_ctx->send_q))!=NULL){
+			count++;
+			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+			is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
+			om=rtp_session_network_simulate(session,om, &is_rtp_packet);
+			if (om){
+				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
+				freemsg(om);
+			}
+			ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		}
+		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+		if (count==0){
+			/*even if no packets were queued, we have to schedule the simulator*/
+			is_rtp_packet=TRUE;
+			om=rtp_session_network_simulate(session,NULL, &is_rtp_packet);
+			if (om){
+				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
+				freemsg(om);
+			}
+		}
+	}else if (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled){
+#if defined(ORTP_TIMESTAMP)
+		ortpTimeSpec current;
+		ortpTimeSpec packet_time;
+		mblk_t *todrop=NULL;
+		ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		while((om=peekq(&session->net_sim_ctx->send_q))!=NULL){
+			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+			if (todrop) {
+				freemsg(todrop); /*free the last message while the mutex is not held*/
+				todrop=NULL;
+			}
+			ortp_get_cur_time(&current);
+			packet_time.tv_sec=om->timestamp.tv_sec;
+			packet_time.tv_nsec=om->timestamp.tv_usec*1000LL;
+			if (packet_time.tv_sec<=current.tv_sec && packet_time.tv_nsec<=current.tv_nsec){
+				is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
+				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
+				todrop=om;
+			}else if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
+				todrop=om; /*simulate a packet loss*/
+			}else {
+				/*no packet is to be sent yet; set the time at which we want to be called*/
+				*sleep_until=packet_time;
+				break; 
+			}
+			ortp_mutex_lock(&session->net_sim_ctx->mutex);
+			if (todrop) getq(&session->net_sim_ctx->send_q); /* pop the message while the mutex is held*/
+		}
+		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+		if (todrop) freemsg(todrop);
+		if (sleep_until->tv_sec==0){
+			/*no packet in the queue yet, schedule a wake up not too far*/
+			sleep_until->tv_sec=current.tv_sec;
+			sleep_until->tv_nsec=current.tv_nsec+1000000LL; /*in 1 ms*/
+		}
+#else
+		ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		while((om=getq(&session->net_sim_ctx->send_q))!=NULL){
+			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+			freemsg(om);
+			ortp_error("Network simulator is in mode OrtpNetworkSimulatorOutboundControlled but oRTP wasn't compiled with --enable-ntp-timestamp.");
+			ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		}
+#endif
+	}
 }
 

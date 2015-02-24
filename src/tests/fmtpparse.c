@@ -23,7 +23,7 @@
 int main(int argc, char *argv[]){
 	char value[256]={0};
 	if (argc<3){
-		fprintf(stderr,"%s <fmtp-line> <param-to-extract>\n");
+		fprintf(stderr,"%s <fmtp-line> <param-to-extract>\n", argv[0]);
 		return -1;
 	}
 	if (fmtp_get_value(argv[1],argv[2],value,sizeof(value))){
