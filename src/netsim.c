@@ -108,7 +108,7 @@ static void * outboud_simulator_thread(void *ctx){
 	return NULL;
 }
 
-static const char *simulator_mode_to_string(OrtpNetworkSimulatorMode mode){
+const char *ortp_network_simulator_mode_to_string(OrtpNetworkSimulatorMode mode){
 	switch(mode){
 		case OrtpNetworkSimulatorInbound:
 			return "Inbound";
@@ -116,8 +116,17 @@ static const char *simulator_mode_to_string(OrtpNetworkSimulatorMode mode){
 			return "Outbound";
 		case OrtpNetworkSimulatorOutboundControlled:
 			return "OutboundControlled";
+		case OrtpNetworkSimulatorInvalid:
+			return "Invalid";
 	}
 	return "invalid";
+}
+
+OrtpNetworkSimulatorMode ortp_network_simulator_mode_from_string(const char *str){
+	if (strcasecmp(str,"Inbound")==0) return OrtpNetworkSimulatorInbound;
+	if (strcasecmp(str,"Outbound")==0) return OrtpNetworkSimulatorOutbound;
+	if (strcasecmp(str,"OutboundControlled")==0) return OrtpNetworkSimulatorOutboundControlled;
+	return OrtpNetworkSimulatorInvalid;
 }
 
 void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params){
@@ -158,7 +167,7 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 				params->max_buffer_size,
 				params->jitter_burst_density,
 				params->jitter_strength,
-				simulator_mode_to_string(params->mode)
+				ortp_network_simulator_mode_to_string(params->mode)
     			);
 	}else{
 		session->net_sim_ctx=NULL;

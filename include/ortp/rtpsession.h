@@ -119,6 +119,7 @@ typedef struct _RtpTransport
 }  RtpTransport;
 
 typedef enum _OrtpNetworkSimulatorMode{
+	OrtpNetworkSimulatorInvalid=-1,
 	OrtpNetworkSimulatorInbound,/**<simulation is applied when receiving packets*/
 	OrtpNetworkSimulatorOutbound, /**<simulation is applied to sent packets*/
 	OrtpNetworkSimulatorOutboundControlled /**<simulation is applied to sent packets according to sent timestamp 
@@ -399,6 +400,10 @@ extern "C"
 {
 #endif
 
+ORTP_PUBLIC const char *ortp_network_simulator_mode_to_string(OrtpNetworkSimulatorMode mode);
+ORTP_PUBLIC OrtpNetworkSimulatorMode ortp_network_simulator_mode_from_string(const char *str);
+
+	
 /* public API */
 ORTP_PUBLIC RtpSession *rtp_session_new(int mode);
 ORTP_PUBLIC void rtp_session_set_scheduling_mode(RtpSession *session, int yesno);
