@@ -248,6 +248,10 @@ ORTP_PUBLIC const char *getWinSocketError(int error);
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 
+#ifndef F_OK
+#define F_OK 00 /* Visual Studio does not define F_OK */
+#endif
+
 
 #ifdef __cplusplus
 extern "C"{
