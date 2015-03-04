@@ -19,5 +19,17 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #
 ############################################################################
+#
+# Config file for the oRTP package.
+# It defines the following variables:
+#
+#  ORTP_FOUND - system has oRTP
+#  ORTP_INCLUDE_DIRS - the oRTP include directory
+#  ORTP_LIBRARIES - The libraries needed to use oRTP
 
 include("${CMAKE_CURRENT_LIST_DIR}/ORTPTargets.cmake")
+
+get_filename_component(ORTP_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+set(ORTP_INCLUDE_DIRS "${ORTP_CMAKE_DIR}/../../../include")
+set(ORTP_LIBRARIES BelledonneCommunications::ortp)
+set(ORTP_FOUND 1)
