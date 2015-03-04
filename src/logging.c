@@ -50,6 +50,9 @@ OrtpLogFunc ortp_logv_out=__ortp_logv_out;
 void ortp_set_log_handler(OrtpLogFunc func){
 	ortp_logv_out=func;
 }
+OrtpLogFunc ortp_get_log_handler(){
+	return ortp_logv_out;
+}
 
 
 static unsigned int __ortp_log_mask=ORTP_WARNING|ORTP_ERROR|ORTP_FATAL;
