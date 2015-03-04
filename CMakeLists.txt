@@ -179,17 +179,6 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 
-set(ORTP_CPPFLAGS )
-if(ORTP_STATIC)
-	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
-endif()
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/FindORTP.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake @ONLY)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/FindORTP.cmake
-	DESTINATION share/cmake/Modules
-	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-)
-
-
 if(DOXYGEN_FOUND)
 	set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
 	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
@@ -220,3 +209,30 @@ set(ORTPDEPS_LIBS )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION lib/pkgconfig)
 
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
+	VERSION ${ORTP_VERSION}
+	COMPATIBILITY AnyNewerVersion
+)
+export(EXPORT ORTPTargets
+	FILE "${CMAKE_CURRENT_BINARY_DIR}/ORTPTargets.cmake"
+	NAMESPACE BelledonneCommunications::
+)
+configure_file(ORTPConfig.cmake
+	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
+	COPYONLY
+)
+
+set(ConfigPackageLocation lib/cmake/oRTP)
+install(EXPORT ORTPTargets
+	FILE ORTPTargets.cmake
+	NAMESPACE BelledonneCommunications::
+	DESTINATION ${ConfigPackageLocation}
+)
+install(FILES
+	ORTPConfig.cmake
+	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
+	DESTINATION ${ConfigPackageLocation}
+)
