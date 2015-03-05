@@ -25,29 +25,9 @@
 #define ORTP_MICRO_VERSION ${ORTP_MICRO_VERSION}
 #define ORTP_VERSION "${ORTP_VERSION}"
 
-#cmakedefine HAVE_INTTYPES_H 1
-#cmakedefine HAVE_MEMORY_H 1
-#cmakedefine HAVE_STDINT_H 1
-#cmakedefine HAVE_STDLIB_H 1
-#cmakedefine HAVE_STRINGS_H 1
-#cmakedefine HAVE_STRING_H 1
-#cmakedefine HAVE_SYS_STAT_H 1
-#cmakedefine HAVE_SYS_TYPES_H 1
-#cmakedefine HAVE_POLL_H 1
-#cmakedefine HAVE_SYS_POLL_H 1
 #cmakedefine HAVE_SYS_UIO_H 1
-#cmakedefine HAVE_FCNTL_H 1
-#cmakedefine HAVE_SYS_TIME_H 1
-#cmakedefine HAVE_UNISTD_H 1
 #cmakedefine HAVE_SYS_AUDIO_H 1
-#cmakedefine HAVE_LINUX_SOUNDCARD_H 1
 #cmakedefine HAVE_SYS_SHM_H 1
-
-#cmakedefine HAVE_SELECT 1
-#cmakedefine HAVE_SOCKET 1
-#cmakedefine HAVE_STRERROR 1
-
-#cmakedefine HAVE_SETEUID 1
 #cmakedefine HAVE_ARC4RANDOM 1
 
 #cmakedefine ORTP_BIGENDIAN

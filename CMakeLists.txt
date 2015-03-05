@@ -42,11 +42,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_PREFIX_PATH}/share/cmake/Modules)
 find_package(Doxygen)
 
 
-include(CheckCSourceCompiles)
 include(CheckIncludeFile)
-include(CheckLibraryExists)
 include(CheckFunctionExists)
-include(CMakePushCheckState)
 
 set(MSVC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/MSVC")
 if(MSVC)
@@ -55,68 +52,10 @@ endif()
 
 find_package(Threads)
 
-check_include_file(inttypes.h HAVE_INTTYPES_H)
-check_include_file(memory.h HAVE_MEMORY_H)
-check_include_file(stdint.h HAVE_STDINT_H)
-check_include_file(stdlib.h HAVE_STDLIB_H)
-check_include_file(strings.h HAVE_STRINGS_H)
-check_include_file(string.h HAVE_STRING_H)
-check_include_file(sys/stat.h HAVE_SYS_STAT_H)
-check_include_file(sys/types.h HAVE_SYS_TYPES_H)
-check_include_file(poll.h HAVE_POLL_H)
-check_include_file(sys/poll.h HAVE_SYS_POLL_H)
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
-check_include_file(fcntl.h HAVE_FCNTL_H)
-check_include_file(sys/time.h HAVE_SYS_TIME_H)
-check_include_file(unistd.h HAVE_UNISTD_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
-check_include_file(linux/soundcard.h HAVE_LINUX_SOUNDCARD_H)
 check_include_file(sys/shm.h HAVE_SYS_SHM_H)
-check_include_file(windows.h HAVE_WINDOWS_H)
-if(HAVE_WINDOWS_H)
-	check_include_file(winsock2.h HAVE_WINSOCK2_H)
-endif()
-
-if(MSVC)
-	cmake_push_check_state(RESET)
-	set(CMAKE_REQUIRED_LIBRARIES ws2_32)
-	check_c_source_compiles("#include <winsock2.h>
-int main(int argc, char *argv[]) {
-select(0, 0, 0, 0, 0);
-return 0;
-}"
-	HAVE_SELECT)
-	check_c_source_compiles("#include <winsock2.h>
-int main(int argc, char *argv[]) {
-socket(0, 0, 0);
-return 0;
-}"
-	HAVE_SOCKET)
-	check_c_source_compiles("#include <winsock2.h>
-int main(int argc, char *argv[]) {
-strerror(0);
-return 0;
-}"
-	HAVE_STRERROR)
-	cmake_pop_check_state()
-else()
-	check_function_exists("select" HAVE_SELECT)
-	check_function_exists("socket" HAVE_SOCKET)
-	check_function_exists("strerror" HAVE_STRERROR)
-endif()
-if(NOT HAVE_SELECT)
-	message(FATAL_ERROR "select has not been found")
-endif()
-if(NOT HAVE_SOCKET)
-	message(FATAL_ERROR "socket has not been found")
-endif()
-if(NOT HAVE_STRERROR)
-	message(FATAL_ERROR "strerror has not been found")
-endif()
-check_function_exists(seteuid HAVE_SETEUID)
 check_function_exists(arc4random HAVE_ARC4RANDOM)
-
-check_library_exists("rt" "clock_gettime" "" HAVE_LIBRT)
 
 include(TestBigEndian)
 test_big_endian(WORDS_BIGENDIAN)
