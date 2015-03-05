@@ -20,7 +20,7 @@
 #
 ############################################################################
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 project(ORTP C)
 
 
@@ -46,9 +46,7 @@ include(CheckCSourceCompiles)
 include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
-if("${CMAKE_VERSION}" VERSION_GREATER "2.8.5")
-	include(CMakePushCheckState)
-endif()
+include(CMakePushCheckState)
 
 if(MSVC)
 	list(APPEND CMAKE_REQUIRED_INCLUDES ${CMAKE_PREFIX_PATH}/include/MSVC)
@@ -79,11 +77,7 @@ if(HAVE_WINDOWS_H)
 endif()
 
 if(MSVC)
-	if("${CMAKE_VERSION}" VERSION_GREATER "2.8.5")
-		cmake_push_check_state(RESET)
-	else()
-		set(SAVE_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-	endif()
+	cmake_push_check_state(RESET)
 	set(CMAKE_REQUIRED_LIBRARIES ws2_32)
 	check_c_source_compiles("#include <winsock2.h>
 int main(int argc, char *argv[]) {
@@ -103,11 +97,7 @@ strerror(0);
 return 0;
 }"
 	HAVE_STRERROR)
-	if("${CMAKE_VERSION}" VERSION_GREATER "2.8.5")
-		cmake_pop_check_state()
-	else()
-		set(CMAKE_REQUIRED_LIBRARIES ${SAVE_CMAKE_REQUIRED_LIBRARIES})
-	endif()
+	cmake_pop_check_state()
 else()
 	check_function_exists("select" HAVE_SELECT)
 	check_function_exists("socket" HAVE_SOCKET)
@@ -232,7 +222,7 @@ install(EXPORT ORTPTargets
 	DESTINATION ${ConfigPackageLocation}
 )
 install(FILES
-	ORTPConfig.cmake
+	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
 	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
 	DESTINATION ${ConfigPackageLocation}
 )
