@@ -48,8 +48,9 @@ include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CMakePushCheckState)
 
+set(MSVC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/MSVC")
 if(MSVC)
-	list(APPEND CMAKE_REQUIRED_INCLUDES ${CMAKE_PREFIX_PATH}/include/MSVC)
+	list(APPEND CMAKE_REQUIRED_INCLUDES "${MSVC_INCLUDE_DIR}")
 endif()
 
 find_package(Threads)
@@ -130,7 +131,7 @@ include_directories(
 	${CMAKE_CURRENT_BINARY_DIR}
 )
 if(MSVC)
-	include_directories(${CMAKE_PREFIX_PATH}/include/MSVC)
+	include_directories(${MSVC_INCLUDE_DIR})
 endif()
 
 
