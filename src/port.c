@@ -712,7 +712,7 @@ void ortp_shm_close(void *mem){
 #include <sys/timeb.h>
 #endif
 
-void ortp_get_cur_time(ortpTimeSpec *ret){
+void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(WIN32)
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 	DWORD timemillis;
@@ -741,13 +741,18 @@ void ortp_get_cur_time(ortpTimeSpec *ret){
 	ret->tv_nsec = time_val.millitm * 1000000LL;
 #else
 	struct timespec ts;
-	if (clock_gettime(CLOCK_MONOTONIC,&ts)<0){
+	if (clock_gettime(realtime ? CLOCK_REALTIME : CLOCK_MONOTONIC,&ts)<0){
 		ortp_fatal("clock_gettime() doesn't work: %s",strerror(errno));
 	}
 	ret->tv_sec=ts.tv_sec;
 	ret->tv_nsec=ts.tv_nsec;
 #endif
 }
+
+void ortp_get_cur_time(ortpTimeSpec *ret){
+	return _ortp_get_cur_time(ret, FALSE);
+}
+
 
 uint64_t ortp_get_cur_time_ms(void) {
 	ortpTimeSpec ts;
@@ -767,8 +772,8 @@ void ortp_sleep_ms(int ms){
 #endif
 #else
 	struct timespec ts;
-	ts.tv_sec=0;
-	ts.tv_nsec=ms*1000000LL;
+	ts.tv_sec=ms/1000;
+	ts.tv_nsec=(ms%1000)*1000000LL;
 	nanosleep(&ts,NULL);
 #endif
 }
@@ -783,7 +788,7 @@ void ortp_sleep_until(const ortpTimeSpec *ts){
 #else
 	ortpTimeSpec current;
 	ortpTimeSpec diff;
-	ortp_get_cur_time(&current);
+	_ortp_get_cur_time(&current, TRUE);
 	diff.tv_sec=ts->tv_sec-current.tv_sec;
 	diff.tv_nsec=ts->tv_nsec-current.tv_nsec;
 	if (diff.tv_nsec<0){

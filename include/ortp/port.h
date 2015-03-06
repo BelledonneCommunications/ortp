@@ -313,6 +313,7 @@ ORTP_PUBLIC char *ortp_strcat_vprintf(char *dst, const char *fmt, va_list ap);
 ORTP_PUBLIC int ortp_file_exist(const char *pathname);
 
 ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
+void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime);
 ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
 ORTP_PUBLIC void ortp_sleep_ms(int ms);
 ORTP_PUBLIC void ortp_sleep_until(const ortpTimeSpec *ts);

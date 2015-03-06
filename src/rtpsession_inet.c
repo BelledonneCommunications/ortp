@@ -1025,7 +1025,8 @@ int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockad
 int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
 	int ret;
 	
-	if (session->net_sim_ctx && session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound){
+	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
+			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
 		ret=msgdsize(m);
 		m=dupmsg(m);
 		memcpy(&m->net_addr,destaddr,destlen);
