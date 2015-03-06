@@ -74,8 +74,10 @@ if(MSVC)
 endif()
 
 
+set(ORTP_CPPFLAGS "")
 if(ENABLE_STATIC)
 	set(ORTP_STATIC 1)
+	set(ORTP_CPPFLAGS "${ORTP_CPPFLAGS} -DORTP_STATIC")
 endif()
 if(ENABLE_PERF)
 	set(PERF 1)
@@ -150,9 +152,9 @@ export(EXPORT ORTPTargets
 	FILE "${CMAKE_CURRENT_BINARY_DIR}/ORTPTargets.cmake"
 	NAMESPACE BelledonneCommunications::
 )
-configure_file(ORTPConfig.cmake
+configure_file(ORTPConfig.cmake.in
 	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
-	COPYONLY
+	@ONLY
 )
 
 set(ConfigPackageLocation lib/cmake/oRTP)
