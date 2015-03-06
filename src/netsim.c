@@ -407,7 +407,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			ortp_get_cur_time(&current);
 			packet_time.tv_sec=om->timestamp.tv_sec;
 			packet_time.tv_nsec=om->timestamp.tv_usec*1000LL;
-			else if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
+			if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
 				todrop=om; /*simulate a packet loss*/
 			}else if (packet_time.tv_sec<=current.tv_sec && packet_time.tv_nsec<=current.tv_nsec){
 				is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
