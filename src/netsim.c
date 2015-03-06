@@ -407,12 +407,12 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			ortp_get_cur_time(&current);
 			packet_time.tv_sec=om->timestamp.tv_sec;
 			packet_time.tv_nsec=om->timestamp.tv_usec*1000LL;
-			if (packet_time.tv_sec<=current.tv_sec && packet_time.tv_nsec<=current.tv_nsec){
+			else if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
+				todrop=om; /*simulate a packet loss*/
+			}else if (packet_time.tv_sec<=current.tv_sec && packet_time.tv_nsec<=current.tv_nsec){
 				is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
 				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
 				todrop=om;
-			}else if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
-				todrop=om; /*simulate a packet loss*/
 			}else {
 				/*no packet is to be sent yet; set the time at which we want to be called*/
 				*sleep_until=packet_time;
