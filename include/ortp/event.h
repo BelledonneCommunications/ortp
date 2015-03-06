@@ -42,7 +42,7 @@ struct _OrtpEventData{
 		bool_t dtls_stream_encrypted;
 		bool_t zrtp_stream_encrypted;
 		struct _ZrtpSas{
-			char sas[5]; // 4 characters
+			char sas[32]; // up to 31 + null characters
 			bool_t verified;
 		} zrtp_sas;
 		OrtpSocketType socket_type;
