@@ -1716,40 +1716,43 @@ void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno){
 	session->use_connect=yesno;
 }
 
-static float compute_bw(struct timeval *orig, unsigned int bytes){
-	struct timeval current;
+static float compute_bw(struct timeval *orig, unsigned int bytes, const struct timeval *current){
 	float bw;
 	float time;
-	if (bytes==0) return 0;
-	ortp_gettimeofday(&current,NULL);
-	time=(float)(current.tv_sec - orig->tv_sec) +
-		((float)(current.tv_usec - orig->tv_usec)*1e-6);
-	bw=((float)bytes)*8/(time+0.001);
+	
+	time=(float)(current->tv_sec - orig->tv_sec) +
+		((float)(current->tv_usec - orig->tv_usec)*1e-6);
+	bw=((float)bytes)*8/(time+0.0001);
 	/*+0.0001 avoids a division by zero without changing the results significatively*/
+	*orig=*current;
 	return bw;
 }
 
-static void compute_recv_bandwidth(OrtpStream *os) {
-	os->download_bw = compute_bw(&os->recv_bw_start, os->recv_bytes);
+static void compute_recv_bandwidth(OrtpStream *os, const struct timeval *current) {
+	os->download_bw = compute_bw(&os->recv_bw_start, os->recv_bytes, current);
 	os->recv_bytes = 0;
-	ortp_gettimeofday(&os->recv_bw_start, NULL);
 }
 
-static void compute_send_bandwidth(OrtpStream *os) {
-	os->upload_bw = compute_bw(&os->send_bw_start, os->sent_bytes);
+static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current) {
+	os->upload_bw = compute_bw(&os->send_bw_start, os->sent_bytes, current);
 	os->sent_bytes = 0;
-	ortp_gettimeofday(&os->send_bw_start, NULL);
 }
 
 float rtp_session_compute_recv_bandwidth(RtpSession *session) {
-	compute_recv_bandwidth(&session->rtp.gs);
-	compute_recv_bandwidth(&session->rtcp.gs);
+	struct timeval current;
+	ortp_gettimeofday(&current,NULL);
+	
+	compute_recv_bandwidth(&session->rtp.gs, &current);
+	compute_recv_bandwidth(&session->rtcp.gs, &current);
 	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 }
 
 float rtp_session_compute_send_bandwidth(RtpSession *session) {
-	compute_send_bandwidth(&session->rtp.gs);
-	compute_send_bandwidth(&session->rtcp.gs);
+	struct timeval current;
+	ortp_gettimeofday(&current,NULL);
+	
+	compute_send_bandwidth(&session->rtp.gs, &current);
+	compute_send_bandwidth(&session->rtcp.gs, &current);
 	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
 }
 
