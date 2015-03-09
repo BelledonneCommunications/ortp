@@ -470,8 +470,8 @@ ORTP_PUBLIC uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m);
 
 typedef struct OrtpLossRateEstimator{
 	int min_packet_count_interval;
-	uint64_t min_time_ms_interval; 
-	uint64_t last_estimate_time_ms; 
+	uint64_t min_time_ms_interval;
+	uint64_t last_estimate_time_ms;
 	int32_t last_cum_loss;
 	int32_t last_ext_seq;
 	float loss_rate;
@@ -494,7 +494,7 @@ ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int m
 
 
 /**
- * Process an incoming report block to compute loss rate. It tries to compute
+ * Process an incoming report block to compute loss rate percentage. It tries to compute
  * loss rate, depending on the previous report block. It may fails if the two
  * reports are too close or if a discontinuity occurred. You should NOT use
  * loss rate field of the report block directly (see below).
@@ -511,7 +511,12 @@ ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int m
 ORTP_PUBLIC bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 																 const struct _RtpStream *stream,
 																 const report_block_t *rb);
-
+/**
+ * Get the latest loss rate in percentage estimation computed.
+ *
+ * @param obj #OrtpLossRateEstimator object.
+ * @return The latest loss rate in percentage computed.
+ */
 ORTP_PUBLIC float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj);
 
 ORTP_PUBLIC void ortp_loss_rate_estimator_uninit(OrtpLossRateEstimator *obj);
