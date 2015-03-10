@@ -2032,7 +2032,7 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
 		ret = rtm->t_process_on_send(rtm,msg);
 
-		if (ret<0){
+		if (ret<=0){
 			// something went wrong in the modifier (failed to encrypt for instance)
 			return ret;
 		}
@@ -2090,7 +2090,7 @@ int meta_rtp_transport_modifier_inject_packet_to(const RtpTransport *t, RtpTrans
 			RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
 			ret = rtm->t_process_on_send(rtm,msg);
 
-			if (ret<0){
+			if (ret<=0){
 				// something went wrong in the modifier (failed to encrypt for instance)
 				return ret;
 			}
