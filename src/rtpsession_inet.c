@@ -1334,6 +1334,40 @@ static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, const
 	}
 }
 
+static void notify_tmmbr_received(RtpSession *session, mblk_t *m) {
+	if (session->eventqs != NULL) {
+		rtcp_fb_tmmbr_fci_t *fci = rtcp_RTPFB_tmmbr_get_fci(m);
+		OrtpEvent *ev = ortp_event_new(ORTP_EVENT_TMMBR_RECEIVED);
+		OrtpEventData *d = ortp_event_get_data(ev);
+		d->packet = copymsg(m);
+		d->info.tmmbr_mxtbr = rtcp_fb_tmmbr_fci_get_mxtbr_mantissa(fci) * (1 << rtcp_fb_tmmbr_fci_get_mxtbr_exp(fci));
+		rtp_session_dispatch_event(session, ev);
+	}
+}
+
+static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
+	switch (rtcp_RTPFB_get_type(block)) {
+		case RTCP_RTPFB_TMMBR:
+			if (session->rtcp.tmmbr_info.received) freemsg(session->rtcp.tmmbr_info.received);
+			session->rtcp.tmmbr_info.received = copymsg(block);
+			rtp_session_send_rtcp_fb_tmmbn(session);
+			notify_tmmbr_received(session, block);
+			break;
+		case RTCP_RTPFB_TMMBN:
+			if (session->rtcp.tmmbr_info.sent) {
+				rtcp_fb_tmmbr_fci_t *tmmbn_fci = rtcp_RTPFB_tmmbr_get_fci(block);
+				rtcp_fb_tmmbr_fci_t *tmmbr_fci = rtcp_RTPFB_tmmbr_get_fci(session->rtcp.tmmbr_info.sent);
+				if ((ntohl(tmmbn_fci->ssrc) == rtp_session_get_send_ssrc(session)) && (tmmbn_fci->value == tmmbr_fci->value)) {
+					freemsg(session->rtcp.tmmbr_info.sent);
+					session->rtcp.tmmbr_info.sent = NULL;
+				}
+			}
+			break;
+		default:
+			break;
+	}
+}
+
 /*
  * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
  * @param session : the current session descriptor.
@@ -1417,6 +1451,8 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 			if (rb) compute_rtt_from_report_block(session,&reception_date,rb);
 		} else if (rtcp_is_XR(block)) {
 			compute_rtcp_xr_statistics(session, block, &reception_date);
+		} else if (rtcp_is_RTPFB(block)) {
+			handle_rtcp_rtpfb_packet(session, block);
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);

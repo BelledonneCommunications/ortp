@@ -430,6 +430,17 @@ static void append_fb_packets(RtpSession *session, mblk_t *m) {
 		concatb(m, session->rtcp.send_algo.fb_packets);
 		session->rtcp.send_algo.fb_packets = NULL;
 	}
+
+	/* Repeat TMMBR packets until they are acknowledged with a TMMBN unless a TMMBN is being sent. */
+	if (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_TMMBR)
+		&& (session->rtcp.tmmbr_info.sent != NULL)
+		&& (session->rtcp.send_algo.tmmbr_scheduled != TRUE)
+		&& (session->rtcp.send_algo.tmmbn_scheduled != TRUE)) {
+		concatb(m, copymsg(session->rtcp.tmmbr_info.sent));
+	}
+
+	session->rtcp.send_algo.tmmbr_scheduled = FALSE;
+	session->rtcp.send_algo.tmmbn_scheduled = FALSE;
 }
 
 static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t full) {

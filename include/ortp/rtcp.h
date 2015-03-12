@@ -292,6 +292,12 @@ typedef struct rtcp_xr_voip_metrics_report_block {
 #define MIN_RTCP_XR_PACKET_SIZE (sizeof(rtcp_xr_header_t) + 4)
 
 typedef enum {
+	RTCP_RTPFB_NACK = 1,
+	RTCP_RTPFB_TMMBR = 3,
+	RTCP_RTPFB_TMMBN = 4
+} rtcp_rtpfb_type_t;
+
+typedef enum {
 	RTCP_PSFB_PLI = 1,
 	RTCP_PSFB_SLI = 2,
 	RTCP_PSFB_RPSI = 3,
@@ -303,6 +309,25 @@ typedef struct rtcp_fb_header {
 	uint32_t packet_sender_ssrc;
 	uint32_t media_source_ssrc;
 } rtcp_fb_header_t;
+
+typedef struct rtcp_fb_tmmbr_fci {
+	uint32_t ssrc;
+	uint32_t value;
+} rtcp_fb_tmmbr_fci_t;
+
+#define rtcp_fb_tmmbr_fci_get_ssrc(tmmbr) ntohl((tmmbr)->ssrc)
+#define rtcp_fb_tmmbr_fci_get_mxtbr_exp(tmmbr) \
+	((uint8_t)((ntohl((tmmbr)->value) >> 26) & 0x0000003F))
+#define rtcp_fb_tmmbr_fci_set_mxtbr_exp(tmmbr, mxtbr_exp) \
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0x03FFFFFF) | (((mxtbr_exp) & 0x0000003F) << 26))
+#define rtcp_fb_tmmbr_fci_get_mxtbr_mantissa(tmmbr) \
+	((uint32_t)((ntohl((tmmbr)->value) >> 9) & 0x0001FFFF))
+#define rtcp_fb_tmmbr_fci_set_mxtbr_mantissa(tmmbr, mxtbr_mantissa) \
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFC0001FF) | (((mxtbr_mantissa) & 0x0001FFFF) << 9))
+#define rtcp_fb_tmmbr_fci_get_measured_overhead(tmmbr) \
+	((uint16_t)(ntohl((tmmbr)->value) & 0x000001FF))
+#define rtcp_fb_tmmbr_fci_set_measured_overhead(tmmbr, measured_overhead) \
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFFFFFE00) | ((measured_overhead) & 0x000001FF))
 
 typedef struct rtcp_fb_fir_fci {
 	uint32_t ssrc;
@@ -341,6 +366,7 @@ typedef struct rtcp_fb_rpsi_fci {
 #define rtcp_fb_rpsi_fci_get_bit_string(fci) ((uint8_t *)(fci)->bit_string)
 
 #define MIN_RTCP_PSFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
+#define MIN_RTCP_RTPFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
 
 
 
@@ -456,6 +482,11 @@ ORTP_PUBLIC uint8_t rtcp_XR_voip_metrics_get_rx_config(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_nominal(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_maximum(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m);
+
+/* RTCP RTPFB accessors */
+ORTP_PUBLIC bool_t rtcp_is_RTPFB(const mblk_t *m);
+ORTP_PUBLIC rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m);
+ORTP_PUBLIC rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m);
 
 /* RTCP PSFB accessors */
 ORTP_PUBLIC bool_t rtcp_is_PSFB(const mblk_t *m);

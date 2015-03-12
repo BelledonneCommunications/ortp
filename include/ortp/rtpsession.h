@@ -42,6 +42,9 @@
 #include <ortp/event.h>
 
 
+#define ORTP_AVPF_FEATURE_NONE 0
+#define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
+
 
 typedef enum {
 	RTP_SESSION_RECVONLY,
@@ -175,6 +178,8 @@ typedef struct OrtpRtcpSendAlgorithm {
 	bool_t initialized; /* Whether the RTCP send algorithm is fully initialized. */
 	bool_t initial;
 	bool_t allow_early;
+	bool_t tmmbr_scheduled;
+	bool_t tmmbn_scheduled;
 } OrtpRtcpSendAlgorithm;
 
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
@@ -247,6 +252,11 @@ typedef struct OrtpRtcpXrStats {
 	uint32_t discarded_count;
 } OrtpRtcpXrStats;
 
+typedef struct OrtpRtcpTmmbrInfo {
+	mblk_t *sent;
+	mblk_t *received;
+} OrtpRtcpTmmbrInfo;
+
 typedef struct _OrtpAddress{
 	struct sockaddr_storage addr;
 	socklen_t len;
@@ -317,6 +327,7 @@ typedef struct _RtcpStream
 	OrtpRtcpSendAlgorithm send_algo;
 	OrtpRtcpXrConfiguration xr_conf;
 	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
+	OrtpRtcpTmmbrInfo tmmbr_info;
 	bool_t enabled; /*tells whether we can send RTCP packets */
 	bool_t rtcp_xr_dlrr_to_send;
 	uint8_t rtcp_fb_fir_seq_nr;	/* The FIR command sequence number */
@@ -390,6 +401,7 @@ struct _RtpSession
 	bool_t use_connect; /* use connect() on the socket */
 	bool_t ssrc_set;
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
+	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 };
 
 
@@ -592,12 +604,18 @@ ORTP_PUBLIC void rtp_session_send_rtcp_xr_voip_metrics(RtpSession *session);
 
 
 ORTP_PUBLIC bool_t rtp_session_avpf_enabled(RtpSession *session);
+ORTP_PUBLIC bool_t rtp_session_avpf_payload_type_feature_enabled(RtpSession *session, unsigned char feature);
 ORTP_PUBLIC bool_t rtp_session_avpf_feature_enabled(RtpSession *session, unsigned char feature);
+ORTP_PUBLIC void rtp_session_enable_avpf_feature(RtpSession *session, unsigned char feature, bool_t enable);
 ORTP_PUBLIC uint16_t rtp_session_get_avpf_rr_interval(RtpSession *session);
+ORTP_PUBLIC bool_t rtp_session_rtcp_psfb_scheduled(RtpSession *session, rtcp_psfb_type_t type);
+ORTP_PUBLIC bool_t rtp_session_rtcp_rtpfb_scheduled(RtpSession *session, rtcp_rtpfb_type_t type);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_pli(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_fir(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len);
+ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr);
+ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session);
 
 
 /*private */

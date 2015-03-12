@@ -508,6 +508,34 @@ uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m) {
 }
 
 
+/* RTCP RTPFB accessors */
+bool_t rtcp_is_RTPFB(const mblk_t *m) {
+	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
+	if ((ch != NULL) && (rtcp_common_header_get_packet_type(ch) == RTCP_RTPFB)) {
+		if (msgdsize(m) < MIN_RTCP_RTPFB_PACKET_SIZE) {
+			ortp_warning("Too short RTCP RTPFB packet.");
+			return FALSE;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m) {
+	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
+	return (rtcp_rtpfb_type_t)rtcp_common_header_get_rc(ch);
+}
+
+rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m) {
+	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
+	unsigned int rtcp_size = rtcp_get_size(m);
+	if (size > rtcp_size) {
+		return NULL;
+	}
+	return (rtcp_fb_tmmbr_fci_t *)(m->b_rptr + size - sizeof(rtcp_fb_tmmbr_fci_t));
+}
+
+
 /* RTCP PSFB accessors */
 bool_t rtcp_is_PSFB(const mblk_t *m) {
 	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
