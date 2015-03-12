@@ -1053,7 +1053,7 @@ static void update_sent_bytes(OrtpStream *os, int nbytes) {
 
 static void update_recv_bytes(OrtpStream *os, int nbytes) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	if (os->recv_bytes == 0) {
+	if ((os->recv_bytes == 0) && (os->recv_bw_start.tv_sec == 0) && (os->recv_bw_start.tv_usec == 0)) {
 		ortp_gettimeofday(&os->recv_bw_start, NULL);
 	}
 	os->recv_bytes += nbytes + overhead;
