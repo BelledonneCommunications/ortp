@@ -37,7 +37,7 @@ install-data-hook:
 	cd $(DESTDIR)$(doc_htmldir) && tar xf html.tar && rm -f html.tar
 
 uninstall-hook:
-	cd $(DESTDIR)$(doc_htmldir) && rm -f *
+	- cd $(DESTDIR)$(doc_htmldir) && rm -f *
 
 
 endif
