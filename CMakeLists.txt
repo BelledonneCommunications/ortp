@@ -125,7 +125,7 @@ if(DOXYGEN_FOUND)
 	)
 	add_custom_target(html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
 	install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
-		DESTINATION "${CMAKE_INSTALL_PREFIX}/share/doc/oRTP-${ORTP_VERSION}")
+		DESTINATION "share/doc/oRTP-${ORTP_VERSION}")
 endif()
 
 
