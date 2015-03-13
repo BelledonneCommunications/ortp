@@ -240,7 +240,7 @@ static mblk_t * make_rtcp_fb_tmmbn(RtpSession *session) {
 bool_t rtp_session_rtcp_psfb_scheduled(RtpSession *session, rtcp_psfb_type_t type) {
 	mblk_t *m = session->rtcp.send_algo.fb_packets;
 	while (m != NULL) {
-		if ((rtcp_is_PSFB(m) == TRUE) && (rtcp_PSFB_get_type(m) == type)) {
+		if ((rtcp_is_PSFB_internal(m) == TRUE) && (rtcp_PSFB_get_type(m) == type)) {
 			return TRUE;
 		}
 		m = m->b_cont;
@@ -251,7 +251,7 @@ bool_t rtp_session_rtcp_psfb_scheduled(RtpSession *session, rtcp_psfb_type_t typ
 bool_t rtp_session_rtcp_rtpfb_scheduled(RtpSession *session, rtcp_rtpfb_type_t type) {
 	mblk_t *m = session->rtcp.send_algo.fb_packets;
 	while (m != NULL) {
-		if ((rtcp_is_RTPFB(m) == TRUE) && (rtcp_RTPFB_get_type(m) == type)) {
+		if ((rtcp_is_RTPFB_internal(m) == TRUE) && (rtcp_RTPFB_get_type(m) == type)) {
 			return TRUE;
 		}
 		m = m->b_cont;

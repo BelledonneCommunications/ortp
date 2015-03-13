@@ -521,6 +521,12 @@ bool_t rtcp_is_RTPFB(const mblk_t *m) {
 	return FALSE;
 }
 
+/* Same as rtcp_is_RTPFB but not needing msgpullup. To be used internally only. */
+bool_t rtcp_is_RTPFB_internal(const mblk_t *m) {
+	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
+	return (rtcp_common_header_get_packet_type(ch) == RTCP_RTPFB) ? TRUE : FALSE;
+}
+
 rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m) {
 	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
 	return (rtcp_rtpfb_type_t)rtcp_common_header_get_rc(ch);
@@ -547,6 +553,12 @@ bool_t rtcp_is_PSFB(const mblk_t *m) {
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/* Same as rtcp_is_PSFB but not needing msgpullup. To be used internally only. */
+bool_t rtcp_is_PSFB_internal(const mblk_t *m) {
+	rtcp_common_header_t *ch = (rtcp_common_header_t *)m->b_rptr;
+	return (rtcp_common_header_get_packet_type(ch) == RTCP_PSFB) ? TRUE : FALSE;
 }
 
 rtcp_psfb_type_t rtcp_PSFB_get_type(const mblk_t *m) {

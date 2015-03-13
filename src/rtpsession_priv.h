@@ -73,6 +73,8 @@ mblk_t * make_xr_dlrr(RtpSession *session);
 mblk_t * make_xr_stat_summary(RtpSession *session);
 mblk_t * make_xr_voip_metrics(RtpSession *session);
 
+bool_t rtcp_is_RTPFB_internal(const mblk_t *m);
+bool_t rtcp_is_PSFB_internal(const mblk_t *m);
 bool_t rtp_session_has_fb_packets_to_send(RtpSession *session);
 void rtp_session_send_regular_rtcp_packet_and_reschedule(RtpSession *session, uint64_t tc);
 void rtp_session_send_fb_rtcp_packet_and_reschedule(RtpSession *session);
