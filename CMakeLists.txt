@@ -21,7 +21,7 @@
 ############################################################################
 
 cmake_minimum_required(VERSION 3.0)
-project(ORTP C)
+project(ORTP)
 
 
 set(ORTP_MAJOR_VERSION "0")

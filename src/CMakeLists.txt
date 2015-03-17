@@ -57,7 +57,7 @@ set(SOURCE_FILES
 if(WIN32)
 	list(APPEND SOURCE_FILES dll_entry.c)
 	if("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsPhone")
-		list(APPEND winrttimer.cpp winrttimer.h)
+		list(APPEND SOURCE_FILES winrttimer.cpp winrttimer.h)
 		set_source_files_properties(winrttimer.cpp PROPERTIES COMPILE_FLAGS "/ZW")
 	endif()
 endif()
