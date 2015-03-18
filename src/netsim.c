@@ -57,6 +57,17 @@ void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
 	ortp_free(sim);
 }
 
+#ifndef WIN32
+static const char *sched_policy_to_string(int policy){
+	switch(policy){
+		case SCHED_OTHER: return "SCHED_OTHER";
+		case SCHED_RR: return "SCHED_RR";
+		case SCHED_FIFO: return "SCHED_FIFO";
+	}
+	return "SCHED_INVALID";
+}
+#endif
+
 static void set_high_prio(){
 #ifndef WIN32
 	const char *sched_pref=getenv("ORTP_SIMULATOR_SCHED_POLICY");
@@ -86,8 +97,8 @@ static void set_high_prio(){
 	if((result=pthread_setschedparam(pthread_self(),policy, &param))) {
 		ortp_warning("Ortp simulator: set pthread_setschedparam failed: %s",strerror(result));
 	} else {
-		ortp_message("Priority set to %i and value (%i)",
-				policy, param.sched_priority);
+		ortp_message("ortp network simulator: sched policy set to %s and priority value (%i)",
+				sched_policy_to_string(policy), param.sched_priority);
 	}
 #endif
 }
