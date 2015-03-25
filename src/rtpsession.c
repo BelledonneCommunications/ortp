@@ -2232,3 +2232,6 @@ void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *t
 		tpm->session = tp->session;
 	}
 }
+bool_t rtp_session_get_symmetric_rtp(const RtpSession *session) {
+	return session->symmetric_rtp;
+}

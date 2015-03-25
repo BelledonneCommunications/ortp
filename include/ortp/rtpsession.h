@@ -497,6 +497,8 @@ ORTP_PUBLIC int rtp_session_set_payload_type(RtpSession *session, int pt);
 
 ORTP_PUBLIC void rtp_session_set_symmetric_rtp (RtpSession * session, bool_t yesno);
 
+ORTP_PUBLIC bool_t rtp_session_get_symmetric_rtp (const RtpSession * session);
+
 ORTP_PUBLIC void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno);
 
 ORTP_PUBLIC void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
