@@ -532,6 +532,16 @@ rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m) {
 	return (rtcp_rtpfb_type_t)rtcp_common_header_get_rc(ch);
 }
 
+uint32_t rtcp_RTPFB_get_packet_sender_ssrc(const mblk_t *m) {
+	rtcp_fb_header_t *fbh = (rtcp_fb_header_t *)(m->b_rptr + sizeof(rtcp_common_header_t));
+	return ntohl(fbh->packet_sender_ssrc);
+}
+
+uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m) {
+	rtcp_fb_header_t *fbh = (rtcp_fb_header_t *)(m->b_rptr + sizeof(rtcp_common_header_t));
+	return ntohl(fbh->media_source_ssrc);
+}
+
 rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m) {
 	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
 	unsigned int rtcp_size = rtcp_get_size(m);

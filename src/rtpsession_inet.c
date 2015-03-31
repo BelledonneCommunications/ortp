@@ -115,7 +115,7 @@ static int set_multicast_group(ortp_socket_t sock, const char *addr){
 		ortp_warning ("Error in getaddrinfo on (addr=%s): %s", addr, gai_strerror(err));
 		return -1;
 	}
-	
+
 	switch (res->ai_family){
 		case AF_INET:
 			if (IN_MULTICAST(ntohl(((struct sockaddr_in *) res->ai_addr)->sin_addr.s_addr)))
@@ -204,7 +204,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 				ortp_warning ("Fail to IPV6_V6ONLY: %s.",getSocketError());
 			}
 		}
-		
+
 #if defined(ORTP_TIMESTAMP)
 		optval=1;
 		err = setsockopt (sock, SOL_SOCKET, SO_TIMESTAMP,
@@ -1024,7 +1024,7 @@ int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockad
 
 int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
 	int ret;
-	
+
 	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
 			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
 		ret=msgdsize(m);
@@ -1350,7 +1350,7 @@ static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
 		case RTCP_RTPFB_TMMBR:
 			if (session->rtcp.tmmbr_info.received) freemsg(session->rtcp.tmmbr_info.received);
 			session->rtcp.tmmbr_info.received = copymsg(block);
-			rtp_session_send_rtcp_fb_tmmbn(session);
+			rtp_session_send_rtcp_fb_tmmbn(session, rtcp_RTPFB_get_packet_sender_ssrc(block));
 			notify_tmmbr_received(session, block);
 			break;
 		case RTCP_RTPFB_TMMBN:

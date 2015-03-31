@@ -210,7 +210,7 @@ static mblk_t * make_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr, uint16_t
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_tmmbn(RtpSession *session) {
+static mblk_t * make_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -229,7 +229,7 @@ static mblk_t * make_rtcp_fb_tmmbn(RtpSession *session) {
 	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
 	fbh->media_source_ssrc = htonl(0);
 	memcpy(fci, rtcp_RTPFB_tmmbr_get_fci(session->rtcp.tmmbr_info.received), sizeof(rtcp_fb_tmmbr_fci_t));
-	fci->ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	fci->ssrc = htonl(ssrc);
 
 	/* Fill common header */
 	rtcp_common_header_init(ch, session, RTCP_RTPFB, RTCP_RTPFB_TMMBN, msgdsize(h));
@@ -320,10 +320,10 @@ void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr) {
 	}
 }
 
-void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session) {
+void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 	mblk_t *m;
 	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_TMMBR) == TRUE)) {
-		m = make_rtcp_fb_tmmbn(session);
+		m = make_rtcp_fb_tmmbn(session, ssrc);
 		if (m) {
 			rtp_session_add_fb_packet_to_send(session, m);
 			session->rtcp.send_algo.tmmbn_scheduled = TRUE;

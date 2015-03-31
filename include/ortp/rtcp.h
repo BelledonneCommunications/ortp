@@ -487,6 +487,8 @@ ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m);
 ORTP_PUBLIC bool_t rtcp_is_RTPFB(const mblk_t *m);
 ORTP_PUBLIC rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_RTPFB_get_packet_sender_ssrc(const mblk_t *m);
+ORTP_PUBLIC uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m);
 
 /* RTCP PSFB accessors */
 ORTP_PUBLIC bool_t rtcp_is_PSFB(const mblk_t *m);
