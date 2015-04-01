@@ -49,6 +49,7 @@ Group:          Development/Libraries
 BuildRequires:	doxygen
 #to be alined with redhat which changed epoc to 1 for an unknown reason
 Epoch:		1
+Requires:      ortp = %{epoch}:%{version}-%{release}
 
 %description    devel
 oRTP is a LGPL licensed C library implementing the RTP protocol
