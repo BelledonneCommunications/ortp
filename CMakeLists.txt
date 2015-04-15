@@ -32,6 +32,7 @@ set(ORTP_SO_VERSION "9")
 
 
 option(ENABLE_STATIC "Build static library (default is shared library)." NO)
+option(ENABLE_DOC "Enable documentation generation with Doxygen." YES)
 option(ENABLE_NTP_TIMESTAMP "Turn on NTP timestamping on packet reception." NO)
 option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increase performance." NO)
 option(ENABLE_TESTS "Enable compilation of test programs." NO)
@@ -39,7 +40,6 @@ set(CACHE WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is t
 
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_PREFIX_PATH}/share/cmake/Modules)
-find_package(Doxygen)
 
 
 include(CheckIncludeFile)
@@ -111,21 +111,24 @@ add_subdirectory(include)
 add_subdirectory(src)
 
 
-if(DOXYGEN_FOUND)
-	set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
-	file(GLOB DOC_INPUT_FILES
-		include/ortp/[^.]*.h
-		src/[^.]*.h
-		src/[^.]*.c
-	)
-	add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
-		COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen
-		DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen ${DOC_INPUT_FILES}
-	)
-	add_custom_target(html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
-	install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
-		DESTINATION "share/doc/oRTP-${ORTP_VERSION}")
+if(ENABLE_DOC)
+	find_package(Doxygen)
+	if(DOXYGEN_FOUND)
+		set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
+		file(GLOB DOC_INPUT_FILES
+			include/ortp/[^.]*.h
+			src/[^.]*.h
+			src/[^.]*.c
+		)
+		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
+			COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen
+			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen ${DOC_INPUT_FILES}
+		)
+		add_custom_target(html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
+		install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
+			DESTINATION "share/doc/oRTP-${ORTP_VERSION}")
+	endif()
 endif()
 
 
