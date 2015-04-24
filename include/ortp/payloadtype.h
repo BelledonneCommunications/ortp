@@ -73,7 +73,7 @@ struct _PayloadType
 	int pattern_length;
 	/* other useful information for the application*/
 	int normal_bitrate;	/*in bit/s */
-	char *mime_type; /**<actually the submime, ex: pcm, pcma, gsm*/
+	const char *mime_type; /**<actually the submime, ex: pcm, pcma, gsm*/
 	int channels; /**< number of channels of audio */
 	char *recv_fmtp; /* various format parameters for the incoming stream */
 	char *send_fmtp; /* various format parameters for the outgoing stream */
