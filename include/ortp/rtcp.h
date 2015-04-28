@@ -71,7 +71,7 @@ typedef struct rtcp_common_header
 #define rtcp_common_header_set_length(ch,l)	(ch)->length=htons(l)
 
 #define rtcp_common_header_get_version(ch) ((ch)->version)
-#define rtcp_common_header_get padbit(ch) ((ch)->padbit)
+#define rtcp_common_header_get_padbit(ch) ((ch)->padbit)
 #define rtcp_common_header_get_rc(ch) ((ch)->rc)
 #define rtcp_common_header_get_packet_type(ch) ((ch)->packet_type)
 #define rtcp_common_header_get_length(ch)	ntohs((ch)->length)
