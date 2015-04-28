@@ -457,7 +457,7 @@ RtpProfile av_profile;
 void av_profile_init(RtpProfile *profile)
 {
 	rtp_profile_clear_all(profile);
-	profile->name="AV profile";
+	profile->name=ortp_strdup("AV profile");
 	rtp_profile_set_payload(profile,0,&payload_type_pcmu8000);
 	rtp_profile_set_payload(profile,1,&payload_type_lpc1016);
 	rtp_profile_set_payload(profile,3,&payload_type_gsm);
