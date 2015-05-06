@@ -1,3 +1,6 @@
+May 6, 2015: ortp-0.24.2
+	- Bug fixes
+
 Mar 31, 2015: ortp-0.24.1
 	- Add support of TMMBR and TMMBN (RFC 5104)
 

@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([ortp],[0.24.1])
+AC_INIT([ortp],[0.24.2])
 AC_CANONICAL_SYSTEM
 
 case $INSTALL in
