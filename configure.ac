@@ -321,12 +321,12 @@ esac
 dnl ##################################################
 dnl # Check for doxygen
 dnl ##################################################
-AC_ARG_ENABLE(doxygen,
-	[AS_HELP_STRING([--disable-documentation], [Disable documentation generation using doxygen (default=no)])],
+AC_ARG_ENABLE(documentation,
+	[AS_HELP_STRING([--enable-documentation], [Documentation generation using doxygen (default=yes)])],
 	[case "${enableval}" in
 		yes)	documentation_enabled=yes;;
 		no)		documentation_enabled=no;;
-		*)		AC_MSG_ERROR("Bad value for --disable-documentation");;
+		*)		AC_MSG_ERROR("Bad value for --enable-documentation");;
 	esac],
 	[documentation_enabled=yes]
 )
