@@ -386,6 +386,7 @@ struct _RtpSession
 	struct timeval last_recv_time; /* Time of receiving the RTP/RTCP packet. */
 	mblk_t *pending;
 	/* telephony events extension */
+	int tev_send_pt; /*telephone event to be used for sending*/
 	mblk_t *current_tev;		/* the pending telephony events */
 	mblk_t *minimal_sdes;
 	mblk_t *full_sdes;
@@ -492,6 +493,8 @@ ORTP_PUBLIC int rtp_session_get_send_payload_type(const RtpSession *session);
 
 ORTP_PUBLIC int rtp_session_get_recv_payload_type(const RtpSession *session);
 ORTP_PUBLIC int rtp_session_set_recv_payload_type(RtpSession *session, int pt);
+
+ORTP_PUBLIC int rtp_session_set_send_telephone_event_payload_type(RtpSession *session, int paytype);
 
 ORTP_PUBLIC int rtp_session_set_payload_type(RtpSession *session, int pt);
 

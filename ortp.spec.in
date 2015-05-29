@@ -40,7 +40,7 @@ BuildArch:	i686
 
 %description
 oRTP is a LGPL licensed C library implementing the RTP protocol
-(rfc1889). It is available for most unix clones (primilarly Linux and
+(rfc3550). It is available for most unix clones (primilarly Linux and
 HP-UX), and Microsoft Windows.
 
 %package        devel

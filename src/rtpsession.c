@@ -302,6 +302,7 @@ rtp_session_init (RtpSession * session, int mode)
 	rtp_session_set_transports(	session
 								,meta_rtp_transport_new(TRUE,NULL, 0)
 								,meta_rtp_transport_new(FALSE,NULL, 0));
+	session->tev_send_pt = -1; /*check in rtp profile when needed*/
 }
 
 
@@ -703,6 +704,20 @@ rtp_session_set_send_payload_type (RtpSession * session, int paytype)
 **/
 int rtp_session_get_send_payload_type(const RtpSession *session){
 	return session->snd.pt;
+}
+
+/**
+ * Assign the payload type number for sending telephone-event.
+ * It is required that a "telephone-event" PayloadType is assigned in the RtpProfile set for the RtpSession.
+ * This function is in most of cases useless, unless there is an ambiguity where several PayloadType for "telephone-event" are present in the RtpProfile.
+ * This might happen during SIP offeranswer scenarios. This function allows to remove any ambiguity by letting the application choose the one to be used.
+ * @param session the RtpSession
+ * @param paytype the payload type number
+ * @returns 0, -1 on error.
+**/
+int rtp_session_set_send_telephone_event_payload_type(RtpSession *session, int paytype){
+	session->tev_send_pt = paytype;
+	return 0;
 }
 
 /**

@@ -88,15 +88,31 @@ int rtp_session_send_telephone_events_supported(RtpSession *session)
  * @param start boolean to indicate if the marker bit should be set.
  *
  * @return a message block containing the rtp packet if successfull, NULL if the rtp session
- *cannot support telephony event (because the rtp profile it is bound to does not include
- *a telephony event payload type).
+ * cannot support telephony event (because the rtp profile it is bound to does not include
+ * a telephony event payload type).
 **/
 mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start)
 {
 	mblk_t *mp;
 	rtp_header_t *rtp;
 	PayloadType *cur_pt=rtp_profile_get_payload(session->snd.profile, rtp_session_get_send_payload_type(session));
-	int tev_pt=rtp_profile_find_payload_number(session->snd.profile, "telephone-event", cur_pt ? cur_pt->clock_rate : 8000, 1);
+	int tev_pt = session->tev_send_pt;
+	
+	if (tev_pt != -1){
+		PayloadType *cur_tev_pt=rtp_profile_get_payload(session->snd.profile, tev_pt);
+		if (!cur_tev_pt){
+			ortp_error("Undefined telephone-event payload type %i choosen for sending telephone event", tev_pt);
+			tev_pt = -1;
+		}else if (cur_pt && cur_tev_pt->clock_rate != cur_pt->clock_rate){
+			ortp_error("Telephone-event payload type %i has clockrate %i while main audio codec has clockrate %i: this is not permitted.",
+				tev_pt, cur_tev_pt->clock_rate, cur_pt->clock_rate);
+			tev_pt = -1;
+		}
+	}
+	
+	if (tev_pt == -1){
+		tev_pt = rtp_profile_find_payload_number(session->snd.profile, "telephone-event", cur_pt ? cur_pt->clock_rate : 8000, 1);
+	}
 	return_val_if_fail(tev_pt!=-1,NULL);
 	
 	mp=allocb(RTP_FIXED_HEADER_SIZE+TELEPHONY_EVENTS_ALLOCATED_SIZE,BPRI_MED);
