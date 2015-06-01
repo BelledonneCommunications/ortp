@@ -61,6 +61,9 @@ extern "C"{
 
 struct _PayloadTypeAvpfParams {
 	unsigned char features; /**< A bitmask of PAYLOAD_TYPE_AVPF_* macros. */
+	bool_t rpsi_compatibility; /*< Linphone uses positive feeback for RPSI. However first versions handling
+		AVPF wrongly declared RPSI as negative feedback, so this is kept for compatibility
+		with these versions but will probably be removed at some point in time. */
 	uint16_t trr_interval; /**< The interval in milliseconds between regular RTCP packets. */
 };
 

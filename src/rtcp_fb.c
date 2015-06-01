@@ -288,7 +288,9 @@ void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
 	mblk_t *m;
 	if (rtp_session_avpf_enabled(session) == TRUE) {
-		if (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_SLI) == TRUE) {
+		/* Only send SLI if SLI and RPSI features have been enabled. SLI without RPSI is not really useful. */
+		if ((rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_SLI) == TRUE)
+			&& (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
 			m = make_rtcp_fb_sli(session, first, number, picture_id);
 			rtp_session_add_fb_packet_to_send(session, m);
 			if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
