@@ -45,8 +45,8 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define CHANNELS(val)		.channels=(val)
 #define RECV_FMTP(val)		.recv_fmtp=(val)
 #define SEND_FMTP(val)		.send_fmtp=(val)
-#define NO_AVPF		.avpf={.features=PAYLOAD_TYPE_AVPF_NONE, .trr_interval=0}
-#define AVPF(feat, intv)		.avpf={.features=(feat), .trr_interval=(intv)}
+#define NO_AVPF		.avpf={.supported_features=PAYLOAD_TYPE_AVPF_NONE, .features=PAYLOAD_TYPE_AVPF_NONE, .trr_interval=0}
+#define AVPF(feat, intv)		.avpf={.supported_features=(feat), .features=(feat), .trr_interval=(intv)}
 #define FLAGS(val)		.flags=(val)
 #elif defined(__GNUC__)
 // GCC's legacy tagged syntax (even old versions have it)
@@ -60,8 +60,8 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define CHANNELS(val)		channels: (val)
 #define RECV_FMTP(val)		recv_fmtp: (val)
 #define SEND_FMTP(val)		send_fmtp: (val)
-#define NO_AVPF		avpf: {features: PAYLOAD_TYPE_AVPF_NONE, trr_interval: 0}
-#define AVPF(feat, intv)		avpf: {features: (feat), trr_interval: (intv)}
+#define NO_AVPF		avpf: {supported_features: PAYLOAD_TYPE_AVPF_NONE, features: PAYLOAD_TYPE_AVPF_NONE, trr_interval: 0}
+#define AVPF(feat, intv)		avpf: {supported_features: (feat), features: (feat), trr_interval: (intv)}
 #define FLAGS(val)		flags: (val)
 #else
 // No tagged syntax supported
@@ -75,8 +75,8 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define CHANNELS(val)		(val)
 #define RECV_FMTP(val)		(val)
 #define SEND_FMTP(val)		(val)
-#define NO_AVPF		{PAYLOAD_TYPE_AVPF_NONE, 0}
-#define AVPF(feat, intv)		{(feat), (intv)}
+#define NO_AVPF		{PAYLOAD_TYPE_AVPF_NONE, PAYLOAD_TYPE_AVPF_NONE, 0}
+#define AVPF(feat, intv)		{(feat), (feat), (intv)}
 #define FLAGS(val)		(val)
 
 #endif
