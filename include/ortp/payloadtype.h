@@ -60,8 +60,7 @@ extern "C"{
 #define PAYLOAD_TYPE_AVPF_RPSI (1 << 3)
 
 struct _PayloadTypeAvpfParams {
-	unsigned char supported_features; /**< A bitmask of PAYLOAD_TYPE_AVPF_* macros holding the supported AVPF features. */
-	unsigned char features; /**< A bitmask of PAYLOAD_TYPE_AVPF_* macros holding the enabled AVPF features. */
+	unsigned char features; /**< A bitmask of PAYLOAD_TYPE_AVPF_* macros. */
 	bool_t rpsi_compatibility; /*< Linphone uses positive feeback for RPSI. However first versions handling
 		AVPF wrongly declared RPSI as negative feedback, so this is kept for compatibility
 		with these versions but will probably be removed at some point in time. */
