@@ -37,13 +37,18 @@ if test -d /share/aclocal ; then
         ACLOCAL_ARGS="$ACLOCAL_ARGS -I /share/aclocal"
 fi
 
-
 set -x
 rm -rf config.cache autom4te.cache
 $libtoolize --copy --force
 $ACLOCAL -I m4 $ACLOCAL_ARGS
 autoheader
-$AUTOMAKE --force-missing --add-missing --copy  
+$AUTOMAKE --force-missing --add-missing --copy
 autoconf
+
+#install git pre-commit hooks if possible
+if [ -d .git/hooks ] && [ ! -f .git/hooks/pre-commit ]; then
+        cp .git-pre-commit .git/hooks/pre-commit
+        chmod +x .git/hooks/pre-commit
+fi
 
 cd $THEDIR

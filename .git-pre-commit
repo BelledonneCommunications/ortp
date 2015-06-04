@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# This hook purpose is to keep coding style consistent between all developers
+# It is automatically installed in .git/hooks folder by cmake on first run.
+
+# From https://github.com/tatsuhiro-t/nghttp2/blob/master/pre-commit
+
+# Maybe this is a totally wrong way of detecting clang-format-diff availability..
+clang_format_diff=$(find /usr/bin/ -name 'clang-format-diff*' -type f | head -n1)
+clang_format_diff_options="-style=file"
+
+if [ -z "$clang_format_diff" ]; then
+    echo "$0: Please install clang-format-diff (coding style checker)."
+    exit 1
+fi
+
+errors=$(git diff-index --cached --diff-filter=ACMR -p HEAD -- | $clang_format_diff $clang_format_diff_options -p1)
+if [ -n "$errors" ]; then
+    tmpfile=$(mktemp)
+    echo "$errors" > $tmpfile
+    echo "$errors"
+    echo
+    echo "*****************"
+    echo "$0: Invalid coding style detected. Please correct it using one of the following:"
+    echo "1) Apply patch located at $tmpfile using:"
+    echo "  cd $(git rev-parse --show-toplevel) && patch -p0 < $tmpfile"
+    echo "2) Use clang-format to format lines using:"
+    echo "  ${clang_format_diff/-diff/} $clang_format_diff_options -i <some_file.cpp>)"
+    echo "3) Reformat these lines manually."
+    echo "*** Aborting commit.***"
+    exit 1
+fi
