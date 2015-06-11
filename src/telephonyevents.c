@@ -104,9 +104,8 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
 			ortp_error("Undefined telephone-event payload type %i choosen for sending telephone event", tev_pt);
 			tev_pt = -1;
 		}else if (cur_pt && cur_tev_pt->clock_rate != cur_pt->clock_rate){
-			ortp_error("Telephone-event payload type %i has clockrate %i while main audio codec has clockrate %i: this is not permitted.",
+			ortp_warning("Telephone-event payload type %i has clockrate %i while main audio codec has clockrate %i: this is not permitted.",
 				tev_pt, cur_tev_pt->clock_rate, cur_pt->clock_rate);
-			tev_pt = -1;
 		}
 	}
 	
