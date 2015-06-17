@@ -46,6 +46,6 @@ elif [ ! -z "$(find /usr/bin/ /usr/local/bin/ /opt/bin/ -name 'clang-format-diff
     # Warning! We need at least version 1.6...
     clang-format-diff-diffing $@
 else
-    echo "$0: Please install clang-format (coding style checker) - could not find git-clang-format nor clang-format-diff in PATH."
-    exit 1
+    echo "$0: Please install clang-format (coding style checker) - could not find git-clang-format nor clang-format-diff in PATH. Skipping code verification..."
+    exit 0
 fi
