@@ -166,6 +166,32 @@ mblk_t	*dupmsg(mblk_t* m)
 	return newm;
 }
 
+size_t readmsg(mblk_t *m, size_t rsize, uint8_t *data) {
+	mblk_t *it;
+	size_t res = 0;
+	
+	for(it = m; it != NULL; it = it->b_cont) {
+		if(it->b_rptr < it->b_wptr) break;
+	}
+	if(it == NULL) return 0;
+	
+	do {
+		size_t buf_size = sizeb(it), to_read;
+		if(res + buf_size < rsize) {
+			to_read = buf_size;
+		} else {
+			to_read = rsize - res;
+		}
+		memcpy(data, it->b_rptr, to_read);
+		it->b_rptr += to_read;
+		data += to_read;
+		res += to_read;
+		it = it->b_cont;
+	} while(it != NULL && res < rsize);
+	
+	return res;
+}
+
 void putq(queue_t *q,mblk_t *mp)
 {
 	q->_q_stopper.b_prev->b_next=mp;
@@ -226,6 +252,10 @@ void flushq(queue_t *q, int how)
 	{
 		freemsg(mp);
 	}
+}
+
+size_t sizeb(const mblk_t *buf) {
+	return buf->b_wptr - buf->b_rptr;
 }
 
 size_t msgdsize(const mblk_t *mp)

@@ -125,6 +125,11 @@ ORTP_PUBLIC mblk_t *dupb(mblk_t *m);
 /* duplicates a complex mblk_t, buffer is not duplicated */
 ORTP_PUBLIC mblk_t	*dupmsg(mblk_t* m);
 
+ORTP_PUBLIC size_t readmsg(mblk_t *m, size_t rsize, uint8_t *data);
+
+/* returns the size of the buffer */
+ORTP_PUBLIC size_t sizeb(const mblk_t *buf);
+
 /* returns the size of data of a message */
 ORTP_PUBLIC size_t msgdsize(const mblk_t *mp);
 
