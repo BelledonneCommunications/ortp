@@ -33,7 +33,7 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC /* avoid redefinition... */
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 #include <QOS2.h>
 #endif
 #endif
@@ -248,7 +248,7 @@ rtp_session_init (RtpSession * session, int mode)
 	rtp_session_set_profile (session, &av_profile); /*the default profile to work with */
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
-#ifndef WIN32
+#ifndef _WIN32
 	session->rtp.snd_socket_size=0;	/*use OS default value unless on windows where they are definitely too short*/
 	session->rtp.rcv_socket_size=0;
 #else
@@ -1509,7 +1509,7 @@ void rtp_session_uninit (RtpSession * session)
 	if (rtcp_meta_transport)
 		meta_rtp_transport_destroy(rtcp_meta_transport);
 
-#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
 	if (session->rtp.QoSFlowID != 0)
 	{
 		OSVERSIONINFOEX ovi;

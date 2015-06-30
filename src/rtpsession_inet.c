@@ -33,12 +33,12 @@
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
 #undef ExternC
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 #include <QOS2.h>
 #endif
 #endif
 
-#if (defined(WIN32) || defined(_WIN32_WCE)) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if (defined(_WIN32) || defined(_WIN32_WCE)) && defined(ORTP_WINDOWS_DESKTOP)
 #include <mswsock.h>
 #endif
 
@@ -49,7 +49,7 @@
 
 #define can_connect(s)	( (s)->use_connect && !(s)->symmetric_rtp)
 
-#if defined(WIN32) || defined(_WIN32_WCE)
+#if defined(_WIN32) || defined(_WIN32_WCE)
 #ifndef WSAID_WSARECVMSG
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG {0xf689d7c8,0x6f1f,0x436b,{0x8a,0x53,0xe5,0x4f,0xe3,0x51,0xc3,0x22}}
@@ -73,7 +73,7 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 
 #endif
 
-#if defined(WIN32) || defined(_WIN32_WCE) || defined(__QNX__)
+#if defined(_WIN32) || defined(_WIN32_WCE) || defined(__QNX__)
 /* Mingw32 does not define AI_V4MAPPED, however it is supported starting from Windows Vista. QNX also does not define AI_V4MAPPED. */
 #	ifndef AI_V4MAPPED
 #	define AI_V4MAPPED 0x00000800
@@ -250,7 +250,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 
 	freeaddrinfo(res0);
 
-#if defined(WIN32) || defined(_WIN32_WCE)
+#if defined(_WIN32) || defined(_WIN32_WCE)
 	if (ortp_WSARecvMsg == NULL) {
 		GUID guid = WSAID_WSARECVMSG;
 		DWORD bytes_returned;
@@ -400,7 +400,7 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 {
 	int retval;
 	int optname;
-#if defined(WIN32) || defined(_WIN32_WCE)
+#if defined(_WIN32) || defined(_WIN32_WCE)
 	char optval[sizeof(DWORD)];
 	int optlen = sizeof(optval);
 #else
@@ -411,7 +411,7 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 	// Dont't do anything if socket hasn't been created yet
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
-#if defined(WIN32) || defined(_WIN32_WCE)
+#if defined(_WIN32) || defined(_WIN32_WCE)
 	memset(optval, activate, sizeof(optval));
 #endif
 
@@ -609,7 +609,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	// Don't do anything if socket hasn't been created yet
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
-#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
 	memset(&ovi, 0, sizeof(ovi));
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
 	GetVersionEx((LPOSVERSIONINFO) & ovi);
@@ -695,7 +695,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				ortp_error("Fail to set DSCP value on rtcp socket: %s",getSocketError());
 			}
 		}
-#if (_WIN32_WINNT >= 0x0600) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
 	}
 #endif
 	return retval;

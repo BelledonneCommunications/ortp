@@ -86,9 +86,9 @@ RtpTimer posix_timer={	0,
 						{0,POSIXTIMER_INTERVAL}};
 							
 							
-#else //WIN32
+#else //_WIN32
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 
 #include <windows.h>
 #include <mmsystem.h>
@@ -172,7 +172,7 @@ RtpTimer posix_timer={	0,
 						win_timer_close,
 						{0,TIME_INTERVAL * 1000}};
 
-#else
+#elif defined(ORTP_WINDOWS_PHONE)
 
 #include "winrttimer.h"
 

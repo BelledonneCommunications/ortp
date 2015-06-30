@@ -201,7 +201,7 @@ unsigned long __ortp_thread_self(void) {
 
 int WIN_mutex_init(ortp_mutex_t *mutex, void *attr)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	*mutex=CreateMutex(NULL, FALSE, NULL);
 #else
 	InitializeSRWLock(mutex);
@@ -211,7 +211,7 @@ int WIN_mutex_init(ortp_mutex_t *mutex, void *attr)
 
 int WIN_mutex_lock(ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	WaitForSingleObject(*hMutex, INFINITE); /* == WAIT_TIMEOUT; */
 #else
 	AcquireSRWLockExclusive(hMutex);
@@ -221,7 +221,7 @@ int WIN_mutex_lock(ortp_mutex_t * hMutex)
 
 int WIN_mutex_unlock(ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	ReleaseMutex(*hMutex);
 #else
 	ReleaseSRWLockExclusive(hMutex);
@@ -231,7 +231,7 @@ int WIN_mutex_unlock(ortp_mutex_t * hMutex)
 
 int WIN_mutex_destroy(ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	CloseHandle(*hMutex);
 #endif
 	return 0;
@@ -279,7 +279,7 @@ unsigned long WIN_thread_self(void) {
 
 int WIN_cond_init(ortp_cond_t *cond, void *attr)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	*cond=CreateEvent(NULL, FALSE, FALSE, NULL);
 #else
 	InitializeConditionVariable(cond);
@@ -289,7 +289,7 @@ int WIN_cond_init(ortp_cond_t *cond, void *attr)
 
 int WIN_cond_wait(ortp_cond_t* hCond, ortp_mutex_t * hMutex)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	//gulp: this is not very atomic ! bug here ?
 	WIN_mutex_unlock(hMutex);
 	WaitForSingleObject(*hCond, INFINITE);
@@ -302,7 +302,7 @@ int WIN_cond_wait(ortp_cond_t* hCond, ortp_mutex_t * hMutex)
 
 int WIN_cond_signal(ortp_cond_t * hCond)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	SetEvent(*hCond);
 #else
 	WakeConditionVariable(hCond);
@@ -318,7 +318,7 @@ int WIN_cond_broadcast(ortp_cond_t * hCond)
 
 int WIN_cond_destroy(ortp_cond_t * hCond)
 {
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	CloseHandle(*hCond);
 #endif
 	return 0;
@@ -400,7 +400,7 @@ char * WSAAPI gai_strerror(int errnum){
 
 #endif
 
-#ifndef WIN32
+#ifndef _WIN32
 
 #include <sys/socket.h>
 #include <netdb.h>
@@ -514,7 +514,7 @@ void ortp_shm_close(void *mem){
 
 #endif
 
-#elif defined(WIN32) && !defined(_WIN32_WCE)
+#elif defined(_WIN32) && !defined(_WIN32_WCE)
 
 static char *make_pipe_name(const char *name){
 	return ortp_strdup_printf("\\\\.\\pipe\\%s",name);
@@ -524,7 +524,7 @@ static HANDLE event=NULL;
 
 /* portable named pipes */
 ortp_pipe_t ortp_server_pipe_create(const char *name){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	ortp_pipe_t h;
 	char *pipename=make_pipe_name(name);
 	h=CreateNamedPipe(pipename,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
@@ -547,7 +547,7 @@ even if nobody connects to the pipe.
 ortp_server_pipe_close() makes this function to exit.
 */
 ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	OVERLAPPED ol;
 	DWORD undef;
 	HANDLE handles[2];
@@ -570,7 +570,7 @@ ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server){
 }
 
 int ortp_server_pipe_close_client(ortp_pipe_t server){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	return DisconnectNamedPipe(server)==TRUE ? 0 : -1;
 #else
 	ortp_error("%s not supported!", __FUNCTION__);
@@ -579,7 +579,7 @@ int ortp_server_pipe_close_client(ortp_pipe_t server){
 }
 
 int ortp_server_pipe_close(ortp_pipe_t spipe){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	SetEvent(event);
 	//CancelIoEx(spipe,NULL); /*vista only*/
 	return CloseHandle(spipe);
@@ -590,7 +590,7 @@ int ortp_server_pipe_close(ortp_pipe_t spipe){
 }
 
 ortp_pipe_t ortp_client_pipe_connect(const char *name){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	char *pipename=make_pipe_name(name);
 	ortp_pipe_t hpipe = CreateFile(
 		 pipename,   // pipe name
@@ -639,7 +639,7 @@ typedef struct MapInfo{
 static OList *maplist=NULL;
 
 void *ortp_shm_open(unsigned int keyid, int size, int create){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	HANDLE h;
 	char name[64];
 	void *buf;
@@ -685,7 +685,7 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 }
 
 void ortp_shm_close(void *mem){
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	OList *elem;
 	for(elem=maplist;elem!=NULL;elem=elem->next){
 		MapInfo *i=(MapInfo*)elem->data;
@@ -714,7 +714,7 @@ void ortp_shm_close(void *mem){
 
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(WIN32)
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();
@@ -761,8 +761,8 @@ uint64_t ortp_get_cur_time_ms(void) {
 }
 
 void ortp_sleep_ms(int ms){
-#ifdef WIN32
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef _WIN32
+#ifdef ORTP_WINDOWS_DESKTOP
 	Sleep(ms);
 #else
 	HANDLE sleepEvent = CreateEventEx(NULL, NULL, CREATE_EVENT_MANUAL_RESET, EVENT_ALL_ACCESS);
@@ -795,9 +795,9 @@ void ortp_sleep_until(const ortpTimeSpec *ts){
 		diff.tv_nsec+=1000000000LL;
 		diff.tv_sec-=1;
 	}
-#	ifdef WIN32
+#ifdef _WIN32
 		ortp_sleep_ms((diff.tv_sec * 1000LL) + (diff.tv_nsec/1000000LL));
-#	else
+#else
 	{
 		struct timespec dur,rem;
 		dur.tv_sec=diff.tv_sec;
@@ -806,7 +806,7 @@ void ortp_sleep_until(const ortpTimeSpec *ts){
 			dur=rem;
 		};
 	}
-#	endif
+#endif
 #endif
 }
 
@@ -832,7 +832,7 @@ char* strtok_r(char *str, const char *delim, char **nextp){
 #endif
 
 
-#if defined(WIN32) && !defined(_MSC_VER)
+#if defined(_WIN32) && !defined(_MSC_VER)
 #include <wincrypt.h>
 static int ortp_wincrypto_random(unsigned int *rand_number){
 	static HCRYPTPROV hProv=(HCRYPTPROV)-1;
@@ -868,7 +868,7 @@ unsigned int ortp_random(void){
 			ortp_error("Reading /dev/urandom failed.");
 		}else return tmp;
 	}else ortp_error("Could not open /dev/urandom");
-#elif defined(WIN32)
+#elif defined(_WIN32)
 	static int initd=0;
 	unsigned int ret;
 #ifdef _MSC_VER
@@ -893,7 +893,7 @@ unsigned int ortp_random(void){
 	return rand()<<16 | rand();
 #endif
 	/*fallback to UNIX random()*/
-#ifndef WIN32
+#ifndef _WIN32
 	return (unsigned int) random();
 #endif
 }

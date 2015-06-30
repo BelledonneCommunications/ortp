@@ -57,7 +57,7 @@ void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
 	ortp_free(sim);
 }
 
-#ifndef WIN32
+#ifndef _WIN32
 static const char *sched_policy_to_string(int policy){
 	switch(policy){
 		case SCHED_OTHER: return "SCHED_OTHER";
@@ -69,7 +69,7 @@ static const char *sched_policy_to_string(int policy){
 #endif
 
 static void set_high_prio(){
-#ifndef WIN32
+#ifndef _WIN32
 	const char *sched_pref=getenv("ORTP_SIMULATOR_SCHED_POLICY");
 	int policy=SCHED_OTHER;
 	struct sched_param param;

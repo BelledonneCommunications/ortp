@@ -7,7 +7,7 @@
 typedef struct __STRUCT_SHARED_DATA__
 {
 	DWORD				m_nReference;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 	DWORD				m_dwStartTime;
 #else
 	ULONGLONG			m_ullStartTime;
@@ -27,7 +27,7 @@ extern DWORD dwoRTPLogLevel;
 
 #define	SHMEMSIZE	sizeof(SHARED_DATA)
 
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifndef ORTP_WINDOWS_DESKTOP
 static SHARED_DATA		sharedData;
 #endif
 static	LPSHARED_DATA	lpSharedData;
@@ -61,7 +61,7 @@ BOOL WINAPI DllMain(
 				return FALSE;
 			}
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
             // Create a named file mapping object. 
             hMapObject = CreateFileMapping( INVALID_HANDLE_VALUE,	// use paging file
 											NULL,					// default security attributes
@@ -100,7 +100,7 @@ BOOL WINAPI DllMain(
 				OutputDebugStringW(L"--> dll_entry.c - oRTP.dll - Initializing module\n");
 #endif
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 				lpSharedData->m_dwStartTime	= GetTickCount();
 #else
 				lpSharedData->m_ullStartTime = GetTickCount64();
@@ -164,7 +164,7 @@ BOOL WINAPI DllMain(
 					ortp_exit();
 					UnregisterLog(&dwoRTPLogLevel, "LOG_ORTP");
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 					// Unmap shared memory from the process's address space. 
 					UnmapViewOfFile(lpSharedData);
 					lpSharedData = NULL;

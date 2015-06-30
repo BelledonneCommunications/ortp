@@ -22,7 +22,7 @@
 #define ORTP_PORT_H
 
 
-#if !defined(WIN32) && !defined(_WIN32_WCE)
+#if !defined(_WIN32) && !defined(_WIN32_WCE)
 /********************************/
 /* definitions for UNIX flavour */
 /********************************/
@@ -76,8 +76,6 @@ typedef pthread_cond_t ortp_cond_t;
 #define ORTP_PUBLIC
 #define ORTP_INLINE			inline
 
-#define WINAPI_FAMILY_PARTITION(x) 1
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -126,9 +124,16 @@ unsigned long __ortp_thread_self(void);
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
-#if !defined(WINAPI_FAMILY_PARTITION)
-// Only use with x being WINAPI_PARTITION_DESKTOP to test if building on desktop
-#define WINAPI_FAMILY_PARTITION(x) 1
+#if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION) || !defined(WINAPI_PARTITION_DESKTOP)
+#define ORTP_WINDOWS_DESKTOP 1
+#elif defined(WINAPI_FAMILY_PARTITION)
+#if defined(WINAPI_PARTITION_DESKTOP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#define ORTP_WINDOWS_DESKTOP 1
+#elif defined(WINAPI_PARTITION_PHONE_APP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE_APP)
+#define ORTP_WINDOWS_PHONE 1
+#elif defined(WINAPI_PARTITION_APP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
+#define ORTP_WINDOWS_UNIVERSAL 1
+#endif
 #endif
 
 #ifdef _MSC_VER
@@ -165,7 +170,7 @@ ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #define vsnprintf	_vsnprintf
 
 typedef SOCKET ortp_socket_t;
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#ifdef ORTP_WINDOWS_DESKTOP
 typedef HANDLE ortp_cond_t;
 typedef HANDLE ortp_mutex_t;
 #else
@@ -321,7 +326,7 @@ ORTP_PUBLIC unsigned int ortp_random(void);
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)
-#ifdef WIN32
+#ifdef _WIN32
 typedef HANDLE ortp_pipe_t;
 #define ORTP_PIPE_INVALID INVALID_HANDLE_VALUE
 #else
@@ -356,7 +361,7 @@ ORTP_PUBLIC void ortp_shm_close(void *memory);
 #endif
 
 
-#if (defined(WIN32) || defined(_WIN32_WCE)) && !defined(ORTP_STATIC)
+#if (defined(_WIN32) || defined(_WIN32_WCE)) && !defined(ORTP_STATIC)
 #ifdef ORTP_EXPORTS
    #define ORTP_VAR_PUBLIC    extern __declspec(dllexport)
 #else

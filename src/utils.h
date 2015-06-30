@@ -71,7 +71,7 @@ typedef union{
 #endif
 #define ntoh24(x) hton24(x)
 
-#if defined(WIN32) || defined(_WIN32_WCE)
+#if defined(_WIN32) || defined(_WIN32_WCE)
 #define is_would_block_error(errnum)	(errnum==WSAEWOULDBLOCK)
 #else
 #define is_would_block_error(errnum)	(errnum==EWOULDBLOCK || errnum==EAGAIN)

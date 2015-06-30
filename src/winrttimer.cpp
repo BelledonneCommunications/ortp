@@ -1,11 +1,13 @@
 #include <windows.h>
 
-#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-
-#using <Windows.winmd>
-
 #include "winrttimer.h"
 #include "ortp/logging.h"
+
+#ifndef ORTP_WINDOWS_DESKTOP
+
+#ifdef ORTP_WINDOWS_PHONE
+#using <Windows.winmd>
+#endif
 
 using namespace Windows::Foundation;
 using namespace Windows::System::Threading;

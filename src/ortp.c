@@ -38,7 +38,7 @@ RtpScheduler *__ortp_scheduler;
 extern void av_profile_init(RtpProfile *profile);
 
 static void init_random_number_generator(){
-#ifndef WIN32
+#ifndef _WIN32
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);
 	srandom(t.tv_usec+t.tv_sec);
@@ -47,7 +47,7 @@ static void init_random_number_generator(){
 }
 
 
-#ifdef WIN32
+#ifdef _WIN32
 static bool_t win32_init_sockets(void){
 	WORD wVersionRequested;
 	WSADATA wsaData;
@@ -73,7 +73,7 @@ void ortp_init()
 {
 	if (ortp_initialized++) return;
 
-#ifdef WIN32
+#ifdef _WIN32
 	win32_init_sockets();
 #endif
 

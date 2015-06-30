@@ -84,7 +84,7 @@ char * ortp_strdup_vprintf(const char *fmt, va_list ap)
 	/* Guess we need no more than 100 bytes. */
 	int n, size = 200;
 	char *p,*np;
-#ifndef WIN32
+#ifndef _WIN32
 	va_list cap;/*copy of our argument list: a va_list cannot be re-used (SIGSEGV on linux 64 bits)*/
 #endif
 	if ((p = (char *) ortp_malloc (size)) == NULL)
@@ -92,7 +92,7 @@ char * ortp_strdup_vprintf(const char *fmt, va_list ap)
 	while (1)
 	{
 		/* Try to print in the allocated space. */
-#ifndef WIN32
+#ifndef _WIN32
 		va_copy(cap,ap);
 		n = vsnprintf (p, size, fmt, cap);
 		va_end(cap);
@@ -158,7 +158,7 @@ char *ortp_strcat_printf(char* dst, const char *fmt,...){
 	return ret;
 }
 
-#if	defined(WIN32) || defined(_WIN32_WCE)
+#if	defined(_WIN32) || defined(_WIN32_WCE)
 #define ENDLINE "\r\n"
 #else
 #define ENDLINE "\n"
@@ -180,7 +180,7 @@ void _ortp_logv_flush(int dummy, ...) {
 	ortp_mutex_unlock(&__log_stored_messages_mutex);
 	for (elem = msglist; elem != NULL; elem = o_list_next(elem)) {
 		ortp_stored_log_t *l = (ortp_stored_log_t *)elem->data;
-#ifdef WIN32
+#ifdef _WIN32
 		ortp_logv_out(l->level, l->msg, empty_va_list);
 #else
 		va_list cap;
@@ -225,14 +225,14 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 	char *msg;
 	struct timeval tp;
 	struct tm *lt;
-#ifndef WIN32
+#ifndef _WIN32
 	struct tm tmbuf;
 #endif
 	time_t tt;
 	ortp_gettimeofday(&tp,NULL);
 	tt = (time_t)tp.tv_sec;
 
-#ifdef WIN32
+#ifdef _WIN32
 	lt = localtime(&tt);
 #else
 	lt = localtime_r(&tt,&tmbuf);

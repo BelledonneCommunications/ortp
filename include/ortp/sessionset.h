@@ -47,7 +47,7 @@ typedef fd_set ortp_fd_set;
 
 
 #else
-/* WIN32 */
+/* _WIN32 */
 
 #define ORTP_FD_ZERO(s) \
   do {									      \
@@ -83,7 +83,7 @@ typedef struct
   } ortp_fd_set;
 
 
-#endif /*end WIN32*/
+#endif /*end _WIN32*/
 
 struct _SessionSet
 {
