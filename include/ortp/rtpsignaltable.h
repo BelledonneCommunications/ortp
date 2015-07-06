@@ -22,7 +22,7 @@
 
 #define RTP_CALLBACK_TABLE_MAX_ENTRIES	5
 
-typedef void (*RtpCallback)(struct _RtpSession *, unsigned long arg1, unsigned long arg2, unsigned long arg3);
+typedef void (*RtpCallback)(struct _RtpSession *, void *arg1, void *arg2, void *arg3);
 
 struct _RtpSignalTable
 {
@@ -42,10 +42,10 @@ int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data);
 void rtp_signal_table_emit(RtpSignalTable *table);
 
 /* emit but with a second arg */
-void rtp_signal_table_emit2(RtpSignalTable *table, unsigned long arg);
+void rtp_signal_table_emit2(RtpSignalTable *table, void *arg);
 
 /* emit but with a third arg */
-void rtp_signal_table_emit3(RtpSignalTable *table, unsigned long arg1, unsigned long arg2);
+void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2);
 
 int rtp_signal_table_remove_by_callback(RtpSignalTable *table,RtpCallback cb);
 

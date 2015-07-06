@@ -1139,7 +1139,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		int msgsize=msgdsize(mp);
 		ortp_global_stats.recv += msgsize;
 		stream->stats.recv += msgsize;
-		rtp_signal_table_emit2(&session->on_telephone_event_packet,(long)mp);
+		rtp_signal_table_emit2(&session->on_telephone_event_packet,mp);
 		rtp_session_check_telephone_events(session,mp);
 		freemsg(mp);
 		mp=NULL;

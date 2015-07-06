@@ -339,7 +339,7 @@ int rtp_session_read_telephone_event(RtpSession *session,
 static void notify_tev(RtpSession *session, telephone_event_t *event){
 	OrtpEvent *ev;
 	OrtpEventData *evd;
-	rtp_signal_table_emit2(&session->on_telephone_event,(long)(long)event[0].event);
+	rtp_signal_table_emit2(&session->on_telephone_event,ORTP_INT_TO_POINTER(event[0].event));
 	if (session->eventqs!=NULL){
 		ev=ortp_event_new(ORTP_EVENT_TELEPHONE_EVENT);
 		evd=ortp_event_get_data(ev);

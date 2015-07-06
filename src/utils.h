@@ -46,8 +46,8 @@ OList * o_list_free(OList *elem);
 OList *o_list_remove_link(OList *list, OList *elem);
 
 
-#define INT_TO_POINTER(truc)	((long)(long)(truc))
-#define POINTER_TO_INT(truc)	((int)(long)(truc))
+#define ORTP_INT_TO_POINTER(truc)	((void *)(long long)(truc))
+#define ORTP_POINTER_TO_INT(truc)	((int)(long long)(truc))
 
 typedef struct _dwsplit_t{
 #ifdef ORTP_BIGENDIAN

@@ -54,31 +54,31 @@ void rtp_signal_table_emit(RtpSignalTable *table)
 	for (i=0,c=0;c<table->count;i++){
 		if (table->callback[i]!=NULL){
 			c++;	/*I like it*/
-			table->callback[i](table->session,(unsigned long)table->user_data[i],0,0);
+			table->callback[i](table->session,table->user_data[i],0,0);
 		}
 	}
 }
 
-void rtp_signal_table_emit2(RtpSignalTable *table,unsigned long arg)
+void rtp_signal_table_emit2(RtpSignalTable *table, void *arg)
 {
 	int i,c;
 
 	for (i=0,c=0;c<table->count;i++){
 		if (table->callback[i]!=NULL){
 			c++;	/*I like it*/
-			table->callback[i](table->session,arg,(unsigned long)table->user_data[i],0);
+			table->callback[i](table->session,arg,table->user_data[i],0);
 		}
 	}
 }
 
-void rtp_signal_table_emit3(RtpSignalTable *table, unsigned long arg1, unsigned long arg2)
+void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2)
 {
 	int i,c;
 
 	for (i=0,c=0;c<table->count;i++){
 		if (table->callback[i]!=NULL){
 			c++;	/*I like it*/
-			table->callback[i](table->session,arg1,arg2,(unsigned long)table->user_data[i]);
+			table->callback[i](table->session,arg1,arg2,table->user_data[i]);
 		}
 	}
 }

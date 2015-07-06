@@ -301,7 +301,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		/* detect timestamp important jumps in the future, to workaround stupid rtp senders */
 		if (RTP_TIMESTAMP_IS_NEWER_THAN(rtp->timestamp,session->rtp.rcv_last_ts+session->rtp.ts_jump)){
 			ortp_warning("rtp_parse: timestamp jump in the future detected.");
-			rtp_signal_table_emit2(&session->on_timestamp_jump,(long)&rtp->timestamp);
+			rtp_signal_table_emit2(&session->on_timestamp_jump,&rtp->timestamp);
 		}
 		else if (RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts,rtp->timestamp) 
 			|| RTP_SEQ_IS_STRICTLY_GREATER_THAN(session->rtp.rcv_last_seq,rtp->seq_number)){
@@ -313,8 +313,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 			if ( RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts, rtp->timestamp + session->rtp.ts_jump) ){
 				ortp_warning("rtp_parse: negative timestamp jump detected");
-				rtp_signal_table_emit2(&session->on_timestamp_jump,
-							(long)&rtp->timestamp);
+				rtp_signal_table_emit2(&session->on_timestamp_jump, &rtp->timestamp);
 			}
 			ortp_debug("rtp_parse: discarding too old packet (ts=%i)",rtp->timestamp);
 			freemsg(mp);
