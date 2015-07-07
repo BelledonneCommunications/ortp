@@ -1079,7 +1079,7 @@ static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct socka
 		/*errors to auxiliary destinations are not notified*/
 		if (error < 0){
 			if (session->on_network_error.count>0){
-				rtp_signal_table_emit3(&session->on_network_error,(long)"Error sending RTP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
+				rtp_signal_table_emit3(&session->on_network_error,"Error sending RTP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
 			}else log_send_error(session,"rtp",m,destaddr,destlen);
 			session->rtp.send_errno=getSocketErrorCode();
 		}else{
@@ -1137,7 +1137,7 @@ static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sock
 	if (!is_aux){
 		if (error < 0){
 			if (session->on_network_error.count>0){
-				rtp_signal_table_emit3(&session->on_network_error,(long)"Error sending RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
+				rtp_signal_table_emit3(&session->on_network_error,"Error sending RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
 			}else{
 				log_send_error(session,"rtcp",m,destaddr,destlen);
 			}
@@ -1564,7 +1564,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 			if (error==-1 && !is_would_block_error((errnum=getSocketErrorCode())) )
 			{
 				if (session->on_network_error.count>0){
-					rtp_signal_table_emit3(&session->on_network_error,(long)"Error receiving RTP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
+					rtp_signal_table_emit3(&session->on_network_error,"Error receiving RTP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
 				}else ortp_warning("Error receiving RTP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
 #ifdef __ios
 				/*hack for iOS and non-working socket because of background mode*/
@@ -1641,7 +1641,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 			if (error==-1 && !is_would_block_error((errnum=getSocketErrorCode())) )
 			{
 				if (session->on_network_error.count>0){
-					rtp_signal_table_emit3(&session->on_network_error,(long)"Error receiving RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
+					rtp_signal_table_emit3(&session->on_network_error,"Error receiving RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
 				}else ortp_warning("Error receiving RTCP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
 #ifdef __ios
 				/*hack for iOS and non-working socket because of background mode*/
