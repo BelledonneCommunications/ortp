@@ -98,7 +98,7 @@ typedef struct _RtpTransportModifier
 	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
 	int  (*t_process_on_send)(struct _RtpTransportModifier *t, mblk_t *msg);
 	int  (*t_process_on_receive)(struct _RtpTransportModifier *t, mblk_t *msg);
-	void  (*t_process_on_schedule)(struct _RtpTransportModifier *t); /*invoked each time rtp_session_recvm even is no message are available*/
+	void  (*t_process_on_schedule)(struct _RtpTransportModifier *t); /*invoked each time rtp_session_recvm is called even is no message are available*/
 	/**
 	 * Mandatory callback responsible of freeing the #RtpTransportModifierAND the pointer.
 	 * @param[in] transport #RtpTransportModifier object to free.
