@@ -216,7 +216,10 @@ void ortp_logv(int level, const char *fmt, va_list args) {
 		}
 	}
 #if !defined(_WIN32_WCE)
-	if (level == ORTP_FATAL) abort();
+	if (level == ORTP_FATAL) {
+		ortp_logv_flush();
+		abort();
+	}
 #endif
 }
 
