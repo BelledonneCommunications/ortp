@@ -168,8 +168,8 @@ ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
  */
 typedef struct _ortp_extremum{
 	float current_extremum;
-	uint64_t extremum_time;
 	float last_stable;
+	uint64_t extremum_time;
 	int period;
 }ortp_extremum;
 
