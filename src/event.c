@@ -132,11 +132,13 @@ static void iterate_cbs(OrtpEvDispatcher *disp, OrtpEvent *ev) {
 		OrtpEventType evt = ortp_event_get_type(ev);
 		for (it = disp->cbs; it != NULL; it = it->next){
 			OrtpEvDispatcherData *data = (OrtpEvDispatcherData *)it->data;
+			/*
 			const rtcp_common_header_t *ch = rtcp_get_common_header(d->packet);
 			rtcp_type_t packet_type = 0;
 			if (ch != NULL) {
 				packet_type = rtcp_common_header_get_packet_type(ch);
 			}
+			*/
 			if (evt == data->type) {
 				if (!is_rtcp_event(data->type) || rtcp_is_type(d->packet, data->subtype)) {
 					data->on_found(d, data->user_data);
