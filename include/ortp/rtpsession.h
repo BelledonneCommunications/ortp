@@ -44,6 +44,7 @@
 
 #define ORTP_AVPF_FEATURE_NONE 0
 #define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
+#define ORTP_AVPF_FEATURE_GENERIC_NACK (1 << 1)
 
 
 typedef enum {
@@ -181,6 +182,11 @@ typedef struct OrtpRtcpSendAlgorithm {
 	bool_t tmmbr_scheduled;
 	bool_t tmmbn_scheduled;
 } OrtpRtcpSendAlgorithm;
+
+typedef struct OrtpRtcpFbConfiguration {
+	bool_t generic_nack_enabled;
+	bool_t tmmbr_enabled;
+} OrtpRtcpFbConfiguration;
 
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
 
@@ -615,6 +621,7 @@ ORTP_PUBLIC void rtp_session_enable_avpf_feature(RtpSession *session, unsigned c
 ORTP_PUBLIC uint16_t rtp_session_get_avpf_rr_interval(RtpSession *session);
 ORTP_PUBLIC bool_t rtp_session_rtcp_psfb_scheduled(RtpSession *session, rtcp_psfb_type_t type);
 ORTP_PUBLIC bool_t rtp_session_rtcp_rtpfb_scheduled(RtpSession *session, rtcp_rtpfb_type_t type);
+ORTP_PUBLIC void rtp_session_send_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uint16_t blp);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_pli(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_fir(RtpSession *session);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id);

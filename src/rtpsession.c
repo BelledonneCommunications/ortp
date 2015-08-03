@@ -1063,6 +1063,26 @@ rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number
 	return NULL;
 }
 
+static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
+	uint16_t pid;
+	uint16_t i;
+
+	if (RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.rcv_last_seq + 1)) {
+		uint16_t first_missed_seq = session->rtp.rcv_last_seq + 1;
+		uint16_t diff = rtp->seq_number - first_missed_seq;
+		pid = first_missed_seq;
+		for (i = 0; i <= (diff / 16); i++) {
+			uint16_t seq;
+			uint16_t blp = 0;
+			for (seq = pid + 1; (seq < rtp->seq_number) && ((seq - pid) < 16); seq++) {
+				blp |= (1 << (seq - pid - 1));
+			}
+			rtp_session_send_rtcp_fb_generic_nack(session, pid, blp);
+			pid = seq;
+		}
+	}
+}
+
 /**
  *	Try to get a rtp packet presented as a mblk_t structure from the rtp session.
  *	The @user_ts parameter is relative to the first timestamp of the incoming stream. In other
@@ -1196,6 +1216,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		{
 			payload_type_changed_notify(session, rtp->paytype);
 		}
+		check_for_seq_number_gap(session, rtp);
 		/* update the packet's timestamp so that it corrected by the
 		adaptive jitter buffer mechanism */
 		if (session->rtp.jittctl.adaptive){

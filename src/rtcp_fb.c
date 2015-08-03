@@ -170,6 +170,30 @@ static mblk_t * make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint
 	return h;
 }
 
+static mblk_t * make_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uint16_t blp) {
+	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_generic_nack_fci_t);
+	mblk_t *h = allocb(size, 0);
+	rtcp_common_header_t *ch;
+	rtcp_fb_header_t *fbh;
+	rtcp_fb_generic_nack_fci_t *fci;
+
+	ch = (rtcp_common_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_common_header_t);
+	fbh = (rtcp_fb_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_header_t);
+	fci = (rtcp_fb_generic_nack_fci_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_generic_nack_fci_t);
+	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
+	fbh->media_source_ssrc = htonl(0);
+	rtcp_fb_generic_nack_fci_set_pid(fci, pid);
+	rtcp_fb_generic_nack_fci_set_blp(fci, blp);
+
+	/* Fill common header */
+	rtcp_common_header_init(ch, session, RTCP_RTPFB, RTCP_RTPFB_NACK, msgdsize(h));
+
+	return h;
+}
+
 static mblk_t * make_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr, uint16_t measured_overhead) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
 	mblk_t *h = allocb(size, 0);
@@ -257,6 +281,15 @@ bool_t rtp_session_rtcp_rtpfb_scheduled(RtpSession *session, rtcp_rtpfb_type_t t
 		m = m->b_cont;
 	}
 	return FALSE;
+}
+
+void rtp_session_send_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uint16_t blp) {
+	mblk_t *m;
+	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GENERIC_NACK) == TRUE)) {
+		m = make_rtcp_fb_generic_nack(session, pid, blp);
+		rtp_session_add_fb_packet_to_send(session, m);
+		rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+	}
 }
 
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {

@@ -542,6 +542,15 @@ uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m) {
 	return ntohl(fbh->media_source_ssrc);
 }
 
+rtcp_fb_generic_nack_fci_t * rtcp_RTPFB_generic_nack_get_fci(const mblk_t *m) {
+	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_generic_nack_fci_t);
+	unsigned int rtcp_size = rtcp_get_size(m);
+	if (size > rtcp_size) {
+		return NULL;
+	}
+	return (rtcp_fb_generic_nack_fci_t *)(m->b_rptr + size - sizeof(rtcp_fb_generic_nack_fci_t));
+}
+
 rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m) {
 	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
 	unsigned int rtcp_size = rtcp_get_size(m);

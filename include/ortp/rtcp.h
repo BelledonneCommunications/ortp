@@ -310,6 +310,16 @@ typedef struct rtcp_fb_header {
 	uint32_t media_source_ssrc;
 } rtcp_fb_header_t;
 
+typedef struct rtcp_fb_generic_nack_fci {
+	uint16_t pid;
+	uint16_t blp;
+} rtcp_fb_generic_nack_fci_t;
+
+#define rtcp_fb_generic_nack_fci_get_pid(nack) ntohs((nack)->pid)
+#define rtcp_fb_generic_nack_fci_set_pid(nack, value) ((nack)->pid) = htons(value)
+#define rtcp_fb_generic_nack_fci_get_blp(nack) ntohs((nack)->blp)
+#define rtcp_fb_generic_nack_fci_set_blp(nack, value) ((nack)->blp) = htons(value)
+
 typedef struct rtcp_fb_tmmbr_fci {
 	uint32_t ssrc;
 	uint32_t value;
@@ -486,6 +496,7 @@ ORTP_PUBLIC uint16_t rtcp_XR_voip_metrics_get_jb_abs_max(const mblk_t *m);
 /* RTCP RTPFB accessors */
 ORTP_PUBLIC bool_t rtcp_is_RTPFB(const mblk_t *m);
 ORTP_PUBLIC rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m);
+ORTP_PUBLIC rtcp_fb_generic_nack_fci_t * rtcp_RTPFB_generic_nack_get_fci(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_RTPFB_get_packet_sender_ssrc(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m);
