@@ -156,11 +156,11 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 			sim->params.max_buffer_size=sim->params.max_bandwidth;
 			ortp_message("Network simulation: Max buffer size not set for RTP session [%p], using [%i]",session,sim->params.max_buffer_size);
 		}
+		session->net_sim_ctx=sim;
 		if ((params->mode==OrtpNetworkSimulatorOutbound || params->mode==OrtpNetworkSimulatorOutboundControlled) && !sim->thread_started){
 			sim->thread_started=TRUE;
 			ortp_thread_create(&sim->thread, NULL, outboud_simulator_thread, session);
 		}
-		session->net_sim_ctx=sim;
 
 		ortp_message("Network simulation: enabled with the following parameters:\n"
 				"\tlatency=%d\n"
