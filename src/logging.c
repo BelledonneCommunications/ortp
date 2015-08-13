@@ -295,6 +295,7 @@ static slog2_buffer_t slog2_buffer_handle[2];
 void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args) {
 	uint8_t severity = SLOG2_DEBUG1;
 	uint8_t buffer_idx = 1;
+	char* msg;
 
 	if (slog2_registered != TRUE) {
 		slog2_buffer_config.buffer_set_name = domain;
@@ -334,6 +335,7 @@ void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt,
 			ortp_fatal("Bad level!");
 	}
 
-	vslog2f(slog2_buffer_handle[buffer_idx], 0, severity, fmt, args);
+	msg=ortp_strdup_vprintf(fmt,args);
+	slog2c(slog2_buffer_handle[buffer_idx], 0, severity, msg);
 }
 #endif /* __QNX__ */
