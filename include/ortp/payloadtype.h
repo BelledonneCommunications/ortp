@@ -161,6 +161,7 @@ ORTP_VAR_PUBLIC PayloadType payload_type_aaceld_48k;
 ORTP_VAR_PUBLIC PayloadType payload_type_opus;
 ORTP_VAR_PUBLIC PayloadType payload_type_isac;
 ORTP_VAR_PUBLIC PayloadType payload_type_gsm_efr;
+ORTP_VAR_PUBLIC PayloadType payload_type_codec2;
 
 /* video */
 ORTP_VAR_PUBLIC PayloadType payload_type_mpv;
