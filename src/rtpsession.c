@@ -1971,7 +1971,7 @@ uint32_t rtp_session_time_to_ts(RtpSession *session, int millisecs){
 	if (payload == NULL)
 	{
 		ortp_warning
-			("rtp_session_ts_to_t: use of unsupported payload type %d.", session->snd.pt);
+			("rtp_session_time_to_ts: use of unsupported payload type %d.", session->snd.pt);
 		return 0;
 	}
 	/* the return value is in milisecond */
