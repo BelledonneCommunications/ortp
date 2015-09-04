@@ -90,7 +90,7 @@ endif WITH_EPM
 
 distclean-local:
 	-rm -f ortp.defs
-	-rm -rf doc/html
+	-rm -rf doc
 
 all-local: ortp.spec
 
