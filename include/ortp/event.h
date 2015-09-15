@@ -49,6 +49,7 @@ struct _OrtpEventData{
 		OrtpSocketType socket_type;
 		bool_t ice_processing_successful;
 		uint64_t tmmbr_mxtbr;
+		uint32_t received_rtt_character;
 	} info;
 };
 
@@ -77,6 +78,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ICE_RESTART_NEEDED			12
 #define ORTP_EVENT_DTLS_ENCRYPTION_CHANGED		13
 #define ORTP_EVENT_TMMBR_RECEIVED		14
+#define ORTP_EVENT_RTT_CHARACTER_RECEIVED		15
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
