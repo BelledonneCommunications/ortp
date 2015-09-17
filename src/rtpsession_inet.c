@@ -342,7 +342,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 	int sockfamily;
 	if (session->rtp.gs.socket!=(ortp_socket_t)-1){
 		/* don't rebind, but close before*/
-		rtp_session_release_sockets(session);
+		_rtp_session_release_sockets(session, FALSE);
 	}
 	/* try to bind the rtp port */
 

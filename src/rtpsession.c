@@ -1415,14 +1415,14 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
 	else session->rtp.ts_jump=ts;
 }
 
-/**
- * Closes the rtp and rtcp sockets.
-**/
-void rtp_session_release_sockets(RtpSession *session){
+void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports){
 	if (session->rtp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtp.gs.socket);
 	if (session->rtcp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.gs.socket);
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
+	
+	if (!release_transports)
+		return;
 
 	if (session->rtp.gs.tr) {
 		if (session->rtp.gs.tr->t_close)
@@ -1443,6 +1443,13 @@ void rtp_session_release_sockets(RtpSession *session){
 	session->rtp.gs.rem_addrlen=0;
 	session->rtcp.gs.rem_addrlen=0;
 	*/
+}
+
+/**
+ * Closes the rtp and rtcp sockets, and associated RtpTransport.
+**/
+void rtp_session_release_sockets(RtpSession *session){
+	_rtp_session_release_sockets(session, TRUE);
 }
 
 ortp_socket_t rtp_session_get_rtp_socket(const RtpSession *session){
