@@ -58,20 +58,28 @@ dblk_t *datab_alloc(size_t size){
 	db=(dblk_t *) ortp_malloc(total_size);
 	db->db_base=(uint8_t*)db+sizeof(dblk_t);
 	db->db_lim=db->db_base+size;
+	ortp_mutex_init(&db->mutex, NULL);
 	db->db_ref=1;
 	db->db_freefn=NULL;	/* the buffer pointed by db_base must never be freed !*/
 	return db;
 }
 
 static ORTP_INLINE void datab_ref(dblk_t *d){
+	ortp_mutex_lock(&d->mutex);
 	d->db_ref++;
+	ortp_mutex_unlock(&d->mutex);
 }
 
 static ORTP_INLINE void datab_unref(dblk_t *d){
+	bool_t destroyed;
+	ortp_mutex_lock(&d->mutex);
 	d->db_ref--;
-	if (d->db_ref==0){
+	destroyed = (d->db_ref==0);
+	ortp_mutex_unlock(&d->mutex);
+	if (destroyed){
 		if (d->db_freefn!=NULL)
 			d->db_freefn(d->db_base);
+		ortp_mutex_destroy(&d->mutex);
 		ortp_free(d);
 	}
 }
@@ -105,6 +113,7 @@ mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void*) )
 	datab->db_base=buf;
 	datab->db_lim=buf+size;
 	datab->db_ref=1;
+	ortp_mutex_init(&datab->mutex, NULL);
 	datab->db_freefn=freefn;
 
 	mp->b_datap=datab;

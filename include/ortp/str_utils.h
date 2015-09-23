@@ -73,6 +73,7 @@ typedef struct datab
 	unsigned char *db_lim;
 	void (*db_freefn)(void*);
 	int db_ref;
+	ortp_mutex_t mutex;
 } dblk_t;
 
 typedef struct _queue
