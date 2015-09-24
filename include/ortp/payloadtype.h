@@ -50,8 +50,8 @@ extern "C"{
 #define PAYLOAD_AUDIO_CONTINUOUS 0
 #define PAYLOAD_AUDIO_PACKETIZED 1
 #define PAYLOAD_VIDEO 2
-#define PAYLOAD_TEXT 4
-#define PAYLOAD_OTHER 3  /* ?? */
+#define PAYLOAD_TEXT 3
+#define PAYLOAD_OTHER 4  /* ?? */
 
 #define PAYLOAD_TYPE_AVPF_NONE 0
 #define PAYLOAD_TYPE_AVPF_FIR (1 << 0)
