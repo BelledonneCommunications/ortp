@@ -272,7 +272,7 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 	/* queue the packet for sending*/
 	if (input){
 		putq(&sim->q,input);
-		bits=(msgdsize(input)+overhead)*8;
+		bits=((int)msgdsize(input)+overhead)*8;
 		sim->qsize+=bits;
 	}
 	/*flow control*/
@@ -280,7 +280,7 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 		// ortp_message("rtp_session_network_simulate(): discarding packets.");
 		output=getq(&sim->q);
 		if (output){
-			bits=(msgdsize(output)+overhead)*8;
+			bits=((int)msgdsize(output)+overhead)*8;
 			sim->qsize-=bits;
 			sim->drop_by_congestion++;
 			freemsg(output);
@@ -293,7 +293,7 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 	if (sim->bit_budget>=0){
 		output=getq(&sim->q);
 		if (output){
-			bits=(msgdsize(output)+overhead)*8;
+			bits=((int)msgdsize(output)+overhead)*8;
 			sim->bit_budget-=bits;
 			sim->qsize-=bits;
 		}

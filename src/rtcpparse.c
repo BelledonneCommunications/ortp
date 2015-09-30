@@ -21,21 +21,19 @@
 #include "ortp/ortp.h"
 #include "utils.h"
 
-static int rtcp_get_size(const mblk_t *m){
+static size_t rtcp_get_size(const mblk_t *m){
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
-	if (ch==NULL) return -1;
+	if (ch==NULL) return 0;
 	return (1+rtcp_common_header_get_length(ch))*4;
 }
 
 /*in case of coumpound packet, set read pointer of m to the beginning of the next RTCP
 packet */
 bool_t rtcp_next_packet(mblk_t *m){
-	int nextlen=rtcp_get_size(m);
-	if (nextlen>=0){
-		if (m->b_rptr+nextlen<m->b_wptr){
-			m->b_rptr+=nextlen;
-			return TRUE;
-		}
+	size_t nextlen=rtcp_get_size(m);
+	if (m->b_rptr+nextlen<m->b_wptr){
+		m->b_rptr+=nextlen;
+		return TRUE;
 	}
 	return FALSE;
 }
@@ -46,7 +44,7 @@ void rtcp_rewind(mblk_t *m){
 
 /* get common header; this function will also check the sanity of the packet*/
 const rtcp_common_header_t * rtcp_get_common_header(const mblk_t *m){
-	int size=msgdsize(m);
+	size_t size=msgdsize(m);
 	rtcp_common_header_t *ch;
 	if (m->b_cont!=NULL){
 		ortp_fatal("RTCP parser does not work on fragmented mblk_t. Use msgpullup() before to re-assemble the packet.");
@@ -86,7 +84,7 @@ const sender_info_t * rtcp_SR_get_sender_info(const mblk_t *m){
 const report_block_t * rtcp_SR_get_report_block(const mblk_t *m, int idx){
 	rtcp_sr_t *sr=(rtcp_sr_t*)m->b_rptr;
 	report_block_t *rb=&sr->rb[idx];
-	int size=rtcp_get_size(m);
+	size_t size=rtcp_get_size(m);
 	if ( ( (uint8_t*)rb)+sizeof(report_block_t) <= m->b_rptr + size ) {
 		return rb;
 	}else{
@@ -118,7 +116,7 @@ uint32_t rtcp_RR_get_ssrc(const mblk_t *m){
 const report_block_t * rtcp_RR_get_report_block(const mblk_t *m,int idx){
 	rtcp_rr_t *rr=(rtcp_rr_t*)m->b_rptr;
 	report_block_t *rb=&rr->rb[idx];
-	int size=rtcp_get_size(m);
+	size_t size=rtcp_get_size(m);
 	if ( ( (uint8_t*)rb)+sizeof(report_block_t) <= (m->b_rptr + size ) ){
 		return rb;
 	}else{
@@ -169,7 +167,7 @@ void rtcp_sdes_parse(const mblk_t *m, SdesItemFoundCallback cb, void *user_data)
 
 				if (type==RTCP_SDES_END){
 					/* pad to next 32bit boundary*/
-					rptr=(uint8_t*)(((unsigned long)rptr+4) & ~0x3);
+					rptr=(uint8_t *)((intptr_t)(rptr+4) & ~0x3);
 					nchunk++;
 					if (nchunk<rtcp_common_header_get_rc(ch)){
 						chunk_start=TRUE;
@@ -243,7 +241,7 @@ bool_t rtcp_BYE_get_reason(const mblk_t *m, const char **reason, int *reason_len
 /*APP accessors */
 bool_t rtcp_is_APP(const mblk_t *m){
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
-	int size=rtcp_get_size(m);
+	size_t size=rtcp_get_size(m);
 	if (ch!=NULL && rtcp_common_header_get_packet_type(ch)==RTCP_APP){
 		if (msgdsize(m)<size){
 			ortp_warning("Too short RTCP APP packet.");
@@ -274,7 +272,7 @@ void rtcp_APP_get_name(const mblk_t *m, char *name){
 }
 /* retrieve the data. when returning, data points directly into the mblk_t */
 void rtcp_APP_get_data(const mblk_t *m, uint8_t **data, int *len){
-	int datalen=rtcp_get_size(m)-sizeof(rtcp_app_t);
+	int datalen=(int)rtcp_get_size(m)-sizeof(rtcp_app_t);
 	if (datalen>0){
 		*data=(uint8_t*)m->b_rptr+sizeof(rtcp_app_t);
 		*len=datalen;
@@ -543,8 +541,8 @@ uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m) {
 }
 
 rtcp_fb_generic_nack_fci_t * rtcp_RTPFB_generic_nack_get_fci(const mblk_t *m) {
-	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_generic_nack_fci_t);
-	unsigned int rtcp_size = rtcp_get_size(m);
+	size_t size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_generic_nack_fci_t);
+	size_t rtcp_size = rtcp_get_size(m);
 	if (size > rtcp_size) {
 		return NULL;
 	}
@@ -552,8 +550,8 @@ rtcp_fb_generic_nack_fci_t * rtcp_RTPFB_generic_nack_get_fci(const mblk_t *m) {
 }
 
 rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m) {
-	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
-	unsigned int rtcp_size = rtcp_get_size(m);
+	size_t size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
+	size_t rtcp_size = rtcp_get_size(m);
 	if (size > rtcp_size) {
 		return NULL;
 	}
@@ -596,8 +594,8 @@ uint32_t rtcp_PSFB_get_media_source_ssrc(const mblk_t *m) {
 }
 
 rtcp_fb_fir_fci_t * rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned int idx) {
-	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_fir_fci_t));
-	unsigned int rtcp_size = rtcp_get_size(m);
+	size_t size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_fir_fci_t));
+	size_t rtcp_size = rtcp_get_size(m);
 	if (size > rtcp_size) {
 		return NULL;
 	}
@@ -605,8 +603,8 @@ rtcp_fb_fir_fci_t * rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned int idx) {
 }
 
 rtcp_fb_sli_fci_t * rtcp_PSFB_sli_get_fci(const mblk_t *m, unsigned int idx) {
-	unsigned int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_sli_fci_t));
-	unsigned int rtcp_size = rtcp_get_size(m);
+	size_t size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + ((idx + 1) * sizeof(rtcp_fb_sli_fci_t));
+	size_t rtcp_size = rtcp_get_size(m);
 	if (size > rtcp_size) {
 		return NULL;
 	}
@@ -619,6 +617,6 @@ rtcp_fb_rpsi_fci_t * rtcp_PSFB_rpsi_get_fci(const mblk_t *m) {
 
 uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m) {
 	rtcp_fb_rpsi_fci_t *fci = rtcp_PSFB_rpsi_get_fci(m);
-	uint16_t bit_string_len_in_bytes = rtcp_get_size(m) - (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + 2);
+	uint16_t bit_string_len_in_bytes = (uint16_t)(rtcp_get_size(m) - (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + 2));
 	return ((bit_string_len_in_bytes * 8) - fci->pb);
 }

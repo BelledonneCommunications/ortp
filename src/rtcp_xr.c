@@ -143,7 +143,7 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 	uint32_t lost_packets;
 	rtcp_xr_voip_metrics_report_block_t *block = (rtcp_xr_voip_metrics_report_block_t *)buf;
 	float rtt = rtp_session_get_round_trip_propagation(session);
-	uint16_t int_rtt = (rtt >= 0) ? (rtt * 1000) : 0;
+	uint16_t int_rtt = (uint16_t)((rtt >= 0) ? (rtt * 1000) : 0);
 	float qi = -1;
 	float lq_qi = -1;
 

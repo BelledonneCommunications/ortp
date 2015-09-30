@@ -132,7 +132,7 @@ char *ortp_strdup_printf(const char *fmt,...){
 
 char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
 	char *ret;
-	unsigned long dstlen, retlen;
+	size_t dstlen, retlen;
 
 	ret=ortp_strdup_vprintf(fmt, ap);
 	dstlen = strlen(dst);
@@ -268,7 +268,7 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 		OutputDebugStringA("\r\n");
 	#else
 		{
-			int len=strlen(msg);
+			size_t len=strlen(msg);
 			wchar_t *tmp=(wchar_t*)ortp_malloc0((len+1)*sizeof(wchar_t));
 			mbstowcs(tmp,msg,len);
 			OutputDebugStringW(tmp);

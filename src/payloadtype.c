@@ -189,7 +189,7 @@ bool_t fmtp_get_value(const char *fmtp, const char *param_name, char *result, si
 			int copied;
 			const char *end=strchr(equal+1,';');
 			if (end==NULL) end=fmtp+strlen(fmtp); /*assuming this is the last param */
-			copied=MIN(result_len-1,end-(equal+1));
+			copied=MIN((int)(result_len-1),(int)(end-(equal+1)));
 			strncpy(result,equal+1,copied);
 			result[copied]='\0';
 			return TRUE;

@@ -242,15 +242,15 @@ void msgpullup(mblk_t *mp,size_t len)
 {
 	mblk_t *firstm=mp;
 	dblk_t *db;
-	int wlen=0;
+	size_t wlen=0;
 
 	if (mp->b_cont==NULL && len==-1) return;	/*nothing to do, message is not fragmented */
 
 	if (len==-1) len=msgdsize(mp);
 	db=datab_alloc(len);
 	while(wlen<len && mp!=NULL){
-		int remain=len-wlen;
-		int mlen=mp->b_wptr-mp->b_rptr;
+		int remain=(int)(len-wlen);
+		int mlen=(int)(mp->b_wptr-mp->b_rptr);
 		if (mlen<=remain){
 			memcpy(&db->db_base[wlen],mp->b_rptr,mlen);
 			wlen+=mlen;
@@ -298,7 +298,7 @@ mblk_t * appendb(mblk_t *mp, const char *data, size_t size, bool_t pad){
 	size_t padcnt=0;
 	size_t i;
 	if (pad){
-		padcnt= (size_t)(4L-( (long)(((long)mp->b_wptr)+size) % 4L)) % 4L;
+		padcnt = (size_t)(4 - ((((intptr_t)mp->b_wptr) + size) % 4)) % 4;
 	}
 	if ((mp->b_wptr + size +padcnt) > mp->b_datap->db_lim){
 		/* buffer is not large enough: append a new block (with the same size ?)*/
@@ -337,7 +337,7 @@ mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 
 	/*lookup for an unused msgb (data block with ref count ==1)*/
 	for(m=qbegin(q);!qend(q,m);m=qnext(q,m)){
-		if (m->b_datap->db_ref==1 && m->b_datap->db_lim-m->b_datap->db_base>=size){
+		if ((m->b_datap->db_ref == 1) && ((size_t)(m->b_datap->db_lim - m->b_datap->db_base) >= size)){
 			found=m;
 			break;
 		}

@@ -76,7 +76,7 @@ char offset0[4] = {0x00, 0x00, 0x00, 0x00};
 #define RECV_FMTP(val)		(val)
 #define SEND_FMTP(val)		(val)
 #define NO_AVPF		{PAYLOAD_TYPE_AVPF_NONE, 0}
-#define AVPF(feat, intv)		{(feat), (intv)}
+#define AVPF(feat, intv)		{(feat), FALSE, (intv)}
 #define FLAGS(val)		(val)
 
 #endif

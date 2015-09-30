@@ -175,12 +175,12 @@ void rtp_session_remove_contributing_source(RtpSession *session, uint32_t ssrc) 
 	rtp_session_rtcp_send(session,tmp);
 }
 
-void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s,int type, int rc, int bytes_len){
+void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s,int type, int rc, size_t bytes_len){
 	rtcp_common_header_set_version(ch,2);
 	rtcp_common_header_set_padbit(ch,0);
 	rtcp_common_header_set_packet_type(ch,type);
 	rtcp_common_header_set_rc(ch,rc);	/* as we don't yet support multi source receiving */
-	rtcp_common_header_set_length(ch,(bytes_len/4)-1);
+	rtcp_common_header_set_length(ch,(unsigned short)((bytes_len/4)-1));
 }
 
 mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
@@ -491,9 +491,9 @@ void compute_rtcp_interval(RtpSession *session) {
 
 	if (rtp_session_avpf_enabled(session) == TRUE) {
 		session->rtcp.send_algo.T_rr_interval = rtp_session_get_avpf_rr_interval(session);
-		rtcp_min_time = session->rtcp.send_algo.Tmin;
+		rtcp_min_time = (float)session->rtcp.send_algo.Tmin;
 	} else {
-		rtcp_min_time = session->rtcp.send_algo.T_rr_interval;
+		rtcp_min_time = (float)session->rtcp.send_algo.T_rr_interval;
 		if (session->rtcp.send_algo.initial == TRUE) {
 			rtcp_min_time /= 2.;
 		}
@@ -502,14 +502,14 @@ void compute_rtcp_interval(RtpSession *session) {
 	t = ((session->rtcp.send_algo.avg_rtcp_size * 8 * 2) / rtcp_bw) * 1000;
 	if (t < rtcp_min_time) t = rtcp_min_time;
 	t = rtcp_rand(t);
-	t = t / (2.71828 - 1.5); /* Compensation */
+	t = t / (2.71828f - 1.5f); /* Compensation */
 	session->rtcp.send_algo.T_rr = (uint32_t)t;
 }
 
 void update_avg_rtcp_size(RtpSession *session, int bytes) {
 	int overhead = (ortp_stream_is_ipv6(&session->rtcp.gs) == TRUE) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	int size = bytes + overhead;
-	session->rtcp.send_algo.avg_rtcp_size = ((size + (15 * session->rtcp.send_algo.avg_rtcp_size)) / 16.);
+	session->rtcp.send_algo.avg_rtcp_size = ((size + (15 * session->rtcp.send_algo.avg_rtcp_size)) / 16.f);
 }
 
 static void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
@@ -714,7 +714,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		/*if we are using duplicates, they will not be visible in 'diff' variable.
 		But since we are the emitter, we can retrieve the total count of packet we
 		sent and use this value to compute the loss rate instead.*/
-		obj->loss_rate=100.0*(1. - MAX(0, (diff_unique_outgoing - new_losses) * 1.f / diff_total_outgoing));
+		obj->loss_rate = 100.f * (1.f - MAX(0, (diff_unique_outgoing - new_losses) * 1.f / diff_total_outgoing));
 
 		/*update last values with current*/
 		got_value=TRUE;

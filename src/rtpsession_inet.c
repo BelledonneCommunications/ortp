@@ -53,14 +53,28 @@
 #ifndef WSAID_WSARECVMSG
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG {0xf689d7c8,0x6f1f,0x436b,{0x8a,0x53,0xe5,0x4f,0xe3,0x51,0xc3,0x22}}
+#ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
+#endif
+#ifndef TYPE_ALIGNMENT
 #define TYPE_ALIGNMENT(t) FIELD_OFFSET(struct { char x; t test; },test)
+#endif
 typedef WSACMSGHDR *LPWSACMSGHDR;
+#ifndef WSA_CMSGHDR_ALIGN
 #define WSA_CMSGHDR_ALIGN(length) (((length) + TYPE_ALIGNMENT(WSACMSGHDR)-1) & (~(TYPE_ALIGNMENT(WSACMSGHDR)-1)))
+#endif
+#ifndef WSA_CMSGDATA_ALIGN
 #define WSA_CMSGDATA_ALIGN(length) (((length) + MAX_NATURAL_ALIGNMENT-1) & (~(MAX_NATURAL_ALIGNMENT-1)))
+#endif
+#ifndef WSA_CMSG_FIRSTHDR
 #define WSA_CMSG_FIRSTHDR(msg) (((msg)->Control.len >= sizeof(WSACMSGHDR)) ? (LPWSACMSGHDR)(msg)->Control.buf : (LPWSACMSGHDR)NULL)
+#endif
+#ifndef WSA_CMSG_NXTHDR
 #define WSA_CMSG_NXTHDR(msg,cmsg) ((!(cmsg)) ? WSA_CMSG_FIRSTHDR(msg) : ((((u_char *)(cmsg) + WSA_CMSGHDR_ALIGN((cmsg)->cmsg_len) + sizeof(WSACMSGHDR)) > (u_char *)((msg)->Control.buf) + (msg)->Control.len) ? (LPWSACMSGHDR)NULL : (LPWSACMSGHDR)((u_char *)(cmsg) + WSA_CMSGHDR_ALIGN((cmsg)->cmsg_len))))
+#endif
+#ifndef WSA_CMSG_DATA
 #define WSA_CMSG_DATA(cmsg) ((u_char *)(cmsg) + WSA_CMSGDATA_ALIGN(sizeof(WSACMSGHDR)))
+#endif
 #endif
 #undef CMSG_FIRSTHDR
 #define CMSG_FIRSTHDR WSA_CMSG_FIRSTHDR
@@ -93,7 +107,7 @@ static LPFN_WSARECVMSG ortp_WSARecvMsg = NULL;
 static int
 _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port, bool_t is_aux);
 
-static bool_t try_connect(int fd, const struct sockaddr *dest, socklen_t addrlen){
+static bool_t try_connect(ortp_socket_t fd, const struct sockaddr *dest, socklen_t addrlen){
 	if (connect(fd,dest,addrlen)<0){
 		ortp_warning("Could not connect() socket: %s",getSocketError());
 		return FALSE;
@@ -234,7 +248,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		}
 
 		*sock_family=res->ai_family;
-		err = bind (sock, res->ai_addr, res->ai_addrlen);
+		err = bind(sock, res->ai_addr, (int)res->ai_addrlen);
 		if (err != 0){
 			ortp_error ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket (sock);
@@ -246,7 +260,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		break;
 	}
 	memcpy(bound_addr,res0->ai_addr,res0->ai_addrlen);
-	*bound_addr_len=res0->ai_addrlen;
+	*bound_addr_len=(socklen_t)res0->ai_addrlen;
 
 	freeaddrinfo(res0);
 
@@ -268,13 +282,13 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 			err=getsockname(sock,(struct sockaddr*)&saddr,&slen);
 			if (err==-1){
 				ortp_error("getsockname(): %s",getSocketError());
-				close(sock);
+				close((int)sock);
 				return (ortp_socket_t)-1;
 			}
 			err=getnameinfo((struct sockaddr*)&saddr, slen, NULL, 0, num, sizeof(num), NI_NUMERICHOST | NI_NUMERICSERV);
 			if (err!=0){
 				ortp_error("getnameinfo(): %s",gai_strerror(err));
-				close(sock);
+				close((int)sock);
 				return (ortp_socket_t)-1;
 			}
 			*port=atoi(num);
@@ -284,7 +298,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	return sock;
 }
 
-static void set_socket_sizes(int sock, unsigned int sndbufsz, unsigned int rcvbufsz){
+static void set_socket_sizes(ortp_socket_t sock, unsigned int sndbufsz, unsigned int rcvbufsz){
 	int err;
 	bool_t done=FALSE;
 	if (sndbufsz>0){
@@ -599,7 +613,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	int tos;
 	int proto;
 	int value_type;
-#if (_WIN32_WINNT >= 0x0600)
+#if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
 	OSVERSIONINFOEX ovi;
 #endif
 
@@ -828,7 +842,7 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 		/* set a destination address that has the same type as the local address */
 		if (res->ai_family==session->rtp.gs.sockfamily ) {
 			memcpy(rtp_saddr, res->ai_addr, res->ai_addrlen);
-			*rtp_saddr_len=res->ai_addrlen;
+			*rtp_saddr_len=(socklen_t)res->ai_addrlen;
 			err=0;
 			break;
 		}
@@ -858,7 +872,7 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 		if (res->ai_family==session->rtp.gs.sockfamily ) {
 			err=0;
 			memcpy(rtcp_saddr, res->ai_addr, res->ai_addrlen);
-			*rtcp_saddr_len=res->ai_addrlen;
+			*rtcp_saddr_len=(socklen_t)res->ai_addrlen;
 			break;
 		}
 	}
@@ -1027,7 +1041,7 @@ int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags
 
 	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
 			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
-		ret=msgdsize(m);
+		ret=(int)msgdsize(m);
 		m=dupmsg(m);
 		memcpy(&m->net_addr,destaddr,destlen);
 		m->net_addrlen=destlen;
@@ -1302,7 +1316,7 @@ static void compute_rtt(RtpSession *session, const struct timeval *now, uint32_t
 		if (rtt_frac>=0){
 			rtt_frac/=65536.0;
 
-			session->rtt=rtt_frac;
+			session->rtt=(float)rtt_frac;
 			/*ortp_message("rtt estimated to %f s",session->rtt);*/
 		}else ortp_warning("Negative RTT computation, maybe due to clock adjustments.");
 	}
@@ -1410,7 +1424,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		return 0;
 	}
 
-	update_recv_bytes(&session->rtcp.gs, block->b_wptr - block->b_rptr);
+	update_recv_bytes(&session->rtcp.gs, (int)(block->b_wptr - block->b_rptr));
 
 	/* compound rtcp packet can be composed by more than one rtcp message */
 	do{
@@ -1490,7 +1504,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			}
 		}
 		/* then parse the message and put on jitter buffer queue */
-		update_recv_bytes(&session->rtp.gs, mp->b_wptr - mp->b_rptr);
+		update_recv_bytes(&session->rtp.gs, (int)(mp->b_wptr - mp->b_rptr));
 		rtp_session_rtp_parse(session, mp, user_ts, remaddr,addrlen);
 		/*for bandwidth measurements:*/
 	}else {

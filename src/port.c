@@ -244,9 +244,9 @@ typedef struct thread_param{
 
 static unsigned WINAPI thread_starter(void *data){
 	thread_param_t *params=(thread_param_t*)data;
-	void *ret=params->func(params->arg);
+	params->func(params->arg);
 	ortp_free(data);
-	return (DWORD)ret;
+	return 0;
 }
 
 #if defined _WIN32_WCE
@@ -750,7 +750,7 @@ void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 }
 
 void ortp_get_cur_time(ortpTimeSpec *ret){
-	return _ortp_get_cur_time(ret, FALSE);
+	_ortp_get_cur_time(ret, FALSE);
 }
 
 
@@ -796,7 +796,7 @@ void ortp_sleep_until(const ortpTimeSpec *ts){
 		diff.tv_sec-=1;
 	}
 #ifdef _WIN32
-		ortp_sleep_ms((diff.tv_sec * 1000LL) + (diff.tv_nsec/1000000LL));
+		ortp_sleep_ms((int)((diff.tv_sec * 1000LL) + (diff.tv_nsec/1000000LL)));
 #else
 	{
 		struct timespec dur,rem;

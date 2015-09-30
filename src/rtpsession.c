@@ -894,7 +894,7 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 	rtp_header_t *rtp;
 	uint32_t packet_time;
 	int error = 0;
-	int packsize;
+	size_t packsize;
 	RtpScheduler *sched=session->sched;
 	RtpStream *stream=&session->rtp;
 
@@ -957,7 +957,7 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		}
 		session->rtp.snd_last_ts = packet_ts;
 
-		stream->sent_payload_bytes+=packsize-RTP_FIXED_HEADER_SIZE;
+		stream->sent_payload_bytes+=(uint32_t)(packsize-RTP_FIXED_HEADER_SIZE);
 
 		ortp_global_stats.sent += (1+(int)session->duplication_left) * packsize;
 		stream->stats.sent += (1+(int)session->duplication_left) * packsize;
@@ -1156,7 +1156,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	/* check for telephone event first */
 	mp=getq(&session->rtp.tev_rq);
 	if (mp!=NULL){
-		int msgsize=msgdsize(mp);
+		size_t msgsize=msgdsize(mp);
 		ortp_global_stats.recv += msgsize;
 		stream->stats.recv += msgsize;
 		rtp_signal_table_emit2(&session->on_telephone_event_packet,mp);
@@ -1204,7 +1204,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	end:
 	if (mp != NULL)
 	{
-		int msgsize = msgdsize (mp);	/* evaluate how much bytes (including header) is received by app */
+		size_t msgsize = msgdsize(mp);	/* evaluate how much bytes (including header) is received by app */
 		uint32_t packet_ts;
 		ortp_global_stats.recv += msgsize;
 		stream->stats.recv += msgsize;
@@ -1320,7 +1320,7 @@ int rtp_session_recv_with_ts (RtpSession * session, uint8_t * buffer,
 			if (mp!=NULL) rtp_get_payload(mp,&mp->b_rptr);
 		}
 		if (mp){
-			plen=mp->b_wptr-mp->b_rptr;
+			plen=(int)(mp->b_wptr-mp->b_rptr);
 			if (plen<=len){
 				memcpy(buffer,mp->b_rptr,plen);
 				buffer+=plen;
@@ -1763,9 +1763,9 @@ static float compute_bw(struct timeval *orig, unsigned int bytes, const struct t
 	float bw;
 	float time;
 	
-	time=(float)(current->tv_sec - orig->tv_sec) +
-		((float)(current->tv_usec - orig->tv_usec)*1e-6);
-	bw=((float)bytes)*8/(time+0.0001);
+	time=(float)((double)(current->tv_sec - orig->tv_sec) +
+		((double)(current->tv_usec - orig->tv_usec)*1e-6));
+	bw=((float)bytes)*8/(time+0.0001f);
 	/*+0.0001 avoids a division by zero without changing the results significatively*/
 	*orig=*current;
 	return bw;
@@ -1904,7 +1904,7 @@ int rtp_get_payload(mblk_t *packet, unsigned char **start){
 			tmp=packet->b_cont->b_rptr+(header_len- (packet->b_wptr-packet->b_rptr));
 			if (tmp<=packet->b_cont->b_wptr){
 				*start=tmp;
-				return packet->b_cont->b_wptr-tmp;
+				return (int)(packet->b_cont->b_wptr-tmp);
 			}
 		}
 		ortp_warning("Invalid RTP packet");
@@ -1917,7 +1917,7 @@ int rtp_get_payload(mblk_t *packet, unsigned char **start){
 		}
 	}
 	*start=tmp;
-	return packet->b_wptr-tmp;
+	return (int)(packet->b_wptr-tmp);
 }
 
 /**
@@ -2063,7 +2063,8 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 }
 
 int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
-	int prev_ret,ret;
+	size_t prev_ret;
+	int ret;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 
@@ -2116,7 +2117,8 @@ int meta_rtp_transport_modifier_inject_packet(const RtpTransport *t, RtpTranspor
  * allow a modifier to inject a packet wich will be treated by successive modifiers
  */
 int meta_rtp_transport_modifier_inject_packet_to(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg , int flags,const struct sockaddr *to, socklen_t tolen) {
-	int prev_ret,ret;
+	size_t prev_ret;
+	int ret;
 	OList *elem;
 	bool_t packetInjected = tpm?FALSE:TRUE; /*if no modifier, start from the begening*/
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;

@@ -132,7 +132,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	RtpStream *rtpstream=&session->rtp;
 	rtp_stats_t *stats=&rtpstream->stats;
 
-	msgsize=mp->b_wptr-mp->b_rptr;
+	msgsize=(int)(mp->b_wptr-mp->b_rptr);
 
 	if (msgsize<RTP_FIXED_HEADER_SIZE){
 		ortp_warning("Packet too small to be a rtp packet (%i)!",msgsize);
