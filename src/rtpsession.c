@@ -794,10 +794,10 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
  *@param payload_size size of data carried by the rtp packet.
  *@return a rtp packet in a mblk_t (message block) structure.
 **/
-mblk_t * rtp_session_create_packet(RtpSession *session,int header_size, const uint8_t *payload, int payload_size)
+mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const uint8_t *payload, size_t payload_size)
 {
 	mblk_t *mp;
-	int msglen=header_size+payload_size;
+	size_t msglen=header_size+payload_size;
 	rtp_header_t *rtp;
 
 	mp=allocb(msglen,BPRI_MED);
@@ -816,7 +816,7 @@ mblk_t * rtp_session_create_packet(RtpSession *session,int header_size, const ui
 /**
  * Create a packet already including headers
  */
-mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, int packet_size) {
+mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t packet_size) {
 	mblk_t *mp;
 
 	mp=allocb(packet_size,BPRI_MED);
@@ -843,7 +843,7 @@ mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, int packet_size) {
  * @return: a rtp packet in a mblk_t (message block) structure.
 **/
 
-mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, int payload_size, void (*freefn)(void*))
+mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, size_t payload_size, void (*freefn)(void*))
 {
 	mblk_t *mp,*mpayload;
 	int header_size=RTP_FIXED_HEADER_SIZE; /* revisit when support for csrc is done */
@@ -875,7 +875,7 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
  * @param freefn a function that will be called once the buffer is no more needed (the data has been sent).
  * @return a rtp packet in a mblk_t (message block) structure.
 **/
-mblk_t * rtp_session_create_packet_in_place(RtpSession *session,uint8_t *buffer, int size, void (*freefn)(void*) )
+mblk_t * rtp_session_create_packet_in_place(RtpSession *session,uint8_t *buffer, size_t size, void (*freefn)(void*) )
 {
 	mblk_t *mp;
 	rtp_header_t *rtp;
