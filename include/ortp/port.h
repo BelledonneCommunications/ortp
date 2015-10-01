@@ -155,7 +155,6 @@ unsigned long __ortp_thread_self(void);
 #endif
 
 #define strtok_r strtok_s
-#define close _close
 
 typedef  unsigned __int64 uint64_t;
 typedef  __int64 int64_t;

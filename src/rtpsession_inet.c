@@ -251,7 +251,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		err = bind(sock, res->ai_addr, (int)res->ai_addrlen);
 		if (err != 0){
 			ortp_error ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
-			close_socket (sock);
+			close_socket(sock);
 			sock=-1;
 			continue;
 		}
@@ -282,13 +282,13 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 			err=getsockname(sock,(struct sockaddr*)&saddr,&slen);
 			if (err==-1){
 				ortp_error("getsockname(): %s",getSocketError());
-				close((int)sock);
+				close_socket(sock);
 				return (ortp_socket_t)-1;
 			}
 			err=getnameinfo((struct sockaddr*)&saddr, slen, NULL, 0, num, sizeof(num), NI_NUMERICHOST | NI_NUMERICSERV);
 			if (err!=0){
 				ortp_error("getnameinfo(): %s",gai_strerror(err));
-				close((int)sock);
+				close_socket(sock);
 				return (ortp_socket_t)-1;
 			}
 			*port=atoi(num);
