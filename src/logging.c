@@ -135,6 +135,8 @@ char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
 	size_t dstlen, retlen;
 
 	ret=ortp_strdup_vprintf(fmt, ap);
+	if (!dst) return ret;
+	
 	dstlen = strlen(dst);
 	retlen = strlen(ret);
 
