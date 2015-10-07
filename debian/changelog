@@ -1,3 +1,8 @@
+ortp (0.24.2) unstable; urgency=low
+  * Initial package
+
+ -- Belledonne Communications <info@belledonne-communications.com>  Tue, 07 Oct 2015 14:44:00 +0200
+
 ortp (0.23.0) unstable; urgency=low
 
   * Network simulator improvements
