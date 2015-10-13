@@ -108,6 +108,14 @@ if(NOT MSVC)
 	endif()
 endif()
 
+
+if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
+	set(EXPORT_TARGETS_NAME "LinphoneBuilder")
+else()
+	set(EXPORT_TARGETS_NAME "ORTP")
+endif()
+
+
 add_subdirectory(include)
 add_subdirectory(src)
 
@@ -152,9 +160,8 @@ write_basic_package_version_file(
 	VERSION ${ORTP_VERSION}
 	COMPATIBILITY AnyNewerVersion
 )
-export(EXPORT ORTPTargets
+export(EXPORT ${EXPORT_TARGETS_NAME}Targets
 	FILE "${CMAKE_CURRENT_BINARY_DIR}/ORTPTargets.cmake"
-	NAMESPACE BelledonneCommunications::
 )
 configure_file(ORTPConfig.cmake.in
 	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
@@ -162,9 +169,8 @@ configure_file(ORTPConfig.cmake.in
 )
 
 set(ConfigPackageLocation lib/cmake/oRTP)
-install(EXPORT ORTPTargets
+install(EXPORT ${EXPORT_TARGETS_NAME}Targets
 	FILE ORTPTargets.cmake
-	NAMESPACE BelledonneCommunications::
 	DESTINATION ${ConfigPackageLocation}
 )
 install(FILES

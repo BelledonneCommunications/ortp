@@ -91,7 +91,7 @@ else()
 	endif()
 endif()
 
-install(TARGETS ortp EXPORT ORTPTargets
+install(TARGETS ortp EXPORT ${EXPORT_TARGETS_NAME}Targets
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
 	ARCHIVE DESTINATION lib
