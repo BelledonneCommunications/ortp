@@ -475,6 +475,7 @@ ORTP_PUBLIC void rtp_session_get_transports(const RtpSession *session, RtpTransp
 /*those methods are provided for people who wants to send non-RTP messages using the RTP/RTCP sockets */
 ORTP_PUBLIC ortp_socket_t rtp_session_get_rtp_socket(const RtpSession *session);
 ORTP_PUBLIC ortp_socket_t rtp_session_get_rtcp_socket(const RtpSession *session);
+ORTP_PUBLIC void rtp_session_refresh_sockets(RtpSession *session);
 
 
 /* QOS / DSCP */

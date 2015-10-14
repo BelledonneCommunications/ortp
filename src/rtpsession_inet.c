@@ -344,7 +344,7 @@ static void set_socket_sizes(ortp_socket_t sock, unsigned int sndbufsz, unsigned
  *	In case where the rtp session is send-only, then it is not required to call this function:
  *	when calling rtp_session_set_remote_addr(), if no local address has been set, then the
  *	default INADRR_ANY (0.0.0.0) IP address with a random port will be used. Calling
- *	rtp_sesession_set_local_addr() is mandatory when the session is recv-only or duplex.
+ *	rtp_session_set_local_addr() is mandatory when the session is recv-only or duplex.
  *
  *	Returns: 0 on success.
 **/
@@ -388,6 +388,35 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 	return -1;
 }
 
+static void _rtp_session_recreate_sockets(RtpSession *session){
+	char addr[NI_MAXHOST];
+	int err = getnameinfo((struct sockaddr*)&session->rtp.gs.loc_addr, session->rtp.gs.loc_addrlen, addr, sizeof(addr), NULL, 0, NI_NUMERICHOST);
+	if (err != 0){
+		ortp_error("_rtp_session_recreate_sockets(): getnameinfo() error: %s", gai_strerror(err));
+		return;
+	}
+	/*re create and bind sockets as they were done previously*/
+	ortp_message("RtpSession %p is going to re-create its socket.", session);
+	rtp_session_set_local_addr(session, addr, session->rtp.gs.loc_port, session->rtcp.gs.loc_port);
+}
+
+static void _rtp_session_check_socket_refresh(RtpSession *session){
+	if (session->flags & RTP_SESSION_SOCKET_REFRESH_REQUESTED){
+		session->flags &= ~RTP_SESSION_SOCKET_REFRESH_REQUESTED;
+		_rtp_session_recreate_sockets(session);
+	}
+}
+
+/**
+ * Requests the session to re-create and bind its RTP and RTCP sockets same as they are currently.
+ * This is used when a change in the routing rules of the host or process was made, in order to have
+ * this routing rules change taking effect on the RTP/RTCP packets sent by the session.
+**/
+void rtp_session_refresh_sockets(RtpSession *session){
+	if (session->rtp.gs.socket != (ortp_socket_t) -1){
+		session->flags |= RTP_SESSION_SOCKET_REFRESH_REQUESTED;
+	}
+}
 
 int rtp_session_join_multicast_group(RtpSession *session, const char *ip){
 	int err;
@@ -1039,6 +1068,7 @@ int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockad
 int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
 	int ret;
 
+	_rtp_session_check_socket_refresh(session);
 	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
 			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
 		ret=(int)msgdsize(m);
