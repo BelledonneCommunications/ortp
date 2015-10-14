@@ -37,7 +37,7 @@ option(ENABLE_NTP_TIMESTAMP "Turn on NTP timestamping on packet reception." NO)
 option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increase performance." NO)
 option(ENABLE_TESTS "Enable compilation of test programs." NO)
 option(ENABLE_DEBUG_LOGS "Turn on or off debug level logs." NO)
-set(CACHE WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
+set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_PREFIX_PATH}/share/cmake/Modules)
