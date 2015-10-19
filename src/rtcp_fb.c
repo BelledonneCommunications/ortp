@@ -373,12 +373,12 @@ void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 }
 
 bool_t rtp_session_avpf_enabled(RtpSession *session) {
-	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
+	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 	return pt && (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED);
 }
 
 bool_t rtp_session_avpf_payload_type_feature_enabled(RtpSession *session, unsigned char feature) {
-	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
+	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
 	PayloadTypeAvpfParams params;
 	if (!pt) return FALSE;
 	params = payload_type_get_avpf_params(pt);
