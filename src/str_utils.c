@@ -33,14 +33,7 @@ void qinit(queue_t *q){
 
 void mblk_init(mblk_t *mp)
 {
-	mp->b_cont=mp->b_prev=mp->b_next=NULL;
-	mp->b_rptr=mp->b_wptr=NULL;
-	mp->reserved1=0;
-	mp->reserved2=0;
-#if defined(ORTP_TIMESTAMP)
-	memset(&(mp->timestamp), 0, sizeof(struct timeval));
-#endif
-	mp->ttl_or_hl = 0;
+	memset(mp, 0, sizeof(mblk_t));
 }
 
 void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
@@ -82,8 +75,7 @@ mblk_t *allocb(size_t size, int pri)
 	mblk_t *mp;
 	dblk_t *datab;
 
-	mp=(mblk_t *) ortp_malloc(sizeof(mblk_t));
-	mblk_init(mp);
+	mp=(mblk_t *) ortp_malloc0(sizeof(mblk_t));
 	datab=datab_alloc(size);
 
 	mp->b_datap=datab;
@@ -97,10 +89,8 @@ mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void*) )
 	mblk_t *mp;
 	dblk_t *datab;
 
-	mp=(mblk_t *) ortp_malloc(sizeof(mblk_t));
-	mblk_init(mp);
+	mp=(mblk_t *) ortp_malloc0(sizeof(mblk_t));
 	datab=(dblk_t *) ortp_malloc(sizeof(dblk_t));
-
 
 	datab->db_base=buf;
 	datab->db_lim=buf+size;
@@ -142,8 +132,7 @@ mblk_t *dupb(mblk_t *mp)
 	return_val_if_fail(mp->b_datap->db_base!=NULL,NULL);
 
 	datab_ref(mp->b_datap);
-	newm=(mblk_t *) ortp_malloc(sizeof(mblk_t));
-	mblk_init(newm);
+	newm=(mblk_t *) ortp_malloc0(sizeof(mblk_t));
 	mblk_meta_copy(mp, newm);
 	newm->b_datap=mp->b_datap;
 	newm->b_rptr=mp->b_rptr;
