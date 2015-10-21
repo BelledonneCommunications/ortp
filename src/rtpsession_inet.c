@@ -1321,9 +1321,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 				msg->ttl_or_hl = (*ptr & 0xFF);
 			}
 #endif
-			if (msg->recv_addr.family == AF_UNSPEC) {
-				ortp_warning("Could not get address the RTP packet has been received from!");
-			}
 		}
 	}
 	return ret;
