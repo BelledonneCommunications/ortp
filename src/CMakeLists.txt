@@ -25,7 +25,8 @@ if(HAVE_RT)
 	list(APPEND LIBS rt)
 endif()
 
-set(SOURCE_FILES
+set(ORTP_SOURCE_FILES
+	${ORTP_HEADER_FILES}
 	avprofile.c
 	b64.c
 	event.c
@@ -55,9 +56,9 @@ set(SOURCE_FILES
 )
 
 if(WIN32)
-	list(APPEND SOURCE_FILES dll_entry.c)
+	list(APPEND ORTP_SOURCE_FILES dll_entry.c)
 	if("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsPhone")
-		list(APPEND SOURCE_FILES winrttimer.cpp winrttimer.h)
+		list(APPEND ORTP_SOURCE_FILES winrttimer.cpp winrttimer.h)
 		set_source_files_properties(winrttimer.cpp PROPERTIES COMPILE_FLAGS "/ZW /AI\$(WindowsSDK_MetadataPath)")
 	endif()
 endif()
@@ -75,10 +76,10 @@ if(WIN32)
 endif()
 
 if(ENABLE_STATIC)
-	add_library(ortp STATIC ${SOURCE_FILES})
+	add_library(ortp STATIC ${ORTP_SOURCE_FILES})
 	target_link_libraries(ortp ${LIBS})
 else()
-	add_library(ortp SHARED ${SOURCE_FILES})
+	add_library(ortp SHARED ${ORTP_SOURCE_FILES})
 	set_target_properties(ortp PROPERTIES VERSION ${ORTP_SO_VERSION})
 	target_link_libraries(ortp ${LIBS})
 	if(MSVC)

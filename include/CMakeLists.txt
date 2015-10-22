@@ -20,8 +20,29 @@
 #
 ############################################################################
 
-file(GLOB HEADER_FILES "ortp/*.h")
+set(HEADER_FILES
+	b64.h
+	event.h
+	logging.h
+	ortp.h
+	payloadtype.h
+	port.h
+	rtcp.h
+	rtp.h
+	rtpprofile.h
+	rtpsession.h
+	rtpsignaltable.h
+	sessionset.h
+	str_utils.h
+	telephonyevents.h
+)
 
-install(FILES ${HEADER_FILES}
+set(ORTP_HEADER_FILES )
+foreach(HEADER_FILE ${HEADER_FILES})
+	list(APPEND ORTP_HEADER_FILES "${CMAKE_CURRENT_LIST_DIR}/ortp/${HEADER_FILE}")
+endforeach()
+set(ORTP_HEADER_FILES ${ORTP_HEADER_FILES} PARENT_SCOPE)
+
+install(FILES ${ORTP_HEADER_FILES}
         DESTINATION include/ortp
         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
