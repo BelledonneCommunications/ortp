@@ -26,7 +26,6 @@ if(HAVE_RT)
 endif()
 
 set(ORTP_SOURCE_FILES
-	${ORTP_HEADER_FILES}
 	avprofile.c
 	b64.c
 	event.c
@@ -76,10 +75,10 @@ if(WIN32)
 endif()
 
 if(ENABLE_STATIC)
-	add_library(ortp STATIC ${ORTP_SOURCE_FILES})
+	add_library(ortp STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES})
 	target_link_libraries(ortp ${LIBS})
 else()
-	add_library(ortp SHARED ${ORTP_SOURCE_FILES})
+	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES})
 	set_target_properties(ortp PROPERTIES VERSION ${ORTP_SO_VERSION})
 	target_link_libraries(ortp ${LIBS})
 	if(MSVC)
