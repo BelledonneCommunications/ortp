@@ -1086,7 +1086,7 @@ int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags
 	return ret;
 }
 
-static void update_sent_bytes(OrtpStream *os, int nbytes) {
+void update_sent_bytes(OrtpStream *os, int nbytes) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if ((os->sent_bytes == 0) && (os->send_bw_start.tv_sec == 0) && (os->send_bw_start.tv_usec == 0)) {
 		/* Initialize bandwidth computing time when has not been started yet. */
@@ -1113,7 +1113,6 @@ static void log_send_error(RtpSession *session, const char *type, mblk_t *m, str
 
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error;
-
 	if (rtp_session_using_transport(session, rtp)){
 		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
@@ -1322,6 +1321,9 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 			}
 #endif
 		}
+		/*store recv addr for use by modifiers*/
+		memcpy(&msg->net_addr,from,*fromlen);
+		msg->net_addrlen = *fromlen;
 	}
 	return ret;
 }
@@ -1563,6 +1565,16 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	}
 }
 
+void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts) {
+	if (session->net_sim_ctx && session->net_sim_ctx->params.mode == OrtpNetworkSimulatorInbound) {
+		/*drain possible packets queued in the network simulator*/
+		mp = rtp_session_network_simulate(session, mp, &is_rtp_packet);
+		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts);
+	} else if (mp != NULL) {
+		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts);
+	}
+}
+
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	int error;
 	ortp_socket_t sockfd=session->rtp.gs.socket;
@@ -1578,10 +1590,9 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 		bool_t is_rtp_packet = TRUE;
 
-		if (session->rtp.gs.cached_mp==NULL){
-			 session->rtp.gs.cached_mp = msgb_allocator_alloc(&session->allocator,session->recv_buf_size);
-		}
-		mp=session->rtp.gs.cached_mp;
+		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+		mp->reserved1 = user_ts;
+		
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
@@ -1591,16 +1602,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		}
 		if (error > 0){
 			mp->b_wptr+=error;
-
-			/*if we use the network simulator, store packet source address for later use(otherwise it will be used immediately)*/
-			memcpy(&mp->net_addr,&remaddr,addrlen);
-			mp->net_addrlen = addrlen;
-			if (session->net_sim_ctx && session->net_sim_ctx->params.mode==OrtpNetworkSimulatorInbound){
-				mp=rtp_session_network_simulate(session,mp,&is_rtp_packet);
-			}
-			rtp_process_incoming_packet(session,mp,is_rtp_packet,user_ts);
-
-			session->rtp.gs.cached_mp=NULL;
+			rtp_session_process_incoming(session, mp, is_rtp_packet, user_ts);
 		}
 		else
 		{
@@ -1619,13 +1621,9 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 #endif
 			}else{
 				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
-				if (session->net_sim_ctx && session->net_sim_ctx->params.mode==OrtpNetworkSimulatorInbound){
-					/*drain possible packets queued in the network simulator*/
-					mp=rtp_session_network_simulate(session,NULL,&is_rtp_packet);
-					rtp_process_incoming_packet(session,mp,is_rtp_packet,user_ts);
-				}
+				rtp_session_process_incoming(session, NULL, is_rtp_packet, user_ts);
 			}
-			/* don't free the cached_mp, it will be reused next time */
+			freemsg(mp);
 			return -1;
 		}
 	}
@@ -1646,11 +1644,10 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
 		bool_t is_rtp_packet = FALSE;
-		if (session->rtcp.gs.cached_mp==NULL){
-			 session->rtcp.gs.cached_mp = allocb (RTCP_MAX_RECV_BUFSIZE, 0);
-		}
 
-		mp=session->rtcp.gs.cached_mp;
+		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, RTCP_MAX_RECV_BUFSIZE);
+		mp->reserved1 = session->rtp.rcv_last_app_ts;
+		
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(session->rtcp.gs.socket, mp, 0, NULL, NULL);
 		}else{
@@ -1669,15 +1666,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 		if (error > 0)
 		{
 			mp->b_wptr += error;
-
-			memcpy(&mp->net_addr,&remaddr,addrlen);
-			mp->net_addrlen = addrlen;
-
-			if (session->net_sim_ctx && session->net_sim_ctx->params.mode==OrtpNetworkSimulatorInbound){
-				mp=rtp_session_network_simulate(session,mp,&is_rtp_packet);
-			}
-			rtp_process_incoming_packet(session,mp,is_rtp_packet,session->rtp.rcv_last_app_ts);
-			session->rtcp.gs.cached_mp=NULL;
+			rtp_session_process_incoming(session, mp, is_rtp_packet, session->rtp.rcv_last_app_ts);
 		}
 		else
 		{
@@ -1697,13 +1686,10 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 				session->rtp.recv_errno=errnum;
 			}else{
 				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
-				if (session->net_sim_ctx && session->net_sim_ctx->params.mode==OrtpNetworkSimulatorInbound){
-					/*drain possible packets queued in the network simulator*/
-					mp=rtp_session_network_simulate(session,NULL,&is_rtp_packet);
-					rtp_process_incoming_packet(session,mp,is_rtp_packet,session->rtp.rcv_last_app_ts);
-				}
+				rtp_session_process_incoming(session, NULL, is_rtp_packet, session->rtp.rcv_last_app_ts);
 			}
-			/* don't free the cached_mp, it will be reused next time */
+			
+			freemsg(mp);
 			return -1; /* avoids an infinite loop ! */
 		}
 	}
