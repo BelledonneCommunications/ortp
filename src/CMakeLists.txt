@@ -56,7 +56,7 @@ set(ORTP_SOURCE_FILES
 
 if(WIN32)
 	list(APPEND ORTP_SOURCE_FILES dll_entry.c)
-	if("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsPhone")
+	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone")
 		list(APPEND ORTP_SOURCE_FILES winrttimer.cpp winrttimer.h)
 		set_source_files_properties(winrttimer.cpp PROPERTIES COMPILE_FLAGS "/ZW /AI\$(WindowsSDK_MetadataPath)")
 	endif()
@@ -69,18 +69,16 @@ add_definitions(
 if(WIN32)
 	add_definitions(-DWINDOWS_NATIVE)
 	list(APPEND LIBS ws2_32)
-	if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsPhone")
+	if(NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone")
 		list(APPEND LIBS delayimp Winmm Qwave)
 	endif()
 endif()
 
 if(ENABLE_STATIC)
 	add_library(ortp STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES})
-	target_link_libraries(ortp ${LIBS})
 else()
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES})
 	set_target_properties(ortp PROPERTIES VERSION ${ORTP_SO_VERSION})
-	target_link_libraries(ortp ${LIBS})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 			install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/ortp.pdb
@@ -90,6 +88,8 @@ else()
 		endif()
 	endif()
 endif()
+target_link_libraries(ortp ${LIBS})
+target_compile_options(ortp PRIVATE ${STRICT_OPTIONS_CPP} ${STRICT_OPTIONS_C})
 
 install(TARGETS ortp EXPORT ${EXPORT_TARGETS_NAME}Targets
 	RUNTIME DESTINATION bin
