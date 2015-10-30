@@ -1207,11 +1207,11 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	{
 		size_t msgsize = msgdsize(mp);	/* evaluate how much bytes (including header) is received by app */
 		uint32_t packet_ts;
-		ortp_debug("Returning mp with ts=%i", packet_ts);
 		ortp_global_stats.recv += msgsize;
 		stream->stats.recv += msgsize;
 		rtp = (rtp_header_t *) mp->b_rptr;
 		packet_ts=rtp->timestamp;
+		ortp_debug("Returning mp with ts=%i", packet_ts);
 		/* check for payload type changes */
 		if (session->rcv.pt != rtp->paytype)
 		{
