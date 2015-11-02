@@ -25,10 +25,10 @@ project(ORTP)
 
 
 set(ORTP_MAJOR_VERSION "0")
-set(ORTP_MINOR_VERSION "24")
-set(ORTP_MICRO_VERSION "2")
+set(ORTP_MINOR_VERSION "25")
+set(ORTP_MICRO_VERSION "0")
 set(ORTP_VERSION "${ORTP_MAJOR_VERSION}.${ORTP_MINOR_VERSION}.${ORTP_MICRO_VERSION}")
-set(ORTP_SO_VERSION "9")
+set(ORTP_SO_VERSION "10")
 
 
 option(ENABLE_STATIC "Build static library (default is shared library)." NO)
