@@ -88,4 +88,6 @@ void rtp_session_set_transports(RtpSession *session, RtpTransport *rtptr, RtpTra
 
 ORTP_PUBLIC bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt);
 
+ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp);
+
 #endif

@@ -1052,6 +1052,14 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 }
 #endif
 
+ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
+	if (session->rtcp_mux){
+		return session->rtp.gs.socket;
+	}else{
+		return is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
+	}
+}
+
 int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
 	int error;
 #ifdef USE_SENDMSG
@@ -1080,7 +1088,7 @@ int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags
 		putq(&session->net_sim_ctx->send_q, m);
 		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
 	}else{
-		ortp_socket_t sockfd=is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
+		ortp_socket_t sockfd = rtp_session_get_socket(session, is_rtp);
 		ret=_ortp_sendto(sockfd, m, flags, destaddr, destlen);
 	}
 	return ret;
@@ -1169,8 +1177,8 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 
 static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error=0;
-	ortp_socket_t sockfd=session->rtcp.gs.socket;
-
+	ortp_socket_t sockfd = rtp_session_get_socket(session, FALSE);
+	
 	if (rtp_session_using_transport(session, rtcp)){
 			error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0,
 			destaddr, destlen);
@@ -1523,6 +1531,17 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	}
 	remaddr = (struct sockaddr *)&mp->net_addr;
 	addrlen = mp->net_addrlen;
+	
+	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
+	if (session->rtcp_mux && is_rtp_packet){
+		if (rtp_get_version(mp) == 2){
+			int pt = rtp_get_payload_type(mp);
+			if (pt >= 64 && pt <= 95){
+				/*this is assumed to be an RTCP packet*/
+				is_rtp_packet = FALSE;
+			}
+		}
+	}
 
 	if (is_rtp_packet){
 		if (session->use_connect){

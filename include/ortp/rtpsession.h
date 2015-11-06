@@ -408,6 +408,7 @@ struct _RtpSession
 	bool_t use_connect; /* use connect() on the socket */
 	bool_t ssrc_set;
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
+	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 };
 
@@ -508,6 +509,10 @@ ORTP_PUBLIC int rtp_session_set_payload_type(RtpSession *session, int pt);
 ORTP_PUBLIC void rtp_session_set_symmetric_rtp (RtpSession * session, bool_t yesno);
 
 ORTP_PUBLIC bool_t rtp_session_get_symmetric_rtp (const RtpSession * session);
+
+ORTP_PUBLIC void rtp_session_enable_rtcp_mux(RtpSession *session, bool_t yesno);
+
+ORTP_PUBLIC bool_t rtp_session_rtcp_mux_enabled(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno);
 

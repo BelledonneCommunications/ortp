@@ -112,6 +112,7 @@ extern "C"{
 ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
 #define rtp_set_payload_type(mp,pt)	((rtp_header_t*)((mp)->b_rptr))->paytype=(pt)
 
+#define rtp_get_version(mp)	(((rtp_header_t*)((mp)->b_rptr))->version)
 #define rtp_get_markbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->markbit)
 #define rtp_get_extbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->extbit)
 #define rtp_get_timestamp(mp)	(((rtp_header_t*)((mp)->b_rptr))->timestamp)

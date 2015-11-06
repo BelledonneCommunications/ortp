@@ -1739,6 +1739,14 @@ rtp_session_set_symmetric_rtp (RtpSession * session, bool_t yesno)
 	session->symmetric_rtp =yesno;
 }
 
+void rtp_session_enable_rtcp_mux(RtpSession *session, bool_t yesno){
+	session->rtcp_mux = yesno;
+}
+
+bool_t rtp_session_rtcp_mux_enabled(RtpSession *session){
+	return session->rtcp_mux;
+}
+
 /**
  *	If yesno is TRUE, thus a connect() syscall is done on the socket to
  *	the destination address set by rtp_session_set_remote_addr(), or
