@@ -25,7 +25,7 @@ if(HAVE_RT)
 	list(APPEND LIBS rt)
 endif()
 
-set(ORTP_SOURCE_FILES
+set(ORTP_SOURCE_FILES_C
 	avprofile.c
 	b64.c
 	event.c
@@ -53,11 +53,12 @@ set(ORTP_SOURCE_FILES
 	telephonyevents.c
 	utils.c
 )
+set(ORTP_SOURCE_FILES_CXX )
 
 if(WIN32)
-	list(APPEND ORTP_SOURCE_FILES dll_entry.c)
+	list(APPEND ORTP_SOURCE_FILES_C dll_entry.c)
 	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone")
-		list(APPEND ORTP_SOURCE_FILES winrttimer.cpp winrttimer.h)
+		list(APPEND ORTP_SOURCE_FILES_CXX winrttimer.cpp winrttimer.h)
 		set_source_files_properties(winrttimer.cpp PROPERTIES COMPILE_FLAGS "/ZW /AI\$(WindowsSDK_MetadataPath)")
 	endif()
 endif()
@@ -74,10 +75,13 @@ if(WIN32)
 	endif()
 endif()
 
+apply_compile_flags(ORTP_SOURCE_FILES_C "CPP" "C")
+apply_compile_flags(ORTP_SOURCE_FILES_CXX "CPP" "CXX")
+
 if(ENABLE_STATIC)
-	add_library(ortp STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES})
+	add_library(ortp STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 else()
-	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES})
+	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	set_target_properties(ortp PROPERTIES VERSION ${ORTP_SO_VERSION})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -89,7 +93,6 @@ else()
 	endif()
 endif()
 target_link_libraries(ortp ${LIBS})
-target_compile_options(ortp PRIVATE ${STRICT_OPTIONS_CPP} ${STRICT_OPTIONS_C})
 
 install(TARGETS ortp EXPORT ${EXPORT_TARGETS_NAME}Targets
 	RUNTIME DESTINATION bin
