@@ -1204,8 +1204,8 @@ int
 rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 	int error=0;
 	ortp_socket_t sockfd=session->rtcp.gs.socket;
-	struct sockaddr *destaddr=(struct sockaddr*)&session->rtcp.gs.rem_addr;
-	socklen_t destlen=session->rtcp.gs.rem_addrlen;
+	struct sockaddr *destaddr=session->rtcp_mux ? (struct sockaddr*)&session->rtp.gs.rem_addr : (struct sockaddr*)&session->rtcp.gs.rem_addr;
+	socklen_t destlen=session->rtcp_mux ? session->rtp.gs.rem_addrlen : session->rtcp.gs.rem_addrlen;
 	OList *elem=NULL;
 	bool_t using_connected_socket=(session->flags & RTCP_SOCKET_CONNECTED)!=0;
 
@@ -1336,11 +1336,13 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	return ret;
 }
 
-void rtp_session_notify_inc_rtcp(RtpSession *session, mblk_t *m){
+void rtp_session_notify_inc_rtcp(RtpSession *session, mblk_t *m, bool_t received_via_rtcp_mux){
+	ortp_message("Received RTCP via mux: %i", (int) received_via_rtcp_mux);
 	if (session->eventqs!=NULL){
 		OrtpEvent *ev=ortp_event_new(ORTP_EVENT_RTCP_PACKET_RECEIVED);
 		OrtpEventData *d=ortp_event_get_data(ev);
 		d->packet=m;
+		d->info.socket_type = received_via_rtcp_mux ? OrtpRTPSocket : OrtpRTCPSocket;
 		rtp_session_dispatch_event(session,ev);
 	}
 	else freemsg(m);  /* avoid memory leak */
@@ -1525,6 +1527,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 
 	struct sockaddr *remaddr = NULL;
 	socklen_t addrlen;
+	bool_t received_via_rtcp_mux = FALSE;
 
 	if (!mp){
 		return;
@@ -1539,6 +1542,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			if (pt >= 64 && pt <= 95){
 				/*this is assumed to be an RTCP packet*/
 				is_rtp_packet = FALSE;
+				received_via_rtcp_mux = TRUE;
 			}
 		}
 	}
@@ -1574,7 +1578,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			that a message has been received*/
 			mblk_t * copy = copymsg(mp);
 			/* post an event to notify the application */
-			rtp_session_notify_inc_rtcp(session,mp);
+			rtp_session_notify_inc_rtcp(session, mp, received_via_rtcp_mux);
 			/* reply to collaborative RTCP XR packets if needed. */
 			if (session->rtcp.xr_conf.enabled == TRUE){
 				reply_to_collaborative_rtcp_xr_packet(session, copy);

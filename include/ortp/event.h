@@ -42,12 +42,13 @@ struct _OrtpEventData{
 		int payload_type;
 		bool_t dtls_stream_encrypted;
 		bool_t zrtp_stream_encrypted;
+		bool_t ice_processing_successful;
 		struct _ZrtpSas{
 			char sas[32]; // up to 31 + null characters
 			bool_t verified;
+			bool_t pad[3];
 		} zrtp_sas;
 		OrtpSocketType socket_type;
-		bool_t ice_processing_successful;
 		uint64_t tmmbr_mxtbr;
 		uint32_t received_rtt_character;
 	} info;
