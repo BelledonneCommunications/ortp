@@ -1337,7 +1337,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 }
 
 void rtp_session_notify_inc_rtcp(RtpSession *session, mblk_t *m, bool_t received_via_rtcp_mux){
-	ortp_message("Received RTCP via mux: %i", (int) received_via_rtcp_mux);
 	if (session->eventqs!=NULL){
 		OrtpEvent *ev=ortp_event_new(ORTP_EVENT_RTCP_PACKET_RECEIVED);
 		OrtpEventData *d=ortp_event_get_data(ev);
