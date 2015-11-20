@@ -38,7 +38,7 @@
 static struct timeval orig,cur;
 static uint32_t posix_timer_time=0;		/*in milisecond */
 
-void posix_timer_init()
+void posix_timer_init(void)
 {
 	posix_timer.state=RTP_TIMER_RUNNING;
 	ortp_gettimeofday(&orig,NULL);
@@ -48,7 +48,7 @@ void posix_timer_init()
 
 
 
-void posix_timer_do()
+void posix_timer_do(void)
 {
 	int diff,time;
 	struct timeval tv;
@@ -74,7 +74,7 @@ void posix_timer_do()
 	
 }
 
-void posix_timer_uninit()
+void posix_timer_uninit(void)
 {
 	posix_timer.state=RTP_TIMER_STOPPED;
 }

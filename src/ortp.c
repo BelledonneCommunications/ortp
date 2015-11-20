@@ -37,7 +37,7 @@ RtpScheduler *__ortp_scheduler;
 
 extern void av_profile_init(RtpProfile *profile);
 
-static void init_random_number_generator(){
+static void init_random_number_generator(void){
 #ifndef _WIN32
 	struct timeval t;
 	ortp_gettimeofday(&t,NULL);

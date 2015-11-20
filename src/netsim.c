@@ -68,7 +68,7 @@ static const char *sched_policy_to_string(int policy){
 }
 #endif
 
-static void set_high_prio(){
+static void set_high_prio(void){
 #ifndef _WIN32
 	const char *sched_pref=getenv("ORTP_SIMULATOR_SCHED_POLICY");
 	int policy=SCHED_OTHER;

@@ -101,7 +101,7 @@ extern void rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts,
 		struct sockaddr *addr, socklen_t addrlen);
 
 
-static uint32_t uint32_t_random(){
+static uint32_t uint32_t_random(void){
 	return ortp_random();
 }
 
