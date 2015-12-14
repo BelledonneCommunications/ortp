@@ -182,7 +182,7 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
     			);
 	}else{
 		session->net_sim_ctx=NULL;
-        ortp_message("rtp_session_enable_network_simulation:DISABLING NETWORK SIMULATION");
+		ortp_message("rtp_session_enable_network_simulation:DISABLING NETWORK SIMULATION");
 		if (sim!=NULL) ortp_network_simulator_destroy(sim);
 	}
 }
@@ -343,7 +343,7 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 
 	om=input;
 
-    /*while packet is stored in network simulator queue, keep its type in reserved1 space*/
+	/*while packet is stored in network simulator queue, keep its type in reserved1 space*/
 	if (om != NULL){
 		sim->total_count++;
 		om->reserved1 = *is_rtp_packet;
@@ -356,10 +356,17 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 	if (sim->params.max_bandwidth>0){
 		om=simulate_bandwidth_limit_and_jitter(session,om);
 	}
-  
-	if (sim->params.loss_rate>0 && om && (*is_rtp_packet == TRUE) && (sim->params.RTP_only==TRUE) ){
-		om=simulate_loss_rate(sim,om);
+
+	if ((sim->params.loss_rate > 0) && (om != NULL)) {
+		if (sim->params.RTP_only == TRUE) {
+			if (*is_rtp_packet == TRUE) {
+				om = simulate_loss_rate(sim, om);
+			}
+		} else {
+			om = simulate_loss_rate(sim, om);
+		}
 	}
+
 	/*finally when releasing the packet from the simulator, reset the reserved1 space to default,
 	since it will be used by mediastreamer later*/
 	if (om != NULL){
