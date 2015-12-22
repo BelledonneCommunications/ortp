@@ -92,7 +92,7 @@ else()
 		endif()
 	endif()
 endif()
-target_link_libraries(ortp ${LIBS})
+target_link_libraries(ortp m ${LIBS})
 
 install(TARGETS ortp EXPORT ${EXPORT_TARGETS_NAME}Targets
 	RUNTIME DESTINATION bin
