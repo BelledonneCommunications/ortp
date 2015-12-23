@@ -521,12 +521,12 @@ typedef struct OrtpLossRateEstimator{
 	float loss_rate;
 	/**
 	* Total number of outgoing duplicate packets on last
-	* #ortp_loss_rate_estimator_process_report_block iteration.
+	* ortp_loss_rate_estimator_process_report_block iteration.
 	**/
 	int32_t last_dup_packet_sent_count;
 	/**
 	* Total number of outgoing unique packets on last
-	* #ortp_loss_rate_estimator_process_report_block iteration.
+	* ortp_loss_rate_estimator_process_report_block iteration.
 	**/
 	int32_t last_packet_sent_count;
 }OrtpLossRateEstimator;

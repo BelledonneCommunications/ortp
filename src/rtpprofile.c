@@ -150,12 +150,12 @@ RtpProfile * rtp_profile_new(const char *name)
  * @param pt the payload type description
  *
 **/
-void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType *pt){
+void rtp_profile_set_payload(RtpProfile *profile, int idx, PayloadType *pt){
 	if (idx<0 || idx>=RTP_PROFILE_MAX_PAYLOADS) {
 		ortp_error("Bad index %i",idx);
 		return;
 	}
-	prof->payload[idx]=pt;
+	profile->payload[idx]=pt;
 }
 
 /**
@@ -163,10 +163,10 @@ void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType *pt){
  *@param profile a RTP profile
  *
 **/
-void rtp_profile_clear_all(RtpProfile *obj){
+void rtp_profile_clear_all(RtpProfile *profile){
 	int i;
 	for (i=0;i<RTP_PROFILE_MAX_PAYLOADS;i++){
-		obj->payload[i]=0;
+		profile->payload[i]=0;
 	}
 }
 
@@ -174,12 +174,12 @@ void rtp_profile_clear_all(RtpProfile *obj){
 /**
  * Set a name to the rtp profile. (This is not required)
  * @param profile a rtp profile object
- * @param nm a string
+ * @param name a string
  *
 **/
-void rtp_profile_set_name(RtpProfile *obj, const char *name){
-	if (obj->name!=NULL) ortp_free(obj->name);
-	obj->name=ortp_strdup(name);
+void rtp_profile_set_name(RtpProfile *profile, const char *name){
+	if (profile->name!=NULL) ortp_free(profile->name);
+	profile->name=ortp_strdup(name);
 }
 
 /* ! payload are not cloned*/

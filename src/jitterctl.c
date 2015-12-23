@@ -132,7 +132,7 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 			ctl->adapt_jitt_comp_ts=(int) MAX(ctl->jitt_comp_ts,2*ctl->jitter);
 			//jitter_control_dump_stats(ctl);
 		}
-		
+
 		ctl->slide=slide;
 	}else {
 		/*ctl->slide and jitter size are not updated*/
@@ -153,11 +153,10 @@ float jitter_control_compute_mean_size(JitterControl *ctl){
 
 
 /**
- *rtp_session_set_jitter_compensation:
- *@session: a RtpSession
- *@milisec: the time interval in milisec to be jitter compensed.
+ *@param session: a RtpSession
+ *@param milisec: the time interval in milisec to be jitter compensed.
  *
- * Sets the time interval for which packet are buffered instead of being delivered to the 
+ * Sets the time interval for which packet are buffered instead of being delivered to the
  * application.
  **/
 void

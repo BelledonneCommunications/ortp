@@ -331,12 +331,12 @@ rtp_session_new (int mode)
 }
 
 /**
- * Sets the scheduling mode of the rtp session. If @yesno is TRUE, the rtp session is in
+ * Sets the scheduling mode of the rtp session. If \a yesno is TRUE, the rtp session is in
  *	the scheduled mode, that means that you can use session_set_select() to block until it's time
  *	to receive or send on this session according to the timestamp passed to the respective functions.
  *  You can also use blocking mode (see rtp_session_set_blocking_mode() ), to simply block within
  *	the receive and send functions.
- *	If @yesno is FALSE, the ortp scheduler will not manage those sessions, meaning that blocking mode
+ *	If \a yesno is FALSE, the ortp scheduler will not manage those sessions, meaning that blocking mode
  *  and the use of session_set_select() for this session are disabled.
  *@param session a rtp session.
  *@param yesno 	a boolean to indicate the scheduling mode.
@@ -369,11 +369,11 @@ rtp_session_set_scheduling_mode (RtpSession * session, int yesno)
 /**
  *	This function implicitely enables the scheduling mode if yesno is TRUE.
  *	rtp_session_set_blocking_mode() defines the behaviour of the rtp_session_recv_with_ts() and
- *	rtp_session_send_with_ts() functions. If @yesno is TRUE, rtp_session_recv_with_ts()
+ *	rtp_session_send_with_ts() functions. If \a yesno is TRUE, rtp_session_recv_with_ts()
  *	will block until it is time for the packet to be received, according to the timestamp
  *	passed to the function. After this time, the function returns.
  *	For rtp_session_send_with_ts(), it will block until it is time for the packet to be sent.
- *	If @yesno is FALSE, then the two functions will return immediately.
+ *	If \a yesno is FALSE, then the two functions will return immediately.
  *
  *  @param session a rtp session
  *  @param yesno a boolean
@@ -526,9 +526,9 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned 
 
 /**
  *	This function provides the way for an application to be informed of various events that
- *	may occur during a rtp session. @signal is a string identifying the event, and @cb is
+ *	may occur during a rtp session. \a signal_name is a string identifying the event, and \a cb is
  *	a user supplied function in charge of processing it. The application can register
- *	several callbacks for the same signal, in the limit of #RTP_CALLBACK_TABLE_MAX_ENTRIES.
+ *	several callbacks for the same signal, in the limit of \a RTP_CALLBACK_TABLE_MAX_ENTRIES.
  *	Here are name and meaning of supported signals types:
  *
  *	"ssrc_changed" : the SSRC of the incoming stream has changed.
@@ -574,7 +574,7 @@ rtp_session_signal_connect (RtpSession * session, const char *signal_name,
 
 
 /**
- *	Removes callback function @cb to the list of callbacks for signal @signal.
+ *	Removes callback function \a cb to the list of callbacks for signal \a signal.
  *
  * @param session a rtp session
  * @param signal_name	a signal name
@@ -600,7 +600,7 @@ rtp_session_signal_disconnect_by_callback (RtpSession * session, const char *sig
 /**
  * Set the initial sequence number for outgoing stream..
  * @param session		a rtp session freshly created.
- * @param addr			a 16 bit unsigned number.
+ * @param seq			a 16 bit unsigned number.
  *
 **/
 void rtp_session_set_seq_number(RtpSession *session, uint16_t seq){
@@ -760,7 +760,7 @@ int rtp_session_get_recv_payload_type(const RtpSession *session){
  *	the "payload_type_changed" signal is emitted.
  *
  * @param session a rtp session
- * @param paytype the payload type number
+ * @param pt the payload type number
  * @return 0 on success, -1 if the payload is not defined.
 **/
 int rtp_session_set_payload_type(RtpSession *session, int pt){
@@ -835,7 +835,7 @@ mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t packet_size
  *	sent with rtp_session_sendm_with_ts().
  *	oRTP will send this packet using libc's sendmsg() (if this function is availlable!) so that there will be no
  *	packet concatenation involving copies to be done in user-space.
- *  @freefn can be NULL, in that case payload will be kept untouched.
+ *  \a freefn can be NULL, in that case payload will be kept untouched.
  *
  * @param session a rtp session.
  * @param payload the data to be sent with this packet
@@ -868,7 +868,7 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
  * In the header, ssrc and payload_type according to the session's
  *context. Timestamp and seq number are not set, there will be set when the packet is going to be
  *	sent with rtp_session_sendm_with_ts().
- *  @freefn can be NULL, in that case payload will be kept untouched.
+ * \a freefn can be NULL, in that case payload will be kept untouched.
  *
  * @param session a rtp session.
  * @param buffer a buffer that contains first just enough place to write a RTP header, then the data to send.
@@ -985,13 +985,13 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 }
 
 /**
- *	Send the rtp datagram @mp to the destination set by rtp_session_set_remote_addr()
- *	with timestamp @timestamp. For audio data, the timestamp is the number
+ *	Send the rtp datagram \a packet to the destination set by rtp_session_set_remote_addr()
+ *	with timestamp \a timestamp. For audio data, the timestamp is the number
  *	of the first sample resulting of the data transmitted. See rfc1889 for details.
- *  The packet (@mp) is freed once it is sended.
+ *  The packet (\a packet) is freed once it is sent.
  *
  *@param session a rtp session.
- *@param mp a rtp packet presented as a mblk_t.
+ *@param packet a rtp packet presented as a mblk_t.
  *@param timestamp the timestamp of the data to be sent.
  * @return the number of bytes sent over the network.
 **/
@@ -1005,15 +1005,14 @@ int rtp_session_sendm_with_ts(RtpSession *session, mblk_t *packet, uint32_t time
 
 /**
  *	Send a rtp datagram to the destination set by rtp_session_set_remote_addr() containing
- *	the data from @buffer with timestamp @userts. This is a high level function that uses
+ *	the data from \a buffer with timestamp \a userts. This is a high level function that uses
  *	rtp_session_create_packet() and rtp_session_sendm_with_ts() to send the data.
  *
  *@param session a rtp session.
  *@param buffer a buffer containing the data to be sent in a rtp packet.
  *@param len the length of the data buffer, in bytes.
  *@param userts	the timestamp of the data to be sent. Refer to the rfc to know what it is.
- *
- *@param return the number of bytes sent over the network.
+ *@return the number of bytes sent over the network.
 **/
 int
 rtp_session_send_with_ts (RtpSession * session, const uint8_t * buffer, int len,
@@ -1086,9 +1085,9 @@ static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 
 /**
  *	Try to get a rtp packet presented as a mblk_t structure from the rtp session.
- *	The @user_ts parameter is relative to the first timestamp of the incoming stream. In other
+ *	The \a user_ts parameter is relative to the first timestamp of the incoming stream. In other
  *	words, the application does not have to know the first timestamp of the stream, it can
- *	simply call for the first time this function with @user_ts=0, and then incrementing it
+ *	simply call for the first time this function with \a user_ts=0, and then incrementing it
  *	as it want. The RtpSession takes care of synchronisation between the stream timestamp
  *	and the user timestamp given here.
  *
@@ -1274,7 +1273,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
  *	rtp_session_recvm_with_ts() does better job.
  *
  *	Tries to read the bytes of the incoming rtp stream related to timestamp ts. In case
- *	where the user supplied buffer @buffer is not large enough to get all the data
+ *	where the user supplied buffer \a buffer is not large enough to get all the data
  *	related to timestamp ts, then *( have_more) is set to 1 to indicate that the application
  *	should recall the function with the same timestamp to get more data.
  *
@@ -1284,7 +1283,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
  *	fits the query or not.
  *
  *	Important note: it is clear that the application cannot know the timestamp of the first
- *	packet of the incoming stream, because it can be random. The @ts timestamp given to the
+ *	packet of the incoming stream, because it can be random. The \a ts timestamp given to the
  *	function is used relatively to first timestamp of the stream. In simple words, 0 is a good
  *	value to start calling this function.
  *
@@ -1405,7 +1404,7 @@ uint32_t rtp_session_get_current_recv_ts(RtpSession *session){
  * to reset the session in order to resynchronize, or any other action like stopping the call
  * and reporting an error.
  * @param session the rtp session
- * @param ts_step a time interval in miliseconds
+ * @param milisecs a time interval in miliseconds
  *
 **/
 void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
@@ -1421,7 +1420,7 @@ void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports
 	if (session->rtcp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.gs.socket);
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
-	
+
 	if (!release_transports)
 		return;
 
@@ -1767,7 +1766,7 @@ void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno){
 static float compute_bw(struct timeval *orig, unsigned int bytes, const struct timeval *current){
 	float bw;
 	float time;
-	
+
 	time=(float)((double)(current->tv_sec - orig->tv_sec) +
 		((double)(current->tv_usec - orig->tv_usec)*1e-6));
 	bw=((float)bytes)*8/(time+0.0001f);
@@ -1789,7 +1788,7 @@ static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current
 float rtp_session_compute_recv_bandwidth(RtpSession *session) {
 	struct timeval current;
 	ortp_gettimeofday(&current,NULL);
-	
+
 	compute_recv_bandwidth(&session->rtp.gs, &current);
 	compute_recv_bandwidth(&session->rtcp.gs, &current);
 	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
@@ -1798,7 +1797,7 @@ float rtp_session_compute_recv_bandwidth(RtpSession *session) {
 float rtp_session_compute_send_bandwidth(RtpSession *session) {
 	struct timeval current;
 	ortp_gettimeofday(&current,NULL);
-	
+
 	compute_send_bandwidth(&session->rtp.gs, &current);
 	compute_send_bandwidth(&session->rtcp.gs, &current);
 	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
@@ -2072,7 +2071,7 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	int ret;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
-	
+
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
 	}
@@ -2112,7 +2111,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send(const RtpTransport *t, Rtp
 	if (m->is_rtp) {
 		to=(struct sockaddr*)&t->session->rtp.gs.rem_addr;
 		tolen=t->session->rtp.gs.rem_addrlen;
-	} else { 
+	} else {
 		to = (struct sockaddr*)&t->session->rtcp.gs.rem_addr;
 		tolen = t->session->rtcp.gs.rem_addrlen;
 	}
@@ -2177,11 +2176,11 @@ int meta_rtp_transport_modifier_inject_packet_to_recv(const RtpTransport *t, Rtp
 	if (!m->has_set_session) {
 		meta_rtp_set_session(t->session, m);
 	}
-	
+
 	for (;elem != NULL; elem = o_list_next(elem)) {
 		last_elem = elem;
 	}
-	
+
 	prev_ret = msgdsize(msg);
 	for (;last_elem != NULL; last_elem = o_list_prev(last_elem)) {
 		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
@@ -2201,9 +2200,9 @@ int meta_rtp_transport_modifier_inject_packet_to_recv(const RtpTransport *t, Rtp
 			foundMyself = TRUE;
 		}
 	}
-	
+
 	rtp_session_process_incoming(t->session, msg, m->is_rtp, msg->reserved1);
-	
+
 	return ret;
 }
 

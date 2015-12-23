@@ -54,7 +54,7 @@ ORTP_VAR_PUBLIC RtpProfile av_profile;
 ORTP_PUBLIC void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType *pt);
 
 /**
- *	Set payload type number @index unassigned in the profile.
+ *	Set payload type number \a index unassigned in the profile.
  *
  *@param profile an RTP profile
  *@param index	the payload type number

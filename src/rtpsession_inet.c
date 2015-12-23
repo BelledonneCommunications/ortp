@@ -335,10 +335,10 @@ static void set_socket_sizes(ortp_socket_t sock, unsigned int sndbufsz, unsigned
 
 /**
  *rtp_session_set_local_addr:
- *@session:		a rtp session freshly created.
- *@addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@rtp_port:		a local port or -1 to let oRTP choose the port randomly
- *@rtcp_port:		a local port or -1 to let oRTP choose the port randomly
+ *@param session:		a rtp session freshly created.
+ *@param addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtp_port:		a local port or -1 to let oRTP choose the port randomly
+ *@param rtcp_port:		a local port or -1 to let oRTP choose the port randomly
  *
  *	Specify the local addr to be use to listen for rtp packets or to send rtp packet from.
  *	In case where the rtp session is send-only, then it is not required to call this function:
@@ -431,8 +431,8 @@ int rtp_session_join_multicast_group(RtpSession *session, const char *ip){
 
 /**
  *rtp_session_set_pktinfo:
- *@session: a rtp session
- *@activate: activation flag (0 to deactivate, other value to activate)
+ *@param session: a rtp session
+ *@param activate: activation flag (0 to deactivate, other value to activate)
  *
  * (De)activates packet info for incoming and outgoing packets.
  *
@@ -491,8 +491,8 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 
 /**
  *rtp_session_set_multicast_ttl:
- *@session: a rtp session
- *@ttl: desired Multicast Time-To-Live
+ *@param session: a rtp session
+ *@param ttl: desired Multicast Time-To-Live
  *
  * Sets the TTL (Time-To-Live) for outgoing multicast packets.
  *
@@ -545,7 +545,7 @@ int rtp_session_set_multicast_ttl(RtpSession *session, int ttl)
 
 /**
  *rtp_session_get_multicast_ttl:
- *@session: a rtp session
+ *@param session: a rtp session
  *
  * Returns the TTL (Time-To-Live) for outgoing multicast packets.
  *
@@ -557,9 +557,8 @@ int rtp_session_get_multicast_ttl(RtpSession *session)
 
 
 /**
- *rtp_session_set_multicast_loopback:
- *@session: a rtp session
- *@ttl: desired Multicast Time-To-Live
+ *@param session: a rtp session
+ *@param yesno: desired Multicast Time-To-Live
  *
  * Sets the TTL (Time-To-Live) for outgoing multicast packets.
  *
@@ -617,7 +616,7 @@ int rtp_session_set_multicast_loopback(RtpSession *session, int yesno)
 
 /**
  *rtp_session_get_multicast_loopback:
- *@session: a rtp session
+ *@param session: a rtp session
  *
  * Returns the multicast loopback state of rtp session (true or false).
  *
@@ -629,8 +628,8 @@ int rtp_session_get_multicast_loopback(RtpSession *session)
 
 /**
  *rtp_session_set_dscp:
- *@session: a rtp session
- *@dscp: desired DSCP PHB value
+ *@param session: a rtp session
+ *@param dscp: desired DSCP PHB value
  *
  * Sets the DSCP (Differentiated Services Code Point) for outgoing RTP packets.
  *
@@ -747,7 +746,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 
 /**
  *rtp_session_get_dscp:
- *@session: a rtp session
+ *@param session: a rtp session
  *
  * Returns the DSCP (Differentiated Services Code Point) for outgoing RTP packets.
  *
@@ -760,7 +759,7 @@ int rtp_session_get_dscp(const RtpSession *session)
 
 /**
  *rtp_session_get_local_port:
- *@session:	a rtp session for which rtp_session_set_local_addr() or rtp_session_set_remote_addr() has been called
+ *@param session:	a rtp session for which rtp_session_set_local_addr() or rtp_session_set_remote_addr() has been called
  *
  *	This function can be useful to retrieve the local port that was randomly choosen by
  *	rtp_session_set_remote_addr() when rtp_session_set_local_addr() was not called.
@@ -778,9 +777,9 @@ int rtp_session_get_local_rtcp_port(const RtpSession *session){
 
 /**
  *rtp_session_set_remote_addr:
- *@session:		a rtp session freshly created.
- *@addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@port:		a local port.
+ *@param session:		a rtp session freshly created.
+ *@param addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@param port:		a local port.
  *
  *	Sets the remote address of the rtp session, ie the destination address where rtp packet
  *	are sent. If the session is recv-only or duplex, it also sets the origin of incoming RTP
@@ -795,11 +794,11 @@ rtp_session_set_remote_addr (RtpSession * session, const char * addr, int port){
 
 /**
  *rtp_session_set_remote_addr_full:
- *@session:		a rtp session freshly created.
- *@rtp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@rtp_port:		a local rtp port.
- *@rtcp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@rtcp_port:		a local rtcp port.
+ *@param session:		a rtp session freshly created.
+ *@param rtp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtp_port:		a local rtp port.
+ *@param rtcp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtcp_port:		a local rtcp port.
  *
  *	Sets the remote address of the rtp session, ie the destination address where rtp packet
  *	are sent. If the session is recv-only or duplex, it also sets the origin of incoming RTP
@@ -957,11 +956,11 @@ int rtp_session_set_remote_addr_and_port(RtpSession * session, const char * addr
 
 /**
  *rtp_session_add_remote_aux_addr_full:
- *@session:		a rtp session freshly created.
- *@rtp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@rtp_port:		a local rtp port.
- *@rtcp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@rtcp_port:		a local rtcp port.
+ *@param session:		a rtp session freshly created.
+ *@param rtp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtp_port:		a local rtp port.
+ *@param rtcp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtcp_port:		a local rtcp port.
  *
  *	Add an auxiliary remote address for the rtp session, ie a destination address where rtp packet
  *	are sent.
@@ -1011,7 +1010,7 @@ void rtp_session_get_transports(const RtpSession *session, RtpTransport **rtptr,
 
 /**
  *rtp_session_flush_sockets:
- *@session: a rtp session
+ *@param session: a rtp session
  *
  * Flushes the sockets for all pending incoming packets.
  * This can be usefull if you did not listen to the stream for a while
@@ -1178,7 +1177,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error=0;
 	ortp_socket_t sockfd = rtp_session_get_socket(session, FALSE);
-	
+
 	if (rtp_session_using_transport(session, rtcp)){
 			error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0,
 			destaddr, destlen);
@@ -1533,7 +1532,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	}
 	remaddr = (struct sockaddr *)&mp->net_addr;
 	addrlen = mp->net_addrlen;
-	
+
 	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
 	if (session->rtcp_mux && is_rtp_packet){
 		if (rtp_get_version(mp) == 2){
@@ -1614,7 +1613,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 
 		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
 		mp->reserved1 = user_ts;
-		
+
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
@@ -1669,7 +1668,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 
 		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, RTCP_MAX_RECV_BUFSIZE);
 		mp->reserved1 = session->rtp.rcv_last_app_ts;
-		
+
 		if (sock_connected){
 			error=rtp_session_rtp_recv_abstract(session->rtcp.gs.socket, mp, 0, NULL, NULL);
 		}else{
@@ -1710,7 +1709,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
 				rtp_session_process_incoming(session, NULL, is_rtp_packet, session->rtp.rcv_last_app_ts);
 			}
-			
+
 			freemsg(mp);
 			return -1; /* avoids an infinite loop ! */
 		}

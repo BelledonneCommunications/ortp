@@ -87,7 +87,7 @@ void ortp_init()
 
 /**
  *	Initialize the oRTP scheduler. You only have to do that if you intend to use the
- *	scheduled mode of the #RtpSession in your application.
+ *	scheduled mode of the RtpSession in your application.
  *
 **/
 void ortp_scheduler_init()

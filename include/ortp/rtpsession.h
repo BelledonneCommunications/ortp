@@ -102,8 +102,8 @@ typedef struct _RtpTransportModifier
 	int  (*t_process_on_receive)(struct _RtpTransportModifier *t, mblk_t *msg);
 	void  (*t_process_on_schedule)(struct _RtpTransportModifier *t); /*invoked each time rtp_session_recvm is called even is no message are available*/
 	/**
-	 * Mandatory callback responsible of freeing the #RtpTransportModifierAND the pointer.
-	 * @param[in] transport #RtpTransportModifier object to free.
+	 * Mandatory callback responsible of freeing the #_RtpTransportModifier AND the pointer.
+	 * @param[in] transport #_RtpTransportModifier object to free.
 	 */
 	void  (*t_destroy)(struct _RtpTransportModifier *transport);
 } RtpTransportModifier;
@@ -117,8 +117,8 @@ typedef struct _RtpTransport
 	int  (*t_recvfrom)(struct _RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 	void  (*t_close)(struct _RtpTransport *transport, void *userData);
 	/**
-	 * Mandatory callback responsible of freeing the #RtpTransport object AND the pointer.
-	 * @param[in] transport #RtpTransport object to free.
+	 * Mandatory callback responsible of freeing the #_RtpTransport object AND the pointer.
+	 * @param[in] transport #_RtpTransport object to free.
 	 */
 	void  (*t_destroy)(struct _RtpTransport *transport);
 }  RtpTransport;
@@ -127,7 +127,7 @@ typedef enum _OrtpNetworkSimulatorMode{
 	OrtpNetworkSimulatorInvalid=-1,
 	OrtpNetworkSimulatorInbound,/**<simulation is applied when receiving packets*/
 	OrtpNetworkSimulatorOutbound, /**<simulation is applied to sent packets*/
-	OrtpNetworkSimulatorOutboundControlled /**<simulation is applied to sent packets according to sent timestamp 
+	OrtpNetworkSimulatorOutboundControlled /**<simulation is applied to sent packets according to sent timestamp
 				set in the timestamp field of mblk_t, which is definied only with -DORTP_TIMESTAMP */
 }OrtpNetworkSimulatorMode;
 
@@ -424,7 +424,7 @@ extern "C"
 ORTP_PUBLIC const char *ortp_network_simulator_mode_to_string(OrtpNetworkSimulatorMode mode);
 ORTP_PUBLIC OrtpNetworkSimulatorMode ortp_network_simulator_mode_from_string(const char *str);
 
-	
+
 /* public API */
 ORTP_PUBLIC RtpSession *rtp_session_new(int mode);
 ORTP_PUBLIC void rtp_session_set_scheduling_mode(RtpSession *session, int yesno);
@@ -654,15 +654,15 @@ void update_sent_bytes(OrtpStream *os, int nbytes);
 
 /**
  * get endpoint if any
- * @param[in] t #RtpTransport object.
- * @return #rtpEndpoint
+ * @param[in] transport RtpTransport object.
+ * @return #_RtpTransport
  *
  * */
 ORTP_PUBLIC RtpTransport* meta_rtp_transport_get_endpoint(const RtpTransport *transport);
 /**
  * set endpoint
- * @param[in] t #RtpTransport object.
- * @param[in] t #RtpEndpoint.
+ * @param[in] transport RtpTransport object.
+ * @param[in] endpoint RtpEndpoint.
  *
  * */
 ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTransport *endpoint);

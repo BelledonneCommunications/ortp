@@ -45,7 +45,7 @@ void session_set_destroy(SessionSet *set)
 	ortp_free(set);
 }
 
-int count_power_items_simple(int v) 
+int count_power_items_simple(int v)
 {
     int c = 0,j;
     for (j=0;j<32;j++){
@@ -56,7 +56,7 @@ int count_power_items_simple(int v)
     return c;
 }
 
-int count_power_items_fast(int v) 
+int count_power_items_fast(int v)
 {
     int c = 0;
     while(v) {
@@ -89,20 +89,20 @@ int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, Sessi
 }
 
 /**
- *	This function performs similarly as libc select() function, but performs on #RtpSession 
+ *	This function performs similarly as libc select() function, but performs on RtpSession
  *	instead of file descriptors.
  *	session_set_select() suspends the calling process until some events arrive on one of the
  *	three sets passed in argument. Two of the sets can be NULL.
- *	The first set @recvs is interpreted as a set of RtpSession waiting for receive events:
+ *	The first set \a recvs is interpreted as a set of RtpSession waiting for receive events:
  *	a new buffer (perhaps empty) is availlable on one or more sessions of the set, or the last
- *	receive operation with rtp_session_recv_with_ts() would have finished if it were in 
+ *	receive operation with rtp_session_recv_with_ts() would have finished if it were in
  *	blocking mode.
  *	The second set is interpreted as a set of RtpSession waiting for send events, i.e. the last
  *	rtp_session_send_with_ts() call on a session would have finished if it were in blocking mode.
- *	
+ *
  *	When some events arrived on some of sets, then the function returns and sets are changed
  *	to indicate the sessions where events happened.
- *	Sessions can be added to sets using session_set_set(), a session has to be tested to be 
+ *	Sessions can be added to sets using session_set_set(), a session has to be tested to be
  *	part of a set using session_set_is_set().
  *
  * @param recvs a set of rtp sessions to be watched for read events
@@ -115,10 +115,10 @@ int session_set_select(SessionSet *recvs, SessionSet *sends, SessionSet *errors)
 	int ret=0,bits;
 	SessionSet temp;
 	RtpScheduler *sched=ortp_get_scheduler();
-	
+
 	/*lock the scheduler to not read the masks while they are being modified by the scheduler*/
 	rtp_scheduler_lock(sched);
-	
+
 	while(1){
 		/* computes the SessionSet intersection (in the other words mask intersection) between
 		the mask given by the user and scheduler masks */

@@ -16,7 +16,7 @@
   License along with this library; if not, write to the Free Software
   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
-/** 
+/**
  * \file sessionset.h
  * \brief Sending and receiving multiple streams together with only one thread.
  *
@@ -105,7 +105,7 @@ ORTP_PUBLIC SessionSet * session_set_new(void);
 
 /**
  * This macro tests if the session is part of the set. 1 is returned if true, 0 else.
- *@param ss a set (#SessionSet object)
+ *@param ss a set
  *@param rtpsession a rtp session
  *
 **/
@@ -128,12 +128,12 @@ ORTP_PUBLIC SessionSet * session_set_new(void);
 **/
 ORTP_PUBLIC void session_set_destroy(SessionSet *set);
 
-	
+
 ORTP_PUBLIC int session_set_select(SessionSet *recvs, SessionSet *sends, SessionSet *errors);
 ORTP_PUBLIC int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *errors,  struct timeval *timeout);
 
 #ifdef __cplusplus
 }
 #endif
-	
+
 #endif
