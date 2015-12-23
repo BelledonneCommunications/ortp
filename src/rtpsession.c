@@ -39,14 +39,14 @@
 #endif
 
 /**
- * #RtpTransport object which can handle multiples security protocols. You can for instance use this object
- * to use both sRTP and tunnel transporter. #mblk_t messages received and sent from the endpoint
+ * #_RtpTransport object which can handle multiples security protocols. You can for instance use this object
+ * to use both sRTP and tunnel transporter. mblk_t messages received and sent from the endpoint
  * will pass through the list of modifiers given. First modifier in list will be first to modify the message
  * in send mode and last in receive mode.
  * @param[in] is_rtp Whether this object will be used for RTP packets or not.
- * @param[in] endpoint #RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
- * @param[in] modifiers_count number of #RtpModifier object given in the variadic list. Must be 0 if none are given.
- * @returns #RtpTransport object that will be generated or NULL.
+ * @param[in] endpoint #_RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
+ * @param[in] modifiers_count number of #_RtpTransport object given in the variadic list. Must be 0 if none are given.
+ * @returns #_RtpTransport object that will be generated or NULL.
 **/
 RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
 
@@ -1928,7 +1928,7 @@ int rtp_get_payload(mblk_t *packet, unsigned char **start){
  * Obtain the extension header if any.
  * @param packet the RTP packet.
  * @param profile the profile field of the extension header
- * @param start_ext_header pointer that will be set to the beginning of the payload of the extension header.
+ * @param start_ext pointer that will be set to the beginning of the payload of the extension header.
  * @return the size of the extension in bytes (the payload size, it can be 0), -1 if parsing of the extension header failed or if no extension is present.
 **/
 int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext){

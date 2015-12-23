@@ -548,7 +548,7 @@ ORTP_PUBLIC void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int m
  * cumulative loss factor which allows us to take into consideration duplicates
  * packets as well.
  * @param[in] obj #OrtpLossRateEstimator object.
- * @param[in] stream #RtpStream stream in which the report block to consider belongs.
+ * @param[in] stream #_RtpStream stream in which the report block to consider belongs.
  * @param[in] rb Report block to analyze.
  * @return TRUE if a new loss rate estimation is ready, FALSE otherwise.
  */

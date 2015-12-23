@@ -120,7 +120,7 @@ typedef struct OrtpEvDispatcher{
 /**
  * Constructs an OrtpEvDispatcher object. This object can be used to be notified
  * when any RTCP type packet is received or emitted on the rtp session,
- * given a callback registered with #ortp_ev_dispatcher_connect
+ * given a callback registered with \a ortp_ev_dispatcher_connect
  *
  * @param session RTP session to listen on. Cannot be NULL.
  *
@@ -136,7 +136,7 @@ ORTP_PUBLIC OrtpEvDispatcher * ortp_ev_dispatcher_new(struct _RtpSession* sessio
 ORTP_PUBLIC void ortp_ev_dispatcher_destroy(OrtpEvDispatcher *d);
 /**
  * Iterate method to be called periodically. If a RTCP packet is found and
- * its type matches one of the callback connected with #ortp_ev_dispatcher_connect,
+ * its type matches one of the callback connected with \a ortp_ev_dispatcher_connect,
  * this callback will be invoked in the current thread.
  *
  * @param d OrtpEvDispatcher object

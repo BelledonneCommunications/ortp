@@ -65,10 +65,10 @@ ORTP_PUBLIC void rtp_profile_set_payload(RtpProfile *prof, int idx, PayloadType 
 /* I prefer have this function inlined because it is very often called in the code */
 /**
  *
- *	Gets the payload description of the payload type @index in the profile.
+ *	Gets the payload description of the payload type \a index in the profile.
  *
- *@param profile an RTP profile (a #RtpProfile object)
- *@param index	the payload type number
+ *@param prof an RTP profile (a #_RtpProfile object)
+ *@param idx	the payload type number
  *@return the payload description (a PayloadType object)
 **/
 static ORTP_INLINE PayloadType * rtp_profile_get_payload(const RtpProfile *prof, int idx){
