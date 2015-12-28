@@ -24,6 +24,9 @@ set(LIBS ${CMAKE_THREAD_LIBS_INIT})
 if(HAVE_RT)
 	list(APPEND LIBS rt)
 endif()
+if(LIBM)
+	list(APPEND LIBS ${LIBM})
+endif()
 
 set(ORTP_SOURCE_FILES_C
 	avprofile.c
@@ -92,7 +95,7 @@ else()
 		endif()
 	endif()
 endif()
-target_link_libraries(ortp m ${LIBS})
+target_link_libraries(ortp ${LIBS})
 
 install(TARGETS ortp EXPORT ${EXPORT_TARGETS_NAME}Targets
 	RUNTIME DESTINATION bin
