@@ -27,11 +27,11 @@ static size_t rtcp_get_size(const mblk_t *m){
 	return (1+rtcp_common_header_get_length(ch))*4;
 }
 
-/*in case of coumpound packet, set read pointer of m to the beginning of the next RTCP
+/*in case of compound packet, set read pointer of m to the beginning of the next RTCP
 packet */
 bool_t rtcp_next_packet(mblk_t *m){
 	size_t nextlen=rtcp_get_size(m);
-	if (m->b_rptr+nextlen<m->b_wptr){
+	if ((nextlen > 0) && (m->b_rptr + nextlen < m->b_wptr)){
 		m->b_rptr+=nextlen;
 		return TRUE;
 	}
