@@ -1441,8 +1441,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 
 	rtcp = (rtcp_common_header_t *)block->b_rptr;
 
-	if (rtcp->version != 2)
-	{
+	if (rtcp->version != 2){
 		/* try to see if it is a STUN packet */
 		uint16_t stunlen = *((uint16_t *)(block->b_rptr + sizeof(uint16_t)));
 		stunlen = ntohs(stunlen);
@@ -1456,12 +1455,12 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 				memcpy(&ed->source_addr,addr,addrlen);
 				ed->info.socket_type = OrtpRTCPSocket;
 				rtp_session_dispatch_event(session, ev);
-				return -1;
 			}
+		}else{
+			/* discard in two case: the packet is not stun OR nobody is interested by STUN (no eventqs) */
+			ortp_warning("RtpSession [%p] receiving rtcp packet with version number != 2, discarded", session);
 		}
-		/* discard in two case: the packet is not stun OR nobody is interested by STUN (no eventqs) */
-		ortp_debug("Receiving rtcp packet with version number !=2...discarded");
-		return 0;
+		return -1;
 	}
 
 	update_recv_bytes(&session->rtcp.gs, (int)(block->b_wptr - block->b_rptr));
