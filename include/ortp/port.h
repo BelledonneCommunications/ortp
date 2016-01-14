@@ -325,6 +325,7 @@ void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime);
 ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
 ORTP_PUBLIC void ortp_sleep_ms(int ms);
 ORTP_PUBLIC void ortp_sleep_until(const ortpTimeSpec *ts);
+ORTP_PUBLIC int ortp_timespec_compare(const ortpTimeSpec *s1, const ortpTimeSpec *s2);
 ORTP_PUBLIC unsigned int ortp_random(void);
 
 /* portable named pipes  and shared memory*/

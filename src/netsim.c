@@ -376,6 +376,23 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 	return om;
 }
 
+/*compares two ortpTimeSpec s1 and s2.
+ * returns a negative value if s1 is earlier than s2, 0 if they are equal, a positive value if s1 is later than s2*/
+int ortp_timespec_compare(const ortpTimeSpec *s1, const ortpTimeSpec *s2){
+	int64_t secdiff = s1->tv_sec - s2->tv_sec;
+	if (secdiff == 0){
+		int64_t nsec_diff = s1->tv_nsec - s2->tv_nsec;
+		if (nsec_diff < 0){
+			return -1;
+		}else if (nsec_diff > 0){
+			return 1;
+		}else return 0;
+	}else if (secdiff < 0){
+		return -1;
+	}else
+		return 1;
+}
+
 #if defined(ORTP_TIMESTAMP)
 static mblk_t * rtp_session_netsim_find_next_packet_to_send(RtpSession *session){
 	mblk_t *om;
@@ -390,7 +407,7 @@ static mblk_t * rtp_session_netsim_find_next_packet_to_send(RtpSession *session)
 			/*this is a packet to drop*/
 			return om;
 		}
-		if (min_packet_time.tv_sec == 0 || (packet_time.tv_sec <= min_packet_time.tv_sec && packet_time.tv_nsec <= min_packet_time.tv_nsec)){
+		if (min_packet_time.tv_sec == 0 || ortp_timespec_compare(&packet_time, &min_packet_time) < 0){
 			min_packet_time = packet_time;
 			next_packet = om;
 		}
@@ -453,7 +470,8 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			packet_time.tv_nsec=om->timestamp.tv_usec*1000LL;
 			if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
 				todrop = om; /*simulate a packet loss*/
-			}else if (packet_time.tv_sec<=current.tv_sec && packet_time.tv_nsec<=current.tv_nsec){
+			}else if (ortp_timespec_compare(&packet_time, &current) <= 0){
+				/*it is time to send this packet*/
 				is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
 				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
 				todrop = om;
