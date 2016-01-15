@@ -57,7 +57,8 @@ mblk_t * rtp_getq(queue_t *q, uint32_t ts, int *rejected);
 int rtp_session_rtp_recv(RtpSession * session, uint32_t ts);
 int rtp_session_rtcp_recv(RtpSession * session);
 int rtp_session_rtp_send (RtpSession * session, mblk_t * m);
-int rtp_session_rtcp_send (RtpSession * session, mblk_t * m);
+
+#define rtp_session_rtcp_send rtp_session_rtcp_sendm_raw
 
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen);
 

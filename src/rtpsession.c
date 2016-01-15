@@ -417,6 +417,10 @@ void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno){
 	session->rtcp.enabled=yesno;
 }
 
+bool_t rtp_session_rtcp_enabled(const RtpSession *session) {
+	return  session->rtcp.enabled;
+}
+
 /**
  * Sets the default interval in milliseconds for RTCP reports emitted by the session
  *
@@ -961,12 +965,12 @@ __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_t
 		stream->sent_payload_bytes+=(uint32_t)(packsize-RTP_FIXED_HEADER_SIZE);
 
 		ortp_global_stats.sent += (1+(int)session->duplication_left) * packsize;
-		stream->stats.sent += (1+(int)session->duplication_left) * packsize;
+		session->stats.sent += (1+(int)session->duplication_left) * packsize;
 
 		ortp_global_stats.packet_sent++;
-		stream->stats.packet_sent++;
+		session->stats.packet_sent++;
 
-		stream->stats.packet_dup_sent+=(int)session->duplication_left;
+		session->stats.packet_dup_sent+=(int)session->duplication_left;
 		ortp_global_stats.packet_sent+=(int)session->duplication_left;;
 	}
 
@@ -1122,7 +1126,6 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	uint32_t ts;
 	uint32_t packet_time;
 	RtpScheduler *sched=session->sched;
-	RtpStream *stream=&session->rtp;
 	int rejected=0;
 	bool_t read_socket=TRUE;
 
@@ -1158,7 +1161,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	if (mp!=NULL){
 		size_t msgsize=msgdsize(mp);
 		ortp_global_stats.recv += msgsize;
-		stream->stats.recv += msgsize;
+		session->stats.recv += msgsize;
 		rtp_signal_table_emit2(&session->on_telephone_event_packet,mp);
 		rtp_session_check_telephone_events(session,mp);
 		freemsg(mp);
@@ -1195,7 +1198,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		}
 	}else mp=getq(&session->rtp.rq);/*no jitter buffer at all*/
 
-	stream->stats.outoftime+=rejected;
+	session->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
 	session->rtcp_xr_stats.discarded_count += rejected;
 
@@ -1207,7 +1210,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		size_t msgsize = msgdsize(mp);	/* evaluate how much bytes (including header) is received by app */
 		uint32_t packet_ts;
 		ortp_global_stats.recv += msgsize;
-		stream->stats.recv += msgsize;
+		session->stats.recv += msgsize;
 		rtp = (rtp_header_t *) mp->b_rptr;
 		packet_ts=rtp->timestamp;
 		ortp_debug("Returning mp with ts=%i", packet_ts);
@@ -1632,7 +1635,7 @@ void rtp_session_reset (RtpSession * session)
 	session->rtp.sent_payload_bytes=0;
 	rtp_session_clear_send_error_code(session);
 	rtp_session_clear_recv_error_code(session);
-	rtp_stats_reset(&session->rtp.stats);
+	rtp_stats_reset(&session->stats);
 	rtp_session_resync(session);
 	session->ssrc_set=FALSE;
 }
@@ -1641,7 +1644,7 @@ void rtp_session_reset (RtpSession * session)
  * Retrieve the session's statistics.
 **/
 const rtp_stats_t * rtp_session_get_stats(const RtpSession *session){
-	return &session->rtp.stats;
+	return &session->stats;
 }
 
 /**
@@ -1702,7 +1705,7 @@ void rtp_session_rtcp_set_delay_value( struct _RtpSession *s, const unsigned int
 }
 
 void rtp_session_reset_stats(RtpSession *session){
-	memset(&session->rtp.stats,0,sizeof(rtp_stats_t));
+	memset(&session->stats,0,sizeof(rtp_stats_t));
 }
 
 /**

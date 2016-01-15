@@ -897,4 +897,15 @@ unsigned int ortp_random(void){
 	return (unsigned int) random();
 #endif
 }
-
+bool_t ortp_is_multicast_addr(const struct sockaddr *addr) {
+	
+	switch (addr->sa_family) {
+		case AF_INET:
+			return IN_MULTICAST(ntohl(((struct sockaddr_in *) addr)->sin_addr.s_addr));
+		case AF_INET6:
+			return IN6_IS_ADDR_MULTICAST(&(((struct sockaddr_in6 *) addr)->sin6_addr));
+		default:
+			return FALSE;
+	}
+	
+}

@@ -1543,15 +1543,16 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			}
 		}
 	}
-
+	
+	/* store the sender RTP address to do symmetric RTP at start mainly for stun packets. 
+	 * --For rtp packet symmetric RTP is handled in rtp_session_rtp_parse() after first valid rtp packet received.
+	 * --For rtcp, only swicth if valid rtcp packet && first rtcp packet received*/
+	rtp_session_update_remote_sock_addr(session,mp,is_rtp_packet,is_rtp_packet || (rtp_get_version(mp) != 2));
+	
 	if (is_rtp_packet){
-		if (session->use_connect){
-			/* In the case where use_connect is false, symmetric RTP is handled in rtp_session_rtp_parse() */
-			if (session->symmetric_rtp && !sock_connected){
-				/* store the sender RTP address to do symmetric RTP */
-				memcpy(&session->rtp.gs.rem_addr,&remaddr,addrlen);
-				session->rtp.gs.rem_addrlen=addrlen;
-				if (try_connect(session->rtp.gs.socket,remaddr,addrlen))
+		if (session->use_connect && session->symmetric_rtp && !sock_connected ){
+			/* In the case where use_connect is false, */
+			if (try_connect(session->rtp.gs.socket,remaddr,addrlen)) {
 					session->flags|=RTP_SOCKET_CONNECTED;
 			}
 		}
@@ -1560,16 +1561,13 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 		rtp_session_rtp_parse(session, mp, user_ts, remaddr,addrlen);
 		/*for bandwidth measurements:*/
 	}else {
-		if (session->symmetric_rtp && !sock_connected){
-			/* store the sender RTP address to do symmetric RTP */
-			memcpy(&session->rtcp.gs.rem_addr,remaddr,addrlen);
-			session->rtcp.gs.rem_addrlen=addrlen;
-			if (session->use_connect){
-				if (try_connect(session->rtcp.gs.socket,remaddr,addrlen))
+		if (session->use_connect && session->symmetric_rtp && !sock_connected){
+			if (try_connect(session->rtcp.gs.socket,remaddr,addrlen)) {
 					session->flags|=RTCP_SOCKET_CONNECTED;
 			}
 		}
 		if (process_rtcp_packet(session, mp, remaddr, addrlen) >= 0){
+			session->stats.recv_rtcp_packets++;
 			/* a copy is needed since rtp_session_notify_inc_rtcp will free the mp,
 			and we don't want to send RTCP XR packet before notifying the application
 			that a message has been received*/
@@ -1715,3 +1713,55 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	}
 	return error;
 }
+
+int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {
+	struct sockaddr_storage * rem_addr = NULL;
+	socklen_t rem_addrlen;
+	const char* socket_type;
+	bool_t sock_connected;
+	bool_t do_address_change = /*(rtp_get_version(mp) == 2 && */ !only_at_start;
+	
+	if (!rtp_session_get_symmetric_rtp(session))
+		return -1; /*nothing to try if not rtp symetric*/
+	
+	if (is_rtp) {
+		rem_addr = &session->rtp.gs.rem_addr;
+		rem_addrlen = session->rtp.gs.rem_addrlen;
+		socket_type = "rtp";
+		sock_connected = session->flags & RTP_SOCKET_CONNECTED;
+		do_address_change =  session->rtp.gs.socket != (ortp_socket_t)-1  && ( do_address_change || rtp_session_get_stats(session)->packet_recv == 0);
+	} else {
+		rem_addr = &session->rtcp.gs.rem_addr;
+		rem_addrlen = session->rtcp.gs.rem_addrlen;
+		sock_connected = session->flags & RTCP_SOCKET_CONNECTED;
+		socket_type = "rtcp";
+		do_address_change = session->rtcp.gs.socket != (ortp_socket_t)-1  && (do_address_change || rtp_session_get_stats(session)->recv_rtcp_packets == 0);
+	}
+	
+	if (do_address_change
+		&& rem_addr
+		&& !sock_connected
+		&& !ortp_is_multicast_addr((const struct sockaddr*)rem_addr)
+		&& memcmp(rem_addr,&mp->net_addr,mp->net_addrlen) !=0) {
+		char current_host[65]={0};
+		char current_port[12]={0};
+		char new_host[65]={0};
+		char new_port[12]={0};
+		
+		getnameinfo((const struct sockaddr *)rem_addr,rem_addrlen,current_host,sizeof(current_host)-1,current_port,sizeof(current_port)-1,NI_NUMERICHOST|NI_NUMERICSERV);
+		
+		getnameinfo((const struct sockaddr *)&mp->net_addr,mp->net_addrlen,new_host,sizeof(new_host)-1,new_port,sizeof(new_port)-1,NI_NUMERICHOST|NI_NUMERICSERV);
+		
+		ortp_message("Switching %s destination from [%s:%s] to [%s:%s] for session [%p]"
+			   , socket_type
+			   , current_host
+			   , current_port
+			   , new_host
+			   , new_port
+			   , session);
+		
+		memcpy(rem_addr,&mp->net_addr,mp->net_addrlen);
+		return 0;
+	}
+	return -1;
+	}

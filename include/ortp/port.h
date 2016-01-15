@@ -357,6 +357,9 @@ ORTP_PUBLIC int ortp_pipe_write(ortp_pipe_t p, const uint8_t *buf, int len);
 ORTP_PUBLIC void *ortp_shm_open(unsigned int keyid, int size, int create);
 ORTP_PUBLIC void ortp_shm_close(void *memory);
 
+ORTP_PUBLIC	bool_t ortp_is_multicast_addr(const struct sockaddr *addr);
+	
+	
 #endif
 
 #ifdef __cplusplus

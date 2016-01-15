@@ -167,6 +167,8 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header) {
 	ortp_log(ORTP_MESSAGE, "incoming received too late           %10"PRId64" packets", stats->outoftime);
 	ortp_log(ORTP_MESSAGE, "incoming bad formatted               %10"PRId64" packets", stats->bad);
 	ortp_log(ORTP_MESSAGE, "incoming discarded (queue overflow)  %10"PRId64" packets", stats->discarded);
+	ortp_log(ORTP_MESSAGE, "sent rtcp                            %10"PRId64" packets", stats->sent_rtcp_packets);
+	ortp_log(ORTP_MESSAGE, "received rtcp                        %10"PRId64" packets", stats->recv_rtcp_packets);
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 }
 

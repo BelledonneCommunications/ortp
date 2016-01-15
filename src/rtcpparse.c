@@ -51,7 +51,7 @@ const rtcp_common_header_t * rtcp_get_common_header(const mblk_t *m){
 		return NULL;
 	}
 	if (size<sizeof(rtcp_common_header_t)){
-		ortp_warning("Bad RTCP packet, too short.");
+		ortp_warning("Bad RTCP packet, too short [%i b]. on block [%p]",(int)size,m);
 		return NULL;
 	}
 	ch=(rtcp_common_header_t*)m->b_rptr;

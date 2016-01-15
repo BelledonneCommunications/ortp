@@ -130,13 +130,13 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	rtp_header_t *rtp;
 	int msgsize;
 	RtpStream *rtpstream=&session->rtp;
-	rtp_stats_t *stats=&rtpstream->stats;
+	rtp_stats_t *stats=&session->stats;
 
 	msgsize=(int)(mp->b_wptr-mp->b_rptr);
 
 	if (msgsize<RTP_FIXED_HEADER_SIZE){
 		ortp_warning("Packet too small to be a rtp packet (%i)!",msgsize);
-		rtpstream->stats.bad++;
+		session->stats.bad++;
 		ortp_global_stats.bad++;
 		freemsg(mp);
 		return;
@@ -209,13 +209,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			}
 			if (session->inc_same_ssrc_count>=session->rtp.ssrc_changed_thres){
 				/* store the sender rtp address to do symmetric RTP */
-				if (!session->use_connect){
-					if (session->rtp.gs.socket>0 && session->symmetric_rtp){
-						/* store the sender rtp address to do symmetric RTP */
-						memcpy(&session->rtp.gs.rem_addr,addr,addrlen);
-						session->rtp.gs.rem_addrlen=addrlen;
-					}
-				}
+				rtp_session_update_remote_sock_addr(session,mp,TRUE,FALSE);
 				session->rtp.rcv_last_ts = rtp->timestamp;
 				session->rcv.ssrc=rtp->ssrc;
 				rtp_signal_table_emit(&session->on_ssrc_changed);
@@ -235,14 +229,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	}else{
 		session->ssrc_set=TRUE;
 		session->rcv.ssrc=rtp->ssrc;
-
-		if (!session->use_connect){
-			if (session->rtp.gs.socket>0 && session->symmetric_rtp){
-				/* store the sender rtp address to do symmetric RTP */
-				memcpy(&session->rtp.gs.rem_addr,addr,addrlen);
-				session->rtp.gs.rem_addrlen=addrlen;
-			}
-		}
+		rtp_session_update_remote_sock_addr(session,mp,TRUE,FALSE);
 	}
 
 	/* update some statistics */

@@ -74,7 +74,9 @@ typedef struct rtp_stats
 	uint64_t bad;				/* incoming packets that did not appear to be RTP */
 	uint64_t discarded;			/* incoming packets discarded because the queue exceeds its max size */
 	uint64_t sent_rtcp_packets;	/* outgoing RTCP packets counter (only packets that embed a report block are considered) */
+	uint64_t recv_rtcp_packets;	/* incoming RTCP packets counter (only packets that embed a report block are considered) */
 } rtp_stats_t;
+
 
 typedef struct jitter_stats
 {

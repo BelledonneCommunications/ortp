@@ -320,7 +320,6 @@ typedef struct _RtpStream
 	uint16_t snd_seq; /* send sequence number */
 	uint32_t last_rtcp_packet_count; /*the sender's octet count in the last sent RTCP SR*/
 	uint32_t sent_payload_bytes; /*used for RTCP sender reports*/
-	rtp_stats_t stats;
 	int recv_errno;
 	int send_errno;
 	int snd_socket_size;
@@ -411,6 +410,7 @@ struct _RtpSession
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
 	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
+	rtp_stats_t stats;
 };
 
 
@@ -518,6 +518,11 @@ ORTP_PUBLIC bool_t rtp_session_rtcp_mux_enabled(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno);
 
 ORTP_PUBLIC void rtp_session_enable_rtcp(RtpSession *session, bool_t yesno);
+/*
+ * rtcp status
+ * @return TRUE if rtcp is enabled for this session
+ */
+ORTP_PUBLIC bool_t rtp_session_rtcp_enabled(const RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms);
 
@@ -555,6 +560,17 @@ ORTP_PUBLIC float rtp_session_get_rtcp_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype, const char *name, const uint8_t *data, int datalen);
+/**
+ *	Send the rtcp datagram \a packet to the destination set by rtp_session_set_remote_addr()
+ *  The packet (\a packet) is freed once it is sent.
+ *
+ * @param session a rtp session.
+ * @param packet a rtcp packet presented as a mblk_t.
+ * @return the number of bytes sent over the network.
+ **/
+
+ORTP_PUBLIC	int rtp_session_rtcp_sendm_raw(RtpSession * session, mblk_t * m);
+	
 
 ORTP_PUBLIC uint32_t rtp_session_get_current_send_ts(RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_current_recv_ts(RtpSession *session);
@@ -669,6 +685,20 @@ ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTran
 
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
+
+	/*
+ * Update remote addr is the following case:
+ * rtp symetric == TRUE && socket not connected && remote addr has changed && ((rtp/rtcp packet && not onlyat start) or (no rtp/rtcp packets received))
+ * @param[in] session  on which to perform change
+ * @param[in] mp packet where remote addr is retreived
+ * @param[in] is_rtp true if rtp
+ * @param[in] only_at_start only perform changes if no valid packets received yet
+ * @return 0 if chaged was performed
+ *
+ */
+	
+ORTP_PUBLIC int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start);
+	
 #ifdef __cplusplus
 }
 #endif

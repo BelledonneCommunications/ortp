@@ -221,9 +221,9 @@ static void sender_info_init(sender_info_t *info, RtpSession *session){
 	info->ntp_timestamp_msw=htonl(ntp >>32);
 	info->ntp_timestamp_lsw=htonl(ntp & 0xFFFFFFFF);
 	info->rtp_timestamp=htonl(session->rtp.snd_last_ts);
-	info->senders_packet_count=(uint32_t) htonl((u_long) session->rtp.stats.packet_sent);
+	info->senders_packet_count=(uint32_t) htonl((u_long) session->stats.packet_sent);
 	info->senders_octet_count=(uint32_t) htonl((u_long) session->rtp.sent_payload_bytes);
-	session->rtp.last_rtcp_packet_count=session->rtp.stats.packet_sent;
+	session->rtp.last_rtcp_packet_count=session->stats.packet_sent;
 }
 
 static void report_block_init(report_block_t *b, RtpSession *session){
@@ -242,11 +242,11 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			packet_loss = session->lost_packets_test_vector;
 			/* The test value is the definite cumulative one, no need to increment
 			it each time a packet is sent */
-			stream->stats.cum_packet_loss = packet_loss;
+			session->stats.cum_packet_loss = packet_loss;
 		}else {
 			/* Normal mode */
 			packet_loss = expected_packets - stream->hwrcv_since_last_SR;
-			stream->stats.cum_packet_loss += packet_loss;
+			session->stats.cum_packet_loss += packet_loss;
 		}
 		if (expected_packets>0){/*prevent division by zero and negative loss fraction*/
 			loss_fraction=(int)( 256 * packet_loss) / expected_packets;
@@ -287,7 +287,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	b->ssrc=htonl(session->rcv.ssrc);
 
 
-	report_block_set_cum_packet_lost(b, stream->stats.cum_packet_loss);
+	report_block_set_cum_packet_lost(b, session->stats.cum_packet_loss);
 	report_block_set_fraction_lost(b, loss_fraction);
 
 	if ( session->flags & RTCP_OVERRIDE_JITTER ) {
@@ -322,7 +322,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 	/* the jitter raw value is kept in stream clock units */
 	uint32_t jitter = session->rtp.jittctl.inter_jitter;
-	session->rtp.stats.sent_rtcp_packets ++;
+	session->stats.sent_rtcp_packets ++;
 	session->rtp.jitter_stats.sum_jitter += jitter;
 	session->rtp.jitter_stats.jitter=jitter;
 	/* stores the biggest jitter for that session and its date (in millisecond) since Epoch */
@@ -340,7 +340,7 @@ static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 
 static int rtcp_sr_init(RtpSession *session, uint8_t *buf, int size){
 	rtcp_sr_t *sr=(rtcp_sr_t*)buf;
-	int rr=(session->rtp.stats.packet_recv>0);
+	int rr=(session->stats.packet_recv>0);
 	int sr_size=sizeof(rtcp_sr_t)-sizeof(report_block_t)+(rr*sizeof(report_block_t));
 	if (size<sr_size) return 0;
 	rtcp_common_header_init(&sr->ch,session,RTCP_SR,rr,sr_size);
@@ -447,11 +447,11 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 	mblk_t *m=NULL;
 	bool_t is_sr = FALSE;
 
-	if (session->rtp.last_rtcp_packet_count < session->rtp.stats.packet_sent) {
+	if (session->rtp.last_rtcp_packet_count < session->stats.packet_sent) {
 		m = make_sr(session);
-		session->rtp.last_rtcp_packet_count = session->rtp.stats.packet_sent;
+		session->rtp.last_rtcp_packet_count = session->stats.packet_sent;
 		is_sr = TRUE;
-	} else if (session->rtp.stats.packet_recv > 0) {
+	} else if (session->stats.packet_recv > 0) {
 		/* Don't send RR when no packet are received yet */
 		m = make_rr(session);
 		is_sr = FALSE;
@@ -645,7 +645,7 @@ int rtp_session_bye(RtpSession *session, const char *reason) {
     bye = rtcp_create_simple_bye_packet(session->snd.ssrc, reason);
 
     /* SR or RR is determined by the fact whether stream was sent*/
-    if (session->rtp.stats.packet_sent>0)
+    if (session->stats.packet_sent>0)
     {
         cm = allocb(sizeof(rtcp_sr_t), 0);
         cm->b_wptr += rtcp_sr_init(session,cm->b_wptr, sizeof(rtcp_sr_t));
@@ -653,7 +653,7 @@ int rtp_session_bye(RtpSession *session, const char *reason) {
         sdes = rtp_session_create_rtcp_sdes_packet(session, TRUE);
         /* link them */
         concatb(concatb(cm, sdes), bye);
-    } else if (session->rtp.stats.packet_recv>0){
+    } else if (session->stats.packet_recv>0){
         /* make a RR packet */
         cm = allocb(sizeof(rtcp_rr_t), 0);
         cm->b_wptr += rtcp_rr_init(session, cm->b_wptr, sizeof(rtcp_rr_t));
@@ -678,17 +678,17 @@ void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_co
 	obj->min_packet_count_interval=min_packet_count_interval;
 	obj->last_ext_seq=rtp_session_get_seq_number(session);
 	obj->last_cum_loss=rtp_session_get_cum_loss(session);
-	obj->last_packet_sent_count=session->rtp.stats.packet_sent;
-	obj->last_dup_packet_sent_count=session->rtp.stats.packet_dup_sent;
+	obj->last_packet_sent_count=session->stats.packet_sent;
+	obj->last_dup_packet_sent_count=session->stats.packet_dup_sent;
 	obj->min_time_ms_interval=min_time_ms_interval;
 	obj->last_estimate_time_ms=(uint64_t)-1;
 }
 
-bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpStream *stream, const report_block_t *rb){
+bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpSession *session, const report_block_t *rb){
 	int32_t cum_loss=report_block_get_cum_packet_lost(rb);
 	int32_t extseq=report_block_get_high_ext_seq(rb);
-	int32_t diff_unique_outgoing=stream->stats.packet_sent-obj->last_packet_sent_count;
-	int32_t diff_total_outgoing=diff_unique_outgoing+stream->stats.packet_dup_sent-obj->last_dup_packet_sent_count;
+	int32_t diff_unique_outgoing=session->stats.packet_sent-obj->last_packet_sent_count;
+	int32_t diff_total_outgoing=diff_unique_outgoing+session->stats.packet_dup_sent-obj->last_dup_packet_sent_count;
 	int32_t diff;
 	uint64_t curtime;
 	bool_t got_value=FALSE;
@@ -706,8 +706,8 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		ortp_warning("ortp_loss_rate_estimator_process %p: Suspected discontinuity in sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
-		obj->last_packet_sent_count=stream->stats.packet_sent;
-		obj->last_dup_packet_sent_count=stream->stats.packet_dup_sent;
+		obj->last_packet_sent_count=session->stats.packet_sent;
+		obj->last_dup_packet_sent_count=session->stats.packet_dup_sent;
 	}else if (diff>obj->min_packet_count_interval && curtime-obj->last_estimate_time_ms>=obj->min_time_ms_interval){
 		/*we have sufficient interval*/
 		int32_t new_losses=cum_loss-obj->last_cum_loss;
@@ -725,8 +725,8 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		}
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
-		obj->last_packet_sent_count=stream->stats.packet_sent;
-		obj->last_dup_packet_sent_count=stream->stats.packet_dup_sent;
+		obj->last_packet_sent_count=session->stats.packet_sent;
+		obj->last_dup_packet_sent_count=session->stats.packet_dup_sent;
 	}
 	return got_value;
 
