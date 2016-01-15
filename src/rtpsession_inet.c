@@ -1567,11 +1567,11 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			}
 		}
 		if (process_rtcp_packet(session, mp, remaddr, addrlen) >= 0){
-			session->stats.recv_rtcp_packets++;
 			/* a copy is needed since rtp_session_notify_inc_rtcp will free the mp,
 			and we don't want to send RTCP XR packet before notifying the application
 			that a message has been received*/
 			mblk_t * copy = copymsg(mp);
+			session->stats.recv_rtcp_packets++;
 			/* post an event to notify the application */
 			rtp_session_notify_inc_rtcp(session, mp, received_via_rtcp_mux);
 			/* reply to collaborative RTCP XR packets if needed. */
