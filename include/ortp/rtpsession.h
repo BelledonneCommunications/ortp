@@ -565,7 +565,7 @@ ORTP_PUBLIC void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype,
  *  The packet (\a packet) is freed once it is sent.
  *
  * @param session a rtp session.
- * @param packet a rtcp packet presented as a mblk_t.
+ * @param m a rtcp packet presented as a mblk_t.
  * @return the number of bytes sent over the network.
  **/
 
