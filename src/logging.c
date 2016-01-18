@@ -1,20 +1,20 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
+The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
+Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
 
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
 
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #ifdef HAVE_CONFIG_H
@@ -31,8 +31,8 @@ static OList *__log_stored_messages_list = NULL;
 static ortp_mutex_t __log_stored_messages_mutex;
 
 /**
- *@param file a FILE pointer where to output the ortp logs.
- *
+*@param file a FILE pointer where to output the ortp logs.
+*
 **/
 void ortp_set_log_file(FILE *file)
 {
@@ -44,8 +44,8 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args);
 OrtpLogFunc ortp_logv_out=__ortp_logv_out;
 
 /**
- *@param func: your logging function, compatible with the OrtpLogFunc prototype.
- *
+*@param func: your logging function, compatible with the OrtpLogFunc prototype.
+*
 **/
 void ortp_set_log_handler(OrtpLogFunc func){
 	ortp_logv_out=func;
@@ -58,8 +58,8 @@ OrtpLogFunc ortp_get_log_handler(){
 static unsigned int __ortp_log_mask=ORTP_WARNING|ORTP_ERROR|ORTP_FATAL;
 
 /**
- * @ param levelmask a mask of ORTP_DEBUG, ORTP_MESSAGE, ORTP_WARNING, ORTP_ERROR
- * ORTP_FATAL .
+* @ param levelmask a mask of ORTP_DEBUG, ORTP_MESSAGE, ORTP_WARNING, ORTP_ERROR
+* ORTP_FATAL .
 **/
 void ortp_set_log_level_mask(int levelmask){
 	__ortp_log_mask=levelmask;
@@ -81,43 +81,42 @@ void ortp_set_log_thread_id(unsigned long thread_id) {
 
 char * ortp_strdup_vprintf(const char *fmt, va_list ap)
 {
-	/* Guess we need no more than 100 bytes. */
+/* Guess we need no more than 100 bytes. */
 	int n, size = 200;
 	char *p,*np;
 #ifndef _WIN32
-	va_list cap;/*copy of our argument list: a va_list cannot be re-used (SIGSEGV on linux 64 bits)*/
+va_list cap;/*copy of our argument list: a va_list cannot be re-used (SIGSEGV on linux 64 bits)*/
 #endif
 	if ((p = (char *) ortp_malloc (size)) == NULL)
 		return NULL;
 	while (1)
 	{
-		/* Try to print in the allocated space. */
+/* Try to print in the allocated space. */
 #ifndef _WIN32
 		va_copy(cap,ap);
 		n = vsnprintf (p, size, fmt, cap);
 		va_end(cap);
 #else
-		/*this works on 32 bits, luckily*/
+/*this works on 32 bits, luckily*/
 		n = vsnprintf (p, size, fmt, ap);
 #endif
-		/* If that worked, return the string. */
+/* If that worked, return the string. */
 		if (n > -1 && n < size)
 			return p;
-		//printf("Reallocing space.\n");
-		/* Else try again with more space. */
-		if (n > -1)	/* glibc 2.1 */
-			size = n + 1;	/* precisely what is needed */
-		else		/* glibc 2.0 */
-			size *= 2;	/* twice the old size */
+//printf("Reallocing space.\n");
+/* Else try again with more space. */
+if (n > -1)	/* glibc 2.1 */
+size = n + 1;	/* precisely what is needed */
+else		/* glibc 2.0 */
+size *= 2;	/* twice the old size */
 		if ((np = (char *) ortp_realloc (p, size)) == NULL)
-		  {
+		{
 			free(p);
 			return NULL;
-		  }
-		else
-		  {
+		} else
+		{
 			p = np;
-		  }
+		}
 	}
 }
 
@@ -136,7 +135,7 @@ char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
 
 	ret=ortp_strdup_vprintf(fmt, ap);
 	if (!dst) return ret;
-	
+
 	dstlen = strlen(dst);
 	retlen = strlen(ret);
 
@@ -244,44 +243,38 @@ static void __ortp_logv_out(OrtpLogLevel lev, const char *fmt, va_list args){
 #endif
 
 	if (__log_file==NULL) __log_file=stderr;
-	switch(lev){
-		case ORTP_DEBUG:
-			lname="debug";
-			break;
-		case ORTP_MESSAGE:
-			lname="message";
-			break;
-		case ORTP_WARNING:
-			lname="warning";
-			break;
-		case ORTP_ERROR:
-			lname="error";
-			break;
-		case ORTP_FATAL:
-			lname="fatal";
-			break;
-		default:
-			ortp_fatal("Bad level !");
+	if ((lev & ORTP_DEBUG) != 0) {
+		lname="debug";
+	} else if ((lev & ORTP_MESSAGE) != 0) {
+		lname="message";
+	} else if ((lev & ORTP_WARNING) != 0) {
+		lname="warning";
+	} else if ((lev & ORTP_ERROR) != 0) {
+		lname="error";
+	} else if ((lev & ORTP_FATAL) != 0) {
+		lname="fatal";
+	} else {
+		ortp_fatal("Bad level !");
 	}
 	msg=ortp_strdup_vprintf(fmt,args);
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
-	#ifndef _UNICODE
-		OutputDebugStringA(msg);
-		OutputDebugStringA("\r\n");
-	#else
-		{
-			size_t len=strlen(msg);
-			wchar_t *tmp=(wchar_t*)ortp_malloc0((len+1)*sizeof(wchar_t));
-			mbstowcs(tmp,msg,len);
-			OutputDebugStringW(tmp);
-			OutputDebugStringW(L"\r\n");
-			ortp_free(tmp);
-		}
-	#endif
+#ifndef _UNICODE
+	OutputDebugStringA(msg);
+	OutputDebugStringA("\r\n");
+#else
+	{
+		size_t len=strlen(msg);
+		wchar_t *tmp=(wchar_t*)ortp_malloc0((len+1)*sizeof(wchar_t));
+		mbstowcs(tmp,msg,len);
+		OutputDebugStringW(tmp);
+		OutputDebugStringW(L"\r\n");
+		ortp_free(tmp);
+	}
+#endif
 #endif
 	fprintf(__log_file,"%i-%.2i-%.2i %.2i:%.2i:%.2i:%.3i ortp-%s-%s" ENDLINE
-			,1900+lt->tm_year,1+lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec
-			,(int)(tp.tv_usec/1000), lname,msg);
+		,1900+lt->tm_year,1+lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec
+		,(int)(tp.tv_usec/1000), lname,msg);
 	fflush(__log_file);
 	ortp_free(msg);
 }
@@ -315,29 +308,22 @@ void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt,
 		}
 	}
 
-	switch (lev) {
-		case ORTP_DEBUG:
-			severity = SLOG2_DEBUG1;
-			buffer_idx = 0;
-			break;
-		case ORTP_MESSAGE:
-			severity = SLOG2_INFO;
-			buffer_idx = 0;
-			break;
-		case ORTP_WARNING:
-			severity = SLOG2_WARNING;
-			break;
-		case ORTP_ERROR:
-			severity = SLOG2_ERROR;
-			break;
-		case ORTP_FATAL:
-			severity = SLOG2_CRITICAL;
-			break;
-		default:
-			ortp_fatal("Bad level!");
+	if ((lev & ORTP_DEBUG) != 0) {
+		severity = SLOG2_DEBUG1;
+	} else if ((lev & ORTP_MESSAGE) != 0) {
+		severity = SLOG2_INFO;
+	} else if ((lev & ORTP_WARNING) != 0) {
+		severity = SLOG2_WARNING;
+	} else if ((lev & ORTP_ERROR) != 0) {
+		severity = SLOG2_ERROR;
+	} else if ((lev & ORTP_FATAL) != 0) {
+		severity = SLOG2_CRITICAL;
+	} else {
+		ortp_fatal("Bad level!");
 	}
+}
 
-	msg=ortp_strdup_vprintf(fmt,args);
-	slog2c(slog2_buffer_handle[buffer_idx], 0, severity, msg);
+msg=ortp_strdup_vprintf(fmt,args);
+slog2c(slog2_buffer_handle[buffer_idx], 0, severity, msg);
 }
 #endif /* __QNX__ */
