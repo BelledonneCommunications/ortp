@@ -267,7 +267,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		, stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR, stream->hwrcv_extseq, stream->hwrcv_seq_at_last_SR
 		, stream->hwrcv_since_last_SR
 		, packet_loss
-		, (long)stream->stats.cum_packet_loss
+		, (long)session->stats.cum_packet_loss
 		, loss_fraction/2.56
 	);
 
