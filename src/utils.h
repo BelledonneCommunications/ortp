@@ -30,6 +30,9 @@
 #include "ortp/event.h"
 #include "ortp/rtpsession.h"
 
+void ortp_init_logger(void);
+void ortp_uninit_logger(void);
+
 struct _OList {
 	struct _OList *next;
 	struct _OList *prev;
@@ -41,9 +44,11 @@ struct _OList {
 #define o_list_prev(elem) ((elem)->prev)
 
 OList * o_list_append(OList *elem, void * data);
+OList * o_list_prepend(OList *elem, void * data);
 OList * o_list_remove(OList *list, void *data);
 OList * o_list_free(OList *elem);
 OList *o_list_remove_link(OList *list, OList *elem);
+OList * o_list_free_with_data(OList *list, void (*freefunc)(void*));
 
 
 #define ORTP_POINTER_TO_INT(p) ((int)(intptr_t)(p))

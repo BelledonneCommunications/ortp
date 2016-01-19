@@ -33,6 +33,15 @@ OList *o_list_new(void *data){
 	return new_elem;
 }
 
+OList * o_list_prepend(OList *elem, void * data){
+	OList *new_elem=o_list_new(data);
+	if (elem){
+		elem->prev = new_elem;
+		new_elem->next = elem;
+	}
+	return new_elem;
+}
+
 OList * o_list_append(OList *elem, void * data){
 	OList *new_elem=o_list_new(data);
 	OList *it=elem;
@@ -52,6 +61,21 @@ OList * o_list_free(OList *list){
 		elem = elem->next;
 		ortp_free(tmp);
 	}
+	ortp_free(elem);
+	return NULL;
+}
+
+OList * o_list_free_with_data(OList *list, void (*freefunc)(void*)){
+	OList *elem = list;
+	OList *tmp;
+	if (!list) return NULL;
+	while(elem->next!=NULL) {
+		tmp = elem;
+		elem = elem->next;
+		freefunc(tmp->data);
+		ortp_free(tmp);
+	}
+	freefunc(elem->data);
 	ortp_free(elem);
 	return NULL;
 }

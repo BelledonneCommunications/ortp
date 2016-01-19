@@ -22,6 +22,7 @@
 #include "ortp-config.h"
 #endif
 #include "ortp/ortp.h"
+#include "utils.h"
 #include <inttypes.h>
 #include "scheduler.h"
 
@@ -76,7 +77,7 @@ void ortp_init()
 #ifdef _WIN32
 	win32_init_sockets();
 #endif
-
+	ortp_init_logger();
 	av_profile_init(&av_profile);
 	ortp_global_stats_reset();
 	init_random_number_generator();
@@ -127,6 +128,7 @@ void ortp_exit()
 			rtp_scheduler_destroy(__ortp_scheduler);
 			__ortp_scheduler=NULL;
 		}
+		ortp_uninit_logger();
 	}
 }
 
