@@ -121,6 +121,27 @@ void ortp_set_log_level_mask(const char *domain, int levelmask){
 	else get_log_domain_rw(domain)->logmask = levelmask;
 }
 
+
+void ortp_set_log_level(const char *domain, OrtpLogLevel level){
+	int levelmask = ORTP_FATAL;
+	if (level<=ORTP_ERROR){
+		levelmask |= ORTP_ERROR;
+	}
+	if (level<=ORTP_WARNING){
+		levelmask |= ORTP_WARNING;
+	}
+	if (level<=ORTP_MESSAGE){
+		levelmask |= ORTP_MESSAGE;
+	}
+	if (level<=ORTP_TRACE){
+		levelmask |= ORTP_TRACE;
+	}
+	if (level<=ORTP_DEBUG){
+		levelmask |= ORTP_DEBUG;
+	}
+	ortp_set_log_level_mask(domain, levelmask);
+}
+
 unsigned int ortp_get_log_level_mask(const char *domain) {
 	OrtpLogDomain *ld;
 	if (domain == NULL || (ld = get_log_domain(domain)) == NULL) return __ortp_logger.log_mask;

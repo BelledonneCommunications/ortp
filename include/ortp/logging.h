@@ -39,11 +39,11 @@ extern "C"
 
 typedef enum {
 	ORTP_DEBUG=1,
-	ORTP_MESSAGE=1<<1,
-	ORTP_WARNING=1<<2,
-	ORTP_ERROR=1<<3,
-	ORTP_FATAL=1<<4,
-	ORTP_TRACE=1<<5,
+	ORTP_TRACE=1<<1,
+	ORTP_MESSAGE=1<<2,
+	ORTP_WARNING=1<<3,
+	ORTP_ERROR=1<<4,
+	ORTP_FATAL=1<<5,
 	ORTP_LOGLEV_END=1<<6
 } OrtpLogLevel;
 
@@ -65,6 +65,11 @@ ORTP_PUBLIC void ortp_logv(const char *domain, OrtpLogLevel level, const char *f
  * WARNING: Must be called from the thread that has been defined with ortp_set_log_thread_id().
  */
 ORTP_PUBLIC void ortp_logv_flush(void);
+
+/**
+ * Activate all log level greater or equal than specified level argument.
+**/
+ORTP_PUBLIC void ortp_set_log_level(const char *domain, OrtpLogLevel level);
 
 ORTP_PUBLIC void ortp_set_log_level_mask(const char *domain, int levelmask);
 ORTP_PUBLIC unsigned int ortp_get_log_level_mask(const char *domain);
