@@ -72,8 +72,10 @@ add_definitions(
 
 if(WIN32)
 	add_definitions(-DWINDOWS_NATIVE)
-	list(APPEND LIBS ws2_32)
-	if(NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone")
+	if(NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
+		list(APPEND LIBS ws2_32)
+	endif()
+	if(NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone" AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 		list(APPEND LIBS delayimp Winmm Qwave)
 	endif()
 endif()
