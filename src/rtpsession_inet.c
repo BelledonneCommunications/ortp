@@ -381,6 +381,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		rtp_session_set_dscp( session, -1 );
 		rtp_session_set_multicast_ttl( session, -1 );
 		rtp_session_set_multicast_loopback( session, -1 );
+		if (session->use_pktinfo) rtp_session_set_pktinfo(session, TRUE);
 		ortp_message("RtpSession bound to [%s] ports [%i] [%i]", addr, rtp_port, rtcp_port);
 		return 0;
 	}
@@ -450,7 +451,7 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 	int *optval = &activate;
 	int optlen = sizeof(activate);
 #endif
-
+	session->use_pktinfo = activate;
 	// Dont't do anything if socket hasn't been created yet
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
