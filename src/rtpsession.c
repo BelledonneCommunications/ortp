@@ -1494,7 +1494,7 @@ void ortp_stream_clear_aux_addresses(OrtpStream *os){
 }
 
 static void ortp_stream_uninit(OrtpStream *os){
-	msgb_allocator_init(&os->allocator);
+	msgb_allocator_uninit(&os->allocator);
 	ortp_stream_clear_aux_addresses(os);
 }
 
