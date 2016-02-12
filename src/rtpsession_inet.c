@@ -1165,7 +1165,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		destlen=0;
 	}
 	/*first send to main destination*/
-	if (destlen) error=rtp_session_rtp_sendto(session,m,destaddr,destlen,FALSE);
+	error=rtp_session_rtp_sendto(session,m,destaddr,destlen,FALSE);
 	/*then iterate over auxiliary destinations*/
 	for(elem=session->rtp.gs.aux_destinations;elem!=NULL;elem=elem->next){
 		OrtpAddress *addr=(OrtpAddress*)elem->data;
