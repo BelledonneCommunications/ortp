@@ -21,17 +21,18 @@
 ############################################################################
 
 cmake_minimum_required(VERSION 3.0)
-project(ORTP)
+project(oRTP VERSION 0.26.0)
 
 
-set(ORTP_MAJOR_VERSION "0")
-set(ORTP_MINOR_VERSION "26")
-set(ORTP_MICRO_VERSION "0")
-set(ORTP_VERSION "${ORTP_MAJOR_VERSION}.${ORTP_MINOR_VERSION}.${ORTP_MICRO_VERSION}")
+set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
+set(ORTP_MINOR_VERSION ${PROJECT_VERSION_MINOR})
+set(ORTP_MICRO_VERSION ${PROJECT_VERSION_PATCH})
+set(ORTP_VERSION ${PROJECT_VERSION})
 set(ORTP_SO_VERSION "11") # incremented on January, the 20th 2015. DO NOT INCREMENT BEFORE ORTP 0.26
 
 
-option(ENABLE_STATIC "Build static library (default is shared library)." NO)
+option(ENABLE_SHARED "Build shared library." YES)
+option(ENABLE_STATIC "Build static library." YES)
 option(ENABLE_DOC "Enable documentation generation with Doxygen." YES)
 option(ENABLE_NTP_TIMESTAMP "Turn on NTP timestamping on packet reception." NO)
 option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increase performance." NO)
@@ -57,10 +58,14 @@ macro(apply_compile_flags SOURCE_FILES)
 endmacro()
 
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_PREFIX_PATH}/share/cmake/Modules)
-
 include(CheckIncludeFile)
 include(CheckFunctionExists)
+include(GNUInstallDirs)
+
+if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
+	set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_FULL_LIBDIR})
+	message(STATUS "Setting install rpath to ${CMAKE_INSTALL_RPATH}")
+endif()
 
 set(MSVC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/MSVC")
 if(MSVC)
@@ -170,7 +175,7 @@ if(ENABLE_DOC)
 		)
 		add_custom_target(ortp-html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
 		install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
-			DESTINATION "share/doc/oRTP-${ORTP_VERSION}")
+			DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/oRTP-${ORTP_VERSION}")
 	endif()
 endif()
 
@@ -185,7 +190,7 @@ set(ORTP_PKGCONFIG_VERSION "${ORTP_VERSION}")
 set(ORTPDEPS_LIBS )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION lib/pkgconfig)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
 
 include(CMakePackageConfigHelpers)
@@ -202,13 +207,13 @@ configure_file(ORTPConfig.cmake.in
 	@ONLY
 )
 
-set(ConfigPackageLocation lib/cmake/oRTP)
+set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/cmake")
 install(EXPORT ${EXPORT_TARGETS_NAME}Targets
 	FILE ORTPTargets.cmake
-	DESTINATION ${ConfigPackageLocation}
+	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
 install(FILES
 	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
 	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
-	DESTINATION ${ConfigPackageLocation}
+	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
