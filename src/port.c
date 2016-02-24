@@ -832,7 +832,9 @@ char* strtok_r(char *str, const char *delim, char **nextp){
 #endif
 
 
-#if defined(_WIN32) && !defined(_MSC_VER)
+#if defined(_WIN32)
+
+#if !defined(_MSC_VER)
 #include <wincrypt.h>
 static int ortp_wincrypto_random(unsigned int *rand_number){
 	static HCRYPTPROV hProv=(HCRYPTPROV)-1;
@@ -855,18 +857,24 @@ static int ortp_wincrypto_random(unsigned int *rand_number){
 	return 0;
 }
 #endif
+#else
 
 static unsigned int ortp_urandom(void) {
 	static int fd=-1;
-        if (fd==-1) fd=open("/dev/urandom",O_RDONLY);
-        if (fd!=-1){
-                unsigned int tmp;
-                if (read(fd,&tmp,4)!=4){
-                        ortp_error("Reading /dev/urandom failed.");
-                }else return tmp;
-        } else ortp_error("Could not open /dev/urandom");
+	if (fd==-1) fd=open("/dev/urandom",O_RDONLY);
+	if (fd!=-1){
+		unsigned int tmp;
+		if (read(fd,&tmp,4)!=4){
+			ortp_error("Reading /dev/urandom failed.");
+		}else return tmp;
+	} else ortp_error("Could not open /dev/urandom");
 	return (unsigned int) random();
 }
+
+#endif
+
+
+
 
 unsigned int ortp_random(void){
 #ifdef HAVE_ARC4RANDOM
@@ -902,6 +910,7 @@ unsigned int ortp_random(void){
 	return rand()<<16 | rand();
 #endif
 }
+
 bool_t ortp_is_multicast_addr(const struct sockaddr *addr) {
 	
 	switch (addr->sa_family) {
