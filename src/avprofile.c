@@ -171,6 +171,20 @@ PayloadType payload_type_lpc1016={
 	FLAGS(0)
 };
 
+PayloadType payload_type_bv16={
+	TYPE(PAYLOAD_AUDIO_PACKETIZED),
+	CLOCK_RATE(8000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(16000),/* 5ms / 80 bits per frame */
+	MIME_TYPE("BV16"),
+	CHANNELS(1),
+	RECV_FMTP(NULL),
+	SEND_FMTP(NULL),
+	NO_AVPF,
+	FLAGS(0)
+};
 
 PayloadType payload_type_gsm={
 	TYPE(PAYLOAD_AUDIO_PACKETIZED),
@@ -458,6 +472,7 @@ void av_profile_init(RtpProfile *profile)
 {
 	rtp_profile_clear_all(profile);
 	profile->name="AV profile";
+	
 	rtp_profile_set_payload(profile,0,&payload_type_pcmu8000);
 	rtp_profile_set_payload(profile,1,&payload_type_lpc1016);
 	rtp_profile_set_payload(profile,3,&payload_type_gsm);
@@ -474,6 +489,8 @@ void av_profile_init(RtpProfile *profile)
 	rtp_profile_set_payload(profile,34,&payload_type_h263);
 	rtp_profile_set_payload(profile,96,&payload_type_t140);
 	rtp_profile_set_payload(profile,97,&payload_type_t140_red);
+	//rtp_profile_set_payload(profile,127,&payload_type_bv16);
+
 }
 
 /* these are extra payload types that can be used dynamically */
