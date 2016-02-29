@@ -832,7 +832,9 @@ char* strtok_r(char *str, const char *delim, char **nextp){
 #endif
 
 
-#if defined(_WIN32) && !defined(_MSC_VER)
+#if defined(_WIN32)
+
+#if !defined(_MSC_VER)
 #include <wincrypt.h>
 static int ortp_wincrypto_random(unsigned int *rand_number){
 	static HCRYPTPROV hProv=(HCRYPTPROV)-1;
@@ -855,11 +857,9 @@ static int ortp_wincrypto_random(unsigned int *rand_number){
 	return 0;
 }
 #endif
+#else
 
-unsigned int ortp_random(void){
-#ifdef HAVE_ARC4RANDOM
-	return arc4random();
-#elif  defined(__linux) || defined(__APPLE__)
+static unsigned int ortp_urandom(void) {
 	static int fd=-1;
 	if (fd==-1) fd=open("/dev/urandom",O_RDONLY);
 	if (fd!=-1){
@@ -867,7 +867,24 @@ unsigned int ortp_random(void){
 		if (read(fd,&tmp,4)!=4){
 			ortp_error("Reading /dev/urandom failed.");
 		}else return tmp;
-	}else ortp_error("Could not open /dev/urandom");
+	} else ortp_error("Could not open /dev/urandom");
+	return (unsigned int) random();
+}
+
+#endif
+
+
+
+
+unsigned int ortp_random(void){
+#ifdef HAVE_ARC4RANDOM
+#if defined(__QNXNTO__) // There is a false positive with blackberry build
+	return ortp_urandom();
+#else
+	return arc4random();
+#endif
+#elif  defined(__linux) || defined(__APPLE__)
+	return ortp_urandom();
 #elif defined(_WIN32)
 	static int initd=0;
 	unsigned int ret;
@@ -892,11 +909,8 @@ unsigned int ortp_random(void){
 	}
 	return rand()<<16 | rand();
 #endif
-	/*fallback to UNIX random()*/
-#ifndef _WIN32
-	return (unsigned int) random();
-#endif
 }
+
 bool_t ortp_is_multicast_addr(const struct sockaddr *addr) {
 	
 	switch (addr->sa_family) {

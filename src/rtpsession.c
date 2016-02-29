@@ -1419,28 +1419,28 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
 }
 
 void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports){
+	
+	if (release_transports){
+		if (session->rtp.gs.tr) {
+			if (session->rtp.gs.tr->t_close)
+				session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+			session->rtp.gs.tr->t_destroy(session->rtp.gs.tr);
+
+		}
+		session->rtp.gs.tr = 0;
+
+		if (session->rtcp.gs.tr)  {
+			if (session->rtcp.gs.tr->t_close)
+				session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+			session->rtcp.gs.tr->t_destroy(session->rtcp.gs.tr);
+		}
+		session->rtcp.gs.tr = 0;
+	}
+	
 	if (session->rtp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtp.gs.socket);
 	if (session->rtcp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.gs.socket);
 	session->rtp.gs.socket=-1;
 	session->rtcp.gs.socket=-1;
-
-	if (!release_transports)
-		return;
-
-	if (session->rtp.gs.tr) {
-		if (session->rtp.gs.tr->t_close)
-			session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
-		session->rtp.gs.tr->t_destroy(session->rtp.gs.tr);
-
-	}
-	session->rtp.gs.tr = 0;
-
-	if (session->rtcp.gs.tr)  {
-		if (session->rtcp.gs.tr->t_close)
-			session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
-		session->rtcp.gs.tr->t_destroy(session->rtcp.gs.tr);
-	}
-	session->rtcp.gs.tr = 0;
 
 	/* don't discard remote addresses, then can be preserved for next use.
 	session->rtp.gs.rem_addrlen=0;
