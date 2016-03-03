@@ -92,7 +92,7 @@ static ORTP_INLINE uint64_t sender_info_get_ntp_timestamp(const sender_info_t *s
   return ((((uint64_t)ntohl(si->ntp_timestamp_msw)) << 32) +
           ((uint64_t) ntohl(si->ntp_timestamp_lsw)));
 }
-#define sender_info_get_rtp_timestamp(si)	((si)->rtp_timestamp)
+#define sender_info_get_rtp_timestamp(si)	ntohl((si)->rtp_timestamp)
 #define sender_info_get_packet_count(si) \
 	ntohl((si)->senders_packet_count)
 #define sender_info_get_octet_count(si) \
