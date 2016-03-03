@@ -88,7 +88,10 @@ typedef struct sender_info
 	uint32_t senders_octet_count;
 } sender_info_t;
 
-uint64_t sender_info_get_ntp_timestamp(const sender_info_t *si);
+static ORTP_INLINE uint64_t sender_info_get_ntp_timestamp(const sender_info_t *si) {
+  return ((((uint64_t)ntohl(si->ntp_timestamp_msw)) << 32) +
+          ((uint64_t) ntohl(si->ntp_timestamp_lsw)));
+}
 #define sender_info_get_rtp_timestamp(si)	((si)->rtp_timestamp)
 #define sender_info_get_packet_count(si) \
 	ntohl((si)->senders_packet_count)
