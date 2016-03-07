@@ -82,7 +82,7 @@ OrtpLogFunc ortp_get_log_handler(void){
 
 static OrtpLogDomain * get_log_domain(const char *domain){
 	OList *it;
-	
+
 	if (domain == NULL) return NULL;
 	for (it = __ortp_logger.log_domains; it != NULL; it = it->next){
 		OrtpLogDomain *ld = (OrtpLogDomain*)it->data;
@@ -95,7 +95,7 @@ static OrtpLogDomain * get_log_domain(const char *domain){
 
 static OrtpLogDomain *get_log_domain_rw(const char *domain){
 	OrtpLogDomain *ret;
-	
+
 	if (domain == NULL) return NULL;
 	ret = get_log_domain(domain);
 	if (ret) return ret;
@@ -343,7 +343,7 @@ void ortp_logv_out(const char *domain, OrtpLogLevel lev, const char *fmt, va_lis
 		default:
 			lname = "badlevel";
 	}
-	
+
 	msg=ortp_strdup_vprintf(fmt,args);
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
 #ifndef _UNICODE
@@ -364,6 +364,15 @@ void ortp_logv_out(const char *domain, OrtpLogLevel lev, const char *fmt, va_lis
 		,1900+lt->tm_year,1+lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec
 		,(int)(tp.tv_usec/1000), lname, msg);
 	fflush(__ortp_logger.log_file);
+
+	// fatal messages should go to stderr too, even if we are using a file since application will abort right after
+	if (__ortp_logger.log_file != stderr && lev == ORTP_FATAL) {
+		fprintf(stderr,"%i-%.2i-%.2i %.2i:%.2i:%.2i:%.3i ortp-%s-%s" ENDLINE
+			,1900+lt->tm_year,1+lt->tm_mon,lt->tm_mday,lt->tm_hour,lt->tm_min,lt->tm_sec
+			,(int)(tp.tv_usec/1000), lname, msg);
+		fflush(stderr);
+	}
+
 	ortp_free(msg);
 }
 
