@@ -76,7 +76,7 @@ static void set_high_prio(void){
 	int result=0;
 	char* env_prio_c=NULL;
 	int min_prio, max_prio, env_prio;
-		
+
 	if (sched_pref && strcasecmp(sched_pref,"SCHED_RR")==0){
 		policy=SCHED_RR;
 	}else if (sched_pref && strcasecmp(sched_pref,"SCHED_FIFO")==0){
@@ -108,7 +108,7 @@ static void * outboud_simulator_thread(void *ctx){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
 	ortpTimeSpec sleep_until;
 	set_high_prio();
-	
+
 	while(sim->thread_started){
 		sleep_until.tv_sec=0;
 		sleep_until.tv_nsec=0;
@@ -353,10 +353,6 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 		om=simulate_latency(session,om);
 	}
 
-	if (sim->params.max_bandwidth>0){
-		om=simulate_bandwidth_limit_and_jitter(session,om);
-	}
-
 	if ((sim->params.loss_rate > 0) && (om != NULL)) {
 		if (sim->params.RTP_only == TRUE) {
 			if (*is_rtp_packet == TRUE) {
@@ -365,6 +361,10 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 		} else {
 			om = simulate_loss_rate(sim, om);
 		}
+	}
+
+	if (sim->params.max_bandwidth>0){
+		om=simulate_bandwidth_limit_and_jitter(session,om);
 	}
 
 	/*finally when releasing the packet from the simulator, reset the reserved1 space to default,
@@ -399,7 +399,7 @@ static mblk_t * rtp_session_netsim_find_next_packet_to_send(RtpSession *session)
 	ortpTimeSpec min_packet_time = { 0, 0};
 	ortpTimeSpec packet_time;
 	mblk_t *next_packet = NULL;
-	
+
 	for(om = qbegin(&session->net_sim_ctx->send_q); !qend(&session->net_sim_ctx->send_q, om); om = qnext(&session->net_sim_ctx->send_q, om)){
 		packet_time.tv_sec=om->timestamp.tv_sec;
 		packet_time.tv_nsec=om->timestamp.tv_usec*1000LL;
@@ -420,13 +420,13 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 	mblk_t *om;
 	int count=0;
 	bool_t is_rtp_packet;
-	
+
 	if (!session->net_sim_ctx)
 		return;
-	
+
 	if (!session->net_sim_ctx->params.enabled)
 		return;
-	
+
 	if (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound){
 		sleep_until->tv_sec=0;
 		sleep_until->tv_nsec=0;
@@ -479,7 +479,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 				/*no packet is to be sent yet; set the time at which we want to be called*/
 				*sleep_until=packet_time;
 				ortp_mutex_lock(&session->net_sim_ctx->mutex);
-				break; 
+				break;
 			}
 			ortp_mutex_lock(&session->net_sim_ctx->mutex);
 			if (todrop) remq(&session->net_sim_ctx->send_q, todrop); /* remove the message while the mutex is held*/
