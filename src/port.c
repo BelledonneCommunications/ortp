@@ -713,7 +713,7 @@ void ortp_shm_close(void *mem){
 #endif
 
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
-#if defined(_WIN32_WCE) || defined(WIN32)
+#if defined(_WIN32_WCE) || defined(_WIN32)
 #ifdef ORTP_WINDOWS_DESKTOP
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
@@ -839,7 +839,7 @@ char* strtok_r(char *str, const char *delim, char **nextp){
 static int ortp_wincrypto_random(unsigned int *rand_number){
 	static HCRYPTPROV hProv=(HCRYPTPROV)-1;
 	static int initd=0;
-	
+
 	if (!initd){
 		if (!CryptAcquireContext(&hProv,NULL,NULL,PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)){
 			ortp_error("ortp_wincrypto_random(): Could not acquire a windows crypto context");
@@ -849,7 +849,7 @@ static int ortp_wincrypto_random(unsigned int *rand_number){
 	}
 	if (hProv==(HCRYPTPROV)-1)
 		return -1;
-	
+
 	if (!CryptGenRandom(hProv,4,(BYTE*)rand_number)){
 		ortp_error("ortp_wincrypto_random(): CryptGenRandom() failed.");
 		return -1;
@@ -890,7 +890,7 @@ unsigned int ortp_random(void){
 	unsigned int ret;
 #ifdef _MSC_VER
 	/*rand_s() is pretty nice and simple function but is not wrapped by mingw.*/
-	
+
 	if (rand_s(&ret)==0){
 		return ret;
 	}
@@ -912,7 +912,7 @@ unsigned int ortp_random(void){
 }
 
 bool_t ortp_is_multicast_addr(const struct sockaddr *addr) {
-	
+
 	switch (addr->sa_family) {
 		case AF_INET:
 			return IN_MULTICAST(ntohl(((struct sockaddr_in *) addr)->sin_addr.s_addr));
@@ -921,5 +921,5 @@ bool_t ortp_is_multicast_addr(const struct sockaddr *addr) {
 		default:
 			return FALSE;
 	}
-	
+
 }
