@@ -20,7 +20,9 @@
 #
 ############################################################################
 
-set(LIBS ${CMAKE_THREAD_LIBS_INIT})
+if(NOT ANDROID)
+	set(LIBS ${CMAKE_THREAD_LIBS_INIT})
+endif()
 if(HAVE_RT)
 	list(APPEND LIBS rt)
 endif()
@@ -95,6 +97,9 @@ endif()
 if(ENABLE_SHARED)
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	set_target_properties(ortp PROPERTIES VERSION ${ORTP_SO_VERSION})
+	if(ANDROID)
+		set_target_properties(ortp PROPERTIES OUTPUT_NAME "ortp-${CMAKE_SYSTEM_PROCESSOR}")
+	endif()
 	target_link_libraries(ortp ${LIBS})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug")

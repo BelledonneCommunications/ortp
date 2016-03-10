@@ -857,7 +857,7 @@ static int ortp_wincrypto_random(unsigned int *rand_number){
 	return 0;
 }
 #endif
-#else
+#elif (defined(__QNXNTO__) || defined(__linux) || defined(__APPLE__)) && !defined(HAVE_ARC4RANDOM)
 
 static unsigned int ortp_urandom(void) {
 	static int fd=-1;
@@ -883,7 +883,7 @@ unsigned int ortp_random(void){
 #else
 	return arc4random();
 #endif
-#elif  defined(__linux) || defined(__APPLE__)
+#elif defined(__linux) || defined(__APPLE__)
 	return ortp_urandom();
 #elif defined(_WIN32)
 	static int initd=0;
