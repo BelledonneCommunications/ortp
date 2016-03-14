@@ -73,10 +73,7 @@ if(MSVC)
 endif()
 
 find_package(Threads)
-find_library(LIBM
-	NAMES m
-	PATH_SUFFIXES bin lib
-)
+find_library(LIBM NAMES m)
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
