@@ -120,5 +120,5 @@ if(ENABLE_SHARED)
 endif()
 
 if(ENABLE_TESTS)
-	#add_subdirectory(tests)
+	add_subdirectory(tests)
 endif()
