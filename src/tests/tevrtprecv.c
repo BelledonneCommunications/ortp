@@ -45,7 +45,7 @@ int dtmf_count=0;
 
 void recv_tev_cb(RtpSession *session,unsigned long type, unsigned long dummy, void* user_data)
 {
-	printf("Receiving telephony event:%i\n",type);
+	printf("Receiving telephony event:%lu\n",type);
 	if (type<16) printf("This is dtmf %c\n",dtmf_tab[type]);
 	dtmf_count++;
 }
