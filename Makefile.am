@@ -2,7 +2,7 @@
 
 ACLOCAL_AMFLAGS = -I m4 $(ACLOCAL_MACOS_FLAGS)
 
-EXTRA_DIST = oRTP.prj ortp-config.h.in TODO pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen oRTP.pws
+EXTRA_DIST = oRTP.prj ortp-config.h.in TODO pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen oRTP.pws CMakeLists.txt include/CMakeLists.txt src/CMakeLists.txt src/tests/CMakeLists.txt ORTPConfig.cmake.in ortp-config.h.cmake
 
 
 SUBDIRS=src build m4 include
