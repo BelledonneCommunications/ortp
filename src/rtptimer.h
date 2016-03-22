@@ -45,8 +45,8 @@ struct _RtpTimer
 
 typedef struct _RtpTimer RtpTimer;
 
-void rtp_timer_set_interval(RtpTimer *timer, struct timeval *interval);
+ORTP_PUBLIC void rtp_timer_set_interval(RtpTimer *timer, struct timeval *interval);
 
-extern RtpTimer posix_timer;
+ORTP_VAR_PUBLIC RtpTimer posix_timer;
 
 #endif

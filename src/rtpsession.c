@@ -893,8 +893,7 @@ mblk_t * rtp_session_create_packet_in_place(RtpSession *session,uint8_t *buffer,
 }
 
 
-int
-__rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts)
+ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts)
 {
 	rtp_header_t *rtp;
 	uint32_t packet_time;

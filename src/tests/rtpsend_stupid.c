@@ -27,7 +27,7 @@
 #include <stdio.h>
 #endif
 /*defined in library, but not declared in public headers (this method is only useful for tests)*/
-extern int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *packet, uint32_t packet_ts, uint32_t send_ts);
+ORTP_PUBLIC extern int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *packet, uint32_t packet_ts, uint32_t send_ts);
 
 int runcond=1;
 

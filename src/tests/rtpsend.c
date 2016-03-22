@@ -109,13 +109,8 @@ int main(int argc, char *argv[])
 		}
 		/*this will simulate a burst of late packets */
 		if (jitter && (user_ts%(8000)==0)) {
-			struct timespec pausetime, remtime;
 			ortp_message("Simulating late packets now (%i milliseconds)",jitter);
-			pausetime.tv_sec=jitter/1000;
-			pausetime.tv_nsec=(jitter%1000)*1000000;
-			while(nanosleep(&pausetime,&remtime)==-1 && errno==EINTR){
-				pausetime=remtime;
-			}
+			ortp_sleep_ms(jitter);
 		}
 	}
 

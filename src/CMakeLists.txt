@@ -68,10 +68,6 @@ if(WIN32)
 	endif()
 endif()
 
-add_definitions(
-	-DORTP_EXPORTS
-)
-
 if(WIN32)
 	add_definitions(-DWINDOWS_NATIVE)
 	if(NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
@@ -88,6 +84,7 @@ apply_compile_flags(ORTP_SOURCE_FILES_CXX "CPP" "CXX")
 if(ENABLE_STATIC)
 	add_library(ortp-static STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	set_target_properties(ortp-static PROPERTIES OUTPUT_NAME ortp)
+	target_compile_definitions(ortp-static PRIVATE "ORTP_EXPORTS")
 	target_link_libraries(ortp-static ${LIBS})
 	install(TARGETS ortp-static EXPORT ${EXPORT_TARGETS_NAME}Targets
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -102,6 +99,7 @@ if(ENABLE_SHARED)
 		# Do not version shared library on Android
 		set_target_properties(ortp PROPERTIES SOVERSION ${ORTP_SO_VERSION})
 	endif()
+	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
 	target_link_libraries(ortp ${LIBS})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug")
