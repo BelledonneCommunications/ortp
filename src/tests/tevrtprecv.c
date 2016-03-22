@@ -66,20 +66,20 @@ int main(int argc, char *argv[])
 
 	ortp_init();
 	ortp_scheduler_init();
-	
+
 	/* set the telephony event payload type to 96 in the av profile.*/
 	rtp_profile_set_payload(&av_profile,96,&payload_type_telephone_event);
-	
-	session=rtp_session_new(RTP_SESSION_RECVONLY);	
-	
+
+	session=rtp_session_new(RTP_SESSION_RECVONLY);
+
 	rtp_session_set_scheduling_mode(session,1);
 	rtp_session_set_blocking_mode(session,1);
 	rtp_session_set_local_addr(session,"0.0.0.0",atoi(argv[2]),-1);
 	rtp_session_set_payload_type(session,0);
-	
+
 	/* register for telephony events */
 	rtp_session_signal_connect(session,"telephone-event",(RtpCallback)recv_tev_cb,0);
-		
+
 	outfile=fopen(argv[1],"wb");
 	if (outfile==NULL) {
 		perror("Cannot open file");
@@ -92,8 +92,7 @@ int main(int argc, char *argv[])
 		while (have_more){
 			err=rtp_session_recv_with_ts(session,buffer,160,ts,&have_more);
 			if (err>0) {
-				size_t ret = fwrite(buffer,1,err,outfile);
-				assert( ret == err );
+				assert(fwrite(buffer,1,err,outfile) == err );
 			}
 		}
 		ts+=160;
