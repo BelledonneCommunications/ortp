@@ -117,6 +117,6 @@ if(ENABLE_SHARED)
 	)
 endif()
 
-if(ENABLE_TESTS)
+if(ENABLE_TESTS AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone" AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 	add_subdirectory(tests)
 endif()
