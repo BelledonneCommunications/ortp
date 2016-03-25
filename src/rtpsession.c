@@ -1546,24 +1546,17 @@ void rtp_session_uninit (RtpSession * session)
 		ortp_message("check OS support for qwave.lib: %i %i %i\n",
 					ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
 		if (ovi.dwMajorVersion > 5) {
+			BOOL QoSResult;
+			QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle,
+												0,
+												session->rtp.QoSFlowID,
+												0);
 
-			if (FAILED(__HrLoadAllImportsForDll("qwave.dll"))) {
-				ortp_warning("Failed to load qwave.dll: no QoS available\n" );
+			if (QoSResult != TRUE){
+				ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d\n",
+						GetLastError());
 			}
-			else
-			{
-				BOOL QoSResult;
-				QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle,
-													0,
-													session->rtp.QoSFlowID,
-													0);
-
-				if (QoSResult != TRUE){
-					ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d\n",
-							GetLastError());
-				}
-				session->rtp.QoSFlowID=0;
-			}
+			session->rtp.QoSFlowID=0;
 		}
 	}
 

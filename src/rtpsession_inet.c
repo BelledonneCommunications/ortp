@@ -660,53 +660,46 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	ortp_message("check OS support for qwave.lib: %i %i %i\n",
 				ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
 	if (ovi.dwMajorVersion > 5) {
-
-		if (FAILED(__HrLoadAllImportsForDll("qwave.dll"))) {
-			ortp_warning("Failed to load qwave.dll: no QoS available\n" );
-		}
+		if (session->dscp==0)
+			tos=QOSTrafficTypeBestEffort;
+		else if (session->dscp==0x8)
+			tos=QOSTrafficTypeBackground;
+		else if (session->dscp==0x28)
+			tos=QOSTrafficTypeAudioVideo;
+		else if (session->dscp==0x38)
+			tos=QOSTrafficTypeVoice;
 		else
-		{
-			if (session->dscp==0)
-				tos=QOSTrafficTypeBestEffort;
-			else if (session->dscp==0x8)
-				tos=QOSTrafficTypeBackground;
-			else if (session->dscp==0x28)
-				tos=QOSTrafficTypeAudioVideo;
-			else if (session->dscp==0x38)
-				tos=QOSTrafficTypeVoice;
-			else
-				tos=QOSTrafficTypeExcellentEffort; /* 0x28 */
+			tos=QOSTrafficTypeExcellentEffort; /* 0x28 */
 
-			if (session->rtp.QoSHandle==NULL) {
-				QOS_VERSION version;
-				BOOL QoSResult;
+		if (session->rtp.QoSHandle==NULL) {
+			QOS_VERSION version;
+			BOOL QoSResult;
 
-				version.MajorVersion = 1;
-				version.MinorVersion = 0;
+			version.MajorVersion = 1;
+			version.MinorVersion = 0;
 
-				QoSResult = QOSCreateHandle(&version, &session->rtp.QoSHandle);
+			QoSResult = QOSCreateHandle(&version, &session->rtp.QoSHandle);
 
-				if (QoSResult != TRUE){
-					ortp_error("QOSCreateHandle failed to create handle with error %d\n",
-						GetLastError());
-					retval=-1;
-				}
+			if (QoSResult != TRUE){
+				ortp_error("QOSCreateHandle failed to create handle with error %d\n",
+					GetLastError());
+				retval=-1;
 			}
-			if (session->rtp.QoSHandle!=NULL) {
-				BOOL QoSResult;
-				QoSResult = QOSAddSocketToFlow(
-					session->rtp.QoSHandle,
-					session->rtp.gs.socket,
-					(struct sockaddr*)&session->rtp.gs.rem_addr,
-					tos,
-					QOS_NON_ADAPTIVE_FLOW,
-					&session->rtp.QoSFlowID);
+		}
+		if (session->rtp.QoSHandle!=NULL) {
+			BOOL QoSResult;
+			QoSResult = QOSAddSocketToFlow(
+				session->rtp.QoSHandle,
+				session->rtp.gs.socket,
+				(struct sockaddr*)&session->rtp.gs.rem_addr,
+				tos,
+				QOS_NON_ADAPTIVE_FLOW,
+				&session->rtp.QoSFlowID);
 
-				if (QoSResult != TRUE){
-					ortp_error("QOSAddSocketToFlow failed to add a flow with error %d\n",
-						GetLastError());
-					retval=-1;
-				}
+			if (QoSResult != TRUE){
+				ortp_error("QOSAddSocketToFlow failed to add a flow with error %d\n",
+					GetLastError());
+				retval=-1;
 			}
 		}
 	} else {
