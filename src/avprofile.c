@@ -472,9 +472,6 @@ void av_profile_init(RtpProfile *profile)
 	rtp_profile_set_payload(profile,31,&payload_type_h261);
 	rtp_profile_set_payload(profile,32,&payload_type_mpv);
 	rtp_profile_set_payload(profile,34,&payload_type_h263);
-	rtp_profile_set_payload(profile,96,&payload_type_t140);
-	rtp_profile_set_payload(profile,97,&payload_type_t140_red);
-	//rtp_profile_set_payload(profile,127,&payload_type_bv16);
 
 }
 

@@ -2326,3 +2326,37 @@ void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *t
 bool_t rtp_session_get_symmetric_rtp(const RtpSession *session) {
 	return session->symmetric_rtp;
 }
+
+int rtp_session_splice(RtpSession *session, RtpSession *to_session){
+	if (session->spliced_session){
+		ortp_error("rtp_session_splice(): session %p already splicing into session %p", session, session->spliced_session);
+		return -1;
+	}
+	session->spliced_session = to_session;
+	to_session->is_spliced = TRUE;
+	ortp_message("rtp_session_splice(): session %p splicing to %p", session, to_session);
+	return 0;
+}
+
+int rtp_session_unsplice(RtpSession *session, RtpSession *to_session){
+	if (session->spliced_session != to_session){
+		ortp_error("rtp_session_unsplice() session %p is not spliced to session %p", session, to_session);
+		return -1;
+	}
+	session->spliced_session = NULL;
+	to_session->is_spliced = FALSE;
+	ortp_message("rtp_session_unsplice(): session %p no longer splicing to %p", session, to_session);
+	return 0;
+}
+
+/*
+ * send packet through the peered session, the mblk_t is not freed.
+**/
+void rtp_session_do_splice(RtpSession *session, mblk_t *packet, bool_t is_rtp){
+	RtpSession *peer = session->spliced_session;
+	if (peer){
+		OrtpStream *os = is_rtp ? &session->rtp.gs : &session->rtcp.gs;
+		_ortp_sendto(os->socket, packet, 0, (struct sockaddr*)&os->rem_addr, os->rem_addrlen);
+	}
+}
+
