@@ -51,6 +51,7 @@ extern "C"{
 #define PAYLOAD_AUDIO_PACKETIZED 1
 #define PAYLOAD_VIDEO 2
 #define PAYLOAD_TEXT 3
+#define PAYLOAD_SCREEN 5
 #define PAYLOAD_OTHER 4  /* ?? */
 
 #define PAYLOAD_TYPE_AVPF_NONE 0
@@ -83,6 +84,7 @@ struct _PayloadType
 	struct _PayloadTypeAvpfParams avpf; /* AVPF parameters */
 	int flags;
 	void *user_data;
+	int screensharing;
 };
 
 #ifndef PayloadType_defined
