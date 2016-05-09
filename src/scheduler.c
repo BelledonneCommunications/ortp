@@ -31,7 +31,7 @@ void rtp_scheduler_init(RtpScheduler *sched)
 	sched->list=0;
 	sched->time_=0;
 	/* default to the posix timer */
-#if defined(_WIN32) && !defined(ORTP_WINDOWS_UNIVERSAL)
+#if !defined(ORTP_WINDOWS_UNIVERSAL)
 	rtp_scheduler_set_timer(sched,&posix_timer);
 #endif
 	ortp_mutex_init(&sched->lock,NULL);

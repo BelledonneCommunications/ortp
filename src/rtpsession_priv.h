@@ -91,4 +91,19 @@ ORTP_PUBLIC bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt
 
 ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp);
 
+void rtp_session_do_splice(RtpSession *session, mblk_t *packet, bool_t is_rtp);
+
+/*
+ * Update remote addr in the following case:
+ * rtp symetric == TRUE && socket not connected && remote addr has changed && ((rtp/rtcp packet && not only at start) or (no rtp/rtcp packets received))
+ * @param[in] session  on which to perform change
+ * @param[in] mp packet where remote addr is retreived
+ * @param[in] is_rtp true if rtp
+ * @param[in] only_at_start only perform changes if no valid packets received yet
+ * @return 0 if chaged was performed
+ *
+ */
+	
+ORTP_PUBLIC int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start);
+
 #endif

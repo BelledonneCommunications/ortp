@@ -403,6 +403,8 @@ struct _RtpSession
 	float rtt;/*last round trip delay calculated*/
 	int cum_loss;
 	OrtpNetworkSimulatorCtx *net_sim_ctx;
+	RtpSession *spliced_session; /*a RtpSession that will retransmit everything received on this session*/
+	rtp_stats_t stats;
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -412,7 +414,9 @@ struct _RtpSession
 	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 	bool_t use_pktinfo;
-	rtp_stats_t stats;
+	
+	bool_t is_spliced;
+	
 };
 
 
@@ -688,19 +692,11 @@ ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTran
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
 
-	/*
- * Update remote addr is the following case:
- * rtp symetric == TRUE && socket not connected && remote addr has changed && ((rtp/rtcp packet && not onlyat start) or (no rtp/rtcp packets received))
- * @param[in] session  on which to perform change
- * @param[in] mp packet where remote addr is retreived
- * @param[in] is_rtp true if rtp
- * @param[in] only_at_start only perform changes if no valid packets received yet
- * @return 0 if chaged was performed
- *
- */
-	
-ORTP_PUBLIC int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start);
-	
+
+
+ORTP_PUBLIC int rtp_session_splice(RtpSession *session, RtpSession *to_session);
+ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session);
+
 #ifdef __cplusplus
 }
 #endif

@@ -1070,6 +1070,7 @@ int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags
 	int ret;
 
 	_rtp_session_check_socket_refresh(session);
+	
 	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
 			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
 		ret=(int)msgdsize(m);
@@ -1114,6 +1115,7 @@ static void log_send_error(RtpSession *session, const char *type, mblk_t *m, str
 
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error;
+	
 	if (rtp_session_using_transport(session, rtp)){
 		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
@@ -1140,6 +1142,11 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
 	socklen_t destlen=session->rtp.gs.rem_addrlen;
 	OList *elem=NULL;
+	
+	if (session->is_spliced) {
+		freemsg(m);
+		return 0;
+	}
 
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
@@ -1202,6 +1209,10 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 	OList *elem=NULL;
 	bool_t using_connected_socket=(session->flags & RTCP_SOCKET_CONNECTED)!=0;
 
+	if (session->is_spliced) {
+		freemsg(m);
+		return 0;
+	}
 	if (using_connected_socket) {
 		destaddr=NULL;
 		destlen=0;
@@ -1536,6 +1547,11 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 				received_via_rtcp_mux = TRUE;
 			}
 		}
+	}
+	
+	if (session->spliced_session){
+		/*this will forward all traffic to the spliced session*/
+		rtp_session_do_splice(session, mp, is_rtp_packet);
 	}
 	
 	/* store the sender RTP address to do symmetric RTP at start mainly for stun packets. 

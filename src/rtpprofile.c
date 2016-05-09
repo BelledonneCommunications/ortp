@@ -20,17 +20,22 @@
 #include "ortp/ortp.h"
 
 
-int rtp_profile_get_payload_number_from_mime(RtpProfile *profile,const char *mime)
+int rtp_profile_get_payload_number_from_mime(RtpProfile *profile, const char *mime)
+{
+	return rtp_profile_get_payload_number_from_mime_and_flag(profile, mime, -1);
+}
+
+int rtp_profile_get_payload_number_from_mime_and_flag(RtpProfile *profile, const char *mime, int flag)
 {
 	PayloadType *pt;
 	int i;
-	for (i=0;i<RTP_PROFILE_MAX_PAYLOADS;i++)
-	{
-		pt=rtp_profile_get_payload(profile,i);
-		if (pt!=NULL)
-		{
-			if (strcasecmp(pt->mime_type,mime)==0){
-				return i;
+	for (i = 0; i < RTP_PROFILE_MAX_PAYLOADS; i++) {
+		pt = rtp_profile_get_payload(profile, i);
+		if (pt != NULL) {
+			if (strcasecmp(pt->mime_type, mime) == 0) {
+				if (flag < 0 || pt->flags & flag) {
+					return i;
+				}
 			}
 		}
 	}
