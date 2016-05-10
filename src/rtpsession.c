@@ -1422,7 +1422,7 @@ void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports
 	if (release_transports){
 		if (session->rtp.gs.tr) {
 			if (session->rtp.gs.tr->t_close)
-				session->rtp.gs.tr->t_close(session->rtp.gs.tr, session->rtp.gs.tr->data);
+				session->rtp.gs.tr->t_close(session->rtp.gs.tr);
 			session->rtp.gs.tr->t_destroy(session->rtp.gs.tr);
 
 		}
@@ -1430,7 +1430,7 @@ void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports
 
 		if (session->rtcp.gs.tr)  {
 			if (session->rtcp.gs.tr->t_close)
-				session->rtcp.gs.tr->t_close(session->rtcp.gs.tr, session->rtcp.gs.tr->data);
+				session->rtcp.gs.tr->t_close(session->rtcp.gs.tr);
 			session->rtcp.gs.tr->t_destroy(session->rtcp.gs.tr);
 		}
 		session->rtcp.gs.tr = 0;
@@ -2085,7 +2085,7 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
 	}else{
-		ret=_rtp_session_sendto(t->session, m->is_rtp,msg,flags,to,tolen);
+		ret=rtp_session_sendto(t->session, m->is_rtp,msg,flags,to,tolen);
 	}
 	return ret;
 }
@@ -2151,7 +2151,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(const RtpTransport *t, 
 	if (m->endpoint != NULL) {
 		ret = m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
 	} else {
-		ret = _rtp_session_sendto(t->session, m->is_rtp, msg, flags, to, tolen);
+		ret = rtp_session_sendto(t->session, m->is_rtp, msg, flags, to, tolen);
 	}
 	update_sent_bytes(&t->session->rtp.gs, ret);
 	return ret;
@@ -2254,10 +2254,10 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	return ret;
 }
 
-void  meta_rtp_transport_close(RtpTransport *t, void *user_data) {
-	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)user_data;
+void  meta_rtp_transport_close(RtpTransport *t) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	if (m->endpoint!=NULL){
-		m->endpoint->t_close(m->endpoint,m->endpoint->data);
+		m->endpoint->t_close(m->endpoint);
 	}
 }
 

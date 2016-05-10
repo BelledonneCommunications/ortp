@@ -1066,7 +1066,7 @@ int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockad
 	return error;
 }
 
-int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
+int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
 	int ret;
 
 	_rtp_session_check_socket_refresh(session);
@@ -1086,6 +1086,10 @@ int _rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags
 		ret=_ortp_sendto(sockfd, m, flags, destaddr, destlen);
 	}
 	return ret;
+}
+
+int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen) {
+	return rtp_session_rtp_recv_abstract(is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket, m, flags, from, fromlen);
 }
 
 void update_sent_bytes(OrtpStream *os, int nbytes) {
@@ -1119,7 +1123,7 @@ static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct socka
 	if (rtp_session_using_transport(session, rtp)){
 		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
-		error=_rtp_session_sendto(session, TRUE,m,0,destaddr,destlen);
+		error=rtp_session_sendto(session, TRUE,m,0,destaddr,destlen);
 	}
 	if (!is_aux){
 		/*errors to auxiliary destinations are not notified*/

@@ -434,7 +434,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 		while((om=getq(&session->net_sim_ctx->send_q))!=NULL){
 			count++;
 			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
-			is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
+			is_rtp_packet=om->reserved1; /*it was set by rtp_session_sendto()*/
 			om=rtp_session_network_simulate(session,om, &is_rtp_packet);
 			if (om){
 				_ortp_sendto(rtp_session_get_socket(session, is_rtp_packet), om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
@@ -472,7 +472,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 				todrop = om; /*simulate a packet loss*/
 			}else if (ortp_timespec_compare(&packet_time, &current) <= 0){
 				/*it is time to send this packet*/
-				is_rtp_packet=om->reserved1; /*it was set by _rtp_session_sendto()*/
+				is_rtp_packet=om->reserved1; /*it was set by rtp_session_sendto()*/
 				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
 				todrop = om;
 			}else {
