@@ -274,28 +274,15 @@ if test "$perf" = "yes" ; then
 	CFLAGS="$CFLAGS -DPERF"
 fi
 
-AC_ARG_ENABLE(ssl-hmac,
-	[AS_HELP_STRING([--enable-ssl-hmac], [Enable use of ssl/hmac for stun (default=no)])],
-	[case "${enableval}" in
-		yes)	ssl_hmac_enabled=yes;;
-		no)	ssl_hmac_enabled=no;;
-		*)	AC_MSG_ERROR("Bad value for --enable-ssl-hmac");;
-	esac],
-	[ssl_hmac_enabled=no]
-)
 
-if test "$ssl_hmac_enabled" = "yes" ; then
-	AC_CHECK_HEADERS(openssl/hmac.h openssl/md5.h)
-	AC_CHECK_LIB(ssl,SSL_CTX_new,[SSL_LIBS="-lssl"])
-	AC_CHECK_LIB(crypto,MD5,[SSL_LIBS="$SSL_LIBS -lcrypto"])
+PKG_CHECK_MODULES(BCTOOLBOX, bctoolbox, [found_bctoolbox=yes],[found_bctoolbox=no])
+if test "x$found_bctoolbox" != "xyes" ; then
+	AC_MSG_ERROR(["Could not find bctoolbox (required dependency)"])
 fi
 
 
-
-AC_SUBST(SSL_LIBS)
-
-ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $SSL_LIBS"
-ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS"
+ORTPDEPS_LIBS="$ORTPDEPS_LIBS $PTHREAD_LIBS $PTHREAD_LDFLAGS $RT_LIBS $BCTOOLBOX_LIBS"
+ORTPDEPS_CFLAGS="$ORTPDEPS_CFLAGS $PTHREAD_CFLAGS $ORTP_DEFS $BCTOOLBOX_CFLAGS"
 CFLAGS="$CFLAGS $ORTP_DEFS"
 echo "$ORTPDEPS_CFLAGS" > ortp.defs
 

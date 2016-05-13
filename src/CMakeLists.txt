@@ -20,8 +20,9 @@
 #
 ############################################################################
 
+set(LIBS ${BCTOOLBOX_CORE_LIBRARIES})
 if(NOT ANDROID)
-	set(LIBS ${CMAKE_THREAD_LIBS_INIT})
+	list(APPEND LIBS ${CMAKE_THREAD_LIBS_INIT})
 endif()
 if(HAVE_RT)
 	list(APPEND LIBS rt)

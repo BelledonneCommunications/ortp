@@ -46,7 +46,7 @@ libortp_la_SOURCES=	\
 			telephonyevents.c  \
 			utils.c utils.h
 
-libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(SSL_LIBS)
+libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(BCTOOLBOX_LIBS)
 
 libortp_la_LDFLAGS= -version-info $(LIBORTP_SO_VERSION) -no-undefined
 

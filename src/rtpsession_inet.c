@@ -25,6 +25,7 @@
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h" /*needed for HAVE_SYS_UIO_H and HAVE_ARC4RANDOM */
 #endif
+#include <bctoolbox/port.h>
 #include "ortp/ortp.h"
 #include "utils.h"
 #include "ortp/rtpsession.h"
@@ -117,18 +118,11 @@ static bool_t try_connect(ortp_socket_t fd, const struct sockaddr *dest, socklen
 
 static int set_multicast_group(ortp_socket_t sock, const char *addr){
 #ifndef __hpux
-	struct addrinfo hints, *res;
+	struct addrinfo *res;
 	int err;
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_DGRAM;
-
-	err = getaddrinfo(addr,"0", &hints, &res);
-	if (err!=0) {
-		ortp_warning ("Error in getaddrinfo on (addr=%s): %s", addr, gai_strerror(err));
-		return -1;
-	}
+	res = bctbx_name_to_addrinfo(AF_UNSPEC, SOCK_DGRAM, addr, 0);
+	if (res == NULL) return -1;
 
 	switch (res->ai_family){
 		case AF_INET:
@@ -171,22 +165,13 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	int err;
 	int optval = 1;
 	ortp_socket_t sock=-1;
-	char num[8];
-	struct addrinfo hints, *res0, *res;
+	struct addrinfo *res0, *res;
 
 	if (*port==-1) *port=0;
 	if (*port==0) reuse_addr=FALSE;
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_DGRAM;
-
-	snprintf(num, sizeof(num), "%d",*port);
-	err = getaddrinfo(addr,num, &hints, &res0);
-	if (err!=0) {
-		ortp_warning ("Error in getaddrinfo on (addr=%s port=%i): %s", addr, *port, gai_strerror(err));
-		return -1;
-	}
+	res0 = bctbx_name_to_addrinfo(AF_UNSPEC, SOCK_DGRAM, addr, *port);
+	if (res0 == NULL) return -1;
 
 	for (res = res0; res; res = res->ai_next) {
 		sock = socket(res->ai_family, res->ai_socktype, 0);
@@ -262,7 +247,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	memcpy(bound_addr,res0->ai_addr,res0->ai_addrlen);
 	*bound_addr_len=(socklen_t)res0->ai_addrlen;
 
-	freeaddrinfo(res0);
+	bctbx_freeaddrinfo(res0);
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	if (ortp_WSARecvMsg == NULL) {
@@ -285,13 +270,11 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 				close_socket(sock);
 				return (ortp_socket_t)-1;
 			}
-			err=getnameinfo((struct sockaddr*)&saddr, slen, NULL, 0, num, sizeof(num), NI_NUMERICHOST | NI_NUMERICSERV);
+			err = bctbx_sockaddr_to_ip_address((struct sockaddr *)&saddr, slen, NULL, 0, port);
 			if (err!=0){
-				ortp_error("getnameinfo(): %s",gai_strerror(err));
 				close_socket(sock);
 				return (ortp_socket_t)-1;
 			}
-			*port=atoi(num);
 		}
 
 	}
@@ -391,11 +374,8 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 
 static void _rtp_session_recreate_sockets(RtpSession *session){
 	char addr[NI_MAXHOST];
-	int err = getnameinfo((struct sockaddr*)&session->rtp.gs.loc_addr, session->rtp.gs.loc_addrlen, addr, sizeof(addr), NULL, 0, NI_NUMERICHOST);
-	if (err != 0){
-		ortp_error("_rtp_session_recreate_sockets(): getnameinfo() error: %s", gai_strerror(err));
-		return;
-	}
+	int err = bctbx_sockaddr_to_ip_address((struct sockaddr *)&session->rtp.gs.loc_addr, session->rtp.gs.loc_addrlen, addr, sizeof(addr), NULL);
+	if (err != 0) return;
 	/*re create and bind sockets as they were done previously*/
 	ortp_message("RtpSession %p is going to re-create its socket.", session);
 	rtp_session_set_local_addr(session, addr, session->rtp.gs.loc_port, session->rtcp.gs.loc_port);
@@ -808,9 +788,10 @@ rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, i
 
 static int
 _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, int rtp_port, const char * rtcp_addr, int rtcp_port, bool_t is_aux){
+	char rtp_printable_addr[64];
+	char rtcp_printable_addr[64];
 	int err;
-	struct addrinfo hints, *res0, *res;
-	char num[8];
+	struct addrinfo *res0, *res;
 	struct sockaddr_storage *rtp_saddr=&session->rtp.gs.rem_addr;
 	socklen_t *rtp_saddr_len=&session->rtp.gs.rem_addrlen;
 	struct sockaddr_storage *rtcp_saddr=&session->rtcp.gs.rem_addr;
@@ -826,24 +807,12 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 		rtcp_saddr_len=&aux_rtcp->len;
 	}
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
-	hints.ai_socktype = SOCK_DGRAM;
-#ifndef ANDROID
-	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED | AI_ALL : 0;
-#else
-	/*
-	 * Bionic has a crappy implementation of getaddrinfo() that doesn't support the AI_V4MAPPED flag.
-	 * However since linux kernel is very tolerant, you can pass an IPv4 sockaddr to sendto without causing problem.
-	 */
-#endif
-
-	snprintf(num, sizeof(num), "%d", rtp_port);
-	err = getaddrinfo(rtp_addr, num, &hints, &res0);
-	if (err) {
-		ortp_warning("Error in socket address (hints.ai_family=%i, hints.ai_flags=%i): %s", hints.ai_family, hints.ai_flags, gai_strerror(err));
+	res0 = bctbx_name_to_addrinfo((session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily, SOCK_DGRAM, rtp_addr, rtp_port);
+	if (res0 == NULL) {
 		err=-1;
 		goto end;
+	} else {
+		bctbx_addrinfo_to_printable_ip_address(res0, rtp_printable_addr, sizeof(rtp_printable_addr));
 	}
 	if (session->rtp.gs.socket == -1){
 		/* the session has not its socket bound, do it */
@@ -858,7 +827,6 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 		}
 	}
 
-
 	err=-1;
 	for (res = res0; res; res = res->ai_next) {
 		/* set a destination address that has the same type as the local address */
@@ -869,36 +837,30 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 			break;
 		}
 	}
-	freeaddrinfo(res0);
+	bctbx_freeaddrinfo(res0);
 	if (err) {
 		ortp_warning("Could not set destination for RTP socket to %s:%i.",rtp_addr,rtp_port);
 		goto end;
 	}
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = (session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily;
-	hints.ai_socktype = SOCK_DGRAM;
-#ifndef ANDROID
-	hints.ai_flags |= hints.ai_family==AF_INET6 ? AI_V4MAPPED | AI_ALL : 0;
-#endif
-	snprintf(num, sizeof(num), "%d", rtcp_port);
-	err = getaddrinfo(rtcp_addr, num, &hints, &res0);
-	if (err) {
-		ortp_warning ("Error: %s", gai_strerror(err));
+	res0 = bctbx_name_to_addrinfo((session->rtcp.gs.socket == -1) ? AF_UNSPEC : session->rtcp.gs.sockfamily, SOCK_DGRAM, rtcp_addr, rtcp_port);
+	if (res0 == NULL) {
 		err=-1;
 		goto end;
+	} else {
+		bctbx_addrinfo_to_printable_ip_address(res0, rtcp_printable_addr, sizeof(rtcp_printable_addr));
 	}
 	err=-1;
 	for (res = res0; res; res = res->ai_next) {
 		/* set a destination address that has the same type as the local address */
-		if (res->ai_family==session->rtp.gs.sockfamily ) {
+		if (res->ai_family==session->rtcp.gs.sockfamily ) {
 			err=0;
 			memcpy(rtcp_saddr, res->ai_addr, res->ai_addrlen);
 			*rtcp_saddr_len=(socklen_t)res->ai_addrlen;
 			break;
 		}
 	}
-	freeaddrinfo(res0);
+	bctbx_freeaddrinfo(res0);
 	if (err) {
 		ortp_warning("Could not set destination for RCTP socket to %s:%i.",rtcp_addr,rtcp_port);
 		goto end;
@@ -925,11 +887,9 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 		session->flags&=~RTP_SOCKET_CONNECTED;
 		session->flags&=~RTCP_SOCKET_CONNECTED;
 	}
-	ortp_message("RtpSession [%p] sending to rtp [%s:%i] rtcp [%s:%i] %s"	,session
-									,rtp_addr
-									,rtp_port
-									,rtcp_addr
-									,rtcp_port
+	ortp_message("RtpSession [%p] sending to rtp %s rtcp %s %s",session
+									,rtp_printable_addr
+									,rtcp_printable_addr
 									,is_aux ? "as auxiliary destination" : "");
 	end:
 	if (is_aux){
@@ -1110,11 +1070,10 @@ static void update_recv_bytes(OrtpStream *os, int nbytes) {
 }
 
 static void log_send_error(RtpSession *session, const char *type, mblk_t *m, struct sockaddr *destaddr, socklen_t destlen){
-	char host[65]={0};
-	char port[12]={0};
-	getnameinfo(destaddr,destlen,host,sizeof(host)-1,port,sizeof(port)-1,NI_NUMERICHOST|NI_NUMERICSERV);
-	ortp_warning ("RtpSession [%p] error sending [%s] packet [%p] to ip=[%s] port=[%s]: %s",
-		session, type, m, host, port, getSocketError());
+	char printable_ip_address[65]={0};
+	bctbx_sockaddr_to_printable_ip_address(destaddr, destlen, printable_ip_address, sizeof(printable_ip_address));
+	ortp_warning ("RtpSession [%p] error sending [%s] packet [%p] to %s: %s",
+		session, type, m, printable_ip_address, getSocketError());
 }
 
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
@@ -1757,21 +1716,15 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 		&& !sock_connected
 		&& !ortp_is_multicast_addr((const struct sockaddr*)rem_addr)
 		&& memcmp(rem_addr,&mp->net_addr,mp->net_addrlen) !=0) {
-		char current_host[65]={0};
-		char current_port[12]={0};
-		char new_host[65]={0};
-		char new_port[12]={0};
-		
-		getnameinfo((const struct sockaddr *)rem_addr,rem_addrlen,current_host,sizeof(current_host)-1,current_port,sizeof(current_port)-1,NI_NUMERICHOST|NI_NUMERICSERV);
-		
-		getnameinfo((const struct sockaddr *)&mp->net_addr,mp->net_addrlen,new_host,sizeof(new_host)-1,new_port,sizeof(new_port)-1,NI_NUMERICHOST|NI_NUMERICSERV);
-		
-		ortp_message("Switching %s destination from [%s:%s] to [%s:%s] for session [%p]"
+		char current_ip_address[64]={0};
+		char new_ip_address[64]={0};
+
+		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, rem_addrlen, current_ip_address, sizeof(current_ip_address));
+		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)&mp->net_addr, mp->net_addrlen, new_ip_address, sizeof(new_ip_address));
+		ortp_message("Switching %s destination from %s to %s for session [%p]"
 			   , socket_type
-			   , current_host
-			   , current_port
-			   , new_host
-			   , new_port
+			   , current_ip_address
+			   , new_ip_address
 			   , session);
 		
 		memcpy(rem_addr,&mp->net_addr,mp->net_addrlen);
