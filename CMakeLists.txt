@@ -75,6 +75,12 @@ endif()
 find_package(Threads)
 find_library(LIBM NAMES m)
 
+if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
+	include("${EP_bctoolbox_CONFIG_DIR}/BcToolboxConfig.cmake")
+else()
+	find_package(BcToolbox 0.0.3 REQUIRED)
+endif()
+
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
 check_include_file(sys/shm.h HAVE_SYS_SHM_H)
@@ -91,6 +97,7 @@ include_directories(
 	include/
 	src/
 	${CMAKE_CURRENT_BINARY_DIR}
+	${BCTOOLBOX_CORE_INCLUDE_DIRS}
 )
 if(MSVC)
 	include_directories(${MSVC_INCLUDE_DIR})

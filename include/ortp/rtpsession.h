@@ -115,7 +115,7 @@ typedef struct _RtpTransport
 	ortp_socket_t (*t_getsocket)(struct _RtpTransport *t);
 	int  (*t_sendto)(struct _RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
 	int  (*t_recvfrom)(struct _RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
-	void  (*t_close)(struct _RtpTransport *transport, void *userData);
+	void  (*t_close)(struct _RtpTransport *transport);
 	/**
 	 * Mandatory callback responsible of freeing the #_RtpTransport object AND the pointer.
 	 * @param[in] transport #_RtpTransport object to free.
@@ -546,6 +546,8 @@ ORTP_PUBLIC mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, size_t payload_size, void (*freefn)(void*));
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_in_place(RtpSession *session,uint8_t *buffer, size_t size, void (*freefn)(void*) );
 ORTP_PUBLIC int rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t userts);
+ORTP_PUBLIC int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
+ORTP_PUBLIC int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen);
 /* high level recv and send functions */
 ORTP_PUBLIC int rtp_session_recv_with_ts(RtpSession *session, uint8_t *buffer, int len, uint32_t ts, int *have_more);
 ORTP_PUBLIC int rtp_session_send_with_ts(RtpSession *session, const uint8_t *buffer, int len, uint32_t userts);
