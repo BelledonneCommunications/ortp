@@ -274,7 +274,10 @@ char * WSAAPI gai_strerror(int errnum);
 
 #endif
 
+#ifndef _BOOL_T_
+#define _BOOL_T_
 typedef unsigned char bool_t;
+#endif /* _BOOL_T_ */
 #undef TRUE
 #undef FALSE
 #define TRUE 1
