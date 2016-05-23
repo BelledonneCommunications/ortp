@@ -2219,7 +2219,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 			msg->net_addrlen = *fromlen;
 		}
 	}else{
-		ret=rtp_session_rtp_recv_abstract(m->is_rtp?t->session->rtp.gs.socket:t->session->rtcp.gs.socket,msg,flags,from,fromlen);
+		ret=rtp_session_recvfrom(t->session,m->is_rtp,msg,flags,from,fromlen);
 	}
 
 	/*received packet must be treated in reversed order: first in last out

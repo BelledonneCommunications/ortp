@@ -5,7 +5,8 @@ AM_CPPFLAGS=\
 	$(STRICT_OPTIONS) \
 	$(STRICT_OPTIONS_CXX) \
 	-I$(top_srcdir)/include/ \
-	-I$(top_srcdir)
+	-I$(top_srcdir) \
+	$(BCTOOLBOX_CFLAGS)
 
 AM_CFLAGS=\
 	$(STRICT_OPTIONS) \

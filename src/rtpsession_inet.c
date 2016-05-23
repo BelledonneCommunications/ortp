@@ -1049,7 +1049,12 @@ int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags,
 }
 
 int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen) {
-	return rtp_session_rtp_recv_abstract(is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket, m, flags, from, fromlen);
+	int ret = rtp_session_rtp_recv_abstract(is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket, m, flags, from, fromlen);
+	if (ret >= 0) {
+		/* Store the local port in the recv_addr of the mblk_t, the address is already filled in rtp_session_rtp_recv_abstract */
+		m->recv_addr.port = htons(is_rtp ? session->rtp.gs.loc_port : session->rtcp.gs.loc_port);
+	}
+	return ret;
 }
 
 void update_sent_bytes(OrtpStream *os, int nbytes) {
@@ -1568,13 +1573,11 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	int error;
-	ortp_socket_t sockfd=session->rtp.gs.socket;
 	struct sockaddr_storage remaddr;
-
 	socklen_t addrlen = sizeof (remaddr);
 	mblk_t *mp;
 
-	if ((sockfd==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
+	if ((session->rtp.gs.socket==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
 
 	while (1)
 	{
@@ -1585,11 +1588,11 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		mp->reserved1 = user_ts;
 
 		if (sock_connected){
-			error=rtp_session_rtp_recv_abstract(sockfd, mp, 0, NULL, NULL);
+			error=rtp_session_recvfrom(session, TRUE, mp, 0, NULL, NULL);
 		}else if (rtp_session_using_transport(session, rtp)) {
 			error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 		} else {
-			error = rtp_session_rtp_recv_abstract(sockfd, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
+			error = rtp_session_recvfrom(session, TRUE, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 		}
 		if (error > 0){
 			mp->b_wptr+=error;
@@ -1640,7 +1643,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 		mp->reserved1 = session->rtp.rcv_last_app_ts;
 
 		if (sock_connected){
-			error=rtp_session_rtp_recv_abstract(session->rtcp.gs.socket, mp, 0, NULL, NULL);
+			error=rtp_session_recvfrom(session, FALSE, mp, 0, NULL, NULL);
 		}else{
 			addrlen=sizeof (remaddr);
 
@@ -1649,7 +1652,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 					(struct sockaddr *) &remaddr,
 					&addrlen);
 			}else{
-				error=rtp_session_rtp_recv_abstract (session->rtcp.gs.socket,mp, 0,
+				error=rtp_session_recvfrom(session, FALSE, mp, 0,
 					(struct sockaddr *) &remaddr,
 					&addrlen);
 			}

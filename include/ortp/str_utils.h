@@ -44,6 +44,7 @@ typedef struct ortp_recv_addr {
 		struct in_addr ipi_addr;
 		struct in6_addr ipi6_addr;
 	} addr;
+	unsigned short port;
 } ortp_recv_addr_t;
 
 typedef struct msgb
@@ -177,6 +178,8 @@ ORTP_PUBLIC float ortp_extremum_get_current(ortp_extremum *obj);
  * Unlike ortp_extremum_get_current() which can be very fluctuating, ortp_extremum_get_previous() returns the extremum found for the previous period.
 **/
 ORTP_PUBLIC float ortp_extremum_get_previous(ortp_extremum *obj);
+
+ORTP_PUBLIC void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen);
 
 #ifdef __cplusplus
 }

@@ -343,3 +343,19 @@ mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 void msgb_allocator_uninit(msgb_allocator_t *a){
 	flushq(&a->q,-1);
 }
+
+void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen) {
+	if (recvaddr->family == AF_INET) {
+		struct sockaddr_in *addr_in = (struct sockaddr_in *)addr;
+		addr_in->sin_family = AF_INET;
+		addr_in->sin_addr = recvaddr->addr.ipi_addr;
+		addr_in->sin_port = recvaddr->port;
+		*socklen = sizeof(struct sockaddr_in);
+	} else if (recvaddr->family == AF_INET6) {
+		struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)addr;
+		addr_in6->sin6_family = AF_INET6;
+		addr_in6->sin6_addr = recvaddr->addr.ipi6_addr;
+		addr_in6->sin6_port = recvaddr->port;
+		*socklen = sizeof(struct sockaddr_in6);
+	}
+}
