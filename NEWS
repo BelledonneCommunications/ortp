@@ -1,5 +1,10 @@
+May XX, 2016: 
+	- Fix DSCP on Windows.
+
+January 22, 2016: ortp-0.26.0
+
 November 2, 2015: ortp-0.25.0
-	- Suppot AVPF generic NACK
+	- Support AVPF generic NACK
 	- Add payload types for RTT (Real-Time Text) and Codec2
 	- Bug fixes
 
