@@ -1,3 +1,9 @@
+ortp (0.26.0) unstable; urgency=low
+  * Fix DSCP on Windows.
+  
+-- Belledonne Communications <info@belledonne-communications.com>  Wed, 26 May 2016 14:21:00 +0200
+
+
 ortp (0.25.0) unstable; urgency=low
   * Suppot AVPF generic NACK
   * Add payload types for RTT (Real-Time Text) and Codec2
