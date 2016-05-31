@@ -1,5 +1,7 @@
 May XX, 2016: 
 	- Fix DSCP on Windows.
+	- bctoolbox added as dependency
+	- fixes around IPv6 support for windows and android
 
 January 22, 2016: ortp-0.26.0
 
