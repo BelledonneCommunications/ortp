@@ -48,8 +48,9 @@
  * @param[in] modifiers_count number of #_RtpTransport object given in the variadic list. Must be 0 if none are given.
  * @returns #_RtpTransport object that will be generated or NULL.
 **/
-RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...);
-
+RtpTransport* meta_rtp_transport_new(RtpTransport *endpoint, unsigned modifiers_count, ...);
+RtpTransport* meta_rtcp_transport_new(RtpTransport *endpoint, unsigned modifiers_count, ...);
+void meta_rtp_transport_link(RtpTransport *rtp, RtpTransport *rtcp);
 
 /* this function initialize all session parameter's that depend on the payload type */
 static void payload_type_changed(RtpSession *session, PayloadType *pt){
@@ -300,9 +301,12 @@ rtp_session_init (RtpSession * session, int mode)
 	msgb_allocator_init(&session->rtp.gs.allocator);
 	msgb_allocator_init(&session->rtcp.gs.allocator);
 	/*set default rtptransport*/
-	rtp_session_set_transports(	session
-								,meta_rtp_transport_new(TRUE,NULL, 0)
-								,meta_rtp_transport_new(FALSE,NULL, 0));
+	{
+		RtpTransport *rtp_tr = meta_rtp_transport_new(NULL, 0);
+		RtpTransport *rtcp_tr = meta_rtcp_transport_new(NULL, 0);
+		meta_rtp_transport_link(rtp_tr, rtcp_tr);
+		rtp_session_set_transports(session, rtp_tr, rtcp_tr);
+	}
 	session->tev_send_pt = -1; /*check in rtp profile when needed*/
 }
 
@@ -2027,8 +2031,9 @@ void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes) {
 }
 
 
-typedef struct _MetaRtpTransportImpl
-{
+typedef struct _MetaRtpTransportImpl{
+	RtpTransport *other_meta_rtp; /*pointer to the "other" meta RtpTransport, that is the RTCP transport if we are RTP, and the RTP transport
+		if we are RTCP. This is used only for RTCP-mux*/
 	OList *modifiers;
 	RtpTransport *endpoint;
 	bool_t is_rtp;
@@ -2061,9 +2066,21 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 	m->has_set_session=TRUE;
 }
 
+static int _meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen){
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	int ret;
+	
+	if (m->endpoint!=NULL){
+		ret=m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
+	}else{
+		ret=rtp_session_sendto(t->session, m->is_rtp,msg,flags,to,tolen);
+	}
+	return ret;
+}
+
 int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen) {
 	size_t prev_ret;
-	int ret;
+	int ret = 0;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 
@@ -2082,18 +2099,21 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 		msg->b_wptr+=(ret-prev_ret);
 		prev_ret=ret;
 	}
-	if (m->endpoint!=NULL){
-		ret=m->endpoint->t_sendto(m->endpoint,msg,flags,to,tolen);
-	}else{
-		ret=rtp_session_sendto(t->session, m->is_rtp,msg,flags,to,tolen);
-	}
+	if (!m->is_rtp && t->session->rtcp_mux){ /*if this meta transport is handling RTCP and using rtcp-mux, then we should expedite the packet
+		through the rtp endpoint.*/
+		if (m->other_meta_rtp){
+			ret = _meta_rtp_transport_send_through_endpoint(m->other_meta_rtp, msg, flags, to, tolen);
+		}else{
+			ortp_error("meta_rtp_transport_sendto(): rtcp-mux enabled but no RTP meta transport is specified !");
+		}
+	} else ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
 	return ret;
 }
 
 /**
  * allow a modifier to inject a packet which will be treated by successive modifiers
  */
-int meta_rtp_transport_modifier_inject_packet_to_send(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags) {
+int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags) {
 	struct sockaddr *to;
 	socklen_t tolen;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
@@ -2116,7 +2136,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send(const RtpTransport *t, Rtp
 /**
  * allow a modifier to inject a packet which will be treated by successive modifiers
  */
-int meta_rtp_transport_modifier_inject_packet_to_send_to(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen) {
+int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen) {
 	size_t prev_ret;
 	int ret;
 	bool_t foundMyself = tpm ? FALSE : TRUE; /*if no modifier, start from the beginning*/
@@ -2157,26 +2177,19 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(const RtpTransport *t, 
 	return ret;
 }
 
-/**
- * allow a modifier to inject a packet which will be treated by successive modifiers
- */
-int meta_rtp_transport_modifier_inject_packet_to_recv(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags) {
+static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags){
 	int ret = 0;
 	size_t prev_ret;
 	bool_t foundMyself = tpm ? FALSE : TRUE; /*if no modifier, start from the beginning*/
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem = m->modifiers;
 	OList *last_elem = NULL;
-
-	if (!m->has_set_session) {
-		meta_rtp_set_session(t->session, m);
-	}
-
+	
 	for (;elem != NULL; elem = o_list_next(elem)) {
 		last_elem = elem;
 	}
 
-	prev_ret = msgdsize(msg);
+	ret = prev_ret = msgdsize(msg);
 	for (;last_elem != NULL; last_elem = o_list_prev(last_elem)) {
 		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
 		RtpTransportModifier *rtm = (RtpTransportModifier*)last_elem->data;
@@ -2195,17 +2208,25 @@ int meta_rtp_transport_modifier_inject_packet_to_recv(const RtpTransport *t, Rtp
 			foundMyself = TRUE;
 		}
 	}
-
-	rtp_session_process_incoming(t->session, msg, m->is_rtp, msg->reserved1);
-
 	return ret;
 }
 
+/**
+ * allow a modifier to inject a packet which will be treated by successive modifiers
+ */
+int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	int ret = _meta_rtp_transport_recv_through_modifiers(t, tpm, msg, flags);
+	rtp_session_process_incoming(t->session, msg, m->is_rtp, msg->reserved1, FALSE);
+	return ret;
+}
+
+
 int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
-	int ret,prev_ret;
+	int ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem=m->modifiers;
-	OList *last_elem=NULL;
+	bool_t received_via_rtcp_mux = FALSE;
 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
@@ -2221,6 +2242,22 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	}else{
 		ret=rtp_session_recvfrom(t->session,m->is_rtp,msg,flags,from,fromlen);
 	}
+	
+	if (ret <= 0){
+		return ret;
+	}
+	msg->b_wptr+=ret;
+	
+	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
+	if (t->session->rtcp_mux && m->is_rtp){
+		if (ret >= RTP_FIXED_HEADER_SIZE && rtp_get_version(msg) == 2){
+			int pt = rtp_get_payload_type(msg);
+			if (pt >= 64 && pt <= 95){
+				/*this is assumed to be an RTCP packet*/
+				received_via_rtcp_mux = TRUE;
+			}
+		}
+	}
 
 	/*received packet must be treated in reversed order: first in last out
 	 * ,take the opportunity of the schedule to go to the end of the list*/
@@ -2228,29 +2265,22 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
 		/*invoke on schedule on every modifier*/
 		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
-		last_elem=elem;
 	}
 
-
-	if (ret < 0){
-		return ret;
-	}
-	prev_ret=ret;
-	msg->b_wptr+=ret;
-
-	for (;last_elem!=NULL;last_elem=o_list_prev(last_elem)){
-		RtpTransportModifier *rtm=(RtpTransportModifier*)last_elem->data;
-		ret = rtm->t_process_on_receive(rtm,msg);
-		if (ret<0){
-			// something went wrong in the modifier (failed to decrypt for instance)
-			break;
+	if (received_via_rtcp_mux){
+		if (m->other_meta_rtp){
+			_meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
+			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, received_via_rtcp_mux);
+			ret = 0; /*since we directly inject in the RtpSession this RTCP packet, we shall return 0 and pass a duplicate of the message,
+			because rtp_session_rtp_recv() is going to free it.*/
+		}else{
+			ortp_error("RTCP packet received via rtcp-mux but RTCP transport is not set !");
 		}
-		msg->b_wptr+=(ret-prev_ret);
-		prev_ret=ret;
-	}
-
+	}else ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
+	
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
-	msg->b_wptr-=prev_ret;
+	msg->b_wptr-= ret;
+	
 	return ret;
 }
 
@@ -2261,8 +2291,7 @@ void  meta_rtp_transport_close(RtpTransport *t) {
 	}
 }
 
-RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, ...) {
-	va_list arguments;
+static RtpTransport* _meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsigned modifiers_count, va_list arguments) {
 	MetaRtpTransportImpl *m;
 	RtpTransport *t = ortp_new0(RtpTransport,1);
 	m=t->data=ortp_new0(MetaRtpTransportImpl,1);
@@ -2273,16 +2302,40 @@ RtpTransport* meta_rtp_transport_new(bool_t is_rtp, RtpTransport *endpoint, unsi
 	t->t_close=meta_rtp_transport_close;
 	t->t_destroy=meta_rtp_transport_destroy;
 
-	m->is_rtp=is_rtp;
+	m->is_rtp = is_rtp;
 	m->endpoint=endpoint;
-	va_start(arguments,modifiers_count);
 	while (modifiers_count != 0){
 		m->modifiers=o_list_append(m->modifiers, va_arg(arguments,RtpTransportModifier*));
 		modifiers_count--;
 	}
-	va_end(arguments);
 
 	return t;
+}
+
+RtpTransport* meta_rtp_transport_new(RtpTransport *endpoint, unsigned modifiers_count, ...){
+	RtpTransport *tr;
+	va_list args;
+	va_start (args, modifiers_count);
+	tr = _meta_rtp_transport_new(TRUE, endpoint, modifiers_count, args);
+	va_end(args);
+	return tr;
+}
+
+RtpTransport* meta_rtcp_transport_new(RtpTransport *endpoint, unsigned modifiers_count, ...){
+	RtpTransport *tr;
+	va_list args;
+	va_start (args, modifiers_count);
+	tr = _meta_rtp_transport_new(FALSE, endpoint, modifiers_count, args);
+	va_end(args);
+	return tr;
+}
+
+/*this links both meta rtp transport, which is necessary for rtcp-mux to work*/
+void meta_rtp_transport_link(RtpTransport *rtp, RtpTransport *rtcp){
+	MetaRtpTransportImpl *mrtp = (MetaRtpTransportImpl*)rtp->data;
+	MetaRtpTransportImpl *mrtcp = (MetaRtpTransportImpl*)rtcp->data;
+	mrtp->other_meta_rtp = rtcp;
+	mrtcp->other_meta_rtp = rtp;
 }
 
 RtpTransport* meta_rtp_transport_get_endpoint(const RtpTransport *transport) {

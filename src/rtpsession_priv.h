@@ -87,7 +87,7 @@ void ortp_stream_clear_aux_addresses(OrtpStream *os);
  * */
 void rtp_session_set_transports(RtpSession *session, RtpTransport *rtptr, RtpTransport *rtcptr);
 
-ORTP_PUBLIC bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt);
+bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt);
 
 ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp);
 
@@ -104,6 +104,10 @@ void rtp_session_do_splice(RtpSession *session, mblk_t *packet, bool_t is_rtp);
  *
  */
 	
-ORTP_PUBLIC int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start);
+int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start);
+
+void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts, bool_t received_via_rtcp_mux);
+void update_sent_bytes(OrtpStream *os, int nbytes);
+
 
 #endif
