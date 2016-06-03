@@ -1006,11 +1006,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 #endif
 
 ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
-	if (session->rtcp_mux){
-		return session->rtp.gs.socket;
-	}else{
-		return is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
-	}
+	return is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
 }
 
 int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
@@ -1145,14 +1141,15 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 
 static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error=0;
-	ortp_socket_t sockfd = rtp_session_get_socket(session, FALSE);
 
+	/* Even in RTCP mux, we send through the RTCP RtpTransport, which will itself take in charge to do the sending of the packet
+	 * through the RTP endpoint*/
 	if (rtp_session_using_transport(session, rtcp)){
-			error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0,
-			destaddr, destlen);
+		error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0, destaddr, destlen);
 	}else{
-		error=_ortp_sendto(sockfd,m,0,destaddr,destlen);
+		error=_ortp_sendto(rtp_session_get_socket(session, session->rtcp_mux),m,0,destaddr,destlen);
 	}
+
 	if (!is_aux){
 		if (error < 0){
 			if (session->on_network_error.count>0){
@@ -1491,13 +1488,12 @@ static void reply_to_collaborative_rtcp_xr_packet(RtpSession *session, mblk_t *b
 	}
 }
 
-static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_t is_rtp_packet,uint32_t user_ts) {
+static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_t is_rtp_packet, uint32_t user_ts, bool_t received_via_rtcp_mux) {
 	bool_t sock_connected=(is_rtp_packet && !!(session->flags & RTP_SOCKET_CONNECTED))
 		|| (!is_rtp_packet && !!(session->flags & RTCP_SOCKET_CONNECTED));
 
 	struct sockaddr *remaddr = NULL;
 	socklen_t addrlen;
-	bool_t received_via_rtcp_mux = FALSE;
 
 	if (!mp){
 		return;
@@ -1505,17 +1501,6 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	remaddr = (struct sockaddr *)&mp->net_addr;
 	addrlen = mp->net_addrlen;
 
-	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
-	if (session->rtcp_mux && is_rtp_packet){
-		if (rtp_get_version(mp) == 2){
-			int pt = rtp_get_payload_type(mp);
-			if (pt >= 64 && pt <= 95){
-				/*this is assumed to be an RTCP packet*/
-				is_rtp_packet = FALSE;
-				received_via_rtcp_mux = TRUE;
-			}
-		}
-	}
 	
 	if (session->spliced_session){
 		/*this will forward all traffic to the spliced session*/
@@ -1561,13 +1546,13 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	}
 }
 
-void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts) {
+void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts, bool_t received_via_rtcp_mux) {
 	if (session->net_sim_ctx && session->net_sim_ctx->params.mode == OrtpNetworkSimulatorInbound) {
 		/*drain possible packets queued in the network simulator*/
 		mp = rtp_session_network_simulate(session, mp, &is_rtp_packet);
-		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts);
+		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts, received_via_rtcp_mux); /*BUG here: received_via_rtcp_mux is not preserved by network simulator*/
 	} else if (mp != NULL) {
-		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts);
+		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts, received_via_rtcp_mux);
 	}
 }
 
@@ -1582,7 +1567,6 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
-		bool_t is_rtp_packet = TRUE;
 
 		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
 		mp->reserved1 = user_ts;
@@ -1596,7 +1580,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		}
 		if (error > 0){
 			mp->b_wptr+=error;
-			rtp_session_process_incoming(session, mp, is_rtp_packet, user_ts);
+			rtp_session_process_incoming(session, mp, TRUE, user_ts, FALSE);
 		}
 		else
 		{
@@ -1615,7 +1599,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 #endif
 			}else{
 				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
-				rtp_session_process_incoming(session, NULL, is_rtp_packet, user_ts);
+				rtp_session_process_incoming(session, NULL, TRUE, user_ts, FALSE);
 			}
 			freemsg(mp);
 			return -1;
@@ -1637,7 +1621,6 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
-		bool_t is_rtp_packet = FALSE;
 
 		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, RTCP_MAX_RECV_BUFSIZE);
 		mp->reserved1 = session->rtp.rcv_last_app_ts;
@@ -1660,7 +1643,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 		if (error > 0)
 		{
 			mp->b_wptr += error;
-			rtp_session_process_incoming(session, mp, is_rtp_packet, session->rtp.rcv_last_app_ts);
+			rtp_session_process_incoming(session, mp, FALSE, session->rtp.rcv_last_app_ts, FALSE);
 		}
 		else
 		{
@@ -1680,7 +1663,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 				session->rtp.recv_errno=errnum;
 			}else{
 				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
-				rtp_session_process_incoming(session, NULL, is_rtp_packet, session->rtp.rcv_last_app_ts);
+				rtp_session_process_incoming(session, NULL, FALSE, session->rtp.rcv_last_app_ts, FALSE);
 			}
 
 			freemsg(mp);

@@ -670,11 +670,9 @@ ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
 
 ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
-ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
-ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send_to(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen);
-ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_recv(const RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
-void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts);
-void update_sent_bytes(OrtpStream *os, int nbytes);
+ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
+ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen);
+ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
 
 /**
  * get endpoint if any

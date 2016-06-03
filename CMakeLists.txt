@@ -21,14 +21,14 @@
 ############################################################################
 
 cmake_minimum_required(VERSION 3.0)
-project(oRTP VERSION 0.26.0)
+project(oRTP VERSION 0.27.0)
 
 
 set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
 set(ORTP_MINOR_VERSION ${PROJECT_VERSION_MINOR})
 set(ORTP_MICRO_VERSION ${PROJECT_VERSION_PATCH})
 set(ORTP_VERSION ${PROJECT_VERSION})
-set(ORTP_SO_VERSION "11") # incremented on January, the 20th 2015. DO NOT INCREMENT BEFORE ORTP 0.26
+set(ORTP_SO_VERSION "12") # incremented on June, the 1st 2016. DO NOT INCREMENT BEFORE ORTP 0.28
 
 
 option(ENABLE_SHARED "Build shared library." YES)
