@@ -43,7 +43,6 @@
  * to use both sRTP and tunnel transporter. mblk_t messages received and sent from the endpoint
  * will pass through the list of modifiers given. First modifier in list will be first to modify the message
  * in send mode and last in receive mode.
- * @param[in] is_rtp Whether this object will be used for RTP packets or not.
  * @param[in] endpoint #_RtpTransport object in charge of sending/receiving packets. If NULL, it will use standards sendto and recvfrom functions.
  * @param[in] modifiers_count number of #_RtpTransport object given in the variadic list. Must be 0 if none are given.
  * @returns #_RtpTransport object that will be generated or NULL.
