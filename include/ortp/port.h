@@ -249,8 +249,12 @@ const char * ortp_strerror(DWORD value);
 #endif
 
 ORTP_PUBLIC const char *getWinSocketError(int error);
+#ifndef getSocketErrorCode
 #define getSocketErrorCode() WSAGetLastError()
+#endif
+#ifndef getSocketError
 #define getSocketError() getWinSocketError(WSAGetLastError())
+#endif
 
 #define snprintf _snprintf
 #define strcasecmp _stricmp
