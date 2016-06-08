@@ -2224,11 +2224,18 @@ int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransp
 int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
-	OList *elem=m->modifiers;
+	OList *elem;
 	bool_t received_via_rtcp_mux = FALSE;
 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
+	}
+	
+	/*invoke on schedule on every modifier first, regardless of if a packet is actually received.*/
+	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
+		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
+		
+		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
 	}
 
 	if (m->endpoint!=NULL){
@@ -2256,14 +2263,6 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 				received_via_rtcp_mux = TRUE;
 			}
 		}
-	}
-
-	/*received packet must be treated in reversed order: first in last out
-	 * ,take the opportunity of the schedule to go to the end of the list*/
-	for (;elem!=NULL;elem=o_list_next(elem)){
-		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
-		/*invoke on schedule on every modifier*/
-		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
 	}
 
 	if (received_via_rtcp_mux){
