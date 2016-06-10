@@ -521,6 +521,7 @@ void rtp_session_set_recv_buf_size(RtpSession *session, int bufsize){
 **/
 void rtp_session_set_rtp_socket_send_buffer_size(RtpSession * session, unsigned int size){
 	session->rtp.snd_socket_size=size;
+	_rtp_session_apply_socket_sizes(session);
 }
 
 /**
@@ -529,6 +530,7 @@ void rtp_session_set_rtp_socket_send_buffer_size(RtpSession * session, unsigned 
 **/
 void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned int size){
 	session->rtp.rcv_socket_size=size;
+	_rtp_session_apply_socket_sizes(session);
 }
 
 /**

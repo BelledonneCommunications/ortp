@@ -109,5 +109,7 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts, bool_t received_via_rtcp_mux);
 void update_sent_bytes(OrtpStream *os, int nbytes);
 
+void _rtp_session_apply_socket_sizes(RtpSession *session);
+
 
 #endif
