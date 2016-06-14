@@ -73,8 +73,8 @@ typedef struct _JitterControl
 	int adapt_jitt_comp_ts;
 	int64_t slide;
 	int64_t prev_slide;
+	int64_t olddiff;
 	float jitter;
-	int olddiff;
 	float inter_jitter;	/* interarrival jitter as defined in the RFC */
 	int corrective_step;
 	int corrective_slide;

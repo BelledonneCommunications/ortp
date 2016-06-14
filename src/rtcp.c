@@ -223,11 +223,11 @@ static void sender_info_init(sender_info_t *info, RtpSession *session){
 	info->rtp_timestamp=htonl(session->rtp.snd_last_ts);
 	info->senders_packet_count=(uint32_t) htonl((u_long) session->stats.packet_sent);
 	info->senders_octet_count=(uint32_t) htonl((u_long) session->rtp.sent_payload_bytes);
-	session->rtp.last_rtcp_packet_count=session->stats.packet_sent;
+	session->rtp.last_rtcp_packet_count=(uint32_t)session->stats.packet_sent;
 }
 
 static void report_block_init(report_block_t *b, RtpSession *session){
-	int packet_loss=0;
+	int64_t packet_loss=0;
 	int loss_fraction=0;
 	RtpStream *stream=&session->rtp;
 	uint32_t delay_snc_last_sr=0;
@@ -321,7 +321,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 
 static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 	/* the jitter raw value is kept in stream clock units */
-	uint32_t jitter = session->rtp.jittctl.inter_jitter;
+	uint32_t jitter = (uint32_t)session->rtp.jittctl.inter_jitter;
 	session->stats.sent_rtcp_packets ++;
 	session->rtp.jitter_stats.sum_jitter += jitter;
 	session->rtp.jitter_stats.jitter=jitter;
@@ -449,7 +449,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 
 	if (session->rtp.last_rtcp_packet_count < session->stats.packet_sent) {
 		m = make_sr(session);
-		session->rtp.last_rtcp_packet_count = session->stats.packet_sent;
+		session->rtp.last_rtcp_packet_count = (uint32_t)session->stats.packet_sent;
 		is_sr = TRUE;
 	} else if (session->stats.packet_recv > 0) {
 		/* Don't send RR when no packet are received yet */
@@ -687,8 +687,8 @@ void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_co
 bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpSession *session, const report_block_t *rb){
 	int32_t cum_loss=report_block_get_cum_packet_lost(rb);
 	int32_t extseq=report_block_get_high_ext_seq(rb);
-	int32_t diff_unique_outgoing=session->stats.packet_sent-obj->last_packet_sent_count;
-	int32_t diff_total_outgoing=diff_unique_outgoing+session->stats.packet_dup_sent-obj->last_dup_packet_sent_count;
+	int32_t diff_unique_outgoing=(int32_t)(session->stats.packet_sent-obj->last_packet_sent_count);
+	int32_t diff_total_outgoing=diff_unique_outgoing+(int32_t)(session->stats.packet_dup_sent-obj->last_dup_packet_sent_count);
 	int32_t diff;
 	uint64_t curtime;
 	bool_t got_value=FALSE;
