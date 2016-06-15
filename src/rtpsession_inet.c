@@ -36,6 +36,7 @@
 #undef ExternC
 #ifdef ORTP_WINDOWS_DESKTOP
 #include <QOS2.h>
+#include <VersionHelpers.h>
 #endif
 #endif
 
@@ -628,9 +629,6 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	int tos;
 	int proto;
 	int value_type;
-#if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-	OSVERSIONINFOEX ovi;
-#endif
 
 	// Store new DSCP value if one is specified
 	if (dscp>=0) session->dscp = dscp;
@@ -639,13 +637,8 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-	memset(&ovi, 0, sizeof(ovi));
-	ovi.dwOSVersionInfoSize = sizeof(ovi);
-	GetVersionEx((LPOSVERSIONINFO) & ovi);
-
-	ortp_message("check OS support for qwave.lib: %i %i %i\n",
-				ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
-	if (ovi.dwMajorVersion > 5) {
+	ortp_message("check OS support for qwave.lib");
+	if (IsWindowsVistaOrGreater()) {
 		if (session->dscp==0)
 			tos=QOSTrafficTypeBestEffort;
 		else if (session->dscp==0x8)
@@ -667,8 +660,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			QoSResult = QOSCreateHandle(&version, &session->rtp.QoSHandle);
 
 			if (QoSResult != TRUE){
-				ortp_error("QOSCreateHandle failed to create handle with error %d\n",
-					GetLastError());
+				ortp_error("QOSCreateHandle failed to create handle with error %d", GetLastError());
 				retval=-1;
 			}
 		}
@@ -683,8 +675,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				&session->rtp.QoSFlowID);
 
 			if (QoSResult != TRUE){
-				ortp_error("QOSAddSocketToFlow failed to add a flow with error %d\n",
-					GetLastError());
+				ortp_error("QOSAddSocketToFlow failed to add a flow with error %d", GetLastError());
 				retval=-1;
 			}
 		}

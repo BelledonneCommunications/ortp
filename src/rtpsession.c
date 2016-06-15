@@ -35,6 +35,7 @@
 #undef ExternC /* avoid redefinition... */
 #ifdef ORTP_WINDOWS_DESKTOP
 #include <QOS2.h>
+#include <VersionHelpers.h>
 #endif
 #endif
 
@@ -1543,25 +1544,14 @@ void rtp_session_uninit (RtpSession * session)
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
 	if (session->rtp.QoSFlowID != 0)
 	{
-		OSVERSIONINFOEX ovi;
-		memset(&ovi, 0, sizeof(ovi));
-		ovi.dwOSVersionInfoSize = sizeof(ovi);
-		GetVersionEx((LPOSVERSIONINFO) & ovi);
-
-		ortp_message("check OS support for qwave.lib: %i %i %i\n",
-					ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
-		if (ovi.dwMajorVersion > 5) {
+		ortp_message("check OS support for qwave.lib");
+		if (IsWindowsVistaOrGreater()) {
 			BOOL QoSResult;
-			QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle,
-												0,
-												session->rtp.QoSFlowID,
-												0);
-
+			QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle, 0, session->rtp.QoSFlowID, 0);
 			if (QoSResult != TRUE){
-				ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d\n",
-						GetLastError());
+				ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d", GetLastError());
 			}
-			session->rtp.QoSFlowID=0;
+			session->rtp.QoSFlowID = 0;
 		}
 	}
 
