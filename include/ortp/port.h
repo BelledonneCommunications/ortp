@@ -154,8 +154,6 @@ unsigned long __ortp_thread_self(void);
 #define _WINSOCKAPI_
 #endif
 
-#define strtok_r strtok_s
-
 typedef  unsigned __int64 uint64_t;
 typedef  __int64 int64_t;
 typedef  unsigned short uint16_t;
@@ -255,10 +253,6 @@ ORTP_PUBLIC const char *getWinSocketError(int error);
 #ifndef getSocketError
 #define getSocketError() getWinSocketError(WSAGetLastError())
 #endif
-
-#define snprintf _snprintf
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
 
 #ifndef F_OK
 #define F_OK 00 /* Visual Studio does not define F_OK */
