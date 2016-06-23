@@ -104,7 +104,7 @@ if(ENABLE_SHARED)
 		target_compile_options(ortp PRIVATE "/DELAYLOAD:Qwave.dll")
 	endif()
 	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
-	target_link_libraries(ortp ${LIBS})
+	target_link_libraries(ortp PRIVATE ${LIBS})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 			install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/ortp.pdb
