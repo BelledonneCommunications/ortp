@@ -21,7 +21,7 @@
 ############################################################################
 
 if (NOT IOS)
-	list(EXECUTABLES rtpsend rtprecv mrtpsend mrtprecv test_timer tevrtpsend tevrtprecv rtpsend_stupid)
+	set(EXECUTABLES rtpsend rtprecv mrtpsend mrtprecv test_timer tevrtpsend tevrtprecv rtpsend_stupid)
 	foreach(executable ${EXECUTABLES})
 		apply_compile_flags(${executable}.c "CPP" "C")
 		add_executable(${executable} ${executable}.c)
