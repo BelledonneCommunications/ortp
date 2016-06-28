@@ -227,14 +227,14 @@ static void sender_info_init(sender_info_t *info, RtpSession *session){
 }
 
 static void report_block_init(report_block_t *b, RtpSession *session){
-	int64_t packet_loss=0;
+	int packet_loss=0;
 	int loss_fraction=0;
 	RtpStream *stream=&session->rtp;
 	uint32_t delay_snc_last_sr=0;
 
 	/* compute the statistics */
 	if (stream->hwrcv_since_last_SR!=0){
-		int expected_packets=stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR;
+		int expected_packets=(int)((int64_t)stream->hwrcv_extseq - (int64_t)stream->hwrcv_seq_at_last_SR);
 
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with
@@ -245,7 +245,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			session->stats.cum_packet_loss = packet_loss;
 		}else {
 			/* Normal mode */
-			packet_loss = expected_packets - stream->hwrcv_since_last_SR;
+			packet_loss = (int)((int64_t)expected_packets - (int64_t)stream->hwrcv_since_last_SR);
 			session->stats.cum_packet_loss += packet_loss;
 		}
 		if (expected_packets>0){/*prevent division by zero and negative loss fraction*/
@@ -261,13 +261,13 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		"\texpected_packets=%d=%u-%u\n"
 		"\thwrcv_since_last_SR=%u\n"
 		"\tpacket_loss=%d\n"
-		"\tcum_packet_loss=%ld\n"
+		"\tcum_packet_loss=%lld\n"
 		"\tloss_fraction=%f%%\n"
 		, session
 		, stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR, stream->hwrcv_extseq, stream->hwrcv_seq_at_last_SR
 		, stream->hwrcv_since_last_SR
 		, packet_loss
-		, (long)session->stats.cum_packet_loss
+		, (long long)session->stats.cum_packet_loss
 		, loss_fraction/2.56
 	);
 

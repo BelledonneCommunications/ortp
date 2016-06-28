@@ -1648,7 +1648,7 @@ const jitter_stats_t * rtp_session_get_jitter_stats( const RtpSession *session )
  * @param s : the rtp session.
  * @param value : the lost packets test vector value.
 **/
-void rtp_session_rtcp_set_lost_packet_value( struct _RtpSession *s, const int64_t value ) {
+void rtp_session_rtcp_set_lost_packet_value( struct _RtpSession *s, const int value ) {
 	s->lost_packets_test_vector = value;
 	s->flags|=RTCP_OVERRIDE_LOST_PACKETS;
 }
