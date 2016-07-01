@@ -223,7 +223,7 @@ static void sender_info_init(sender_info_t *info, RtpSession *session){
 	info->rtp_timestamp=htonl(session->rtp.snd_last_ts);
 	info->senders_packet_count=(uint32_t) htonl((u_long) session->stats.packet_sent);
 	info->senders_octet_count=(uint32_t) htonl((u_long) session->rtp.sent_payload_bytes);
-	session->rtp.last_rtcp_packet_count=session->stats.packet_sent;
+	session->rtp.last_rtcp_packet_count=(uint32_t)session->stats.packet_sent;
 }
 
 static void report_block_init(report_block_t *b, RtpSession *session){
@@ -234,7 +234,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 
 	/* compute the statistics */
 	if (stream->hwrcv_since_last_SR!=0){
-		int expected_packets=stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR;
+		int expected_packets=(int)((int64_t)stream->hwrcv_extseq - (int64_t)stream->hwrcv_seq_at_last_SR);
 
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with
@@ -245,7 +245,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			session->stats.cum_packet_loss = packet_loss;
 		}else {
 			/* Normal mode */
-			packet_loss = expected_packets - stream->hwrcv_since_last_SR;
+			packet_loss = (int)((int64_t)expected_packets - (int64_t)stream->hwrcv_since_last_SR);
 			session->stats.cum_packet_loss += packet_loss;
 		}
 		if (expected_packets>0){/*prevent division by zero and negative loss fraction*/
@@ -261,13 +261,13 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 		"\texpected_packets=%d=%u-%u\n"
 		"\thwrcv_since_last_SR=%u\n"
 		"\tpacket_loss=%d\n"
-		"\tcum_packet_loss=%ld\n"
+		"\tcum_packet_loss=%lld\n"
 		"\tloss_fraction=%f%%\n"
 		, session
 		, stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR, stream->hwrcv_extseq, stream->hwrcv_seq_at_last_SR
 		, stream->hwrcv_since_last_SR
 		, packet_loss
-		, (long)session->stats.cum_packet_loss
+		, (long long)session->stats.cum_packet_loss
 		, loss_fraction/2.56
 	);
 
@@ -321,7 +321,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 
 static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 	/* the jitter raw value is kept in stream clock units */
-	uint32_t jitter = session->rtp.jittctl.inter_jitter;
+	uint32_t jitter = (uint32_t)session->rtp.jittctl.inter_jitter;
 	session->stats.sent_rtcp_packets ++;
 	session->rtp.jitter_stats.sum_jitter += jitter;
 	session->rtp.jitter_stats.jitter=jitter;
@@ -449,7 +449,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 
 	if (session->rtp.last_rtcp_packet_count < session->stats.packet_sent) {
 		m = make_sr(session);
-		session->rtp.last_rtcp_packet_count = session->stats.packet_sent;
+		session->rtp.last_rtcp_packet_count = (uint32_t)session->stats.packet_sent;
 		is_sr = TRUE;
 	} else if (session->stats.packet_recv > 0) {
 		/* Don't send RR when no packet are received yet */
@@ -687,8 +687,8 @@ void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_co
 bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpSession *session, const report_block_t *rb){
 	int32_t cum_loss=report_block_get_cum_packet_lost(rb);
 	int32_t extseq=report_block_get_high_ext_seq(rb);
-	int32_t diff_unique_outgoing=session->stats.packet_sent-obj->last_packet_sent_count;
-	int32_t diff_total_outgoing=diff_unique_outgoing+session->stats.packet_dup_sent-obj->last_dup_packet_sent_count;
+	int32_t diff_unique_outgoing=(int32_t)(session->stats.packet_sent-obj->last_packet_sent_count);
+	int32_t diff_total_outgoing=diff_unique_outgoing+(int32_t)(session->stats.packet_dup_sent-obj->last_dup_packet_sent_count);
 	int32_t diff;
 	uint64_t curtime;
 	bool_t got_value=FALSE;

@@ -78,7 +78,7 @@ void jitter_control_dump_stats(JitterControl *ctl){
  to recv timestamp to make them reflect the instant they are delivered by the jitter buffer. */
 void jitter_control_update_corrective_slide(JitterControl *ctl){
 	int tmp;
-	tmp=(int)(ctl->slide)-ctl->prev_slide;
+	tmp=(int)(ctl->slide-ctl->prev_slide);
 	if (tmp>ctl->corrective_step) {
 		ctl->corrective_slide+=ctl->corrective_step;
 		ctl->prev_slide=ctl->slide+ctl->corrective_step;
@@ -114,7 +114,8 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 	int d;
 	//printf("diff=%g\n",diff);
 	if (ctl->count==0){
-		slide=ctl->slide=ctl->prev_slide=diff;
+		ctl->slide=ctl->prev_slide=diff;
+		slide=(double)diff;
 		ctl->olddiff=diff;
 		ctl->jitter=0;
 	}else{
@@ -123,7 +124,7 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 	gap=(double)diff - slide;
 	gap=gap<0 ? -gap : 0; /*compute only for late packets*/
 	ctl->jitter=(float) ((ctl->jitter*(1-JC_GAMMA)) + (gap*JC_GAMMA));
-	d=diff-ctl->olddiff;
+	d=(int)(diff-ctl->olddiff);
 	ctl->inter_jitter=(float) (ctl->inter_jitter+ (( (float)abs(d) - ctl->inter_jitter)*(1/16.0)));
 	ctl->olddiff=diff;
 	ctl->count++;
@@ -133,7 +134,7 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 			//jitter_control_dump_stats(ctl);
 		}
 
-		ctl->slide=slide;
+		ctl->slide=(int64_t)slide;
 	}else {
 		/*ctl->slide and jitter size are not updated*/
 	}
@@ -145,7 +146,7 @@ float jitter_control_compute_mean_size(JitterControl *ctl){
 		double tmp=((double)ctl->cum_jitter_buffer_size)/(double)ctl->cum_jitter_buffer_count;
 		ctl->cum_jitter_buffer_size=0;
 		ctl->cum_jitter_buffer_count=0;
-		return 1000.0*(float)tmp/(float)ctl->clock_rate;
+		return 1000.0f*(float)tmp/(float)ctl->clock_rate;
 	}
 	return 0;
 }

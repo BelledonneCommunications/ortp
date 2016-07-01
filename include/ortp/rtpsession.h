@@ -73,8 +73,8 @@ typedef struct _JitterControl
 	int adapt_jitt_comp_ts;
 	int64_t slide;
 	int64_t prev_slide;
+	int64_t olddiff;
 	float jitter;
-	int olddiff;
 	float inter_jitter;	/* interarrival jitter as defined in the RFC */
 	int corrective_step;
 	int corrective_slide;
@@ -397,7 +397,7 @@ struct _RtpSession
 	mblk_t *minimal_sdes;
 	mblk_t *full_sdes;
 	queue_t contributing_sources;
-	int64_t lost_packets_test_vector;
+	int lost_packets_test_vector;
 	unsigned int interarrival_jitter_test_vector;
 	unsigned int delay_test_vector;
 	float rtt;/*last round trip delay calculated*/
@@ -633,7 +633,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
 
-ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int64_t value );
+ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_delay_value(RtpSession *session, const unsigned int value );
 ORTP_PUBLIC mblk_t * rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number);

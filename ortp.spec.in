@@ -103,7 +103,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/*.a
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/*.pc
-%{_includedir}
+%{_includedir}/*
 
 %changelog
 * Tue Oct 25 2005 Francois-Xavier Kowalski <fix@hp.com>

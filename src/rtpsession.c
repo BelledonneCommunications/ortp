@@ -35,6 +35,7 @@
 #undef ExternC /* avoid redefinition... */
 #ifdef ORTP_WINDOWS_DESKTOP
 #include <QOS2.h>
+#include <VersionHelpers.h>
 #endif
 #endif
 
@@ -521,6 +522,7 @@ void rtp_session_set_recv_buf_size(RtpSession *session, int bufsize){
 **/
 void rtp_session_set_rtp_socket_send_buffer_size(RtpSession * session, unsigned int size){
 	session->rtp.snd_socket_size=size;
+	_rtp_session_apply_socket_sizes(session);
 }
 
 /**
@@ -529,6 +531,7 @@ void rtp_session_set_rtp_socket_send_buffer_size(RtpSession * session, unsigned 
 **/
 void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned int size){
 	session->rtp.rcv_socket_size=size;
+	_rtp_session_apply_socket_sizes(session);
 }
 
 /**
@@ -1541,25 +1544,14 @@ void rtp_session_uninit (RtpSession * session)
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
 	if (session->rtp.QoSFlowID != 0)
 	{
-		OSVERSIONINFOEX ovi;
-		memset(&ovi, 0, sizeof(ovi));
-		ovi.dwOSVersionInfoSize = sizeof(ovi);
-		GetVersionEx((LPOSVERSIONINFO) & ovi);
-
-		ortp_message("check OS support for qwave.lib: %i %i %i\n",
-					ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
-		if (ovi.dwMajorVersion > 5) {
+		ortp_message("check OS support for qwave.lib");
+		if (IsWindowsVistaOrGreater()) {
 			BOOL QoSResult;
-			QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle,
-												0,
-												session->rtp.QoSFlowID,
-												0);
-
+			QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle, 0, session->rtp.QoSFlowID, 0);
 			if (QoSResult != TRUE){
-				ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d\n",
-						GetLastError());
+				ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d", GetLastError());
 			}
-			session->rtp.QoSFlowID=0;
+			session->rtp.QoSFlowID = 0;
 		}
 	}
 
@@ -1656,7 +1648,7 @@ const jitter_stats_t * rtp_session_get_jitter_stats( const RtpSession *session )
  * @param s : the rtp session.
  * @param value : the lost packets test vector value.
 **/
-void rtp_session_rtcp_set_lost_packet_value( struct _RtpSession *s, const int64_t value ) {
+void rtp_session_rtcp_set_lost_packet_value( struct _RtpSession *s, const int value ) {
 	s->lost_packets_test_vector = value;
 	s->flags|=RTCP_OVERRIDE_LOST_PACKETS;
 }

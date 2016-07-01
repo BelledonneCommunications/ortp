@@ -405,9 +405,6 @@ AC_OUTPUT(
 	src/tests/win_receiver/Makefile
 	src/tests/win_sender/Makefile
 	build/Makefile
-	build/win32native/Makefile
-	build/wince/Makefile
-	build/winmob/Makefile
 	ortp.pc
 	ortp.spec
 	ortp.doxygen

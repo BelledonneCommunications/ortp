@@ -36,6 +36,7 @@
 #undef ExternC
 #ifdef ORTP_WINDOWS_DESKTOP
 #include <QOS2.h>
+#include <VersionHelpers.h>
 #endif
 #endif
 
@@ -281,14 +282,20 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	return sock;
 }
 
-static void set_socket_sizes(ortp_socket_t sock, unsigned int sndbufsz, unsigned int rcvbufsz){
+void _rtp_session_apply_socket_sizes(RtpSession * session){
 	int err;
 	bool_t done=FALSE;
+	ortp_socket_t sock = session->rtp.gs.socket;
+	unsigned int sndbufsz = session->rtp.snd_socket_size;
+	unsigned int rcvbufsz = session->rtp.rcv_socket_size;
+	
+	if (sock == (ortp_socket_t)-1) return;
+	
 	if (sndbufsz>0){
 #ifdef SO_SNDBUFFORCE
 		err = setsockopt(sock, SOL_SOCKET, SO_SNDBUFFORCE, (void *)&sndbufsz, sizeof(sndbufsz));
 		if (err == -1) {
-			ortp_error("Fail to increase socket's send buffer size with SO_SNDBUFFORCE: %s.", getSocketError());
+			ortp_warning("Fail to increase socket's send buffer size with SO_SNDBUFFORCE: %s.", getSocketError());
 		}else done=TRUE;
 #endif
 		if (!done){
@@ -303,7 +310,7 @@ static void set_socket_sizes(ortp_socket_t sock, unsigned int sndbufsz, unsigned
 #ifdef SO_RCVBUFFORCE
 		err = setsockopt(sock, SOL_SOCKET, SO_RCVBUFFORCE, (void *)&rcvbufsz, sizeof(rcvbufsz));
 		if (err == -1) {
-			ortp_error("Fail to increase socket's recv buffer size with SO_RCVBUFFORCE: %s.", getSocketError());
+			ortp_warning("Fail to increase socket's recv buffer size with SO_RCVBUFFORCE: %s.", getSocketError());
 		}
 #endif
 		if (!done){
@@ -345,10 +352,10 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 
 	sock=create_and_bind(addr,&rtp_port,&sockfamily,session->reuseaddr,&session->rtp.gs.loc_addr,&session->rtp.gs.loc_addrlen);
 	if (sock!=-1){
-		set_socket_sizes(sock,session->rtp.snd_socket_size,session->rtp.rcv_socket_size);
 		session->rtp.gs.sockfamily=sockfamily;
 		session->rtp.gs.socket=sock;
 		session->rtp.gs.loc_port=rtp_port;
+		_rtp_session_apply_socket_sizes(session);
 		/*try to bind rtcp port */
 		sock=create_and_bind(addr,&rtcp_port,&sockfamily,session->reuseaddr,&session->rtcp.gs.loc_addr,&session->rtcp.gs.loc_addrlen);
 		if (sock!=(ortp_socket_t)-1){
@@ -622,9 +629,6 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	int tos;
 	int proto;
 	int value_type;
-#if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-	OSVERSIONINFOEX ovi;
-#endif
 
 	// Store new DSCP value if one is specified
 	if (dscp>=0) session->dscp = dscp;
@@ -633,13 +637,8 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-	memset(&ovi, 0, sizeof(ovi));
-	ovi.dwOSVersionInfoSize = sizeof(ovi);
-	GetVersionEx((LPOSVERSIONINFO) & ovi);
-
-	ortp_message("check OS support for qwave.lib: %i %i %i\n",
-				ovi.dwMajorVersion, ovi.dwMinorVersion, ovi.dwBuildNumber);
-	if (ovi.dwMajorVersion > 5) {
+	ortp_message("check OS support for qwave.lib");
+	if (IsWindowsVistaOrGreater()) {
 		if (session->dscp==0)
 			tos=QOSTrafficTypeBestEffort;
 		else if (session->dscp==0x8)
@@ -661,8 +660,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			QoSResult = QOSCreateHandle(&version, &session->rtp.QoSHandle);
 
 			if (QoSResult != TRUE){
-				ortp_error("QOSCreateHandle failed to create handle with error %d\n",
-					GetLastError());
+				ortp_error("QOSCreateHandle failed to create handle with error %d", GetLastError());
 				retval=-1;
 			}
 		}
@@ -677,8 +675,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 				&session->rtp.QoSFlowID);
 
 			if (QoSResult != TRUE){
-				ortp_error("QOSAddSocketToFlow failed to add a flow with error %d\n",
-					GetLastError());
+				ortp_error("QOSAddSocketToFlow failed to add a flow with error %d", GetLastError());
 				retval=-1;
 			}
 		}
