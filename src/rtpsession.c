@@ -2180,7 +2180,8 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransp
 		last_elem = elem;
 	}
 
-	ret = prev_ret = msgdsize(msg);
+	prev_ret = msgdsize(msg);
+	ret = (int)prev_ret;
 	for (;last_elem != NULL; last_elem = o_list_prev(last_elem)) {
 		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
 		RtpTransportModifier *rtm = (RtpTransportModifier*)last_elem->data;
@@ -2190,8 +2191,8 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransp
 				// something went wrong in the modifier (failed to decrypt for instance)
 				break;
 			}
-			msg->b_wptr += (ret - prev_ret);
-			prev_ret = ret;
+			msg->b_wptr += ((size_t)ret - prev_ret);
+			prev_ret = (size_t)ret;
 		}
 
 		/* check if we must inject the packet */
