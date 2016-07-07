@@ -2399,7 +2399,7 @@ int rtp_session_unsplice(RtpSession *session, RtpSession *to_session){
 void rtp_session_do_splice(RtpSession *session, mblk_t *packet, bool_t is_rtp){
 	RtpSession *peer = session->spliced_session;
 	if (peer){
-		OrtpStream *os = is_rtp ? &session->rtp.gs : &session->rtcp.gs;
+		OrtpStream *os = is_rtp ? &peer->rtp.gs : &peer->rtcp.gs;
 		_ortp_sendto(os->socket, packet, 0, (struct sockaddr*)&os->rem_addr, os->rem_addrlen);
 	}
 }
