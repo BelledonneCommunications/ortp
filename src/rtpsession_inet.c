@@ -288,9 +288,9 @@ void _rtp_session_apply_socket_sizes(RtpSession * session){
 	ortp_socket_t sock = session->rtp.gs.socket;
 	unsigned int sndbufsz = session->rtp.snd_socket_size;
 	unsigned int rcvbufsz = session->rtp.rcv_socket_size;
-	
+
 	if (sock == (ortp_socket_t)-1) return;
-	
+
 	if (sndbufsz>0){
 #ifdef SO_SNDBUFFORCE
 		err = setsockopt(sock, SOL_SOCKET, SO_SNDBUFFORCE, (void *)&sndbufsz, sizeof(sndbufsz));
@@ -1023,7 +1023,7 @@ int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags,
 	int ret;
 
 	_rtp_session_check_socket_refresh(session);
-	
+
 	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
 			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
 		ret=(int)msgdsize(m);
@@ -1070,13 +1070,13 @@ static void update_recv_bytes(OrtpStream *os, int nbytes) {
 static void log_send_error(RtpSession *session, const char *type, mblk_t *m, struct sockaddr *destaddr, socklen_t destlen){
 	char printable_ip_address[65]={0};
 	bctbx_sockaddr_to_printable_ip_address(destaddr, destlen, printable_ip_address, sizeof(printable_ip_address));
-	ortp_warning ("RtpSession [%p] error sending [%s] packet [%p] to %s: %s",
+	ortp_error ("RtpSession [%p] error sending [%s] packet [%p] to %s: %s",
 		session, type, m, printable_ip_address, getSocketError());
 }
 
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error;
-	
+
 	if (rtp_session_using_transport(session, rtp)){
 		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
@@ -1103,7 +1103,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
 	socklen_t destlen=session->rtp.gs.rem_addrlen;
 	OList *elem=NULL;
-	
+
 	if (session->is_spliced) {
 		freemsg(m);
 		return 0;
@@ -1498,17 +1498,17 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 	remaddr = (struct sockaddr *)&mp->net_addr;
 	addrlen = mp->net_addrlen;
 
-	
+
 	if (session->spliced_session){
 		/*this will forward all traffic to the spliced session*/
 		rtp_session_do_splice(session, mp, is_rtp_packet);
 	}
-	
-	/* store the sender RTP address to do symmetric RTP at start mainly for stun packets. 
+
+	/* store the sender RTP address to do symmetric RTP at start mainly for stun packets.
 	 * --For rtp packet symmetric RTP is handled in rtp_session_rtp_parse() after first valid rtp packet received.
 	 * --For rtcp, only swicth if valid rtcp packet && first rtcp packet received*/
 	rtp_session_update_remote_sock_addr(session,mp,is_rtp_packet,is_rtp_packet || (rtp_get_version(mp) != 2));
-	
+
 	if (is_rtp_packet){
 		if (session->use_connect && session->symmetric_rtp && !sock_connected ){
 			/* In the case where use_connect is false, */
@@ -1676,10 +1676,10 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 	const char* socket_type;
 	bool_t sock_connected;
 	bool_t do_address_change = /*(rtp_get_version(mp) == 2 && */ !only_at_start;
-	
+
 	if (!rtp_session_get_symmetric_rtp(session))
 		return -1; /*nothing to try if not rtp symetric*/
-	
+
 	if (is_rtp) {
 		rem_addr = &session->rtp.gs.rem_addr;
 		rem_addrlen = session->rtp.gs.rem_addrlen;
@@ -1693,7 +1693,7 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 		socket_type = "rtcp";
 		do_address_change = session->rtcp.gs.socket != (ortp_socket_t)-1  && (do_address_change || rtp_session_get_stats(session)->recv_rtcp_packets == 0);
 	}
-	
+
 	if (do_address_change
 		&& rem_addr
 		&& !sock_connected
@@ -1709,7 +1709,7 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 			   , current_ip_address
 			   , new_ip_address
 			   , session);
-		
+
 		memcpy(rem_addr,&mp->net_addr,mp->net_addrlen);
 		return 0;
 	}
