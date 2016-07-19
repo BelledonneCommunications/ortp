@@ -19,7 +19,7 @@
 
 
 #include <ortp/ortp.h>
-#include <bctoolbox/bc_vfs.h>
+#include <bctoolbox/vfs.h>
 #include <signal.h>
 #include <stdlib.h>
 #ifndef _WIN32
