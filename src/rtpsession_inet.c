@@ -454,25 +454,35 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 			optname = IP_RECVDSTADDR;
 #endif
 			retval = setsockopt(session->rtp.gs.socket, IPPROTO_IP, optname, optval, optlen);
-			if (retval < 0) break;
+			if (retval < 0) {
+				ortp_warning ("Fail to set packet info on RTP socket: %s.", getSocketError());
+			}
 			retval = setsockopt(session->rtcp.gs.socket, IPPROTO_IP, optname, optval, optlen);
+			if (retval < 0) {
+				ortp_warning ("Fail to set packet info on RTCP socket: %s.", getSocketError());
+			}
 			break;
 		case AF_INET6:
-#ifdef IPV6_PKTINFO
-			optname = IPV6_PKTINFO;
+#ifdef IPV6_RECVPKTINFO
+			optname = IPV6_RECVPKTINFO;
 #else
 			optname = IPV6_RECVDSTADDR;
 #endif
 			retval = setsockopt(session->rtp.gs.socket, IPPROTO_IPV6, optname, optval, optlen);
-			if (retval < 0) break;
+			if (retval < 0) {
+				ortp_warning ("Fail to set packet info on RTP socket: %s.", getSocketError());
+			}
 			retval = setsockopt(session->rtcp.gs.socket, IPPROTO_IPV6, optname, optval, optlen);
+			if (retval < 0) {
+				ortp_warning ("Fail to set packet info on RTCP socket: %s.", getSocketError());
+			}
 			break;
 		default:
 			retval = -1;
+			ortp_warning("Unknow socket family %d used to set packet info", session->rtp.gs.sockfamily);
 			break;
 	}
 
-	if (retval < 0) ortp_warning("Failed to set packet info on socket.");
 	return retval;
 }
 
