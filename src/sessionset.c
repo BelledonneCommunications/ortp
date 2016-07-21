@@ -45,25 +45,25 @@ void session_set_destroy(SessionSet *set)
 	ortp_free(set);
 }
 
-int count_power_items_simple(int v)
+int count_power_items_simple(uint32_t v)
 {
-    int c = 0,j;
-    for (j=0;j<32;j++){
-        if ( ((v)>>j) & 1){
-	    ++c;
+	int c = 0,j;
+	for (j=0;j<32;j++){
+		if ( ((v)>>j) & 1){
+		++c;
         }
-    }
-    return c;
+	}
+	return c;
 }
 
-int count_power_items_fast(int v)
+int count_power_items_fast(uint32_t v)
 {
-    int c = 0;
-    while(v) {
-        c += (v & 1);
-	v >>= 1;
-    }
-    return c;
+	int c = 0;
+	while (v) {
+		c += (v & 1);
+		v >>= 1;
+	}
+	return c;
 }
 
 int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, SessionSet *result_set)
