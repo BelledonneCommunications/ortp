@@ -98,7 +98,7 @@ AC_ARG_ENABLE(perf,
 
 ORTP_DEFS=
 
-AC_DEFINE(__APPLE_USE_RFC_2292, 1, [ Apple wants you to declare what behavior you want by defining either __APPLE_USE_RFC_2292])
+AC_DEFINE(__APPLE_USE_RFC_3542, 1, [ Apple wants you to declare what behavior you want by defining either __APPLE_USE_RFC_3542])
 
 
 dnl enable timestamp support
