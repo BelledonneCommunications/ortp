@@ -453,11 +453,11 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 #endif
 	retval = setsockopt(session->rtp.gs.socket, IPPROTO_IP, optname, optval, optlen);
 	if (retval < 0) {
-		ortp_warning ("Fail to set packet info on RTP socket: %s.", getSocketError());
+		ortp_warning ("Fail to set IPv4 packet info on RTP socket: %s.", getSocketError());
 	}
 	retval = setsockopt(session->rtcp.gs.socket, IPPROTO_IP, optname, optval, optlen);
 	if (retval < 0) {
-		ortp_warning ("Fail to set packet info on RTCP socket: %s.", getSocketError());
+		ortp_warning ("Fail to set IPv4 packet info on RTCP socket: %s.", getSocketError());
 	}
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
@@ -471,11 +471,11 @@ int rtp_session_set_pktinfo(RtpSession *session, int activate)
 #endif
 	retval = setsockopt(session->rtp.gs.socket, IPPROTO_IPV6, optname, optval, optlen);
 	if (retval < 0) {
-		ortp_warning ("Fail to set packet info on RTP socket: %s.", getSocketError());
+		ortp_warning ("Fail to set IPv6 packet info on RTP socket: %s.", getSocketError());
 	}
 	retval = setsockopt(session->rtcp.gs.socket, IPPROTO_IPV6, optname, optval, optlen);
 	if (retval < 0) {
-		ortp_warning ("Fail to set packet info on RTCP socket: %s.", getSocketError());
+		ortp_warning ("Fail to set IPv6 packet info on RTCP socket: %s.", getSocketError());
 	}
 
 	return retval;
