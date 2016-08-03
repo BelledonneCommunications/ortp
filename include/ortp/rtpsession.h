@@ -31,6 +31,8 @@
 #define RTPSESSION_H
 
 
+#include <bctoolbox/list.h>
+
 #include <ortp/port.h>
 #include <ortp/rtp.h>
 #include <ortp/payloadtype.h>
@@ -409,14 +411,15 @@ struct _RtpSession
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
 	bool_t ssrc_set;
-	
+
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
 	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 	bool_t use_pktinfo;
-	
+
 	bool_t is_spliced;
-	
+
+	bctbx_list_t *recv_addr_map;
 };
 
 

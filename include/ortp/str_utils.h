@@ -47,6 +47,12 @@ typedef struct ortp_recv_addr {
 	unsigned short port;
 } ortp_recv_addr_t;
 
+typedef struct ortp_recv_addr_map {
+	struct sockaddr_storage ss;
+	ortp_recv_addr_t recv_addr;
+	uint64_t ts;
+} ortp_recv_addr_map_t;
+
 typedef struct msgb
 {
 	struct msgb *b_prev;

@@ -1046,9 +1046,66 @@ int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags,
 	return ret;
 }
 
+static const ortp_recv_addr_t * lookup_recv_addr(RtpSession *session, struct sockaddr *from, socklen_t fromlen) {
+	const ortp_recv_addr_t *result = NULL;
+	bctbx_list_t *iterator = session->recv_addr_map;
+	while (iterator != NULL) {
+		ortp_recv_addr_map_t *item = (ortp_recv_addr_map_t *)bctbx_list_get_data(iterator);
+		uint64_t curtime = ortp_get_cur_time_ms();
+		if ((curtime - item->ts) > 2000) {
+			bctbx_list_t *to_remove = iterator;
+			iterator = bctbx_list_next(iterator);
+			session->recv_addr_map = bctbx_list_remove_link(session->recv_addr_map, to_remove);
+			bctbx_free(to_remove);
+		} else {
+			if (memcmp(&item->ss, from, fromlen) == 0) result = &item->recv_addr;
+			iterator = bctbx_list_next(iterator);
+		}
+	}
+	return result;
+}
+
+static const ortp_recv_addr_t * get_recv_addr(RtpSession *session, struct sockaddr *from, socklen_t fromlen) {
+	char result[NI_MAXHOST] = { 0 };
+	char dest[NI_MAXHOST] = { 0 };
+	struct addrinfo *ai = NULL;
+	int port = 0;
+	int family = from->sa_family;
+	int err;
+	err = bctbx_sockaddr_to_ip_address(from, fromlen, dest, sizeof(dest), &port);
+	if (err == 0) err = bctbx_get_local_ip_for(family, dest, port, result, sizeof(result));
+	if (err == 0) ai = bctbx_ip_address_to_addrinfo(family, SOCK_DGRAM, result, port);
+	if (ai != NULL) {
+		ortp_recv_addr_map_t *item = bctbx_new0(ortp_recv_addr_map_t, 1);
+		memcpy(&item->ss, from, fromlen);
+		item->recv_addr.family = family;
+		if (family == AF_INET) {
+			memcpy(&item->recv_addr.addr.ipi_addr, &((struct sockaddr_in *)ai->ai_addr)->sin_addr, sizeof(item->recv_addr.addr.ipi_addr));
+		} else if (family == AF_INET6) {
+			memcpy(&item->recv_addr.addr.ipi6_addr, &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr, sizeof(item->recv_addr.addr.ipi6_addr));
+		}
+		bctbx_freeaddrinfo(ai);
+		item->ts = ortp_get_cur_time_ms();
+		session->recv_addr_map = bctbx_list_append(session->recv_addr_map, item);
+		return &item->recv_addr;
+	}
+	return NULL;
+}
+
 int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int ret = rtp_session_rtp_recv_abstract(is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket, m, flags, from, fromlen);
-	if (ret >= 0) {
+	if ((ret >= 0) && (session->use_pktinfo == TRUE)) {
+		if (m->recv_addr.family == AF_UNSPEC) {
+			/* The receive address has not been filled, this typically happens on Mac OS X when receiving an IPv4 packet on
+			 * a dual stack socket. Try to guess the address because it is mandatory for ICE. */
+			const ortp_recv_addr_t *recv_addr = lookup_recv_addr(session, from, *fromlen);
+			if (recv_addr == NULL) {
+				recv_addr = get_recv_addr(session, from, *fromlen);
+			}
+			if (recv_addr != NULL) {
+				memcpy(&m->recv_addr, recv_addr, sizeof(ortp_recv_addr_t));
+			}
+		}
 		/* Store the local port in the recv_addr of the mblk_t, the address is already filled in rtp_session_rtp_recv_abstract */
 		m->recv_addr.port = htons(is_rtp ? session->rtp.gs.loc_port : session->rtcp.gs.loc_port);
 	}

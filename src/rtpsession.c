@@ -1529,6 +1529,7 @@ void rtp_session_uninit (RtpSession * session)
 		freemsg(session->full_sdes);
 	if (session->minimal_sdes != NULL)
 		freemsg(session->minimal_sdes);
+	bctbx_list_free_with_data(session->recv_addr_map, (bctbx_list_free_func)bctbx_free);
 
 	session->signal_tables = o_list_free(session->signal_tables);
 
