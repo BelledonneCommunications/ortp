@@ -1131,9 +1131,11 @@ static void update_recv_bytes(OrtpStream *os, int nbytes) {
 
 static void log_send_error(RtpSession *session, const char *type, mblk_t *m, struct sockaddr *destaddr, socklen_t destlen){
 	char printable_ip_address[65]={0};
+	int errnum = getSocketErrorCode();
+	const char *errstr = getSocketError();
 	bctbx_sockaddr_to_printable_ip_address(destaddr, destlen, printable_ip_address, sizeof(printable_ip_address));
-	ortp_error ("RtpSession [%p] error sending [%s] packet [%p] to %s: %s",
-		session, type, m, printable_ip_address, getSocketError());
+	ortp_error ("RtpSession [%p] error sending [%s] packet [%p] to %s: %s [%d]",
+		session, type, m, printable_ip_address, errstr, errnum);
 }
 
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
