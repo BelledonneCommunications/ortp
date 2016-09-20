@@ -1459,8 +1459,9 @@ static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
  * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
  * @param session : the current session descriptor.
  * @param block : the block descriptor that may contain a SR RTCP message.
- * @return -1 if we detect that the packet is in fact a STUN packet, otherwise 0.
+ * @return 0 if the packet is a real RTCP packet, -1 otherwise. 
  * @note a basic parsing is done on the block structure. However, if it fails, no error is returned, and the session descriptor is left as is, so it does not induce any change in the caller procedure behaviour.
+ * @note the packet is freed or is taken ownership if -1 is returned
  */
 static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct sockaddr *addr, socklen_t addrlen ) {
 	rtcp_common_header_t *rtcp;
@@ -1468,8 +1469,9 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 
 	int msgsize = (int) ( block->b_wptr - block->b_rptr );
 	if ( msgsize < RTCP_COMMON_HEADER_SIZE ) {
-		ortp_debug( "Receiving a too short RTCP packet" );
-		return 0;
+		ortp_warning( "Receiving a too short RTCP packet" );
+		freemsg(block);
+		return -1;
 	}
 
 	rtcp = (rtcp_common_header_t *)block->b_rptr;
@@ -1488,11 +1490,12 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 				memcpy(&ed->source_addr,addr,addrlen);
 				ed->info.socket_type = OrtpRTCPSocket;
 				rtp_session_dispatch_event(session, ev);
+				return -1;
 			}
 		}else{
-			/* discard in two case: the packet is not stun OR nobody is interested by STUN (no eventqs) */
 			ortp_warning("RtpSession [%p] receiving rtcp packet with version number != 2, discarded", session);
 		}
+		freemsg(block);
 		return -1;
 	}
 
@@ -1592,7 +1595,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 					session->flags|=RTCP_SOCKET_CONNECTED;
 			}
 		}
-		if (process_rtcp_packet(session, mp, remaddr, addrlen) >= 0){
+		if (process_rtcp_packet(session, mp, remaddr, addrlen) == 0){
 			/* a copy is needed since rtp_session_notify_inc_rtcp will free the mp,
 			and we don't want to send RTCP XR packet before notifying the application
 			that a message has been received*/
