@@ -1057,8 +1057,7 @@ static const ortp_recv_addr_t * lookup_recv_addr(RtpSession *session, struct soc
 		if ((curtime - item->ts) > 2000) {
 			bctbx_list_t *to_remove = iterator;
 			iterator = bctbx_list_next(iterator);
-			session->recv_addr_map = bctbx_list_remove_link(session->recv_addr_map, to_remove);
-			bctbx_free(to_remove);
+			session->recv_addr_map = bctbx_list_erase_link(session->recv_addr_map, to_remove);
 		} else {
 			if (memcmp(&item->ss, from, fromlen) == 0) result = &item->recv_addr;
 			iterator = bctbx_list_next(iterator);
