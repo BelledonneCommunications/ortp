@@ -553,9 +553,9 @@ int rtp_session_get_multicast_ttl(RtpSession *session)
 
 /**
  *@param session: a rtp session
- *@param yesno: desired Multicast Time-To-Live
+ *@param yesno: enable multicast loopback
  *
- * Sets the TTL (Time-To-Live) for outgoing multicast packets.
+ * Enable multicast loopback.
  *
  * Returns: 0 on success.
  *
@@ -813,6 +813,7 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 
 	res0 = bctbx_name_to_addrinfo((session->rtp.gs.socket == -1) ? AF_UNSPEC : session->rtp.gs.sockfamily, SOCK_DGRAM, rtp_addr, rtp_port);
 	if (res0 == NULL) {
+		ortp_error("_rtp_session_set_remote_addr_full(): cannot set RTP destination to %s port %i.", rtp_addr, rtp_port);
 		err=-1;
 		goto end;
 	} else {
@@ -849,6 +850,7 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 
 	res0 = bctbx_name_to_addrinfo((session->rtcp.gs.socket == -1) ? AF_UNSPEC : session->rtcp.gs.sockfamily, SOCK_DGRAM, rtcp_addr, rtcp_port);
 	if (res0 == NULL) {
+		ortp_error("_rtp_session_set_remote_addr_full(): cannot set RTCP destination to %s port %i.", rtcp_addr, rtcp_port);
 		err=-1;
 		goto end;
 	} else {
@@ -1740,7 +1742,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 
 int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {
 	struct sockaddr_storage * rem_addr = NULL;
-	socklen_t rem_addrlen;
+	socklen_t *rem_addrlen;
 	const char* socket_type;
 	bool_t sock_connected;
 	bool_t do_address_change = /*(rtp_get_version(mp) == 2 && */ !only_at_start;
@@ -1750,13 +1752,13 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 
 	if (is_rtp) {
 		rem_addr = &session->rtp.gs.rem_addr;
-		rem_addrlen = session->rtp.gs.rem_addrlen;
+		rem_addrlen = &session->rtp.gs.rem_addrlen;
 		socket_type = "rtp";
 		sock_connected = session->flags & RTP_SOCKET_CONNECTED;
 		do_address_change =  session->rtp.gs.socket != (ortp_socket_t)-1  && ( do_address_change || rtp_session_get_stats(session)->packet_recv == 0);
 	} else {
 		rem_addr = &session->rtcp.gs.rem_addr;
-		rem_addrlen = session->rtcp.gs.rem_addrlen;
+		rem_addrlen = &session->rtcp.gs.rem_addrlen;
 		sock_connected = session->flags & RTCP_SOCKET_CONNECTED;
 		socket_type = "rtcp";
 		do_address_change = session->rtcp.gs.socket != (ortp_socket_t)-1  && (do_address_change || rtp_session_get_stats(session)->recv_rtcp_packets == 0);
@@ -1770,7 +1772,7 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 		char current_ip_address[64]={0};
 		char new_ip_address[64]={0};
 
-		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, rem_addrlen, current_ip_address, sizeof(current_ip_address));
+		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, *rem_addrlen, current_ip_address, sizeof(current_ip_address));
 		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)&mp->net_addr, mp->net_addrlen, new_ip_address, sizeof(new_ip_address));
 		ortp_message("Switching %s destination from %s to %s for session [%p]"
 			   , socket_type
@@ -1779,7 +1781,8 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 			   , session);
 
 		memcpy(rem_addr,&mp->net_addr,mp->net_addrlen);
+		*rem_addrlen = mp->net_addrlen;
 		return 0;
 	}
 	return -1;
-	}
+}
