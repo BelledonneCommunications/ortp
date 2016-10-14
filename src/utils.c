@@ -116,11 +116,3 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv){
 	lsw=(uint32_t)((double)tv->tv_usec*(double)(((uint64_t)1)<<32)*1.0e-6);
 	return msw<<32 | lsw;
 }
-
-bool_t ortp_stream_is_ipv6(OrtpStream *os) {
-	if (os->sockfamily == AF_INET6) {
-		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)&os->rem_addr;
-		return !IN6_IS_ADDR_V4MAPPED(&in6->sin6_addr);
-	}
-	return FALSE;
-}

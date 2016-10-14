@@ -581,7 +581,7 @@ ORTP_PUBLIC void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype,
  **/
 
 ORTP_PUBLIC	int rtp_session_rtcp_sendm_raw(RtpSession * session, mblk_t * m);
-	
+
 
 ORTP_PUBLIC uint32_t rtp_session_get_current_send_ts(RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_current_recv_ts(RtpSession *session);
@@ -699,6 +699,8 @@ ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTranspor
 
 ORTP_PUBLIC int rtp_session_splice(RtpSession *session, RtpSession *to_session);
 ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session);
+
+ORTP_PUBLIC bool_t ortp_stream_is_ipv6(OrtpStream *os);
 
 #ifdef __cplusplus
 }

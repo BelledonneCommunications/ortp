@@ -1424,7 +1424,7 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs){
 }
 
 void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports){
-	
+
 	if (release_transports){
 		if (session->rtp.gs.tr) {
 			if (session->rtp.gs.tr->t_close)
@@ -1441,7 +1441,7 @@ void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports
 		}
 		session->rtcp.gs.tr = 0;
 	}
-	
+
 	if (session->rtp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtp.gs.socket);
 	if (session->rtcp.gs.socket!=(ortp_socket_t)-1) close_socket (session->rtcp.gs.socket);
 	session->rtp.gs.socket=-1;
@@ -2061,7 +2061,7 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 static int _meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen){
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	int ret;
-	
+
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
 	}else{
@@ -2176,7 +2176,7 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransp
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem = m->modifiers;
 	OList *last_elem = NULL;
-	
+
 	for (;elem != NULL; elem = o_list_next(elem)) {
 		last_elem = elem;
 	}
@@ -2224,11 +2224,11 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
 	}
-	
+
 	/*invoke on schedule on every modifier first, regardless of if a packet is actually received.*/
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
-		
+
 		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
 	}
 
@@ -2242,12 +2242,12 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	}else{
 		ret=rtp_session_recvfrom(t->session,m->is_rtp,msg,flags,from,fromlen);
 	}
-	
+
 	if (ret <= 0){
 		return ret;
 	}
 	msg->b_wptr+=ret;
-	
+
 	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
 	if (t->session->rtcp_mux && m->is_rtp){
 		if (ret >= RTP_FIXED_HEADER_SIZE && rtp_get_version(msg) == 2){
@@ -2269,10 +2269,10 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 			ortp_error("RTCP packet received via rtcp-mux but RTCP transport is not set !");
 		}
 	}else ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
-	
+
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
 	msg->b_wptr-= ret;
-	
+
 	return ret;
 }
 
@@ -2405,3 +2405,10 @@ void rtp_session_do_splice(RtpSession *session, mblk_t *packet, bool_t is_rtp){
 	}
 }
 
+bool_t ortp_stream_is_ipv6(OrtpStream *os) {
+	if (os->sockfamily == AF_INET6) {
+		struct sockaddr_in6 *in6 = (struct sockaddr_in6 *)&os->rem_addr;
+		return !IN6_IS_ADDR_V4MAPPED(&in6->sin6_addr);
+	}
+	return FALSE;
+}
