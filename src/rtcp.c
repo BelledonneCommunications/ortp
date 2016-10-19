@@ -338,10 +338,10 @@ static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 	session->rtp.jitter_stats.jitter_buffer_size_ms=jitter_control_compute_mean_size(&session->rtp.jittctl);
 }
 
-static int rtcp_sr_init(RtpSession *session, uint8_t *buf, int size){
+static size_t rtcp_sr_init(RtpSession *session, uint8_t *buf, size_t size){
 	rtcp_sr_t *sr=(rtcp_sr_t*)buf;
 	int rr=(session->stats.packet_recv>0);
-	int sr_size=sizeof(rtcp_sr_t)-sizeof(report_block_t)+(rr*sizeof(report_block_t));
+	size_t sr_size=sizeof(rtcp_sr_t)-sizeof(report_block_t)+(rr*sizeof(report_block_t));
 	if (size<sr_size) return 0;
 	rtcp_common_header_init(&sr->ch,session,RTCP_SR,rr,sr_size);
 	sr->ssrc=htonl(session->snd.ssrc);
@@ -354,7 +354,7 @@ static int rtcp_sr_init(RtpSession *session, uint8_t *buf, int size){
 	return sr_size;
 }
 
-static int rtcp_rr_init(RtpSession *session, uint8_t *buf, int size){
+static size_t rtcp_rr_init(RtpSession *session, uint8_t *buf, size_t size){
 	rtcp_rr_t *rr=(rtcp_rr_t*)buf;
 	if (size<sizeof(rtcp_rr_t)) return 0;
 	rtcp_common_header_init(&rr->ch,session,RTCP_RR,1,sizeof(rtcp_rr_t));
@@ -364,7 +364,7 @@ static int rtcp_rr_init(RtpSession *session, uint8_t *buf, int size){
 	return sizeof(rtcp_rr_t);
 }
 
-static int rtcp_app_init(RtpSession *session, uint8_t *buf, uint8_t subtype, const char *name, int size){
+static size_t rtcp_app_init(RtpSession *session, uint8_t *buf, uint8_t subtype, const char *name, size_t size){
 	rtcp_app_t *app=(rtcp_app_t*)buf;
 	if (size<sizeof(rtcp_app_t)) return 0;
 	rtcp_common_header_init(&app->ch,session,RTCP_APP,subtype,size);

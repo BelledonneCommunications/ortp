@@ -34,7 +34,7 @@ void ortp_extremum_init(ortp_extremum *obj, int period){
 
 static void extremum_check_init(ortp_extremum *obj, uint64_t curtime, float value, const char *kind){
 	if (obj->extremum_time!=(uint64_t)-1){
-		if (curtime-obj->extremum_time>obj->period){
+		if (((int)(curtime-obj->extremum_time))>obj->period){
 			obj->last_stable=obj->current_extremum;
 			/*last extremum is too old, drop it and replace it with current value*/
 			obj->current_extremum=value;

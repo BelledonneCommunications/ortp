@@ -235,9 +235,9 @@ void msgpullup(mblk_t *mp,size_t len)
 	dblk_t *db;
 	size_t wlen=0;
 
-	if (mp->b_cont==NULL && len==-1) return;	/*nothing to do, message is not fragmented */
+	if (mp->b_cont==NULL && len==(size_t)-1) return;	/*nothing to do, message is not fragmented */
 
-	if (len==-1) len=msgdsize(mp);
+	if (len==(size_t)-1) len=msgdsize(mp);
 	db=datab_alloc(len);
 	while(wlen<len && mp!=NULL){
 		int remain=(int)(len-wlen);
