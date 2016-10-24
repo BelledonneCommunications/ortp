@@ -21,11 +21,8 @@
 #include "ortp-config.h"
 #endif
 
-#if HAVE_STDATOMIC_H
-#include <stdatomic.h>
-#endif
-
 #include "ortp/str_utils.h"
+#include "utils.h"
 
 
 void qinit(queue_t *q){
@@ -62,7 +59,7 @@ dblk_t *datab_alloc(size_t size){
 	return db;
 }
 
-static ORTP_INLINE void datab_ref(dblk_t *d){
+void dblk_ref(dblk_t *d){
 #if HAVE_STDATOMIC_H
 	atomic_fetch_add_explicit(&d->db_ref, 1, memory_order_relaxed);
 #else
@@ -70,7 +67,7 @@ static ORTP_INLINE void datab_ref(dblk_t *d){
 #endif
 }
 
-static ORTP_INLINE void datab_unref(dblk_t *d){
+void dblk_unref(dblk_t *d){
 #if HAVE_STDATOMIC_H
 	atomic_fetch_sub_explicit(&d->db_ref, 1, memory_order_relaxed);
 #else
@@ -83,6 +80,17 @@ static ORTP_INLINE void datab_unref(dblk_t *d){
 	}
 }
 
+unsigned char * dblk_base(dblk_t *db) {
+	return db->db_base;
+}
+
+unsigned char * dblk_lim(dblk_t *db) {
+	return db->db_lim;
+}
+
+int dblk_ref_value(dblk_t *db) {
+	return (int)db->db_ref;
+}
 
 mblk_t *allocb(size_t size, int pri)
 {
@@ -123,7 +131,7 @@ void freeb(mblk_t *mp)
 	return_if_fail(mp->b_datap!=NULL);
 	return_if_fail(mp->b_datap->db_base!=NULL);
 
-	datab_unref(mp->b_datap);
+	dblk_unref(mp->b_datap);
 	ortp_free(mp);
 }
 
@@ -145,7 +153,7 @@ mblk_t *dupb(mblk_t *mp)
 	return_val_if_fail(mp->b_datap!=NULL,NULL);
 	return_val_if_fail(mp->b_datap->db_base!=NULL,NULL);
 
-	datab_ref(mp->b_datap);
+	dblk_ref(mp->b_datap);
 	newm=(mblk_t *) ortp_malloc0(sizeof(mblk_t));
 	mblk_meta_copy(mp, newm);
 	newm->b_datap=mp->b_datap;
@@ -266,7 +274,7 @@ void msgpullup(mblk_t *mp,size_t len)
 	/*set firstm to point to the new datab */
 	freemsg(firstm->b_cont);
 	firstm->b_cont=NULL;
-	datab_unref(firstm->b_datap);
+	dblk_unref(firstm->b_datap);
 	firstm->b_datap=db;
 	firstm->b_rptr=db->db_base;
 	firstm->b_wptr=firstm->b_rptr+wlen;

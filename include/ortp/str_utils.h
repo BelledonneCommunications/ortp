@@ -74,13 +74,13 @@ typedef struct msgb
 
 
 
-typedef struct datab
-{
-	unsigned char *db_base;
-	unsigned char *db_lim;
-	void (*db_freefn)(void*);
-	int db_ref;
-} dblk_t;
+typedef struct datab dblk_t;
+
+ORTP_PUBLIC void dblk_ref(dblk_t *d);
+ORTP_PUBLIC void dblk_unref(dblk_t *d);
+ORTP_PUBLIC unsigned char * dblk_base(dblk_t *db);
+ORTP_PUBLIC unsigned char * dblk_lim(dblk_t *db);
+ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
 
 typedef struct _queue
 {
