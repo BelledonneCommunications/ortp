@@ -21,6 +21,10 @@
 #include "ortp-config.h"
 #endif
 
+#if HAVE_STDATOMIC_H
+#include <stdatomic.h>
+#endif
+
 #include "ortp/str_utils.h"
 
 
@@ -59,11 +63,19 @@ dblk_t *datab_alloc(size_t size){
 }
 
 static ORTP_INLINE void datab_ref(dblk_t *d){
+#if HAVE_STDATOMIC_H
+	atomic_fetch_add_explicit(&d->db_ref, 1, memory_order_relaxed);
+#else
 	d->db_ref++;
+#endif
 }
 
 static ORTP_INLINE void datab_unref(dblk_t *d){
+#if HAVE_STDATOMIC_H
+	atomic_fetch_sub_explicit(&d->db_ref, 1, memory_order_relaxed);
+#else
 	d->db_ref--;
+#endif
 	if (d->db_ref==0){
 		if (d->db_freefn!=NULL)
 			d->db_freefn(d->db_base);
