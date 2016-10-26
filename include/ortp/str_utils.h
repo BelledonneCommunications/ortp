@@ -76,12 +76,6 @@ typedef struct msgb
 
 typedef struct datab dblk_t;
 
-ORTP_PUBLIC void dblk_ref(dblk_t *d);
-ORTP_PUBLIC void dblk_unref(dblk_t *d);
-ORTP_PUBLIC unsigned char * dblk_base(dblk_t *db);
-ORTP_PUBLIC unsigned char * dblk_lim(dblk_t *db);
-ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
-
 typedef struct _queue
 {
 	mblk_t _q_stopper;
@@ -91,6 +85,12 @@ typedef struct _queue
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+ORTP_PUBLIC void dblk_ref(dblk_t *d);
+ORTP_PUBLIC void dblk_unref(dblk_t *d);
+ORTP_PUBLIC unsigned char * dblk_base(dblk_t *db);
+ORTP_PUBLIC unsigned char * dblk_lim(dblk_t *db);
+ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
 
 ORTP_PUBLIC void qinit(queue_t *q);
 
