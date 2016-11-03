@@ -69,11 +69,11 @@ void dblk_ref(dblk_t *d){
 
 void dblk_unref(dblk_t *d){
 #if HAVE_STDATOMIC_H
-	atomic_fetch_sub_explicit(&d->db_ref, 1, memory_order_relaxed);
+	atomic_int previous_ref = atomic_fetch_sub_explicit(&d->db_ref, 1, memory_order_release);
 #else
-	d->db_ref--;
+	int previous_ref = d->db_ref--;
 #endif
-	if (d->db_ref==0){
+	if (previous_ref == 1){
 		if (d->db_freefn!=NULL)
 			d->db_freefn(d->db_base);
 		ortp_free(d);
