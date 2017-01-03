@@ -206,10 +206,9 @@ bool_t rtcp_is_BYE(const mblk_t *m){
 bool_t rtcp_BYE_get_ssrc(const mblk_t *m, int idx, uint32_t *ssrc){
 	rtcp_bye_t *bye=(rtcp_bye_t*)m->b_rptr;
 	int rc=rtcp_common_header_get_rc(&bye->ch);
-	int len=rtcp_common_header_get_length(&bye->ch);
 	if (idx<rc){
 		if ((uint8_t*)&bye->ssrc[idx]<=(m->b_rptr
-				+sizeof(rtcp_common_header_t)+len-4)) {
+				+ rtcp_get_size(m)-4)) {
 			*ssrc=ntohl(bye->ssrc[idx]);
 			return TRUE;
 		}else{

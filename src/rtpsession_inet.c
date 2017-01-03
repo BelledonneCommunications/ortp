@@ -1363,8 +1363,10 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 #endif
 		}
 		/*store recv addr for use by modifiers*/
-		memcpy(&msg->net_addr,from,*fromlen);
-		msg->net_addrlen = *fromlen;
+		if (from && fromlen) {
+			memcpy(&msg->net_addr,from,*fromlen);
+			msg->net_addrlen = *fromlen;
+		}
 	}
 	return ret;
 }

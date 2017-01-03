@@ -2236,8 +2236,10 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
 		if (ret > 0) {
 			/*store recv addr for use by modifiers*/
-			memcpy(&msg->net_addr,from,*fromlen);
-			msg->net_addrlen = *fromlen;
+			if (from && fromlen) {
+				memcpy(&msg->net_addr,from,*fromlen);
+				msg->net_addrlen = *fromlen;
+			}
 		}
 	}else{
 		ret=rtp_session_recvfrom(t->session,m->is_rtp,msg,flags,from,fromlen);

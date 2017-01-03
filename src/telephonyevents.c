@@ -325,7 +325,7 @@ int rtp_session_read_telephone_event(RtpSession *session,
 	telephone_event_t *tev;
 	rtp_header_t *hdr=(rtp_header_t*)packet->b_rptr;
 	unsigned char *payload;
-	if (rtp_profile_is_telephone_event(session->rcv.profile, hdr->paytype)) return 0;  /* this is not tel ev.*/
+	if (!rtp_profile_is_telephone_event(session->rcv.profile, hdr->paytype)) return 0;  /* this is not tel ev.*/
 	datasize=rtp_get_payload(packet,&payload);
 	tev=*tab=(telephone_event_t*)payload;
 	/* convert from network to host order what should be */
