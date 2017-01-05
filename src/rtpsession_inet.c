@@ -1107,6 +1107,8 @@ int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flag
 			}
 			if (recv_addr != NULL) {
 				memcpy(&m->recv_addr, recv_addr, sizeof(ortp_recv_addr_t));
+			} else {
+				ortp_error("Did not succeed to fill the receive address, this should not happen! [family=%d, len=%d]", from->sa_family, (int)*fromlen);
 			}
 		}
 		/* Store the local port in the recv_addr of the mblk_t, the address is already filled in rtp_session_rtp_recv_abstract */
