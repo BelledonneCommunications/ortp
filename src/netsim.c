@@ -461,6 +461,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 
 		ortp_mutex_lock(&session->net_sim_ctx->mutex);
 		while((om = rtp_session_netsim_find_next_packet_to_send(session)) != NULL){
+			is_rtp_packet=om->reserved1; /*it was set by rtp_session_sendto()*/
 			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
 			if (todrop) {
 				freemsg(todrop); /*free the last message while the mutex is not held*/
@@ -469,11 +470,11 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			_ortp_get_cur_time(&current,TRUE);
 			packet_time.tv_sec=om->timestamp.tv_sec;
 			packet_time.tv_nsec=om->timestamp.tv_usec*1000LL;
-			if (om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
-				todrop = om; /*simulate a packet loss*/
+			if (is_rtp_packet && om->timestamp.tv_sec==0 && om->timestamp.tv_usec==0){
+				todrop = om; /*simulate a packet loss, only RTP packets can be dropped. Timestamp is not set for RTCP packets*/
 			}else if (ortp_timespec_compare(&packet_time, &current) <= 0){
 				/*it is time to send this packet*/
-				is_rtp_packet=om->reserved1; /*it was set by rtp_session_sendto()*/
+				
 				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
 				todrop = om;
 			}else {
