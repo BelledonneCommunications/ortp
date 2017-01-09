@@ -1068,7 +1068,7 @@ static const ortp_recv_addr_t * lookup_recv_addr(RtpSession *session, struct soc
 	return result;
 }
 
-static const ortp_recv_addr_t * get_recv_addr(RtpSession *session, struct sockaddr *from, socklen_t fromlen, bool_t debug) {
+static const ortp_recv_addr_t * get_recv_addr(RtpSession *session, struct sockaddr *from, socklen_t fromlen) {
 	char result[NI_MAXHOST] = { 0 };
 	char dest[NI_MAXHOST] = { 0 };
 	struct addrinfo *ai = NULL;
@@ -1076,19 +1076,20 @@ static const ortp_recv_addr_t * get_recv_addr(RtpSession *session, struct sockad
 	int family = from->sa_family;
 	int err;
 	err = bctbx_sockaddr_to_ip_address(from, fromlen, dest, sizeof(dest), &port);
-	if (err == 0) {
-		err = bctbx_get_local_ip_for(family, dest, port, result, sizeof(result));
-	} else {
-		if (debug) ortp_error("bctbx_sockaddr_to_ip_address failed");
+	if (err != 0) {
+		ortp_error("bctbx_sockaddr_to_ip_address failed");
 		return NULL;
 	}
-	if (err == 0) {
-		ai = bctbx_ip_address_to_addrinfo(family, SOCK_DGRAM, result, port);
-	} else {
-		if (debug) ortp_error("bctbx_get_local_ip_for failed: dest=%s, port=%d", dest, port);
+	err = bctbx_get_local_ip_for(family, dest, port, result, sizeof(result));
+	if (err != 0) {
+		ortp_error("bctbx_get_local_ip_for failed: dest=%s, port=%d", dest, port);
 		return NULL;
 	}
-	if (ai != NULL) {
+	ai = bctbx_ip_address_to_addrinfo(family, SOCK_DGRAM, result, port);
+	if (ai == NULL) {
+		ortp_error("bctbx_ip_address_to_addrinfo failed: result=%s, port=%d", result, port);
+		return NULL;
+	} else {
 		ortp_recv_addr_map_t *item = bctbx_new0(ortp_recv_addr_map_t, 1);
 		memcpy(&item->ss, from, fromlen);
 		item->recv_addr.family = family;
@@ -1101,9 +1102,6 @@ static const ortp_recv_addr_t * get_recv_addr(RtpSession *session, struct sockad
 		item->ts = ortp_get_cur_time_ms();
 		session->recv_addr_map = bctbx_list_append(session->recv_addr_map, item);
 		return &item->recv_addr;
-	} else {
-		if (debug) ortp_error("bctbx_ip_address_to_addrinfo failed: result=%s, port=%d", result, port);
-		return NULL;
 	}
 }
 
@@ -1115,13 +1113,12 @@ int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flag
 			 * a dual stack socket. Try to guess the address because it is mandatory for ICE. */
 			const ortp_recv_addr_t *recv_addr = lookup_recv_addr(session, from, *fromlen);
 			if (recv_addr == NULL) {
-				recv_addr = get_recv_addr(session, from, *fromlen, FALSE);
+				recv_addr = get_recv_addr(session, from, *fromlen);
 			}
 			if (recv_addr != NULL) {
 				memcpy(&m->recv_addr, recv_addr, sizeof(ortp_recv_addr_t));
 			} else {
 				ortp_error("Did not succeed to fill the receive address, this should not happen! [family=%d, len=%d]", from->sa_family, (int)*fromlen);
-				get_recv_addr(session, from, *fromlen, TRUE);
 			}
 		}
 		/* Store the local port in the recv_addr of the mblk_t, the address is already filled in rtp_session_rtp_recv_abstract */
