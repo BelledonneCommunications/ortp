@@ -756,8 +756,8 @@ int rtp_session_get_local_rtcp_port(const RtpSession *session){
 /**
  *rtp_session_set_remote_addr:
  *@param session:		a rtp session freshly created.
- *@param addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@param port:		a local port.
+ *@param addr:		a remote IP address in the xxx.xxx.xxx.xxx form.
+ *@param port:		a remote port.
  *
  *	Sets the remote address of the rtp session, ie the destination address where rtp packet
  *	are sent. If the session is recv-only or duplex, it also sets the origin of incoming RTP
@@ -773,10 +773,10 @@ rtp_session_set_remote_addr (RtpSession * session, const char * addr, int port){
 /**
  *rtp_session_set_remote_addr_full:
  *@param session:		a rtp session freshly created.
- *@param rtp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@param rtp_port:		a local rtp port.
- *@param rtcp_addr:		a local IP address in the xxx.xxx.xxx.xxx form.
- *@param rtcp_port:		a local rtcp port.
+ *@param rtp_addr:		a remote IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtp_port:		a remote rtp port.
+ *@param rtcp_addr:		a remote IP address in the xxx.xxx.xxx.xxx form.
+ *@param rtcp_port:		a remote rtcp port.
  *
  *	Sets the remote address of the rtp session, ie the destination address where rtp packet
  *	are sent. If the session is recv-only or duplex, it also sets the origin of incoming RTP
@@ -848,56 +848,59 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 		goto end;
 	}
 
-	res0 = bctbx_name_to_addrinfo((session->rtcp.gs.socket == -1) ? AF_UNSPEC : session->rtcp.gs.sockfamily, SOCK_DGRAM, rtcp_addr, rtcp_port);
-	if (res0 == NULL) {
-		ortp_error("_rtp_session_set_remote_addr_full(): cannot set RTCP destination to %s port %i.", rtcp_addr, rtcp_port);
-		err=-1;
-		goto end;
-	} else {
-		bctbx_addrinfo_to_printable_ip_address(res0, rtcp_printable_addr, sizeof(rtcp_printable_addr));
-	}
-	err=-1;
-	for (res = res0; res; res = res->ai_next) {
-		/* set a destination address that has the same type as the local address */
-		if (res->ai_family==session->rtcp.gs.sockfamily ) {
-			err=0;
-			memcpy(rtcp_saddr, res->ai_addr, res->ai_addrlen);
-			*rtcp_saddr_len=(socklen_t)res->ai_addrlen;
-			break;
+	if ((rtcp_addr != NULL) && (rtcp_port > 0)) {
+		res0 = bctbx_name_to_addrinfo((session->rtcp.gs.socket == -1) ? AF_UNSPEC : session->rtcp.gs.sockfamily, SOCK_DGRAM, rtcp_addr, rtcp_port);
+		if (res0 == NULL) {
+			ortp_error("_rtp_session_set_remote_addr_full(): cannot set RTCP destination to %s port %i.", rtcp_addr, rtcp_port);
+			err=-1;
+			goto end;
+		} else {
+			bctbx_addrinfo_to_printable_ip_address(res0, rtcp_printable_addr, sizeof(rtcp_printable_addr));
 		}
-	}
-	bctbx_freeaddrinfo(res0);
-	if (err) {
-		ortp_warning("Could not set destination for RCTP socket to %s:%i.",rtcp_addr,rtcp_port);
-		goto end;
+		err=-1;
+		for (res = res0; res; res = res->ai_next) {
+			/* set a destination address that has the same type as the local address */
+			if (res->ai_family==session->rtcp.gs.sockfamily ) {
+				err=0;
+				memcpy(rtcp_saddr, res->ai_addr, res->ai_addrlen);
+				*rtcp_saddr_len=(socklen_t)res->ai_addrlen;
+				break;
+			}
+		}
+		bctbx_freeaddrinfo(res0);
+		if (err) {
+			ortp_warning("Could not set destination for RCTP socket to %s:%i.",rtcp_addr,rtcp_port);
+			goto end;
+		}
+
+		if (can_connect(session)){
+			if (try_connect(session->rtp.gs.socket,(struct sockaddr*)&session->rtp.gs.rem_addr,session->rtp.gs.rem_addrlen))
+				session->flags|=RTP_SOCKET_CONNECTED;
+			if (session->rtcp.gs.socket!=(ortp_socket_t)-1){
+				if (try_connect(session->rtcp.gs.socket,(struct sockaddr*)&session->rtcp.gs.rem_addr,session->rtcp.gs.rem_addrlen))
+					session->flags|=RTCP_SOCKET_CONNECTED;
+			}
+		}else if (session->flags & RTP_SOCKET_CONNECTED){
+			/*must dissolve association done by connect().
+			See connect(2) manpage*/
+			struct sockaddr sa;
+			sa.sa_family=AF_UNSPEC;
+			if (connect(session->rtp.gs.socket,&sa,sizeof(sa))<0){
+				ortp_error("Cannot dissolve connect() association for rtp socket: %s", getSocketError());
+			}
+			if (connect(session->rtcp.gs.socket,&sa,sizeof(sa))<0){
+				ortp_error("Cannot dissolve connect() association for rtcp socket: %s", getSocketError());
+			}
+			session->flags&=~RTP_SOCKET_CONNECTED;
+			session->flags&=~RTCP_SOCKET_CONNECTED;
+		}
+
+		ortp_message("RtpSession [%p] sending to rtp %s rtcp %s %s", session, rtp_printable_addr, rtcp_printable_addr, is_aux ? "as auxiliary destination" : "");
+	} else {
+		ortp_message("RtpSession [%p] sending to rtp %s %s", session, rtp_printable_addr, is_aux ? "as auxiliary destination" : "");
 	}
 
-	if (can_connect(session)){
-		if (try_connect(session->rtp.gs.socket,(struct sockaddr*)&session->rtp.gs.rem_addr,session->rtp.gs.rem_addrlen))
-			session->flags|=RTP_SOCKET_CONNECTED;
-		if (session->rtcp.gs.socket!=(ortp_socket_t)-1){
-			if (try_connect(session->rtcp.gs.socket,(struct sockaddr*)&session->rtcp.gs.rem_addr,session->rtcp.gs.rem_addrlen))
-				session->flags|=RTCP_SOCKET_CONNECTED;
-		}
-	}else if (session->flags & RTP_SOCKET_CONNECTED){
-		/*must dissolve association done by connect().
-		See connect(2) manpage*/
-		struct sockaddr sa;
-		sa.sa_family=AF_UNSPEC;
-		if (connect(session->rtp.gs.socket,&sa,sizeof(sa))<0){
-			ortp_error("Cannot dissolve connect() association for rtp socket: %s", getSocketError());
-		}
-		if (connect(session->rtcp.gs.socket,&sa,sizeof(sa))<0){
-			ortp_error("Cannot dissolve connect() association for rtcp socket: %s", getSocketError());
-		}
-		session->flags&=~RTP_SOCKET_CONNECTED;
-		session->flags&=~RTCP_SOCKET_CONNECTED;
-	}
-	ortp_message("RtpSession [%p] sending to rtp %s rtcp %s %s",session
-									,rtp_printable_addr
-									,rtcp_printable_addr
-									,is_aux ? "as auxiliary destination" : "");
-	end:
+end:
 	if (is_aux){
 		if (err==-1){
 			ortp_free(aux_rtp);
