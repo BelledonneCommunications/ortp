@@ -1,21 +1,21 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 
 #ifdef HAVE_CONFIG_H
@@ -29,6 +29,7 @@
 #include "scheduler.h"
 #include "utils.h"
 #include "rtpsession_priv.h"
+#include "congestiondetector.h"
 
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
@@ -149,7 +150,6 @@ int rtp_putq(queue_t *q, mblk_t *mp)
 }
 
 
-
 mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL,*old=NULL;
@@ -158,7 +158,6 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 
 	*rejected=0;
 	ortp_debug("rtp_getq(): Timestamp %i wanted.",timestamp);
-
 	if (qempty(q))
 	{
 		/*ortp_debug("rtp_getq: q is empty.");*/
@@ -170,6 +169,7 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 	{
 		tmprtp=(rtp_header_t*)tmp->b_rptr;
 		ortp_debug("rtp_getq: Seeing packet with ts=%i",tmprtp->timestamp);
+
 		if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmprtp->timestamp) )
 		{
 			if (ret!=NULL && tmprtp->timestamp==ts_found) {
@@ -184,6 +184,7 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 			ret=getq(q); /* dequeue the packet, since it has an interesting timestamp*/
 			ts_found=tmprtp->timestamp;
 			ortp_debug("rtp_getq: Found packet with ts=%i",tmprtp->timestamp);
+
 			old=ret;
 		}
 		else
@@ -283,13 +284,9 @@ rtp_session_init (RtpSession * session, int mode)
 	rtp_session_set_send_payload_type(session,0);
 	/*sets supposed recv payload type to undefined */
 	rtp_session_set_recv_payload_type(session,-1);
-	/* configure jitter buffer with working default parameters */
-	jbp.min_size=RTP_DEFAULT_JITTER_TIME;
-	jbp.nom_size=RTP_DEFAULT_JITTER_TIME;
-	jbp.max_size=-1;
-	jbp.max_packets= 100;/* maximum number of packet allowed to be queued */
-	jbp.adaptive=TRUE;
+
 	rtp_session_enable_jitter_buffer(session,TRUE);
+	jb_parameters_init(&jbp);
 	rtp_session_set_jitter_buffer_params(session,&jbp);
 	rtp_session_set_time_jump_limit(session,5000);
 	rtp_session_enable_rtcp(session,TRUE);
@@ -301,6 +298,7 @@ rtp_session_init (RtpSession * session, int mode)
 	msgb_allocator_init(&session->rtp.gs.allocator);
 	msgb_allocator_init(&session->rtcp.gs.allocator);
 	/*set default rtptransport*/
+
 	{
 		RtpTransport *rtp_tr = meta_rtp_transport_new(NULL, 0);
 		RtpTransport *rtcp_tr = meta_rtcp_transport_new(NULL, 0);
@@ -310,6 +308,33 @@ rtp_session_init (RtpSession * session, int mode)
 	session->tev_send_pt = -1; /*check in rtp profile when needed*/
 }
 
+void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
+	if (enabled){
+		if (!session->rtp.congdetect){
+			session->rtp.congdetect = ortp_congestion_detector_new(session);
+		}
+	}else{
+		if (session->rtp.congdetect){
+			ortp_congestion_detector_destroy(session->rtp.congdetect);
+			session->rtp.congdetect = NULL;
+		}
+	}
+}
+
+void jb_parameters_init(JBParameters *jbp) {
+	/* configure jitter buffer with working default parameters */
+	jbp->min_size=RTP_DEFAULT_JITTER_TIME;
+	jbp->nom_size=RTP_DEFAULT_JITTER_TIME;
+	jbp->max_size=500;
+	jbp->max_packets= 200;/* maximum number of packet allowed to be queued */
+	jbp->adaptive=TRUE;
+	jbp->enabled=TRUE;
+	jbp->buffer_algorithm = OrtpJitterBufferRecursiveLeastSquare;
+	jbp->refresh_ms=5000;
+	jbp->ramp_threshold=70;
+	jbp->ramp_step_ms=20;
+	jbp->ramp_refresh_ms=5000;
+}
 
 /**
  * Creates a new rtp session.
@@ -412,7 +437,7 @@ rtp_session_set_profile (RtpSession * session, RtpProfile * profile)
 /**
  *	By default oRTP automatically sends RTCP SR or RR packets. If
  *	yesno is set to FALSE, the RTCP sending of packet is disabled.
- *	This functionnality might be needed for some equipments that do not
+ *	This functionality might be needed for some equipments that do not
  *	support RTCP, leading to a traffic of ICMP errors on the network.
  *	It can also be used to save bandwidth despite the RTCP bandwidth is
  *	actually and usually very very low.
@@ -436,6 +461,9 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
 
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
 	session->target_upload_bandwidth = target_bandwidth;
+}
+int rtp_session_get_target_upload_bandwidth(RtpSession *session) {
+	return session->target_upload_bandwidth;
 }
 
 /**
@@ -504,6 +532,14 @@ RtpProfile *rtp_session_get_recv_profile(RtpSession *session){
 	return session->rcv.profile;
 }
 
+void rtp_session_set_send_ts_offset(RtpSession *s, int32_t offset){
+	s->send_ts_offset = offset;
+}
+
+uint32_t rtp_session_get_send_ts_offset(RtpSession *s){
+	return s->send_ts_offset;
+}
+
 /**
  *	The default value is UDP_MAX_SIZE bytes, a value which is working for mostly everyone.
  *	However if your application can make assumption on the sizes of received packet,
@@ -541,23 +577,24 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession * session, unsigned 
  *	several callbacks for the same signal, in the limit of \a RTP_CALLBACK_TABLE_MAX_ENTRIES.
  *	Here are name and meaning of supported signals types:
  *
- *	"ssrc_changed" : the SSRC of the incoming stream has changed.
+ *	"ssrc_changed": the SSRC of the incoming stream has changed.
  *
- *	"payload_type_changed" : the payload type of the incoming stream has changed.
+ *	"payload_type_changed": the payload type of the incoming stream has changed.
  *
- *	"telephone-event_packet" : a telephone-event rtp packet (RFC2833) is received.
+ *	"telephone-event_packet": a telephone-event rtp packet (RFC2833) is received.
  *
- *	"telephone-event" : a telephone event has occured. This is a high-level shortcut for "telephone-event_packet".
+ *	"telephone-event": a telephone event has occurred. This is a high-level shortcut for "telephone-event_packet".
  *
- *	"network_error" : a network error happened on a socket. Arguments of the callback functions are
+ *	"network_error": a network error happened on a socket. Arguments of the callback functions are
  *						a const char * explaining the error, an int errno error code and the user_data as usual.
  *
- *	"timestamp_jump" : we have received a packet with timestamp in far future compared to last timestamp received.
+ *	"timestamp_jump": we have received a packet with timestamp in far future compared to last timestamp received.
  *						The farness of far future is set by rtp_sesssion_set_time_jump_limit()
  *  "rtcp_bye": we have received a RTCP bye packet. Arguments of the callback
  *              functions are a const char * containing the leaving reason and
  *              the user_data.
- *
+ *	"congestion_state_changed": congestion detector object changed its internal state. Arguments of
+ *								the callback function are previous and new states.
  *	Returns: 0 on success, -EOPNOTSUPP if the signal does not exists, -1 if no more callbacks
  *	can be assigned to the signal type.
  *
@@ -571,7 +608,7 @@ int
 rtp_session_signal_connect (RtpSession * session, const char *signal_name,
 				RtpCallback cb, void *user_data)
 {
-	OList *elem;
+	bctbx_list_t *elem;
 	for (elem=session->signal_tables;elem!=NULL;elem=o_list_next(elem)){
 		RtpSignalTable *s=(RtpSignalTable*) elem->data;
 		if (strcmp(signal_name,s->signal_name)==0){
@@ -620,6 +657,7 @@ void rtp_session_set_seq_number(RtpSession *session, uint16_t seq){
 void rtp_session_set_duplication_ratio(RtpSession *session, float ratio){
 	session->duplication_ratio=ratio;
 }
+
 
 
 /**
@@ -1006,7 +1044,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 **/
 
 int rtp_session_sendm_with_ts(RtpSession *session, mblk_t *packet, uint32_t timestamp){
-	return __rtp_session_sendm_with_ts(session,packet,timestamp,timestamp);
+	return __rtp_session_sendm_with_ts(session,packet,timestamp+session->send_ts_offset,timestamp+session->send_ts_offset);
 }
 
 
@@ -1037,7 +1075,6 @@ rtp_session_send_with_ts (RtpSession * session, const uint8_t * buffer, int len,
 	err=rtp_session_sendm_with_ts(session,m,userts);
 	return err;
 }
-
 
 
 static void payload_type_changed_notify(RtpSession *session, int paytype){
@@ -1127,7 +1164,7 @@ mblk_t *
 rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 {
 	mblk_t *mp = NULL;
-	rtp_header_t *rtp;
+	rtp_header_t *rtp = NULL;
 	uint32_t ts;
 	uint32_t packet_time;
 	RtpScheduler *sched=session->sched;
@@ -1195,7 +1232,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 
 	/*calculate the stream timestamp from the user timestamp */
 	ts = jitter_control_get_compensated_timestamp(&session->rtp.jittctl,user_ts);
-	if (session->rtp.jittctl.enabled==TRUE){
+	if (session->rtp.jittctl.params.enabled==TRUE){
 		if (session->permissive)
 			mp = rtp_getq_permissive(&session->rtp.rq, ts,&rejected);
 		else{
@@ -1206,8 +1243,6 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	session->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
 	session->rtcp_xr_stats.discarded_count += rejected;
-
-	goto end;
 
 	end:
 	if (mp != NULL)
@@ -1227,7 +1262,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		check_for_seq_number_gap(session, rtp);
 		/* update the packet's timestamp so that it corrected by the
 		adaptive jitter buffer mechanism */
-		if (session->rtp.jittctl.adaptive){
+		if (session->rtp.jittctl.params.adaptive){
 			uint32_t changed_ts;
 			/* only update correction offset between packets of different
 			timestamps*/
@@ -1535,6 +1570,10 @@ void rtp_session_uninit (RtpSession * session)
 
 	if (session->net_sim_ctx)
 		ortp_network_simulator_destroy(session->net_sim_ctx);
+	
+	if (session->rtp.congdetect){
+		ortp_congestion_detector_destroy(session->rtp.congdetect);
+	}
 
 	rtp_session_get_transports(session,&rtp_meta_transport,&rtcp_meta_transport);
 	if (rtp_meta_transport)
@@ -1579,13 +1618,11 @@ void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets)
  * @param session the rtp session
 **/
 void rtp_session_resync(RtpSession *session){
-	int ptindex=rtp_session_get_recv_payload_type(session);
-	PayloadType *pt=rtp_profile_get_payload(session->rcv.profile,ptindex);
-
 	flushq (&session->rtp.rq, FLUSHALL);
 	rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
-	jitter_control_init(&session->rtp.jittctl,-1,pt);
+	rtp_session_init_jitter_buffer(session);
+	if (session->rtp.congdetect) ortp_congestion_detector_reset(session->rtp.congdetect);
 
 	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed
@@ -1754,26 +1791,34 @@ void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno){
 	session->use_connect=yesno;
 }
 
-static float compute_bw(struct timeval *orig, unsigned int bytes, const struct timeval *current){
+static float compute_bw(struct timeval *orig, unsigned int *bytes, const struct timeval *current){
 	float bw;
 	float time;
 
 	time=(float)((double)(current->tv_sec - orig->tv_sec) +
 		((double)(current->tv_usec - orig->tv_usec)*1e-6));
-	bw=((float)bytes)*8/(time+0.0001f);
+	bw=((float)*bytes)*8/(time+0.0001f);
 	/*+0.0001 avoids a division by zero without changing the results significatively*/
 	*orig=*current;
 	return bw;
 }
 
+#define BW_GAMMA 0.5f
+
 static void compute_recv_bandwidth(OrtpStream *os, const struct timeval *current) {
-	os->download_bw = compute_bw(&os->recv_bw_start, os->recv_bytes, current);
+	os->download_bw = compute_bw(&os->recv_bw_start, &os->recv_bytes, current);
 	os->recv_bytes = 0;
+	os->average_download_bw = (os->average_download_bw==0) ?
+							os->download_bw :
+							(1 - BW_GAMMA) * os->average_download_bw + BW_GAMMA * os->download_bw;
 }
 
 static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current) {
-	os->upload_bw = compute_bw(&os->send_bw_start, os->sent_bytes, current);
+	os->upload_bw = compute_bw(&os->send_bw_start, &os->sent_bytes, current);
 	os->sent_bytes = 0;
+	os->average_upload_bw = (os->average_upload_bw==0) ?
+							os->upload_bw :
+							(1 - BW_GAMMA) * os->average_upload_bw + BW_GAMMA * os->upload_bw;
 }
 
 float rtp_session_compute_recv_bandwidth(RtpSession *session) {
@@ -1802,12 +1847,20 @@ float rtp_session_get_recv_bandwidth(RtpSession *session){
 	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 }
 
+float rtp_session_get_recv_bandwidth_smooth(RtpSession *session){
+	return session->rtp.gs.average_download_bw + session->rtcp.gs.average_download_bw;
+}
+
 /**
  * Get last computed send bandwidth.
  * Computation must have been done with rtp_session_compute_send_bandwidth()
 **/
 float rtp_session_get_send_bandwidth(RtpSession *session){
 	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
+}
+
+float rtp_session_get_send_bandwidth_smooth(RtpSession *session){
+	return session->rtp.gs.average_upload_bw + session->rtcp.gs.average_upload_bw;
 }
 
 float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {

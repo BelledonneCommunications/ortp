@@ -29,9 +29,11 @@ LOCAL_MODULE := libortp
 LOCAL_SRC_FILES := \
 	src/avprofile.c \
 	src/b64.c \
+	src/congestiondetector.c \
 	src/event.c \
 	src/extremum.c \
 	src/jitterctl.c \
+	src/kalmanrls.c \
 	src/logging.c \
 	src/netsim.c \
 	src/ortp.c \

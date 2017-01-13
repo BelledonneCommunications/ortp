@@ -1,28 +1,21 @@
-/***************************************************************************
- *            utils.h
- *
- *  Wed Feb 23 14:15:36 2005
- *  Copyright  2005  Simon Morlat
- *  Email simon.morlat@linphone.org
- ****************************************************************************/
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -47,22 +40,18 @@ struct datab {
 #endif
 };
 
-struct _OList {
-	struct _OList *next;
-	struct _OList *prev;
-	void *data;
-};
+#define OList bctbx_list_t
 
 
 #define o_list_next(elem) ((elem)->next)
 #define o_list_prev(elem) ((elem)->prev)
 
-OList * o_list_append(OList *elem, void * data);
-OList * o_list_prepend(OList *elem, void * data);
-OList * o_list_remove(OList *list, void *data);
-OList * o_list_free(OList *elem);
-OList *o_list_remove_link(OList *list, OList *elem);
-OList * o_list_free_with_data(OList *list, void (*freefunc)(void*));
+#define o_list_append bctbx_list_append
+#define o_list_prepend bctbx_list_prepend
+#define o_list_remove bctbx_list_remove
+#define o_list_free bctbx_list_free
+#define o_list_remove_link bctbx_list_erase_link
+#define o_list_free_with_data bctbx_list_free_with_data
 
 
 #define ORTP_POINTER_TO_INT(p) ((int)(intptr_t)(p))

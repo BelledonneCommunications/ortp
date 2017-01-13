@@ -1,5 +1,5 @@
 
-EXTRA_DIST=dll_entry.c master system winrttimer.cpp winrttimer.h
+EXTRA_DIST=dll_entry.c winrttimer.cpp winrttimer.h
 
 AM_CPPFLAGS=\
 	$(STRICT_OPTIONS) \
@@ -21,8 +21,10 @@ lib_LTLIBRARIES = libortp.la
 libortp_la_SOURCES=	\
 			avprofile.c  \
 			b64.c \
+			congestiondetector.c congestiondetector.h\
 			event.c \
 			extremum.c \
+			kalmanrls.c \
 			jitterctl.c jitterctl.h \
 			logging.c \
 			netsim.c \

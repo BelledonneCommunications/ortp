@@ -1,22 +1,21 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2011 Belledonne Communications SARL
-  Author: Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 #include "ortp/ortp.h"
 #include "utils.h"
@@ -35,10 +34,10 @@ static OrtpNetworkSimulatorCtx* simulator_ctx_new(void){
 	return ctx;
 }
 
-void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
+static void ortp_network_simulator_dump_stats(OrtpNetworkSimulatorCtx *sim) {
 	int drop_by_flush=sim->latency_q.q_mcount+sim->q.q_mcount;
 	if (sim->total_count>0){
-		ortp_message("Network simulation: destroyed. Statistics are:"
+		ortp_message("Network simulation: dump stats. Statistics are:"
 			"%d/%d(%.1f%%, param=%.1f) packets dropped by loss, "
 			"%d/%d(%.1f%%) packets dropped by congestion, "
 			"%d/%d(%.1f%%) packets flushed."
@@ -47,6 +46,9 @@ void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
 			, drop_by_flush, sim->total_count, drop_by_flush*100.f/sim->total_count
 		);
 	}
+}
+void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim){
+	ortp_network_simulator_dump_stats(sim);
 	flushq(&sim->latency_q,0);
 	flushq(&sim->q,0);
 	flushq(&sim->send_q,0);
@@ -144,8 +146,11 @@ OrtpNetworkSimulatorMode ortp_network_simulator_mode_from_string(const char *str
 void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params){
 	OrtpNetworkSimulatorCtx *sim=session->net_sim_ctx;
 	if (params->enabled){
-		if (sim==NULL)
+		if (sim==NULL) {
 			sim=simulator_ctx_new();
+		} else {
+			ortp_network_simulator_dump_stats(sim);
+		}
 		sim->drop_by_congestion=sim->drop_by_loss=sim->total_count=0;
 		sim->params=*params;
 		if (sim->params.jitter_burst_density>0 && sim->params.jitter_strength>0 && sim->params.max_bandwidth==0){
@@ -171,7 +176,7 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 				"\tmax_buffer_size=%d\n"
 				"\tjitter_density=%.1f\n"
 				"\tjitter_strength=%.1f\n"
-				"\tmode=%s\n",
+				"\tmode=%s",
 				params->latency,
 				params->loss_rate,
 				params->consecutive_loss_probability,
@@ -311,7 +316,7 @@ static mblk_t *simulate_loss_rate(OrtpNetworkSimulatorCtx *net_sim_ctx, mblk_t *
 	int rrate;
 	float loss_rate=net_sim_ctx->params.loss_rate*10.0f;
 
-	/*in order to simulate bursts of dropped packets, take into account a different probability after a loss occured*/
+	/*in order to simulate bursts of dropped packets, take into account a different probability after a loss occurred*/
 	if (net_sim_ctx->consecutive_drops>0){
 		loss_rate=net_sim_ctx->params.consecutive_loss_probability*1000.0f;
 	}

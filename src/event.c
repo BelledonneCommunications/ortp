@@ -1,21 +1,21 @@
- /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+/*
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 #include "ortp/event.h"
 #include "ortp/ortp.h"
@@ -130,15 +130,8 @@ static void iterate_cbs(OrtpEvDispatcher *disp, OrtpEvent *ev) {
 		OrtpEventData *d = ortp_event_get_data(ev);
 		OList* it;
 		OrtpEventType evt = ortp_event_get_type(ev);
-		for (it = disp->cbs; it != NULL; it = it->next){
+		for (it=disp->cbs;it!=NULL;it=it->next){
 			OrtpEvDispatcherData *data = (OrtpEvDispatcherData *)it->data;
-			/*
-			const rtcp_common_header_t *ch = rtcp_get_common_header(d->packet);
-			rtcp_type_t packet_type = 0;
-			if (ch != NULL) {
-				packet_type = rtcp_common_header_get_packet_type(ch);
-			}
-			*/
 			if (evt == data->type) {
 				if (!is_rtcp_event(data->type) || rtcp_is_type(d->packet, data->subtype)) {
 					data->on_found(d, data->user_data);

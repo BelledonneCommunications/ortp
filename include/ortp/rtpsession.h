@@ -1,21 +1,21 @@
- /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+/*
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 /**
  * \file rtpsession.h
@@ -40,9 +40,9 @@
 #include <ortp/sessionset.h>
 #include <ortp/rtcp.h>
 #include <ortp/str_utils.h>
+#include <ortp/utils.h>
 #include <ortp/rtpsignaltable.h>
 #include <ortp/event.h>
-
 
 #define ORTP_AVPF_FEATURE_NONE 0
 #define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
@@ -56,35 +56,50 @@ typedef enum {
 } RtpSessionMode;
 
 
+typedef enum _OrtpJitterBufferAlgorithm {
+	OrtpJitterBufferBasic,
+	OrtpJitterBufferRecursiveLeastSquare,
+} OrtpJitterBufferAlgorithm;
+
 /*! Jitter buffer parameters
 */
 typedef struct _JBParameters{
-	int min_size; /**< in milliseconds*/
-	int nom_size; /**< idem */
-	int max_size; /**< idem */
-	bool_t adaptive;
-	bool_t pad[3];
-	int max_packets; /**< max number of packets allowed to be queued in the jitter buffer */
+	int min_size; /*(adaptive=TRUE only) maximum dynamic delay to be added to incoming packets (ms) */
+	int nom_size; /*(adaptive=TRUE only) initial dynamic delay to be added to incoming packets (ms) */
+	int max_size; /*(adaptive=TRUE only) minimum dynamic delay to be added to incoming packets (ms) */
+	bool_t adaptive; /*either a dynamic buffer should be used or not to compensate bursts */
+	bool_t enabled; /*whether jitter buffer is enabled*/
+	bool_t pad[2]; /*(dev only) alignment pad: insert your bool_t here*/
+	int max_packets; /**max number of packets allowed to be queued in the jitter buffer */
+	OrtpJitterBufferAlgorithm buffer_algorithm;
+	int refresh_ms; /* (adaptive=TRUE only) dynamic buffer size update frequency (ms) */
+	int ramp_threshold; /*(adaptive=TRUE, algo=RLS only) Percentage in [0;100] threshold between current jitter and previous jitter to enable smooth ramp*/
+	int ramp_step_ms; /*(adaptive=TRUE, algo=RLS only) In smooth ramp, how much we should reduce jitter size on each step*/
+	int ramp_refresh_ms; /*(adaptive=TRUE, algo=RLS only) In smooth ramp, frequency of step*/
 } JBParameters;
 
 typedef struct _JitterControl
 {
-	unsigned int count;
-	int jitt_comp;   /* the user jitt_comp in miliseconds*/
-	int jitt_comp_ts; /* the jitt_comp converted in rtp time (same unit as timestamp) */
+	JBParameters params;
+	unsigned int count; /* number of packets handled in jitter_control_new_packet. Used internally only. */
+	int jitt_comp_ts; /* the nominal jitter buffer size converted in rtp time (same unit as timestamp) */
 	int adapt_jitt_comp_ts;
-	int64_t slide;
-	int64_t prev_slide;
+	int64_t clock_offset_ts; /*offset difference between local and distant clock, in timestamp units*/
+	int64_t prev_clock_offset_ts;
 	int64_t olddiff;
 	float jitter;
 	float inter_jitter;	/* interarrival jitter as defined in the RFC */
+	float jitter_buffer_mean_size; /*effective size (fullness) of jitter buffer*/
 	int corrective_step;
 	int corrective_slide;
 	uint64_t cum_jitter_buffer_size; /*in timestamp units*/
 	unsigned int cum_jitter_buffer_count; /*used for computation of jitter buffer size*/
 	int clock_rate;
-	bool_t adaptive;
-	bool_t enabled;
+	uint32_t adapt_refresh_prev_ts; /*last time we refreshed the buffer*/
+	OrtpExtremum max_ts_deviation; /*maximum difference between packet and expected timestamps */
+	OrtpKalmanRLS kalman_rls;
+	double capped_clock_ratio;
+	uint32_t last_log_ts;
 } JitterControl;
 
 typedef struct _WaitPoint
@@ -129,8 +144,8 @@ typedef enum _OrtpNetworkSimulatorMode{
 	OrtpNetworkSimulatorInvalid=-1,
 	OrtpNetworkSimulatorInbound,/**<simulation is applied when receiving packets*/
 	OrtpNetworkSimulatorOutbound, /**<simulation is applied to sent packets*/
-	OrtpNetworkSimulatorOutboundControlled /**<simulation is applied to sent packets according to sent timestamp
-				set in the timestamp field of mblk_t, which is definied only with -DORTP_TIMESTAMP */
+	OrtpNetworkSimulatorOutboundControlled /**<simulation is applied to sent packets according to sent timestamps
+				set in the timestamps field of mblk_t, which is defined only with -DORTP_TIMESTAMP */
 }OrtpNetworkSimulatorMode;
 
 /**
@@ -138,15 +153,17 @@ typedef enum _OrtpNetworkSimulatorMode{
 **/
 typedef struct _OrtpNetworkSimulatorParams{
 	int enabled; /**<Whether simulation is enabled or off.*/
-	float max_bandwidth; /**<IP bandwidth, in bit/s*/
+	float max_bandwidth; /**<IP bandwidth, in bit/s.
+						This limitation is applied after loss are simulated, so incoming bandwidth
+						is NOT socket bandwidth, but after-loss-simulation bandwidth e.g with 50% loss, the bandwidth will be 50% reduced*/
 	int max_buffer_size; /**<Max number of bit buffered before being discarded*/
 	float loss_rate; /**<Percentage of lost packets*/
 	uint32_t latency; /**<Packet transmission delay, in ms*/
-	float consecutive_loss_probability;/**< a probablity of having a subsequent loss after a loss occured, in a 0-1 range. Useful to simulate burst of lost packets*/
+	float consecutive_loss_probability;/**< a probability of having a subsequent loss after a loss occurred, in a 0-1 range. Useful to simulate burst of lost packets*/
 	float jitter_burst_density; /**<density of gap/bursts events. A value of 1 means one gap/burst per second approximately*/
-	float jitter_strength; /**<percentage of max_bandwidth artifically consumed during bursts events*/
+	float jitter_strength; /**<percentage of max_bandwidth artificially consumed during bursts events*/
 	bool_t RTP_only; /**True for only RTP packet loss, False for both RTP and RTCP */
-	OrtpNetworkSimulatorMode mode; /**<whether simulation is applied to inboud or outbound stream.*/
+	OrtpNetworkSimulatorMode mode; /**<whether simulation is applied to inbound or outbound stream.*/
 }OrtpNetworkSimulatorParams;
 
 typedef struct _OrtpNetworkSimulatorCtx{
@@ -287,14 +304,15 @@ typedef struct _OrtpStream {
 	unsigned int recv_bytes; /* used for bandwidth estimation */
 	float upload_bw;
 	float download_bw;
-	OList *aux_destinations; /*list of OrtpAddress */
+	float average_upload_bw;
+	float average_download_bw;
+	bctbx_list_t *aux_destinations; /*list of OrtpAddress */
 	msgb_allocator_t allocator;
 } OrtpStream;
 
 typedef struct _RtpStream
 {
 	OrtpStream gs;
-	int max_rq_size;
 	int time_jump;
 	uint32_t ts_jump;
 	queue_t rq;
@@ -328,6 +346,7 @@ typedef struct _RtpStream
 	int rcv_socket_size;
 	int ssrc_changed_thres;
 	jitter_stats_t jitter_stats;
+	struct _OrtpCongestionDetector *congdetect;
 }RtpStream;
 
 typedef struct _RtcpStream
@@ -368,7 +387,7 @@ struct _RtpSession
 	int inc_same_ssrc_count;
 	int hw_recv_pt; /* recv payload type before jitter buffer */
 	int recv_buf_size;
-	int target_upload_bandwidth; /* Target upload bandwidth at nework layer (with IP and UDP headers) in bits/s */
+	int target_upload_bandwidth; /* Target upload bandwidth at network layer (with IP and UDP headers) in bits/s */
 	RtpSignalTable on_ssrc_changed;
 	RtpSignalTable on_payload_type_changed;
 	RtpSignalTable on_telephone_event_packet;
@@ -376,8 +395,8 @@ struct _RtpSession
 	RtpSignalTable on_timestamp_jump;
 	RtpSignalTable on_network_error;
 	RtpSignalTable on_rtcp_bye;
-	struct _OList *signal_tables;
-	struct _OList *eventqs;
+	bctbx_list_t *signal_tables;
+	bctbx_list_t *eventqs;
 	RtpStream rtp;
 	RtcpStream rtcp;
 	OrtpRtcpXrStats rtcp_xr_stats;
@@ -388,7 +407,7 @@ struct _RtpSession
 	int multicast_ttl;
 	int multicast_loopback;
 	float duplication_ratio; /* Number of times a packet should be duplicated */
-	float duplication_left ; /* Remainder of the duplication ratio */
+	float duplication_left ; /* Remainder of the duplication ratio, internal use */
 	void * user_data;
 	/* FIXME: Should be a table for all session participants. */
 	struct timeval last_recv_time; /* Time of receiving the RTP/RTCP packet. */
@@ -413,6 +432,7 @@ struct _RtpSession
 	bool_t ssrc_set;
 
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
+	int32_t send_ts_offset; /*additional offset to add when sending packets (for test purpose only)*/
 	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 	bool_t use_pktinfo;
@@ -459,6 +479,16 @@ ORTP_PUBLIC void rtp_session_enable_jitter_buffer(RtpSession *session , bool_t e
 ORTP_PUBLIC bool_t rtp_session_jitter_buffer_enabled(const RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_jitter_buffer_params(RtpSession *session, const JBParameters *par);
 ORTP_PUBLIC void rtp_session_get_jitter_buffer_params(RtpSession *session, JBParameters *par);
+
+/**
+ * Set an additional timestamps offset for outgoing stream..
+ * @param session		a rtp session freshly created.
+ * @param offset		a timestamp offset value
+ *
+**/
+ORTP_PUBLIC void rtp_session_set_send_ts_offset(RtpSession *s, int32_t offset);
+ORTP_PUBLIC uint32_t rtp_session_get_send_ts_offset(RtpSession *s);
+
 
 /*deprecated jitter control functions*/
 ORTP_PUBLIC void rtp_session_set_jitter_compensation(RtpSession *session, int milisec);
@@ -535,7 +565,16 @@ ORTP_PUBLIC bool_t rtp_session_rtcp_enabled(const RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms);
 
+/**
+ * Define the bandwidth available for RTCP streams based on the upload bandwidth
+ * targeted by the application (in bits/s). RTCP streams would not take more than
+ * a few percents of the limit bandwidth (around 5%).
+ *
+ * @param session a rtp session
+ * @param target_bandwidth bandwidth limit in bits/s
+ */
 ORTP_PUBLIC void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth);
+ORTP_PUBLIC int rtp_session_get_target_upload_bandwidth(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_configure_rtcp_xr(RtpSession *session, const OrtpRtcpXrConfiguration *config);
 ORTP_PUBLIC void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, const OrtpRtcpXrMediaCallbacks *cbs);
@@ -569,6 +608,9 @@ ORTP_PUBLIC float rtp_session_get_rtp_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_rtp_recv_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_rtcp_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session);
+
+ORTP_PUBLIC float rtp_session_get_send_bandwidth_smooth(RtpSession *session);
+ORTP_PUBLIC float rtp_session_get_recv_bandwidth_smooth(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_send_rtcp_APP(RtpSession *session, uint8_t subtype, const char *name, const uint8_t *data, int datalen);
 /**
@@ -671,6 +713,7 @@ ORTP_PUBLIC void rtp_session_init(RtpSession *session, int mode);
 ORTP_PUBLIC void rtp_session_uninit(RtpSession *session);
 ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
 
+
 ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
@@ -694,8 +737,6 @@ ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTran
 
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
-
-
 
 ORTP_PUBLIC int rtp_session_splice(RtpSession *session, RtpSession *to_session);
 ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session);

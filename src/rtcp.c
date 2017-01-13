@@ -1,21 +1,21 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 /***************************************************************************
  *            rtcp.c
@@ -703,7 +703,14 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 	diff=extseq-obj->last_ext_seq;
 	curtime=ortp_get_cur_time_ms();
 	if (diff<0 || diff>obj->min_packet_count_interval * 100){
-		ortp_warning("ortp_loss_rate_estimator_process %p: Suspected discontinuity in sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
+		if (extseq==0){
+			/*when extseq reset to 0, it probably means that rtp_session_sync was called but
+			since OrtplossRateEstimator is not reset, first RTCP packet received will be detected
+			as discontinuity instead of init RTCP packet. Avoid logging in such case.*/
+			ortp_message("ortp_loss_rate_estimator_process %p: Suspected RTP session restart, sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
+		}else{
+			ortp_warning("ortp_loss_rate_estimator_process %p: Suspected discontinuity in sequence numbering from %d to %d.", obj, obj->last_ext_seq, extseq);
+		}
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
 		obj->last_packet_sent_count=session->stats.packet_sent;
@@ -734,9 +741,6 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 
 float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj){
 	return obj->loss_rate;
-}
-
-void ortp_loss_rate_estimator_uninit(OrtpLossRateEstimator *obj){
 }
 
 void ortp_loss_rate_estimator_destroy(OrtpLossRateEstimator *obj){

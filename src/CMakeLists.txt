@@ -34,9 +34,11 @@ endif()
 set(ORTP_SOURCE_FILES_C
 	avprofile.c
 	b64.c
+	congestiondetector.c
 	event.c
 	extremum.c
 	jitterctl.c
+	kalmanrls.c
 	logging.c
 	netsim.c
 	ortp.c

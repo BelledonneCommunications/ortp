@@ -1,21 +1,21 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 
 #ifdef HAVE_CONFIG_H
@@ -26,6 +26,7 @@
 #include "jitterctl.h"
 #include "utils.h"
 #include "rtpsession_priv.h"
+#include "congestiondetector.h"
 
 static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded, int *duplicate)
 {
@@ -161,7 +162,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			}
 		}
 		/* discard in two case: the packet is not stun OR nobody is interested by STUN (no eventqs) */
-		ortp_debug("Receiving rtp packet with version number !=2...discarded");
+		ortp_debug("Receiving rtp packet with version number %d!=2...discarded", rtp->version);
 		stats->bad++;
 		ortp_global_stats.bad++;
 		freemsg(mp);
@@ -258,7 +259,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 	/* check for possible telephone events */
 	if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)){
-		queue_packet(&session->rtp.tev_rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate);
+		queue_packet(&session->rtp.tev_rq,session->rtp.jittctl.params.max_packets,mp,rtp,&discarded,&duplicate);
 		stats->discarded+=discarded;
 		ortp_global_stats.discarded+=discarded;
 		stats->packet_dup_recv+=duplicate;
@@ -280,6 +281,15 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		return;
 	}
 
+	if (session->rtp.congdetect){
+		if (ortp_congestion_detector_record(session->rtp.congdetect,rtp->timestamp,local_str_ts)) {
+			OrtpEvent *ev=ortp_event_new(ORTP_EVENT_CONGESTION_STATE_CHANGED);
+			OrtpEventData *ed=ortp_event_get_data(ev);
+			ed->info.congestion_detected = session->rtp.congdetect->state == CongestionStateDetected;
+			rtp_session_dispatch_event(session,ev);
+		}
+	}
+
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
 
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);
@@ -290,7 +300,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			ortp_warning("rtp_parse: timestamp jump in the future detected.");
 			rtp_signal_table_emit2(&session->on_timestamp_jump,&rtp->timestamp);
 		}
-		else if (RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts,rtp->timestamp) 
+		else if (RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts,rtp->timestamp)
 			|| RTP_SEQ_IS_STRICTLY_GREATER_THAN(session->rtp.rcv_last_seq,rtp->seq_number)){
 			/* don't queue packets older than the last returned packet to the application, or whose sequence number
 			 is behind the last packet returned to the application*/
@@ -302,7 +312,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 				ortp_warning("rtp_parse: negative timestamp jump detected");
 				rtp_signal_table_emit2(&session->on_timestamp_jump, &rtp->timestamp);
 			}
-			ortp_debug("rtp_parse: discarding too old packet (ts=%i)",rtp->timestamp);
+			ortp_error("rtp_parse: discarding too old packet (seq_num=%i, ts=%i)",rtp->seq_number, rtp->timestamp);
 			freemsg(mp);
 			stats->outoftime++;
 			ortp_global_stats.outoftime++;
@@ -311,7 +321,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		}
 	}
 
-	if (queue_packet(&session->rtp.rq,session->rtp.max_rq_size,mp,rtp,&discarded,&duplicate))
+	if (queue_packet(&session->rtp.rq,session->rtp.jittctl.params.max_packets,mp,rtp,&discarded,&duplicate))
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
 	stats->discarded+=discarded;
 	ortp_global_stats.discarded+=discarded;

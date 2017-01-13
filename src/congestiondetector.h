@@ -17,37 +17,39 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef rtpsignaltable_h
-#define rtpsignaltable_h
 
-#define RTP_CALLBACK_TABLE_MAX_ENTRIES	5
+#ifndef CONGESTIONDETECTOR_H
+#define CONGESTIONDETECTOR_H
 
-typedef void (*RtpCallback)(struct _RtpSession *, void *arg1, void *arg2, void *arg3);
+#include <ortp/port.h>
+#include <ortp/utils.h>
+struct _JitterControl;
 
-struct _RtpSignalTable
-{
-	RtpCallback callback[RTP_CALLBACK_TABLE_MAX_ENTRIES];
-	void * user_data[RTP_CALLBACK_TABLE_MAX_ENTRIES];
+typedef enum _OrtpCongestionState {
+	CongestionStateNormal = 1 << 0,
+	CongestionStatePending = 1 << 1,
+	CongestionStateDetected = 1 << 2
+} OrtpCongestionState;
+
+typedef struct _OrtpCongestionDetector{
+	OrtpKalmanRLS rls;
+	uint64_t start_ms;
+	int64_t start_jitter_ts;
+	bool_t initialized;
+	bool_t pad[3];
+	OrtpCongestionState state;
 	struct _RtpSession *session;
-	const char *signal_name;
-	int count;
-};
+}OrtpCongestionDetector;
 
-typedef struct _RtpSignalTable RtpSignalTable;
+OrtpCongestionDetector * ortp_congestion_detector_new(struct _RtpSession *session);
 
-void rtp_signal_table_init(RtpSignalTable *table,struct _RtpSession *session, const char *signal_name);
+/*
+ * Returns TRUE if the congestion state is changed.
+**/
+bool_t ortp_congestion_detector_record(OrtpCongestionDetector *obj, uint32_t packet_ts, uint32_t cur_str_ts);
 
-int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data);
+void ortp_congestion_detector_destroy(OrtpCongestionDetector *obj);
 
-void rtp_signal_table_emit(RtpSignalTable *table);
-
-/* emit but with a second arg */
-void rtp_signal_table_emit2(RtpSignalTable *table, void *arg);
-
-/* emit but with a third arg */
-void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2);
-
-int rtp_signal_table_remove_by_callback(RtpSignalTable *table,RtpCallback cb);
+void ortp_congestion_detector_reset(OrtpCongestionDetector *cd);
 
 #endif
-

@@ -1,27 +1,28 @@
- /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+/*
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 #ifndef ortp_events_h
 #define ortp_events_h
 
-#include <ortp/str_utils.h>
-#include <ortp/rtcp.h>
+#include "ortp/str_utils.h"
+#include "ortp/rtcp.h"
+#include "bctoolbox/list.h"
 
 typedef mblk_t OrtpEvent;
 
@@ -49,13 +50,12 @@ struct _OrtpEventData{
 			bool_t pad[3];
 		} zrtp_sas;
 		OrtpSocketType socket_type;
-		uint64_t tmmbr_mxtbr;
 		uint32_t received_rtt_character;
+		bool_t congestion_detected;
 	} info;
 };
 
 typedef struct _OrtpEventData OrtpEventData;
-
 
 
 #ifdef __cplusplus
@@ -78,7 +78,8 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ICE_LOSING_PAIRS_COMPLETED		11
 #define ORTP_EVENT_ICE_RESTART_NEEDED			12
 #define ORTP_EVENT_DTLS_ENCRYPTION_CHANGED		13
-#define ORTP_EVENT_TMMBR_RECEIVED		14
+#define ORTP_EVENT_RTT_CHARACTER_RECEIVED		15
+#define ORTP_EVENT_CONGESTION_STATE_CHANGED		16
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
@@ -114,7 +115,7 @@ typedef struct OrtpEvDispatcherData{
 typedef struct OrtpEvDispatcher{
 	OrtpEvQueue *q;
 	struct _RtpSession* session;
-	OList *cbs;
+	bctbx_list_t *cbs;
 } OrtpEvDispatcher;
 
 /**

@@ -35,6 +35,7 @@ set(HEADER_FILES
 	sessionset.h
 	str_utils.h
 	telephonyevents.h
+	utils.h
 )
 
 set(ORTP_HEADER_FILES )

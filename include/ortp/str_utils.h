@@ -1,21 +1,21 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 #ifndef STR_UTILS_H
 #define STR_UTILS_H
@@ -163,27 +163,6 @@ typedef struct _msgb_allocator{
 ORTP_PUBLIC void msgb_allocator_init(msgb_allocator_t *pa);
 ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, size_t size);
 ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
-
-/**
- * Utility object to determine a maximum or minimum (but not both at the same
- * time), of a signal during a sliding period of time.
- */
-typedef struct _ortp_extremum{
-	float current_extremum;
-	float last_stable;
-	uint64_t extremum_time;
-	int period;
-}ortp_extremum;
-
-ORTP_PUBLIC void ortp_extremum_reset(ortp_extremum *obj);
-ORTP_PUBLIC void ortp_extremum_init(ortp_extremum *obj, int period);
-ORTP_PUBLIC void ortp_extremum_record_min(ortp_extremum *obj, uint64_t curtime, float value);
-ORTP_PUBLIC void ortp_extremum_record_max(ortp_extremum *obj, uint64_t curtime, float value);
-ORTP_PUBLIC float ortp_extremum_get_current(ortp_extremum *obj);
-/**
- * Unlike ortp_extremum_get_current() which can be very fluctuating, ortp_extremum_get_previous() returns the extremum found for the previous period.
-**/
-ORTP_PUBLIC float ortp_extremum_get_previous(ortp_extremum *obj);
 
 ORTP_PUBLIC void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen);
 

@@ -1,21 +1,21 @@
 /*
-  The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) stack.
-  Copyright (C) 2001  Simon MORLAT simon.morlat@linphone.org
-
-  This library is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
-
-  This library is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-
-  You should have received a copy of the GNU Lesser General Public
-  License along with this library; if not, write to the Free Software
-  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
+ * The oRTP library is an RTP (Realtime Transport Protocol - rfc3550) implementation with additional features.
+ * Copyright (C) 2017 Belledonne Communications SARL
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
 
 
 #ifndef RTCP_H
@@ -77,7 +77,7 @@ typedef struct rtcp_common_header
 #define rtcp_common_header_get_length(ch)	ntohs((ch)->length)
 
 
-/* SR or RR  packets */
+/* RTCP SR or RR  packets */
 
 typedef struct sender_info
 {
@@ -294,6 +294,7 @@ typedef struct rtcp_xr_voip_metrics_report_block {
 
 #define MIN_RTCP_XR_PACKET_SIZE (sizeof(rtcp_xr_header_t) + 4)
 
+/* RTCP FB packet */
 typedef enum {
 	RTCP_RTPFB_NACK = 1,
 	RTCP_RTPFB_TMMBR = 3,
@@ -381,7 +382,7 @@ typedef struct rtcp_fb_rpsi_fci {
 #define MIN_RTCP_PSFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
 #define MIN_RTCP_RTPFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
 
-
+/* RTCP structs */
 
 typedef struct rtcp_sr{
 	rtcp_common_header_t ch;
@@ -501,6 +502,13 @@ ORTP_PUBLIC bool_t rtcp_is_RTPFB(const mblk_t *m);
 ORTP_PUBLIC rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_generic_nack_fci_t * rtcp_RTPFB_generic_nack_get_fci(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_tmmbr_fci_t * rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m);
+/**
+ * Return the maximum bitrate in bits / sec contained in the packet.
+ *
+ * @param m RTCP TMMBR packet to read
+ * @return maximum bitrate in bits / sec.
+ */
+ORTP_PUBLIC uint64_t rtcp_RTPFB_tmmbr_get_max_bitrate(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_RTPFB_get_packet_sender_ssrc(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m);
 
@@ -565,8 +573,6 @@ ORTP_PUBLIC bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEst
  * @return The latest loss rate in percentage computed.
  */
 ORTP_PUBLIC float ortp_loss_rate_estimator_get_value(OrtpLossRateEstimator *obj);
-
-ORTP_PUBLIC void ortp_loss_rate_estimator_uninit(OrtpLossRateEstimator *obj);
 
 ORTP_PUBLIC void ortp_loss_rate_estimator_destroy(OrtpLossRateEstimator *obj);
 
