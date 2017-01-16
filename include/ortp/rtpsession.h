@@ -162,7 +162,8 @@ typedef struct _OrtpNetworkSimulatorParams{
 	float consecutive_loss_probability;/**< a probability of having a subsequent loss after a loss occurred, in a 0-1 range. Useful to simulate burst of lost packets*/
 	float jitter_burst_density; /**<density of gap/bursts events. A value of 1 means one gap/burst per second approximately*/
 	float jitter_strength; /**<percentage of max_bandwidth artificially consumed during bursts events*/
-	bool_t RTP_only; /**True for only RTP packet loss, False for both RTP and RTCP */
+	bool_t rtp_only; /**True for only RTP packet loss, False for both RTP and RTCP */
+	bool_t pad[3];
 	OrtpNetworkSimulatorMode mode; /**<whether simulation is applied to inbound or outbound stream.*/
 }OrtpNetworkSimulatorParams;
 
@@ -249,6 +250,7 @@ typedef struct OrtpRtcpXrConfiguration {
 	bool_t enabled;
 	bool_t stat_summary_enabled;
 	bool_t voip_metrics_enabled;
+	bool_t pad;
 	OrtpRtcpXrRcvrRttMode rcvr_rtt_mode;
 	int rcvr_rtt_max_size;
 	OrtpRtcpXrStatSummaryFlag stat_summary_flags;

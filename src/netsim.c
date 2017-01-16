@@ -360,7 +360,7 @@ mblk_t * rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t
 	}
 
 	if ((sim->params.loss_rate > 0) && (om != NULL)) {
-		if (sim->params.RTP_only == TRUE) {
+		if (sim->params.rtp_only == TRUE) {
 			if (*is_rtp_packet == TRUE) {
 				om = simulate_loss_rate(sim, om);
 			}
