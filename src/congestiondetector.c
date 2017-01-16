@@ -26,8 +26,6 @@
 
 static const unsigned int congestion_pending_duration_ms = 5000;
 
-static int congestion_count = 0;
-
 
 void ortp_congestion_detector_reset(OrtpCongestionDetector *cd) {
 	if (cd->state!=CongestionStateNormal) {
@@ -44,7 +42,7 @@ OrtpCongestionDetector * ortp_congestion_detector_new(RtpSession *session) {
 	ortp_congestion_detector_reset(cd);
 	cd->initialized = FALSE;
 	cd->session = session;
-	// congestion_count = 0;
+
 	return cd;
 }
 
@@ -58,7 +56,7 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 
 	if (!cd->initialized) {
 		cd->initialized = TRUE;
-		ortp_kalman_rls_init(&cd->rls, 1, diff);
+		ortp_kalman_rls_init(&cd->rls, 1, (double)diff);
 		cd->rls.lambda = 0.95f;
 	}
 
@@ -69,14 +67,14 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 	has_jitter = jitter > 300.f;
 
 	ortp_debug(
-		"%s clock=%f, congestion_count=%d"
+		"%s clock=%f"
 		", diff=%ld"
 		", %f >? 300.f"
 		", clock_rate=%d"
 		", jb_slide=%f, jb_clock=%f"
 		", down_bw=%0.f, up_bw=%0.f kbits/s"
 		, cd->state==CongestionStateNormal?"":cd->state==CongestionStatePending?"TO CONFIRM...":"IN CONGESTION!"
-		, cd->rls.m, congestion_count
+		, cd->rls.m
 		, (long)diff
 		, jitter
 		, jitterctl->clock_rate
@@ -88,7 +86,7 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 		case CongestionStateNormal:
 			if (clock_drift) {
 				cd->start_ms = ortp_get_cur_time_ms();
-				cd->start_jitter_ts = jitterctl->kalman_rls.b;
+				cd->start_jitter_ts = (int64_t)jitterctl->kalman_rls.b;
 				ortp_message("Congestion detection starts current jitter=%f...", jitterctl->kalman_rls.b);
 				cd->state = CongestionStatePending;
 				state_changed = TRUE;
@@ -103,7 +101,6 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 				if (ortp_get_cur_time_ms() - cd->start_ms > congestion_pending_duration_ms) {
 					ortp_warning("In congestion for more than %d seconds, trigger flag!", congestion_pending_duration_ms / 1000);
 					cd->state = CongestionStateDetected;
-					congestion_count++;
 					state_changed = TRUE;
 				}
 			}

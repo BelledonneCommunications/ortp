@@ -188,7 +188,7 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 static void jitter_control_update_interarrival_jitter(JitterControl *ctl, int64_t diff){
 	/*compute interarrival jitter*/
 	int delta;
-	delta=diff-ctl->olddiff;
+	delta= (int)(diff-ctl->olddiff);
 	ctl->inter_jitter=(float) (ctl->inter_jitter+ (( (float)abs(delta) - ctl->inter_jitter)*(1/16.0)));
 	ctl->olddiff=diff;
 }
@@ -198,7 +198,8 @@ void jitter_control_new_packet_basic(JitterControl *ctl, uint32_t packet_ts, uin
 	double gap,slide;
 
 	if (ctl->count==0){
-		slide=ctl->clock_offset_ts=ctl->prev_clock_offset_ts=diff;
+		ctl->clock_offset_ts=ctl->prev_clock_offset_ts=diff;
+		slide=(double)diff;
 		ctl->olddiff=diff;
 		ctl->jitter=0;
 	}else{
@@ -214,8 +215,7 @@ void jitter_control_new_packet_basic(JitterControl *ctl, uint32_t packet_ts, uin
 			ctl->adapt_jitt_comp_ts=(int) MAX(ctl->jitt_comp_ts,2*ctl->jitter);
 			//jitter_control_dump_stats(ctl);
 		}
-
-		ctl->clock_offset_ts=slide;
+		ctl->clock_offset_ts=(int64_t)slide;
 	}else {
 		/*ctl->slide and jitter size are not updated*/
 	}
@@ -237,7 +237,7 @@ static uint32_t jitter_control_local_ts_to_remote_ts_rls(JitterControl *ctl, uin
 /**************************** RLS *********************************/
 void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint32_t cur_str_ts){
 	int64_t diff=(int64_t)packet_ts - (int64_t)cur_str_ts;
-	double deviation;
+	int deviation;
 	bool_t jb_size_updated = FALSE;
 
 	if (ctl->count==0){
@@ -246,10 +246,10 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 		ctl->jitter=0;
 
 		ortp_extremum_init(&ctl->max_ts_deviation, ctl->params.refresh_ms / 1000.f * ctl->clock_rate);
-		ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, ctl->jitt_comp_ts);
+		ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, (float)ctl->jitt_comp_ts);
 
 		// clocks rate should be the same
-		ortp_kalman_rls_init(&ctl->kalman_rls, 1, diff);
+		ortp_kalman_rls_init(&ctl->kalman_rls, 1, (double)diff);
 		ctl->capped_clock_ratio = ctl->kalman_rls.m;
 	}
 	
@@ -258,19 +258,18 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 	ortp_kalman_rls_record(&ctl->kalman_rls, cur_str_ts, packet_ts);
 
 	ctl->capped_clock_ratio=MAX(.5, MIN(ctl->kalman_rls.m, 2));
-	ctl->clock_offset_ts = (!(.5f<ctl->kalman_rls.m && ctl->kalman_rls.m<2.f))? diff : ctl->kalman_rls.b;
+	ctl->clock_offset_ts = (!(.5f<ctl->kalman_rls.m && ctl->kalman_rls.m<2.f))? diff : (int64_t)ctl->kalman_rls.b;
 	deviation=abs((int32_t)(packet_ts - jitter_control_local_ts_to_remote_ts_rls(ctl, cur_str_ts)));
-	ctl->jitter=(float) ((ctl->jitter*(1-JC_GAMMA)) + (deviation*JC_GAMMA));
 	
 	/*ortp_message("deviation=%g ms", 1000.0*deviation/(double)ctl->clock_rate);*/
 	
 	jitter_control_update_interarrival_jitter(ctl, diff);
 
 	if (ctl->params.adaptive){
-		bool_t max_updated = ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, deviation);
+		bool_t max_updated = ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, (float)deviation);
 		float max_deviation = MAX(ortp_extremum_get_previous(&ctl->max_ts_deviation), ortp_extremum_get_current(&ctl->max_ts_deviation));
 		if (max_updated && max_deviation > ctl->adapt_jitt_comp_ts){
-			ctl->adapt_jitt_comp_ts=max_deviation;
+			ctl->adapt_jitt_comp_ts=(int)max_deviation;
 			jb_size_updated = TRUE;
 		}else if (max_deviation < ctl->params.ramp_threshold/100.f*ctl->adapt_jitt_comp_ts){
 			/*Jitter is decreasing. Make a smooth descent to avoid dropping lot of packets*/
@@ -300,7 +299,7 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 			", offset=%g clock_ratio=%g"
 			", capped_offset=%i capped_clock_ratio=%f"
 			", max_ts_deviation=%f prev_max_ts_deviation=%f"
-			", deviation=%f"
+			", deviation=%i"
 			", RLS VARIABLES: P[0][0]=%f, P[1][0]=%f, P[0][1]=%f, P[1][1]=%f"
 			, ctl->count
 			, ctl->kalman_rls.b, ctl->kalman_rls.m
