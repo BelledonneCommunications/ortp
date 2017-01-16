@@ -14,4 +14,4 @@ override_dh_installchangelogs:
 	dh_installchangelogs NEWS
 
 override_dh_strip:
-	dh_strip --dbg-package=libortp9-dbg
+	dh_strip --dbg-package=libortp13-dbg

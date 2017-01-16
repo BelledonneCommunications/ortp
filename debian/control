@@ -13,7 +13,7 @@ Vcs-Svn: svn://svn.debian.org/pkg-voip/linphone/trunk/
 Vcs-Browser: http://anonscm.debian.org/viewvc/pkg-voip/linphone/trunk/
 
 
-Package: libortp9
+Package: libortp13
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
@@ -31,7 +31,7 @@ Description: Real-time Transport Protocol stack
 Package: libortp-dev
 Section: libdevel
 Architecture: any
-Depends: ${misc:Depends}, libortp9 (= ${binary:Version})
+Depends: ${misc:Depends}, libortp13 (= ${binary:Version})
 Conflicts: libortp7-dev
 Description: Real-time Transport Protocol stack
  This library implements the RFC1889 (RTP) with a easy to use API with high
@@ -44,9 +44,9 @@ Description: Real-time Transport Protocol stack
    - supports multiplexing IO;
    - supports part of RFC2833 for telephone events over RTP.
 
-Package: libortp9-dbg
+Package: libortp13-dbg
 Architecture: any
-Depends: libortp9 (= ${binary:Version}), ${misc:Depends}
+Depends: libortp13 (= ${binary:Version}), ${misc:Depends}
 Section: debug
 Priority: extra
 Description: Debugging symbols for ortp
