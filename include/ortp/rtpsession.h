@@ -434,7 +434,7 @@ struct _RtpSession
 	bool_t ssrc_set;
 
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
-	int32_t send_ts_offset; /*additional offset to add when sending packets (for test purpose only)*/
+	uint32_t send_ts_offset; /*additional offset to add when sending packets */
 	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 	bool_t use_pktinfo;
@@ -488,7 +488,7 @@ ORTP_PUBLIC void rtp_session_get_jitter_buffer_params(RtpSession *session, JBPar
  * @param offset		a timestamp offset value
  *
 **/
-ORTP_PUBLIC void rtp_session_set_send_ts_offset(RtpSession *s, int32_t offset);
+ORTP_PUBLIC void rtp_session_set_send_ts_offset(RtpSession *s, uint32_t offset);
 ORTP_PUBLIC uint32_t rtp_session_get_send_ts_offset(RtpSession *s);
 
 

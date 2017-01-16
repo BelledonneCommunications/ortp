@@ -312,7 +312,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 				ortp_warning("rtp_parse: negative timestamp jump detected");
 				rtp_signal_table_emit2(&session->on_timestamp_jump, &rtp->timestamp);
 			}
-			ortp_error("rtp_parse: discarding too old packet (seq_num=%i, ts=%i)",rtp->seq_number, rtp->timestamp);
+			ortp_error("rtp_parse: discarding too old packet (seq_num=%i, ts=%u)",rtp->seq_number, rtp->timestamp);
 			freemsg(mp);
 			stats->outoftime++;
 			ortp_global_stats.outoftime++;

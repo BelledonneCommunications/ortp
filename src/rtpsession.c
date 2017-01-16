@@ -532,7 +532,7 @@ RtpProfile *rtp_session_get_recv_profile(RtpSession *session){
 	return session->rcv.profile;
 }
 
-void rtp_session_set_send_ts_offset(RtpSession *s, int32_t offset){
+void rtp_session_set_send_ts_offset(RtpSession *s, uint32_t offset){
 	s->send_ts_offset = offset;
 }
 
