@@ -40,7 +40,7 @@ ORTP_PUBLIC void ortp_extremum_reset(OrtpExtremum *obj);
 ORTP_PUBLIC void ortp_extremum_init(OrtpExtremum *obj, int period);
 /**
  * Record a new value for minimal.
- * @Return TRUE if extremum has changed or false otherwise.
+ * @return TRUE if extremum has changed or false otherwise.
  */
 ORTP_PUBLIC bool_t ortp_extremum_record_min(OrtpExtremum *obj, uint64_t curtime, float value);
 ORTP_PUBLIC bool_t ortp_extremum_record_max(OrtpExtremum *obj, uint64_t curtime, float value);

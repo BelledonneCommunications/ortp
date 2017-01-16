@@ -482,7 +482,7 @@ ORTP_PUBLIC void rtp_session_get_jitter_buffer_params(RtpSession *session, JBPar
 
 /**
  * Set an additional timestamps offset for outgoing stream..
- * @param session		a rtp session freshly created.
+ * @param s		a rtp session freshly created.
  * @param offset		a timestamp offset value
  *
 **/
