@@ -245,7 +245,7 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 		ctl->olddiff=diff;
 		ctl->jitter=0;
 
-		ortp_extremum_init(&ctl->max_ts_deviation, ctl->params.refresh_ms / 1000.f * ctl->clock_rate);
+		ortp_extremum_init(&ctl->max_ts_deviation, (int)(ctl->params.refresh_ms / 1000.f * ctl->clock_rate));
 		ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, (float)ctl->jitt_comp_ts);
 
 		// clocks rate should be the same
