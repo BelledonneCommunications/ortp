@@ -428,20 +428,19 @@ struct _RtpSession
 	OrtpNetworkSimulatorCtx *net_sim_ctx;
 	RtpSession *spliced_session; /*a RtpSession that will retransmit everything received on this session*/
 	rtp_stats_t stats;
+	bctbx_list_t *recv_addr_map;
+	uint32_t send_ts_offset; /*additional offset to add when sending packets */
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
 	bool_t ssrc_set;
 
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
-	uint32_t send_ts_offset; /*additional offset to add when sending packets */
 	bool_t rtcp_mux;
 	unsigned char avpf_features; /**< A bitmask of ORTP_AVPF_FEATURE_* macros. */
 	bool_t use_pktinfo;
 
 	bool_t is_spliced;
-
-	bctbx_list_t *recv_addr_map;
 };
 
 
@@ -679,6 +678,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
+ORTP_PUBLIC void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled);
 
 ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );
