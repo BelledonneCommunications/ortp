@@ -83,7 +83,9 @@ endif()
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
-check_include_file(sys/shm.h HAVE_SYS_SHM_H)
+if(NOT ANDROID)
+	check_include_file(sys/shm.h HAVE_SYS_SHM_H)
+endif()
 check_include_file(stdatomic.h HAVE_STDATOMIC_H)
 check_function_exists(arc4random HAVE_ARC4RANDOM)
 
