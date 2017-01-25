@@ -177,13 +177,13 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 				break;
 			}
 			if (old!=NULL) {
-				ortp_debug("rtp_getq: discarding too old packet with ts=%i",ts_found);
+				ortp_debug("rtp_getq: discarding too old packet with ts=%u",ts_found);
 				(*rejected)++;
 				freemsg(old);
 			}
 			ret=getq(q); /* dequeue the packet, since it has an interesting timestamp*/
 			ts_found=tmprtp->timestamp;
-			ortp_debug("rtp_getq: Found packet with ts=%i",tmprtp->timestamp);
+			ortp_debug("rtp_getq: Found packet with ts=%u",tmprtp->timestamp);
 
 			old=ret;
 		}

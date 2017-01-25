@@ -25,60 +25,102 @@
 #include <ortp/rtpsession.h>
 
 static const unsigned int congestion_pending_duration_ms = 5000;
+static const float congested_clock_ratio = 0.93;
 
+const char *ortp_congestion_detector_state_to_string(OrtpCongestionState state){
+	switch (state){
+		case CongestionStateNormal:
+			return "CongestionStateNormal";
+		break;
+		case CongestionStateSuspected:
+			return "CongestionStatePending";
+		break;
+		case CongestionStateDetected:
+			return "CongestionStateDetected";
+		break;
+		case CongestionStateResolving:
+			return "CongestionStateResolving";
+		break;
+	}
+	return "invalid state";
+}
+
+static bool_t ortp_congestion_detector_set_state(OrtpCongestionDetector *cd, OrtpCongestionState state){
+	bool_t binary_state_changed = FALSE;
+	if (state == cd->state) return FALSE;
+	ortp_message("OrtpCongestionDetector: moving from state %s to state %s", 
+		     ortp_congestion_detector_state_to_string(cd->state),
+		     ortp_congestion_detector_state_to_string(state));
+	cd->state = state;
+	if (state == CongestionStateDetected){
+		if (!cd->is_in_congestion){
+			cd->is_in_congestion = TRUE;
+			binary_state_changed = TRUE;
+		}
+	}else if (state == CongestionStateNormal){
+		cd->start_ms = (uint64_t)-1;
+		if (cd->is_in_congestion){
+			cd->is_in_congestion = FALSE;
+			binary_state_changed = TRUE;
+		}
+	}
+	return binary_state_changed;
+}
 
 void ortp_congestion_detector_reset(OrtpCongestionDetector *cd) {
-	if (cd->state!=CongestionStateNormal) {
-		ortp_message("Congestion detection from %s canceled"
-				, cd->state==CongestionStatePending?"TO CONFIRM...":"IN CONGESTION!");
-	}
-	cd->state = CongestionStateNormal;
-	cd->start_ms = (uint64_t)-1;
-	cd->start_jitter_ts = 0;
+	cd->initialized = FALSE;
+	cd->skip = FALSE;
+	ortp_congestion_detector_set_state(cd, CongestionStateNormal);
 }
 
 OrtpCongestionDetector * ortp_congestion_detector_new(RtpSession *session) {
 	OrtpCongestionDetector *cd = (OrtpCongestionDetector*)ortp_malloc0(sizeof(OrtpCongestionDetector));
-	ortp_congestion_detector_reset(cd);
-	cd->initialized = FALSE;
 	cd->session = session;
-
+	ortp_congestion_detector_reset(cd);
 	return cd;
 }
 
-bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t packet_ts, uint32_t cur_str_ts) {
-	bool_t state_changed = FALSE;
-	int64_t diff=(int64_t)packet_ts - (int64_t)cur_str_ts;
-	bool_t clock_drift;
-	float jitter;
-	JitterControl *jitterctl = &cd->session->rtp.jittctl;
-	bool_t has_jitter;
+/*
+static uint32_t local_ts_to_remote_ts_rls(double clock_ratio, double offset, uint32_t local_ts){
+	return (uint32_t)( (int64_t)(clock_ratio*(double)local_ts) + (int64_t)offset);
+}
+*/
 
+bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t packet_ts, uint32_t cur_str_ts) {
+	bool_t binary_state_changed = FALSE;
+	bool_t clock_drift;
+	JitterControl *jitterctl = &cd->session->rtp.jittctl;
+	//float deviation;
+
+	if (cd->skip) return FALSE;
+	
+	packet_ts -= jitterctl->remote_ts_start;
+	cur_str_ts -= jitterctl->local_ts_start;
+	
 	if (!cd->initialized) {
 		cd->initialized = TRUE;
-		ortp_kalman_rls_init(&cd->rls, 1, (double)diff);
-		cd->rls.lambda = 0.95f;
+		ortp_kalman_rls_init(&cd->rls, 1, packet_ts - cur_str_ts);
+		cd->rls.lambda = 0.99f;
+		if (jitterctl->params.buffer_algorithm != OrtpJitterBufferRecursiveLeastSquare){
+			ortp_error("ortp congestion detection requires RLS jitter buffer algorithm.");
+			cd->skip = TRUE;
+		}
 	}
 
 	ortp_kalman_rls_record(&cd->rls, cur_str_ts, packet_ts);
 
-	clock_drift = cd->rls.m < 0.9;
-	jitter = labs((long)(diff - jitterctl->clock_offset_ts) /*cd->start_jitter_ts*/) * 1000.f / jitterctl->clock_rate;
-	has_jitter = jitter > 300.f;
+	clock_drift = cd->rls.m < congested_clock_ratio || cd->rls.m < congested_clock_ratio * jitterctl->capped_clock_ratio || jitterctl->capped_clock_ratio < congested_clock_ratio ;
+	//deviation = ((int32_t)(packet_ts - local_ts_to_remote_ts_rls(cd->rls.m, cd->rls.b, cur_str_ts))) / (float)jitterctl->clock_rate;
+	//deviation = ortp_extremum_get_current(&jitterctl->max_ts_deviation)/(float)jitterctl->clock_rate;
+	//has_jitter = deviation > acceptable_deviation;
 
 	ortp_debug(
-		"%s clock=%f"
-		", diff=%ld"
-		", %f >? 300.f"
-		", clock_rate=%d"
-		", jb_slide=%f, jb_clock=%f"
+		"OrtpCongestionDetector state=%s clock=%f"
+		", jb->deviation=%f, jb->capped_clock_ratio=%f"
 		", down_bw=%0.f, up_bw=%0.f kbits/s"
-		, cd->state==CongestionStateNormal?"":cd->state==CongestionStatePending?"TO CONFIRM...":"IN CONGESTION!"
+		, ortp_congestion_detector_state_to_string(cd->state)
 		, cd->rls.m
-		, (long)diff
-		, jitter
-		, jitterctl->clock_rate
-		, jitterctl->kalman_rls.b, jitterctl->kalman_rls.m
+		, deviation, jitterctl->capped_clock_ratio
 		, rtp_session_get_recv_bandwidth_smooth(cd->session)*1e-3, rtp_session_get_send_bandwidth_smooth(cd->session)*1e-3
 	);
 
@@ -86,34 +128,38 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 		case CongestionStateNormal:
 			if (clock_drift) {
 				cd->start_ms = ortp_get_cur_time_ms();
-				cd->start_jitter_ts = (int64_t)jitterctl->kalman_rls.b;
-				ortp_message("Congestion detection starts current jitter=%f...", jitterctl->kalman_rls.b);
-				cd->state = CongestionStatePending;
-				state_changed = TRUE;
+				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateSuspected);
 			}
-			break;
-		case CongestionStatePending:
-			if (!clock_drift && !has_jitter) {
-				// congestion has stopped - reinit everything
-				ortp_congestion_detector_reset(cd);
+		break;
+		case CongestionStateSuspected:
+			if (!clock_drift) {
+				// congestion has maybe stopped 
+				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
 			} else {
 				// congestion continues - if it has been for longer enough, trigger congestion flag
 				if (ortp_get_cur_time_ms() - cd->start_ms > congestion_pending_duration_ms) {
-					ortp_warning("In congestion for more than %d seconds, trigger flag!", congestion_pending_duration_ms / 1000);
-					cd->state = CongestionStateDetected;
-					state_changed = TRUE;
+					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateDetected);
 				}
 			}
-			break;
+		break;
 		case CongestionStateDetected:
-			if (!clock_drift && !has_jitter) {
-				// congestion has stopped - reinit everything
-				ortp_congestion_detector_reset(cd);
-				state_changed = TRUE;
+			if (!clock_drift) {
+				// congestion is maybe terminated, go resolving state
+				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateResolving);
+				cd->start_ms = ortp_get_cur_time_ms();
 			}
-			break;
+		break;
+		case CongestionStateResolving:
+			if (clock_drift) {
+				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateDetected);
+			} else {
+				if (ortp_get_cur_time_ms() - cd->start_ms > congestion_pending_duration_ms) {
+					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
+				}
+			}
+		break;
 	}
-	return state_changed;
+	return binary_state_changed;
 }
 
 void ortp_congestion_detector_destroy(OrtpCongestionDetector *obj){

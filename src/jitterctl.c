@@ -187,14 +187,14 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 
 static void jitter_control_update_interarrival_jitter(JitterControl *ctl, int64_t diff){
 	/*compute interarrival jitter*/
-	int delta;
-	delta= (int)(diff-ctl->olddiff);
+	int32_t delta;
+	delta= (int32_t)(diff-ctl->olddiff);
 	ctl->inter_jitter=(float) (ctl->inter_jitter+ (( (float)abs(delta) - ctl->inter_jitter)*(1/16.0)));
 	ctl->olddiff=diff;
 }
 
 void jitter_control_new_packet_basic(JitterControl *ctl, uint32_t packet_ts, uint32_t cur_str_ts){
-	int64_t diff=(int64_t)packet_ts - (int64_t)cur_str_ts;
+	int32_t diff = packet_ts - cur_str_ts;
 	double gap,slide;
 
 	if (ctl->count==0){
@@ -231,40 +231,56 @@ static bool_t time_for_log(JitterControl *ctl, uint32_t cur_str_ts){
 }
 
 static uint32_t jitter_control_local_ts_to_remote_ts_rls(JitterControl *ctl, uint32_t local_ts){
-	return (uint32_t)( (int64_t)(ctl->capped_clock_ratio*(double)local_ts) + ctl->clock_offset_ts);
+	return (uint32_t)( (int64_t)(ctl->capped_clock_ratio*(double)(local_ts - ctl->local_ts_start) + ctl->clock_offset_ts));
 }
 
 /**************************** RLS *********************************/
 void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint32_t cur_str_ts){
-	int64_t diff=(int64_t)packet_ts - (int64_t)cur_str_ts;
+	int32_t diff = packet_ts - cur_str_ts;
 	int deviation;
 	bool_t jb_size_updated = FALSE;
 
 	if (ctl->count==0){
-		ctl->clock_offset_ts=ctl->prev_clock_offset_ts=diff;
-		ctl->olddiff=diff;
-		ctl->jitter=0;
+		ctl->clock_offset_ts = ctl->prev_clock_offset_ts = (int32_t)packet_ts;
+		/*
+		 * Offset compensation. In order to avoid managing the rollover of the uint32_t timestamp, the timestamps passed
+		 * to the kalman filter are substracted with their initial value.
+		 * This allows a video stream to run 13hours (clockrate: 90 000), which looks at first sight
+		 * sufficient for a VoIP application.
+		 */
+		ctl->local_ts_start = cur_str_ts;
+		ctl->remote_ts_start = packet_ts;
+		ctl->olddiff = diff;
+		ctl->jitter = 0;
 
 		ortp_extremum_init(&ctl->max_ts_deviation, (int)(ctl->params.refresh_ms / 1000.f * ctl->clock_rate));
-		ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, (float)ctl->jitt_comp_ts);
+		ortp_extremum_record_max(&ctl->max_ts_deviation, 0, (float)ctl->jitt_comp_ts);
 
-		// clocks rate should be the same
-		ortp_kalman_rls_init(&ctl->kalman_rls, 1, (double)diff);
+		// clock rates should be the same
+		ortp_kalman_rls_init(&ctl->kalman_rls, 1.0, 0.0);
 		ctl->capped_clock_ratio = ctl->kalman_rls.m;
 	}
 	
-	/*offset estimation tends to be smaller than reality when
-	jitter appears since it compensates the jitter */
-	ortp_kalman_rls_record(&ctl->kalman_rls, cur_str_ts, packet_ts);
+	/*Compute the deviation from the value predicted by the kalman filter*/
+	deviation = abs((int32_t)(packet_ts - jitter_control_local_ts_to_remote_ts_rls(ctl, cur_str_ts)));
+	
+	/*update the kalman filter*/
+	ortp_kalman_rls_record(&ctl->kalman_rls, cur_str_ts - ctl->local_ts_start, packet_ts - ctl->remote_ts_start);
 
-	ctl->capped_clock_ratio=MAX(.5, MIN(ctl->kalman_rls.m, 2));
-	ctl->clock_offset_ts = (!(.5f<ctl->kalman_rls.m && ctl->kalman_rls.m<2.f))? diff : (int64_t)ctl->kalman_rls.b;
-	deviation=abs((int32_t)(packet_ts - jitter_control_local_ts_to_remote_ts_rls(ctl, cur_str_ts)));
+	ctl->capped_clock_ratio = MAX(.5, MIN(ctl->kalman_rls.m, 2));
+	
+	if (.5f<ctl->kalman_rls.m && ctl->kalman_rls.m<2.f){
+		/*realistic clock ratio, the filter is well converged*/
+		ctl->clock_offset_ts = (int32_t)((int32_t)ctl->kalman_rls.b + ctl->remote_ts_start);
+	}else{
+		ctl->clock_offset_ts = diff;
+	}
 	
 	/*ortp_message("deviation=%g ms", 1000.0*deviation/(double)ctl->clock_rate);*/
 	
 	jitter_control_update_interarrival_jitter(ctl, diff);
-
+	cur_str_ts -= ctl->local_ts_start;
+	
 	if (ctl->params.adaptive){
 		bool_t max_updated = ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, (float)deviation);
 		float max_deviation = MAX(ortp_extremum_get_previous(&ctl->max_ts_deviation), ortp_extremum_get_current(&ctl->max_ts_deviation));

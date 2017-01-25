@@ -281,6 +281,8 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		return;
 	}
 
+	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
+
 	if (session->rtp.congdetect){
 		if (ortp_congestion_detector_record(session->rtp.congdetect,rtp->timestamp,local_str_ts)) {
 			OrtpEvent *ev=ortp_event_new(ORTP_EVENT_CONGESTION_STATE_CHANGED);
@@ -289,9 +291,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			rtp_session_dispatch_event(session,ev);
 		}
 	}
-
-	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
-
+	
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);
 
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) {

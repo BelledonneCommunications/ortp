@@ -26,17 +26,19 @@
 struct _JitterControl;
 
 typedef enum _OrtpCongestionState {
-	CongestionStateNormal = 1 << 0,
-	CongestionStatePending = 1 << 1,
-	CongestionStateDetected = 1 << 2
+	CongestionStateNormal,
+	CongestionStateSuspected,
+	CongestionStateDetected,
+	CongestionStateResolving
 } OrtpCongestionState;
 
 typedef struct _OrtpCongestionDetector{
 	OrtpKalmanRLS rls;
 	uint64_t start_ms;
-	int64_t start_jitter_ts;
 	bool_t initialized;
-	bool_t pad[3];
+	bool_t is_in_congestion;
+	bool_t skip;
+	bool_t pad[1];
 	OrtpCongestionState state;
 	struct _RtpSession *session;
 }OrtpCongestionDetector;

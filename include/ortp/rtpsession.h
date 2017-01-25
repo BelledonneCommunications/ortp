@@ -84,9 +84,9 @@ typedef struct _JitterControl
 	unsigned int count; /* number of packets handled in jitter_control_new_packet. Used internally only. */
 	int jitt_comp_ts; /* the nominal jitter buffer size converted in rtp time (same unit as timestamp) */
 	int adapt_jitt_comp_ts;
-	int64_t clock_offset_ts; /*offset difference between local and distant clock, in timestamp units*/
-	int64_t prev_clock_offset_ts;
-	int64_t olddiff;
+	int32_t clock_offset_ts; /*offset difference between local and distant clock, in timestamp units*/
+	int32_t prev_clock_offset_ts;
+	int32_t olddiff;
 	float jitter;
 	float inter_jitter;	/* interarrival jitter as defined in the RFC */
 	float jitter_buffer_mean_size; /*effective size (fullness) of jitter buffer*/
@@ -100,6 +100,8 @@ typedef struct _JitterControl
 	OrtpKalmanRLS kalman_rls;
 	double capped_clock_ratio;
 	uint32_t last_log_ts;
+	uint32_t local_ts_start;
+	uint32_t remote_ts_start;
 } JitterControl;
 
 typedef struct _WaitPoint
