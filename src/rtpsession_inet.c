@@ -368,7 +368,6 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		}
 
 		/* set socket options (but don't change chosen states) */
-		rtp_session_set_dscp( session, -1 );
 		rtp_session_set_multicast_ttl( session, -1 );
 		rtp_session_set_multicast_loopback( session, -1 );
 		if (session->use_pktinfo) rtp_session_set_pktinfo(session, TRUE);
@@ -899,7 +898,8 @@ _rtp_session_set_remote_addr_full (RtpSession * session, const char * rtp_addr, 
 	} else {
 		ortp_message("RtpSession [%p] sending to rtp %s %s", session, rtp_printable_addr, is_aux ? "as auxiliary destination" : "");
 	}
-
+	/*Apply DSCP setting. On windows the destination address is required for doing this.*/
+	rtp_session_set_dscp(session, -1);
 end:
 	if (is_aux){
 		if (err==-1){
@@ -1787,6 +1787,12 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 
 		memcpy(rem_addr,&mp->net_addr,mp->net_addrlen);
 		*rem_addrlen = mp->net_addrlen;
+#ifdef WIN32
+		if (is_rtp){
+			/*re-apply dscp settings for the new destination (windows specific).*/
+			rtp_session_set_dscp( session, -1 );
+		}
+#endif
 		return 0;
 	}
 	return -1;

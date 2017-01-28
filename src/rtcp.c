@@ -234,7 +234,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 
 	/* compute the statistics */
 	if (stream->hwrcv_since_last_SR!=0){
-		int expected_packets=(int)((int64_t)stream->hwrcv_extseq - (int64_t)stream->hwrcv_seq_at_last_SR);
+		uint32_t expected_packets=(uint32_t)(stream->hwrcv_extseq - stream->hwrcv_seq_at_last_SR);
 
 		if ( session->flags & RTCP_OVERRIDE_LOST_PACKETS ) {
 			/* If the test mode is enabled, replace the lost packet field with
@@ -245,7 +245,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			session->stats.cum_packet_loss = packet_loss;
 		}else {
 			/* Normal mode */
-			packet_loss = (int)((int64_t)expected_packets - (int64_t)stream->hwrcv_since_last_SR);
+			packet_loss = (int)(expected_packets - stream->hwrcv_since_last_SR);
 			session->stats.cum_packet_loss += packet_loss;
 		}
 		if (expected_packets>0){/*prevent division by zero and negative loss fraction*/
