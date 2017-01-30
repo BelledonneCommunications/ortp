@@ -166,6 +166,9 @@ void ortp_ev_dispatcher_disconnect(OrtpEvDispatcher *d
 								, OrtpEventType type
 								, rtcp_type_t subtype
 								, OrtpEvDispatcherCb cb) {
+	if(!d) {
+		return;
+	}
 	OList *it = d->cbs;
 	while (it) {
 		OrtpEvDispatcherData *data = (OrtpEvDispatcherData*)it->data;
