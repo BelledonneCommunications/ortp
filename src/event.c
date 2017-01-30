@@ -166,10 +166,11 @@ void ortp_ev_dispatcher_disconnect(OrtpEvDispatcher *d
 								, OrtpEventType type
 								, rtcp_type_t subtype
 								, OrtpEvDispatcherCb cb) {
+	OList *it = NULL;
 	if(!d) {
 		return;
 	}
-	OList *it = d->cbs;
+	it = d->cbs;
 	while (it) {
 		OrtpEvDispatcherData *data = (OrtpEvDispatcherData*)it->data;
 		if (data && data->type == type && data->subtype == subtype && data->on_found == cb) {
