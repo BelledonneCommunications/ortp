@@ -25,7 +25,7 @@
 #include <ortp/rtpsession.h>
 
 static const unsigned int congestion_pending_duration_ms = 5000;
-static const float congested_clock_ratio = 0.93;
+static const float congested_clock_ratio = 0.93f;
 
 const char *ortp_congestion_detector_state_to_string(OrtpCongestionState state){
 	switch (state){

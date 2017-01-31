@@ -165,7 +165,7 @@ ORTP_PUBLIC void ortp_ev_dispatcher_connect(OrtpEvDispatcher *d
 /**
  * Disconnects the given callback for the given type and subtype on the given dispatcher.
 */
-void ortp_ev_dispatcher_disconnect(OrtpEvDispatcher *d
+ORTP_PUBLIC void ortp_ev_dispatcher_disconnect(OrtpEvDispatcher *d
 								, OrtpEventType type
 								, rtcp_type_t subtype
 								, OrtpEvDispatcherCb cb);

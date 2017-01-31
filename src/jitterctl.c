@@ -185,10 +185,10 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 	ctl->count++;
 }
 
-static void jitter_control_update_interarrival_jitter(JitterControl *ctl, int64_t diff){
+static void jitter_control_update_interarrival_jitter(JitterControl *ctl, int32_t diff){
 	/*compute interarrival jitter*/
 	int32_t delta;
-	delta= (int32_t)(diff-ctl->olddiff);
+	delta=diff-ctl->olddiff;
 	ctl->inter_jitter=(float) (ctl->inter_jitter+ (( (float)abs(delta) - ctl->inter_jitter)*(1/16.0)));
 	ctl->olddiff=diff;
 }
@@ -215,7 +215,7 @@ void jitter_control_new_packet_basic(JitterControl *ctl, uint32_t packet_ts, uin
 			ctl->adapt_jitt_comp_ts=(int) MAX(ctl->jitt_comp_ts,2*ctl->jitter);
 			//jitter_control_dump_stats(ctl);
 		}
-		ctl->clock_offset_ts=(int64_t)slide;
+		ctl->clock_offset_ts=(int32_t)slide;
 	}else {
 		/*ctl->slide and jitter size are not updated*/
 	}
