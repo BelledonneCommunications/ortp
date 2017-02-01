@@ -310,6 +310,10 @@ rtp_session_init (RtpSession * session, int mode)
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
 	if (enabled){
+		if (session->rtp.jittctl.params.buffer_algorithm != OrtpJitterBufferRecursiveLeastSquare){
+			ortp_error("rtp_session_enable_congestion_detection(): cannot use congestion control without RLS jitter buffer algorithm");
+			return;
+		}
 		if (!session->rtp.congdetect){
 			session->rtp.congdetect = ortp_congestion_detector_new(session);
 		}

@@ -116,11 +116,11 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 
 	ortp_debug(
 		"OrtpCongestionDetector state=%s clock=%f"
-		", jb->deviation=%f, jb->capped_clock_ratio=%f"
+		", jb->capped_clock_ratio=%f"
 		", down_bw=%0.f, up_bw=%0.f kbits/s"
 		, ortp_congestion_detector_state_to_string(cd->state)
 		, cd->rls.m
-		, deviation, jitterctl->capped_clock_ratio
+		, jitterctl->capped_clock_ratio
 		, rtp_session_get_recv_bandwidth_smooth(cd->session)*1e-3, rtp_session_get_send_bandwidth_smooth(cd->session)*1e-3
 	);
 
