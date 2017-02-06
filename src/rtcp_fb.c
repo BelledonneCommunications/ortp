@@ -384,6 +384,9 @@ void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 
 bool_t rtp_session_avpf_enabled(RtpSession *session) {
 	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
+	if (!pt){
+		ortp_warning("rtp_session_avpf_enabled(): payload type not set, unreliable result returned.");
+	}
 	return pt && (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED);
 }
 

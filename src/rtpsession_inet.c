@@ -1566,10 +1566,6 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 
 	struct sockaddr *remaddr = NULL;
 	socklen_t addrlen;
-
-	if (!mp){
-		return;
-	}
 	remaddr = (struct sockaddr *)&mp->net_addr;
 	addrlen = mp->net_addrlen;
 
@@ -1581,8 +1577,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 
 	/* store the sender RTP address to do symmetric RTP at start mainly for stun packets.
 	 * --For rtp packet symmetric RTP is handled in rtp_session_rtp_parse() after first valid rtp packet received.
-	 * --For rtcp, only swicth if valid rtcp packet && first rtcp packet received*/
-	rtp_session_update_remote_sock_addr(session,mp,is_rtp_packet,is_rtp_packet || (rtp_get_version(mp) != 2));
+	 * --For rtcp, only switch if valid rtcp packet && first rtcp packet received*/
 
 	if (is_rtp_packet){
 		if (session->use_connect && session->symmetric_rtp && !sock_connected ){
@@ -1606,6 +1601,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			and we don't want to send RTCP XR packet before notifying the application
 			that a message has been received*/
 			mblk_t * copy = copymsg(mp);
+			rtp_session_update_remote_sock_addr(session, mp, FALSE, TRUE);
 			session->stats.recv_rtcp_packets++;
 			/* post an event to notify the application */
 			rtp_session_notify_inc_rtcp(session, mp, received_via_rtcp_mux);
@@ -1622,7 +1618,7 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 	if (session->net_sim_ctx && session->net_sim_ctx->params.mode == OrtpNetworkSimulatorInbound) {
 		/*drain possible packets queued in the network simulator*/
 		mp = rtp_session_network_simulate(session, mp, &is_rtp_packet);
-		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts, received_via_rtcp_mux); /*BUG here: received_via_rtcp_mux is not preserved by network simulator*/
+		if (mp) rtp_process_incoming_packet(session, mp, is_rtp_packet, ts, received_via_rtcp_mux); /*BUG here: received_via_rtcp_mux is not preserved by network simulator*/
 	} else if (mp != NULL) {
 		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts, received_via_rtcp_mux);
 	}
