@@ -1488,6 +1488,8 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		stunlen = ntohs(stunlen);
 		if (stunlen + 20 == block->b_wptr - block->b_rptr) {
 			/* this looks like a stun packet */
+			rtp_session_update_remote_sock_addr(session, block, FALSE, TRUE);
+			
 			if (session->eventqs != NULL) {
 				OrtpEvent *ev = ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed = ortp_event_get_data(ev);
@@ -1551,6 +1553,8 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);
+	
+	rtp_session_update_remote_sock_addr(session, block, FALSE, FALSE);
 	return 0;
 }
 
@@ -1575,9 +1579,13 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 		rtp_session_do_splice(session, mp, is_rtp_packet);
 	}
 
-	/* store the sender RTP address to do symmetric RTP at start mainly for stun packets.
-	 * --For rtp packet symmetric RTP is handled in rtp_session_rtp_parse() after first valid rtp packet received.
-	 * --For rtcp, only switch if valid rtcp packet && first rtcp packet received*/
+	/*
+	 * Symmetric RTP policy
+	 * - if a STUN packet is received AND it is the first packet received, switch destination.
+	 * - if a RTP or RTCP packet is received, switch destination.
+	 * In all other cases, we don't switch.
+	 * This logic is implemented in rtp_session_rtp_parse() and process_rtcp_packet().
+	**/
 
 	if (is_rtp_packet){
 		if (session->use_connect && session->symmetric_rtp && !sock_connected ){
@@ -1601,7 +1609,6 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			and we don't want to send RTCP XR packet before notifying the application
 			that a message has been received*/
 			mblk_t * copy = copymsg(mp);
-			rtp_session_update_remote_sock_addr(session, mp, FALSE, TRUE);
 			session->stats.recv_rtcp_packets++;
 			/* post an event to notify the application */
 			rtp_session_notify_inc_rtcp(session, mp, received_via_rtcp_mux);

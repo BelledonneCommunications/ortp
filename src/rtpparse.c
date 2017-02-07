@@ -150,6 +150,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		stunlen = ntohs(stunlen);
 		if (stunlen+20==mp->b_wptr-mp->b_rptr){
 			/* this looks like a stun packet */
+			rtp_session_update_remote_sock_addr(session,mp,TRUE,TRUE);
 			if (session->eventqs!=NULL){
 				OrtpEvent *ev=ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed=ortp_event_get_data(ev);
