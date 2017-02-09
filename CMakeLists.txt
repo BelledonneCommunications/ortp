@@ -62,6 +62,8 @@ include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
 
+add_subdirectory(build)
+
 if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_FULL_LIBDIR})
 	message(STATUS "Setting install rpath to ${CMAKE_INSTALL_RPATH}")
