@@ -48,7 +48,7 @@ string(COMPARE GREATER "${GIT_VERSION_STRING}" "1.7.10" GIT_REV_LIST_HAS_COUNT)
 
 if (GIT_REV_LIST_HAS_COUNT)
         set(GIT_REV_LIST_COMMAND "${GIT_EXECUTABLE}" "rev-list" "--count" "${PROJECT_VERSION}..HEAD")
-        set(WC_COMMAND )
+        set(WC_COMMAND echo) #nop
 else()
         set(GIT_REV_LIST_COMMAND "${GIT_EXECUTABLE}" "rev-list" "${PROJECT_VERSION}..HEAD")
         set(WC_COMMAND "${WC}"  "-l")
@@ -63,7 +63,9 @@ if(GIT_EXECUTABLE)
                 WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
         )
         # if BUILD VERSION is available, append it to package filename
+if (PROJECT_VERSION_BUILD)
         set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-${PROJECT_VERSION_BUILD}")
+endif()
 	message("Package file name is ${CPACK_PACKAGE_FILE_NAME}" )
 endif()
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
