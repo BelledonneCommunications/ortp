@@ -48,7 +48,7 @@ string(COMPARE GREATER "${GIT_VERSION_STRING}" "1.7.10" GIT_REV_LIST_HAS_COUNT)
 
 if (GIT_REV_LIST_HAS_COUNT)
         set(GIT_REV_LIST_COMMAND "${GIT_EXECUTABLE}" "rev-list" "--count" "${PROJECT_VERSION}..HEAD")
-        set(WC_COMMAND echo) #nop
+        set(WC_COMMAND  "more") #nop
 else()
         set(GIT_REV_LIST_COMMAND "${GIT_EXECUTABLE}" "rev-list" "${PROJECT_VERSION}..HEAD")
         set(WC_COMMAND "${WC}"  "-l")
@@ -69,6 +69,7 @@ endif()
 	message("Package file name is ${CPACK_PACKAGE_FILE_NAME}" )
 endif()
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/rpm/ortp.spec.cmake ${CMAKE_CURRENT_SOURCE_DIR}/../ortp.spec)
 
 include(CPack)
 

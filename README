@@ -52,6 +52,10 @@ In which application oRTP is being used ?
 
 How to compile my program using ortp ?
 **************************************
+
+with cmake, use find_package(ORTP)
+
+with pkgconfig:
 gcc -o myprogram  `pkg-config --cflags ortp` myprogram.c  \
 			`pkg-config --libs ortp`
 
@@ -60,4 +64,11 @@ What about Windows port ?
 *************************
 There are instructions and Microsoft Visual C++ project files in build/win32native/oRTP.
 
-
+Rpm packaging
+************************
+ortp rpm can be generated with cmake3 using the following command:
+mkdir WORK
+cd WORK
+cmake3 ../
+make package_source
+rpmbuild -ta --clean --rmsource --rmspec ortp-<version>-<release>.tar.gz

@@ -189,7 +189,7 @@ if(ENABLE_DOC)
 		)
 		add_custom_target(ortp-html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
 		install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
-			DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/oRTP-${ORTP_VERSION}")
+			DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}")
 	endif()
 endif()
 
@@ -205,8 +205,6 @@ set(ORTPDEPS_LIBS )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.spec.cmake ${CMAKE_CURRENT_SOURCE_DIR}/ortp.spec)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
@@ -232,3 +230,8 @@ install(FILES
 	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
 	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
+install(FILES 	"${CMAKE_CURRENT_SOURCE_DIR}/README" 
+	"${CMAKE_CURRENT_SOURCE_DIR}/ChangeLog" 
+	"${CMAKE_CURRENT_SOURCE_DIR}/COPYING" 
+	"${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS" 
+	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}")

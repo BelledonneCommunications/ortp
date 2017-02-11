@@ -22,10 +22,10 @@
 %ifarch %ix86
 %define		ortp_cpu	pentium4
 %endif
-%define build_number %(git describe --tags --abbrev=40 | sed -rn 's/^.*-([0-9]+)-g[a-z0-9]{40}$/\1/p' || echo '1')
+%define build_number @PROJECT_VERSION_BUILD@
 Summary:	Real-time Transport Protocol Stack
 Name:		%pkg_name
-Version:	@ORTP_PKGCONFIG_VERSION@
+Version:	@PROJECT_VERSION@
 Release:	%build_number%{?dist}
 #to be alined with redhat which changed epoc to 1 for an unknown reason
 Epoch:		1
@@ -71,14 +71,14 @@ develop programs using the oRTP library.
 %setup -n %{name}-%{version}-%build_number
 
 %build
-%cmake .
+%cmake3 .
 make %{?_smp_mflags}
 
 %install
 make install DESTDIR=%{buildroot}
 
 %check
-ctest -V %{?_smp_mflags}
+ctest3 -V %{?_smp_mflags}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -94,11 +94,14 @@ rm -rf $RPM_BUILD_ROOT
 %files devel
 %defattr(-,root,root,-)
 %doc %{_docdir}/ortp-%{version}/html/*
-%{_libdir}/*.la
 %{_libdir}/*.a
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/*.pc
 %{_includedir}/*
+%{_datadir}/oRTP/cmake/ORTPConfig.cmake 
+%{_datadir}/oRTP/cmake/ORTPConfigVersion.cmake
+%{_datadir}/oRTP/cmake/ORTPTargets-noconfig.cmake
+%{_datadir}/oRTP/cmake/ORTPTargets.cmake
 
 %changelog
 * Tue Oct 25 2005 Francois-Xavier Kowalski <fix@hp.com>
