@@ -38,6 +38,14 @@ BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
 BuildArch:	i686
 %endif
 
+%if 0%{?rhel} && 0%{?rhel} <= 7
+%global cmake_name cmake3
+%define ctest_name ctest3
+%else
+%global cmake_name cmake
+%define ctest_name ctest
+%endif
+
 %description
 oRTP is a LGPL licensed C library implementing the RTP protocol
 (rfc3550). It is available for most unix clones (primilarly Linux and
@@ -71,14 +79,14 @@ develop programs using the oRTP library.
 %setup -n %{name}-%{version}-%build_number
 
 %build
-%cmake3 .
+%{expand:%%%cmake_name} .
 make %{?_smp_mflags}
 
 %install
 make install DESTDIR=%{buildroot}
 
 %check
-ctest3 -V %{?_smp_mflags}
+%{ctest_name} -V %{?_smp_mflags}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
