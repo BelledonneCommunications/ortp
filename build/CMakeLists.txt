@@ -20,7 +20,9 @@
 #
 ############################################################################
 
-set(CPACK_PACKAGE_NAME "ortp")
+if (NOT CPACK_PACKAGE_NAME)
+	set(CPACK_PACKAGE_NAME "ortp")
+ENDIF()
 
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../COPYING")
 
