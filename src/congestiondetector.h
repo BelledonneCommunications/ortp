@@ -35,6 +35,7 @@ typedef enum _OrtpCongestionState {
 typedef struct _OrtpCongestionDetector{
 	OrtpKalmanRLS rls;
 	uint64_t start_ms;
+	uint32_t loss_begin, seq_begin;
 	bool_t initialized;
 	bool_t is_in_congestion;
 	bool_t skip;
