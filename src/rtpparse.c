@@ -284,7 +284,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
 
-	if (session->rtp.congdetect){
+	if (session->congestion_detector_enabled && session->rtp.congdetect){
 		if (ortp_congestion_detector_record(session->rtp.congdetect,rtp->timestamp,local_str_ts)) {
 			OrtpEvent *ev=ortp_event_new(ORTP_EVENT_CONGESTION_STATE_CHANGED);
 			OrtpEventData *ed=ortp_event_get_data(ev);

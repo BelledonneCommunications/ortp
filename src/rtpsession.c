@@ -316,13 +316,11 @@ void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled
 		}
 		if (!session->rtp.congdetect){
 			session->rtp.congdetect = ortp_congestion_detector_new(session);
-		}
-	}else{
-		if (session->rtp.congdetect){
-			ortp_congestion_detector_destroy(session->rtp.congdetect);
-			session->rtp.congdetect = NULL;
+		}else{
+			if (!session->congestion_detector_enabled) ortp_congestion_detector_reset(session->rtp.congdetect); 
 		}
 	}
+	session->congestion_detector_enabled = enabled;
 }
 
 void jb_parameters_init(JBParameters *jbp) {

@@ -443,6 +443,7 @@ struct _RtpSession
 	bool_t use_pktinfo;
 
 	bool_t is_spliced;
+	bool_t congestion_detector_enabled;
 };
 
 
