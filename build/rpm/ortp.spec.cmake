@@ -47,7 +47,7 @@ BuildArch:	i686
 %endif
 
 %description
-oRTP is a LGPL licensed C library implementing the RTP protocol
+oRTP is a GPL licensed C library implementing the RTP protocol
 (rfc3550). It is available for most unix clones (primilarly Linux and
 HP-UX), and Microsoft Windows.
 
@@ -60,7 +60,7 @@ Epoch:		1
 Requires:      %{name} = %{epoch}:%{version}-%{release}
 
 %description    devel
-oRTP is a LGPL licensed C library implementing the RTP protocol
+oRTP is a GPL licensed C library implementing the RTP protocol
 (rfc1889). It is available for most unix clones (primilarly Linux and
 HP-UX), and Microsoft Windows.
 
@@ -79,7 +79,7 @@ develop programs using the oRTP library.
 %setup -n %{name}-%{version}-%build_number
 
 %build
-%{expand:%%%cmake_name} .
+%{expand:%%%cmake_name} . -DCMAKE_INSTALL_LIBDIR:PATH=%{_libdir}
 make %{?_smp_mflags}
 
 %install
