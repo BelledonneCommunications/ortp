@@ -28,7 +28,7 @@ static const unsigned int congestion_pending_duration_ms = 5000;
 static const float return_from_suspected_max_loss_rate = 5.0;
 static const float absolute_congested_clock_ratio = 0.93f;
 static const float relative_congested_clock_ratio = 0.96f;
-static const float rls_forgetting_factor = 0.97;
+static const float rls_forgetting_factor = 0.97f;
 
 const char *ortp_congestion_detector_state_to_string(OrtpCongestionState state){
 	switch (state){
@@ -90,12 +90,12 @@ static uint32_t local_ts_to_remote_ts_rls(double clock_ratio, double offset, uin
 */
 
 static float ortp_congestion_detector_get_loss_rate(OrtpCongestionDetector *cd){
-	uint32_t cur_loss = cd->session->stats.cum_packet_loss;
+	uint32_t cur_loss = (uint32_t)cd->session->stats.cum_packet_loss;
 	uint32_t cur_seq = rtp_session_get_rcv_ext_seq_number(cd->session);
 	uint32_t expected = cur_seq - cd->seq_begin;
 	
 	if (expected == 0) return 0;
-	return 100.0*(float)(cur_loss - cd->loss_begin) / (float)expected;
+	return 100.0f*(float)(cur_loss - cd->loss_begin) / (float)expected;
 }
 
 bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t packet_ts, uint32_t cur_str_ts) {
@@ -153,7 +153,7 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 		case CongestionStateNormal:
 			if (clock_drift) {
 				cd->start_ms = ortp_get_cur_time_ms();
-				cd->loss_begin = cd->session->stats.cum_packet_loss;
+				cd->loss_begin = (uint32_t)cd->session->stats.cum_packet_loss;
 				cd->seq_begin = rtp_session_get_rcv_ext_seq_number(cd->session);
 				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateSuspected);
 			}
