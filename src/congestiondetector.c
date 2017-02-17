@@ -55,6 +55,7 @@ static bool_t ortp_congestion_detector_set_state(OrtpCongestionDetector *cd, Ort
 		     ortp_congestion_detector_state_to_string(cd->state),
 		     ortp_congestion_detector_state_to_string(state));
 	cd->state = state;
+	cd->too_much_loss = FALSE;
 	if (state == CongestionStateDetected){
 		if (!cd->is_in_congestion){
 			cd->is_in_congestion = TRUE;
@@ -155,24 +156,41 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 				cd->start_ms = ortp_get_cur_time_ms();
 				cd->loss_begin = (uint32_t)cd->session->stats.cum_packet_loss;
 				cd->seq_begin = rtp_session_get_rcv_ext_seq_number(cd->session);
+				cd->last_packet_recv = cd->start_ms;
 				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateSuspected);
 			}
 		break;
 		case CongestionStateSuspected:
+		{
+			uint64_t curtime = ortp_get_cur_time_ms();
 			if (!clock_drift) {
 				float loss_rate = ortp_congestion_detector_get_loss_rate(cd);
 				if (loss_rate >= return_from_suspected_max_loss_rate){
-					ortp_message("OrtpCongestionDetector: loss rate is [%f], too much for returning to CongestionStateNormal state.", loss_rate);
+					if (!cd->too_much_loss){
+						ortp_message("OrtpCongestionDetector: loss rate is [%f], too much for returning to CongestionStateNormal state.", loss_rate);
+						cd->too_much_loss = TRUE;
+					}
 				}else{
 					// congestion has maybe stopped 
 					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
 				}
 			} else {
-				// congestion continues - if it has been for longer enough, trigger congestion flag
-				if (ortp_get_cur_time_ms() - cd->start_ms > congestion_pending_duration_ms) {
-					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateDetected);
+				
+				if (curtime - cd->last_packet_recv >= 1000){
+					/*no packet received during last second ! 
+					 It means that the drift measure is not very significant, and futhermore the banwdith computation will be 
+					 near to zero. It makes no sense to trigger a congestion detection in this case; the network is simply not working.
+					 */
+					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
+				}else{
+					// congestion continues - if it has been for longer enough, trigger congestion flag
+					if (curtime - cd->start_ms > congestion_pending_duration_ms) {
+						binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateDetected);
+					}
 				}
 			}
+			cd->last_packet_recv = curtime;
+		}
 		break;
 		case CongestionStateDetected:
 			if (!clock_drift) {
