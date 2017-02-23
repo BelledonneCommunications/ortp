@@ -109,7 +109,7 @@ static DWORD offset_time;
 
 
 
-void CALLBACK timerCb(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2)
+void CALLBACK timerCb(UINT uID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2)
 {
         // Check timerId
         if (timerId == uID)
@@ -122,7 +122,7 @@ void CALLBACK timerCb(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2)
 
 void win_timer_init(void)
 {
-        timerId = timeSetEvent(TIME_INTERVAL,10,timerCb,0,TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
+	timerId = timeSetEvent(TIME_INTERVAL, 10, timerCb, (DWORD)0, (UINT)(TIME_PERIODIC | TIME_CALLBACK_FUNCTION));
         TimeEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
 
         late_ticks = 0;
