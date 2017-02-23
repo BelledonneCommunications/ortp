@@ -34,7 +34,6 @@
 #cmakedefine ORTP_BIGENDIAN
 
 #cmakedefine PERF
-#cmakedefine ORTP_STATIC
 #cmakedefine ORTP_TIMESTAMP
 #cmakedefine ORTP_DEBUG_MODE
 #cmakedefine ORTP_DEFAULT_THREAD_STACK_SIZE ${ORTP_DEFAULT_THREAD_STACK_SIZE}
