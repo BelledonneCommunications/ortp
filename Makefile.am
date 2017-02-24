@@ -2,7 +2,22 @@
 
 ACLOCAL_AMFLAGS = -I m4 $(ACLOCAL_MACOS_FLAGS)
 
-EXTRA_DIST = oRTP.prj ortp-config.h.in  pkg.list autogen.sh ortp.pc.in ortp.spec.in ortp.spec ortp.doxygen oRTP.pws CMakeLists.txt include/CMakeLists.txt src/CMakeLists.txt src/tests/CMakeLists.txt ORTPConfig.cmake.in ortp-config.h.cmake
+EXTRA_DIST = \
+	oRTP.prj \
+	ortp-config.h.in \
+	pkg.list autogen.sh \
+	ortp.pc.in \
+	ortp.spec.in \
+	ortp.spec \
+	ortp.doxygen \
+	oRTP.pws \
+	CMakeLists.txt \
+	include/CMakeLists.txt \
+	src/CMakeLists.txt \
+	src/tests/CMakeLists.txt \
+	ORTPConfig.cmake.in \
+	ortp-config.h.cmake \
+	README.md
 
 
 SUBDIRS=src build m4 include
@@ -23,7 +38,7 @@ if HAVE_DOXYGEN
 pkgdocdir=$(docdir)/$(PACKAGE)-$(VERSION)
 doc_htmldir=$(pkgdocdir)/html
 
-pkgdoc_DATA = README AUTHORS ChangeLog COPYING
+pkgdoc_DATA = README.md AUTHORS ChangeLog COPYING
 doc_html_DATA = $(top_builddir)/doc/html/html.tar
 
 $(top_builddir)/doc/html/html.tar: $(top_builddir)/doc/html/index.html

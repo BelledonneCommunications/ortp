@@ -35,7 +35,7 @@ AC_SUBST(ORTP_PKGCONFIG_VERSION)
 
 PACKAGE=ortp
 
-AM_INIT_AUTOMAKE([tar-ustar])
+AM_INIT_AUTOMAKE([tar-ustar foreign])
 m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])],)
 AC_SUBST([docdir], [${datadir}/doc])
 AC_CONFIG_HEADERS(ortp-config.h)
