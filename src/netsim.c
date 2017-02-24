@@ -399,7 +399,6 @@ int ortp_timespec_compare(const ortpTimeSpec *s1, const ortpTimeSpec *s2){
 		return 1;
 }
 
-#if defined(ORTP_TIMESTAMP)
 static mblk_t * rtp_session_netsim_find_next_packet_to_send(RtpSession *session){
 	mblk_t *om;
 	ortpTimeSpec min_packet_time = { 0, 0};
@@ -420,7 +419,6 @@ static mblk_t * rtp_session_netsim_find_next_packet_to_send(RtpSession *session)
 	}
 	return next_packet;
 }
-#endif
 
 static void rtp_session_schedule_outbound_network_simulator(RtpSession *session, ortpTimeSpec *sleep_until){
 	mblk_t *om;
@@ -459,7 +457,6 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			}
 		}
 	}else if (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled){
-#if defined(ORTP_TIMESTAMP)
 		ortpTimeSpec current={0};
 		ortpTimeSpec packet_time;
 		mblk_t *todrop=NULL;
@@ -499,16 +496,6 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			sleep_until->tv_sec=current.tv_sec;
 			sleep_until->tv_nsec=current.tv_nsec+1000000LL; /*in 1 ms*/
 		}
-#else
-		ortp_mutex_lock(&session->net_sim_ctx->mutex);
-		while((om=getq(&session->net_sim_ctx->send_q))!=NULL){
-			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
-			freemsg(om);
-			ortp_error("Network simulator is in mode OrtpNetworkSimulatorOutboundControlled but oRTP wasn't compiled with --enable-ntp-timestamp.");
-			ortp_mutex_lock(&session->net_sim_ctx->mutex);
-		}
-		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
-#endif
 	}
 }
 

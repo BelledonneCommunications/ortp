@@ -205,7 +205,6 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 			}
 		}
 
-#if defined(ORTP_TIMESTAMP)
 		optval=1;
 		err = setsockopt (sock, SOL_SOCKET, SO_TIMESTAMP,
 			(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
@@ -213,7 +212,6 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		{
 			ortp_warning ("Fail to set rtp timestamp: %s.",getSocketError());
 		}
-#endif
 		err = 0;
 		optval=1;
 		switch (res->ai_family) {
@@ -1139,12 +1137,13 @@ void update_sent_bytes(OrtpStream *os, int nbytes) {
 	os->sent_bytes += nbytes + overhead;
 }
 
-static void update_recv_bytes(OrtpStream *os, int nbytes) {
+static void update_recv_bytes(OrtpStream *os, size_t nbytes, const struct timeval *recv_time) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if ((os->recv_bytes == 0) && (os->recv_bw_start.tv_sec == 0) && (os->recv_bw_start.tv_usec == 0)) {
 		ortp_gettimeofday(&os->recv_bw_start, NULL);
 	}
 	os->recv_bytes += nbytes + overhead;
+	ortp_bw_estimator_packet_received(&os->recv_bw_estimator, nbytes + overhead, recv_time);
 }
 
 static void log_send_error(RtpSession *session, const char *type, mblk_t *m, struct sockaddr *destaddr, socklen_t destlen){
@@ -1331,11 +1330,9 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		ret = bytes_received;
 #endif
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
-#if defined(ORTP_TIMESTAMP)
 			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SO_TIMESTAMP) {
 				memcpy(&msg->timestamp, (struct timeval *)CMSG_DATA(cmsghdr), sizeof(struct timeval));
 			}
-#endif
 #ifdef IP_PKTINFO
 			if ((cmsghdr->cmsg_level == IPPROTO_IP) && (cmsghdr->cmsg_type == IP_PKTINFO)) {
 				struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsghdr);
@@ -1507,7 +1504,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		return -1;
 	}
 
-	update_recv_bytes(&session->rtcp.gs, (int)(block->b_wptr - block->b_rptr));
+	update_recv_bytes(&session->rtcp.gs, (int)(block->b_wptr - block->b_rptr), &block->timestamp);
 
 	/* compound rtcp packet can be composed by more than one rtcp message */
 	do{
@@ -1595,7 +1592,7 @@ static void rtp_process_incoming_packet(RtpSession * session, mblk_t * mp, bool_
 			}
 		}
 		/* then parse the message and put on jitter buffer queue */
-		update_recv_bytes(&session->rtp.gs, (int)(mp->b_wptr - mp->b_rptr));
+		update_recv_bytes(&session->rtp.gs, (size_t)(mp->b_wptr - mp->b_rptr), &mp->timestamp);
 		rtp_session_rtp_parse(session, mp, user_ts, remaddr,addrlen);
 		/*for bandwidth measurements:*/
 	}else {

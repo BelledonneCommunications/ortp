@@ -302,6 +302,7 @@ typedef struct _OrtpStream {
 	socklen_t loc_addrlen;
 	struct sockaddr_storage loc_addr;
 	struct _RtpTransport *tr;
+	OrtpBwEstimator recv_bw_estimator;
 	struct timeval send_bw_start; /* used for bandwidth estimation */
 	struct timeval recv_bw_start; /* used for bandwidth estimation */
 	unsigned int sent_bytes; /* used for bandwidth estimation */

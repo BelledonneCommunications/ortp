@@ -306,6 +306,9 @@ rtp_session_init (RtpSession * session, int mode)
 		rtp_session_set_transports(session, rtp_tr, rtcp_tr);
 	}
 	session->tev_send_pt = -1; /*check in rtp profile when needed*/
+	
+	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95, 0.01);
+	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95, 0.01);
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -1846,7 +1849,8 @@ float rtp_session_compute_send_bandwidth(RtpSession *session) {
  * Computation must have been done with rtp_session_compute_recv_bandwidth()
 **/
 float rtp_session_get_recv_bandwidth(RtpSession *session){
-	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
+	//return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
+	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator) + ortp_bw_estimator_get_value(&session->rtcp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_recv_bandwidth_smooth(RtpSession *session){
@@ -1866,7 +1870,8 @@ float rtp_session_get_send_bandwidth_smooth(RtpSession *session){
 }
 
 float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {
-	return session->rtp.gs.download_bw;
+	//return session->rtp.gs.download_bw;
+	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_rtp_send_bandwidth(RtpSession *session) {
@@ -1874,7 +1879,8 @@ float rtp_session_get_rtp_send_bandwidth(RtpSession *session) {
 }
 
 float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session) {
-	return session->rtcp.gs.download_bw;
+	//return session->rtcp.gs.download_bw;
+	return ortp_bw_estimator_get_value(&session->rtcp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_rtcp_send_bandwidth(RtpSession *session) {

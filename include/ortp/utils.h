@@ -71,6 +71,26 @@ ORTP_PUBLIC void ortp_kalman_rls_init(OrtpKalmanRLS *obj, double m0, double b0);
 ORTP_PUBLIC void ortp_kalman_rls_record(OrtpKalmanRLS *obj, double xmes, double ymes);
 
 
+typedef struct _OrtpBwEstimator{
+	float one_minus_alpha;
+	float inv_step;
+	float exp_constant;
+	struct timeval last_packet_recv;
+	float value;
+}OrtpBwEstimator;
+
+/**
+ * Utility object to compute a sliding exponential mean bitrate.
+ * @param obj the estimator structure to initialize
+ * @param alpha the weight of previous estimation (between 0 and 1)
+ * @param step a time constant in seconds representing the sampling period
+**/ 
+ORTP_PUBLIC void ortp_bw_estimator_init(OrtpBwEstimator *obj, float alpha, float step);
+
+ORTP_PUBLIC void ortp_bw_estimator_packet_received (OrtpBwEstimator *obj, size_t bytes, const struct timeval *recv_time);
+
+ORTP_PUBLIC float ortp_bw_estimator_get_value(OrtpBwEstimator *obj);
+
 #ifdef __cplusplus
 }
 #endif
