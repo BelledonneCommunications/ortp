@@ -81,8 +81,8 @@ if(WIN32)
 	endif()
 endif()
 
-apply_compile_flags(ORTP_SOURCE_FILES_C "CPP" "C")
-apply_compile_flags(ORTP_SOURCE_FILES_CXX "CPP" "CXX")
+bc_apply_compile_flags(ORTP_SOURCE_FILES_C STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
+bc_apply_compile_flags(ORTP_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_CXX)
 
 if(ENABLE_STATIC)
 	add_library(ortp-static STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
