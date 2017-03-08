@@ -97,7 +97,7 @@ endif()
 if(ENABLE_SHARED)
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	if(ANDROID)
-		set_target_properties(ortp PROPERTIES OUTPUT_NAME "ortp-${NDK_ARCHITECTURE}")
+		set_target_properties(ortp PROPERTIES OUTPUT_NAME "ortp-${CMAKE_ANDROID_ARCH_ABI}")
 	else()
 		# Do not version shared library on Android
 		set_target_properties(ortp PROPERTIES SOVERSION ${ORTP_SO_VERSION})
