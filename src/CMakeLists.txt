@@ -88,7 +88,8 @@ if(ENABLE_STATIC)
 	add_library(ortp-static STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	set_target_properties(ortp-static PROPERTIES OUTPUT_NAME ortp)
 	target_compile_definitions(ortp-static PRIVATE "ORTP_EXPORTS")
-	target_link_libraries(ortp-static ${LIBS})
+	target_include_directories(ortp-static PUBLIC ${BCTOOLBOX_CORE_INCLUDE_DIRS})
+	target_link_libraries(ortp-static INTERFACE ${LIBS})
 	install(TARGETS ortp-static EXPORT ${EXPORT_TARGETS_NAME}Targets
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
@@ -106,6 +107,7 @@ if(ENABLE_SHARED)
 		target_compile_options(ortp PRIVATE "/DELAYLOAD:Qwave.dll")
 	endif()
 	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
+	target_include_directories(ortp PUBLIC ${BCTOOLBOX_CORE_INCLUDE_DIRS})
 	target_link_libraries(ortp PRIVATE ${LIBS})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")

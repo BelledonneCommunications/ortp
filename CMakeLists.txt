@@ -86,7 +86,6 @@ include_directories(
 	include/
 	src/
 	${CMAKE_CURRENT_BINARY_DIR}
-	${BCTOOLBOX_CORE_INCLUDE_DIRS}
 )
 if(MSVC)
 	include_directories(${MSVC_INCLUDE_DIR})
