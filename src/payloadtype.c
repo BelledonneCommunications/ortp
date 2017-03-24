@@ -128,6 +128,11 @@ void payload_type_set_avpf_params(PayloadType *pt, PayloadTypeAvpfParams params)
 	}
 }
 
+bool_t payload_type_is_vbr(const PayloadType *pt) {
+	if (pt->type == PAYLOAD_VIDEO) return TRUE;
+	return !!(pt->flags & PAYLOAD_TYPE_IS_VBR);
+}
+
 
 /**
  * Frees a PayloadType.
