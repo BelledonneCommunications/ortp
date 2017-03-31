@@ -291,6 +291,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			ed->info.congestion_detected = session->rtp.congdetect->state == CongestionStateDetected;
 			rtp_session_dispatch_event(session,ev);
 		}
+		ortp_video_bandwidth_detector_process_packet(session->rtp.congdetect->vbd, rtp->timestamp, &mp->timestamp, msgsize, rtp->markbit == 1);
 	}
 	
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);

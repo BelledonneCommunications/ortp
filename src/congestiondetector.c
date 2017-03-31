@@ -81,6 +81,7 @@ OrtpCongestionDetector * ortp_congestion_detector_new(RtpSession *session) {
 	OrtpCongestionDetector *cd = (OrtpCongestionDetector*)ortp_malloc0(sizeof(OrtpCongestionDetector));
 	cd->session = session;
 	ortp_congestion_detector_reset(cd);
+	ortp_congestion_detector_setup_video_bandwidth_detector(cd, 5, 100, 95);
 	return cd;
 }
 
@@ -216,3 +217,86 @@ void ortp_congestion_detector_destroy(OrtpCongestionDetector *obj){
 	ortp_free(obj);
 }
 
+void ortp_congestion_detector_setup_video_bandwidth_detector(OrtpCongestionDetector *cd, int count, int size_max, int trust) {
+	cd->vbd = (OrtpVideoBandwidthDetector*)ortp_malloc0(sizeof(OrtpVideoBandwidthDetector));
+	cd->vbd->packet_count_min = count;
+	cd->vbd->packets_size_max = size_max;
+	cd->vbd->trust_percentage = trust;
+	cd->vbd->packets = NULL;
+}
+
+static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwidthDetector *vbd, OrtpVideoBandwidthDetectorPacket *packet) {
+	float difftime = (float)(packet->recv_last_timestamp.tv_sec - packet->recv_first_timestamp.tv_sec) 
+		+ 1e-6*(packet->recv_last_timestamp.tv_usec - packet->recv_first_timestamp.tv_usec);
+	packet->bitrate = (packet->bytes / difftime) / 1000; // bytes per seconds
+	ortp_debug("[VBD] Bitrate is %f computed using %f timedif and %u size", packet->bitrate, difftime, packet->bytes);
+
+	vbd->packets = bctbx_list_prepend(vbd->packets, packet);
+
+	if (bctbx_list_size(vbd->packets) > vbd->packets_size_max) {
+		void *old_data = bctbx_list_nth_data(vbd->packets, vbd->packets_size_max);
+		vbd->packets = bctbx_list_remove(vbd->packets, old_data);
+	}
+}
+
+void ortp_video_bandwidth_detector_process_packet(OrtpVideoBandwidthDetector *vbd, uint32_t sent_timestamp, const struct timeval *recv_timestamp, int msgsize, bool_t is_last) {
+	OrtpVideoBandwidthDetectorPacket *last_packet = vbd->last_packet;
+	OrtpVideoBandwidthDetectorPacket *current_packet = NULL;
+
+	if (last_packet) {
+		if (last_packet->sent_timestamp == sent_timestamp) {
+			current_packet = last_packet;
+			current_packet->count += 1;
+			current_packet->bytes += msgsize;
+			current_packet->recv_last_timestamp.tv_sec = recv_timestamp->tv_sec;
+			current_packet->recv_last_timestamp.tv_usec = recv_timestamp->tv_usec;
+
+			if (is_last && current_packet->count >= vbd->packet_count_min) {
+				compute_bitrate_add_to_list_and_remove_oldest_value(vbd, current_packet);
+				vbd->last_packet = NULL;
+			}
+		} else {
+			// This can happen even if it's probability is quite low
+			if (last_packet->count >= vbd->packet_count_min) {
+				ortp_warning("[VBD] Last packet not complete but enough packet received (%u), add to packets list", last_packet->count);
+				compute_bitrate_add_to_list_and_remove_oldest_value(vbd, last_packet);
+			} else {
+				ortp_free(vbd->last_packet);
+			}
+			vbd->last_packet = NULL;
+		}
+	}
+
+	if (!current_packet) {
+		current_packet = (OrtpVideoBandwidthDetectorPacket*)ortp_malloc0(sizeof(OrtpVideoBandwidthDetectorPacket));
+		current_packet->count = 1;
+		current_packet->bytes = msgsize;
+		current_packet->sent_timestamp = sent_timestamp;
+		current_packet->recv_first_timestamp.tv_sec = recv_timestamp->tv_sec;
+		current_packet->recv_first_timestamp.tv_usec = recv_timestamp->tv_usec;
+		vbd->last_packet = current_packet;
+	}
+}
+
+static int compare_float(const float *v1, const float *v2) {
+	if (*v1 == *v2) return 0;
+	if (*v1 < *v2) return 1;
+	return -1;
+}
+
+int ortp_video_bandwidth_detector_get_estimated_available_bandwidth(OrtpVideoBandwidthDetector *vbd) {
+	if (bctbx_list_size(vbd->packets) >= vbd->packets_size_max) {
+		bctbx_list_t *bitrate_sorted = NULL;
+		bctbx_list_t *elem;
+		float *result = NULL;
+		int index = (int)(vbd->trust_percentage * vbd->packets_size_max / 100);
+		for(elem = vbd->packets; elem != NULL; elem = bctbx_list_next(elem)) {
+			OrtpVideoBandwidthDetectorPacket *packet = (OrtpVideoBandwidthDetectorPacket *)bctbx_list_get_data(elem);
+			bitrate_sorted = bctbx_list_insert_sorted(bitrate_sorted, &packet->bitrate, (bctbx_compare_func)compare_float);
+		}
+		result = (float *)bctbx_list_nth_data(bitrate_sorted, index);
+		bctbx_list_free(bitrate_sorted);
+		return (int)*result;
+	}
+	return -1;
+}
