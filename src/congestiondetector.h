@@ -44,26 +44,7 @@ typedef struct _OrtpCongestionDetector{
 	bool_t too_much_loss;
 	OrtpCongestionState state;
 	struct _RtpSession *session;
-	struct _OrtpVideoBandwidthDetector *vbd;
 }OrtpCongestionDetector;
-
-typedef struct _OrtpVideoBandwidthDetectorPacket{
-	unsigned int index;
-	uint32_t sent_timestamp;
-	struct timeval recv_first_timestamp;
-	struct timeval recv_last_timestamp;
-	unsigned int bytes;
-	unsigned int count;
-	float bitrate;
-}OrtpVideoBandwidthDetectorPacket;
-
-typedef struct _OrtpVideoBandwidthDetector{
-	unsigned int packet_count_min;
-	unsigned int packets_size_max;
-	unsigned int trust_percentage;
-	OrtpVideoBandwidthDetectorPacket *last_packet;
-	bctbx_list_t *packets;
-}OrtpVideoBandwidthDetector;
 
 OrtpCongestionDetector * ortp_congestion_detector_new(struct _RtpSession *session);
 
@@ -76,9 +57,4 @@ void ortp_congestion_detector_destroy(OrtpCongestionDetector *obj);
 
 void ortp_congestion_detector_reset(OrtpCongestionDetector *cd);
 
-void ortp_congestion_detector_setup_video_bandwidth_detector(OrtpCongestionDetector *cd, int count, int size_max, int trust);
-
-void ortp_video_bandwidth_detector_process_packet(OrtpVideoBandwidthDetector *vbd, uint32_t sent_timestamp, const struct timeval *recv_timestamp, int msgsize, bool_t is_last);
-
-int ortp_video_bandwidth_detector_get_estimated_available_bandwidth(OrtpVideoBandwidthDetector *vbd);
 #endif

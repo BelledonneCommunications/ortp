@@ -52,6 +52,7 @@ struct _OrtpEventData{
 		OrtpSocketType socket_type;
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
+		int video_bandwidth_available;
 	} info;
 };
 
@@ -80,6 +81,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_DTLS_ENCRYPTION_CHANGED		13
 #define ORTP_EVENT_RTT_CHARACTER_RECEIVED		15
 #define ORTP_EVENT_CONGESTION_STATE_CHANGED		16
+#define ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE		17
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);

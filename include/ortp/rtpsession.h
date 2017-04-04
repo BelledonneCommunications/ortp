@@ -352,6 +352,7 @@ typedef struct _RtpStream
 	int ssrc_changed_thres;
 	jitter_stats_t jitter_stats;
 	struct _OrtpCongestionDetector *congdetect;
+	struct _OrtpVideoBandwidthEstimator *video_bw_estimator;
 }RtpStream;
 
 typedef struct _RtcpStream
@@ -445,6 +446,7 @@ struct _RtpSession
 
 	bool_t is_spliced;
 	bool_t congestion_detector_enabled;
+	bool_t video_bandwidth_estimator_enabled;
 };
 
 
@@ -683,6 +685,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
 ORTP_PUBLIC void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled);
+ORTP_PUBLIC void rtp_session_enable_video_bandwidth_estimator(RtpSession *session, bool_t enabled);
 
 ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );

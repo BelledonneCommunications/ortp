@@ -47,6 +47,7 @@ libortp_la_SOURCES=	\
 			sessionset.c  \
 			str_utils.c 	\
 			telephonyevents.c  \
+			videobandwidthestimator.c videobandwidthestimator.h\
 			utils.c utils.h
 
 libortp_la_LIBADD= $(PTHREAD_LIBS) $(RT_LIBS) -lm $(BCTOOLBOX_LIBS)

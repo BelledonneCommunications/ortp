@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "rtpsession_priv.h"
 #include "congestiondetector.h"
+#include "videobandwidthestimator.h"
 
 #if (_WIN32_WINNT >= 0x0600)
 #include <delayimp.h>
@@ -324,6 +325,17 @@ void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled
 		}
 	}
 	session->congestion_detector_enabled = enabled;
+}
+
+void rtp_session_enable_video_bandwidth_estimator(RtpSession *session, bool_t enabled){
+	if (enabled){
+		if (!session->rtp.video_bw_estimator){
+			session->rtp.video_bw_estimator = ortp_video_bandwidth_estimator_new(session);
+		}else{
+			if (!session->video_bandwidth_estimator_enabled) ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator); 
+		}
+	}
+	session->video_bandwidth_estimator_enabled = enabled;
 }
 
 void jb_parameters_init(JBParameters *jbp) {
@@ -1580,6 +1592,10 @@ void rtp_session_uninit (RtpSession * session)
 		ortp_congestion_detector_destroy(session->rtp.congdetect);
 	}
 
+	if (session->rtp.video_bw_estimator){
+		ortp_video_bandwidth_estimator_destroy(session->rtp.video_bw_estimator);
+	}
+
 	rtp_session_get_transports(session,&rtp_meta_transport,&rtcp_meta_transport);
 	if (rtp_meta_transport)
 		meta_rtp_transport_destroy(rtp_meta_transport);
@@ -1628,6 +1644,7 @@ void rtp_session_resync(RtpSession *session){
 	rtp_session_unset_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 	rtp_session_init_jitter_buffer(session);
 	if (session->rtp.congdetect) ortp_congestion_detector_reset(session->rtp.congdetect);
+	if (session->rtp.video_bw_estimator) ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator);
 
 	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed

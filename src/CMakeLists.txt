@@ -59,6 +59,7 @@ set(ORTP_SOURCE_FILES_C
 	sessionset.c
 	str_utils.c
 	telephonyevents.c
+	videobandwidthestimator.c
 	utils.c
 )
 set(ORTP_SOURCE_FILES_CXX )

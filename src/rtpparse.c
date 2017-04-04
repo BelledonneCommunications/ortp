@@ -27,6 +27,7 @@
 #include "utils.h"
 #include "rtpsession_priv.h"
 #include "congestiondetector.h"
+#include "videobandwidthestimator.h"
 
 static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rtp, int *discarded, int *duplicate)
 {
@@ -291,7 +292,11 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			ed->info.congestion_detected = session->rtp.congdetect->state == CongestionStateDetected;
 			rtp_session_dispatch_event(session,ev);
 		}
-		ortp_video_bandwidth_detector_process_packet(session->rtp.congdetect->vbd, rtp->timestamp, &mp->timestamp, msgsize, rtp->markbit == 1);
+	}
+
+	if (session->video_bandwidth_estimator_enabled && session->rtp.video_bw_estimator) {
+		int overhead = ortp_stream_is_ipv6(&session->rtp.gs) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+		ortp_video_bandwidth_estimator_process_packet(session->rtp.video_bw_estimator, rtp->timestamp, &mp->timestamp, msgsize + overhead, rtp->markbit == 1);
 	}
 	
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);
