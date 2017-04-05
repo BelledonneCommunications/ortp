@@ -311,13 +311,13 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 			((float)ctl->adapt_jitt_comp_ts/(float)ctl->clock_rate)*1000.0,
 			ctl->jitter_buffer_mean_size,
 			ctl->params.min_size, ctl->params.nom_size, ctl->params.max_size);
-		ortp_message("jitter buffer rls stats: count=%d"
+		ortp_message("jitter buffer rls stats: count=%d, clockrate=%i"
 			", offset=%g clock_ratio=%g"
 			", capped_offset=%i capped_clock_ratio=%f"
 			", max_ts_deviation=%f prev_max_ts_deviation=%f"
 			", deviation=%i"
 			", RLS VARIABLES: P[0][0]=%f, P[1][0]=%f, P[0][1]=%f, P[1][1]=%f"
-			, ctl->count
+			, ctl->count, ctl->clock_rate
 			, ctl->kalman_rls.b, ctl->kalman_rls.m
 			, (int) ctl->clock_offset_ts, (float)ctl->capped_clock_ratio
 			, ortp_extremum_get_current(&ctl->max_ts_deviation), ortp_extremum_get_previous(&ctl->max_ts_deviation)

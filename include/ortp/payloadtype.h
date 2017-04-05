@@ -70,7 +70,7 @@ struct _PayloadTypeAvpfParams {
 	uint16_t trr_interval; /**< The interval in milliseconds between regular RTCP packets. */
 };
 
-struct _PayloadType
+struct _OrtpPayloadType
 {
 	int type; /**< one of PAYLOAD_* macros*/
 	int clock_rate; /**< rtp clock rate*/
@@ -90,7 +90,8 @@ struct _PayloadType
 
 #ifndef PayloadType_defined
 #define PayloadType_defined
-typedef struct _PayloadType PayloadType;
+typedef struct _OrtpPayloadType OrtpPayloadType;
+typedef OrtpPayloadType PayloadType;
 typedef struct _PayloadTypeAvpfParams PayloadTypeAvpfParams;
 #endif
 
@@ -109,6 +110,7 @@ ORTP_PUBLIC void payload_type_append_recv_fmtp(PayloadType *pt, const char *fmtp
 ORTP_PUBLIC void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp);
 #define payload_type_get_avpf_params(pt)	((pt)->avpf)
 ORTP_PUBLIC void payload_type_set_avpf_params(PayloadType *pt, PayloadTypeAvpfParams params);
+ORTP_PUBLIC bool_t payload_type_is_vbr(const PayloadType *pt);
 
 #define payload_type_get_bitrate(pt)	((pt)->normal_bitrate)
 #define payload_type_get_rate(pt)		((pt)->clock_rate)

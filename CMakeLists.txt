@@ -42,22 +42,6 @@ option(ENABLE_DEBUG_LOGS "Turn on or off debug level logs." NO)
 set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
-macro(apply_compile_flags SOURCE_FILES)
-	if(${SOURCE_FILES})
-		set(options "")
-		foreach(a ${ARGV})
-			if(STRICT_OPTIONS_${a})
-				string(REPLACE ";" " " options_${a} "${STRICT_OPTIONS_${a}}")
-				set(options "${options} ${options_${a}}")
-			endif()
-		endforeach()
-		if(options)
-			set_source_files_properties(${${SOURCE_FILES}} PROPERTIES COMPILE_FLAGS "${options}")
-		endif()
-	endif()
-endmacro()
-
-
 include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
@@ -102,7 +86,6 @@ include_directories(
 	include/
 	src/
 	${CMAKE_CURRENT_BINARY_DIR}
-	${BCTOOLBOX_CORE_INCLUDE_DIRS}
 )
 if(MSVC)
 	include_directories(${MSVC_INCLUDE_DIR})
@@ -237,3 +220,5 @@ install(FILES 	"${CMAKE_CURRENT_SOURCE_DIR}/README"
 	"${CMAKE_CURRENT_SOURCE_DIR}/COPYING" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS" 
 	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}")
+
+
