@@ -49,6 +49,7 @@ struct _OrtpEventData{
 			bool_t verified;
 			bool_t pad[3];
 		} zrtp_sas;
+		bool_t zrtp_cache_mismatch;
 		OrtpSocketType socket_type;
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
@@ -80,6 +81,8 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_DTLS_ENCRYPTION_CHANGED		13
 #define ORTP_EVENT_RTT_CHARACTER_RECEIVED		15
 #define ORTP_EVENT_CONGESTION_STATE_CHANGED		16
+#define ORTP_EVENT_ZRTP_CACHE_MISMATCH			17
+#define ORTP_EVENT_ZRTP_PEER_VERSION_OBSOLETE		18
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
