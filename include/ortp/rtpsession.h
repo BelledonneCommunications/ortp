@@ -449,6 +449,16 @@ struct _RtpSession
 	bool_t video_bandwidth_estimator_enabled;
 };
 
+/**
+ * Structure describing the video bandwidth estimator parameters
+**/
+typedef struct _OrtpVideoBandwidthEstimatorParams {
+	int enabled; /**<Whether estimator is enabled or off.*/
+	unsigned int packet_count_min; /** minimum number of packets with the same sent timestamp to be processed continuously before being used */
+	unsigned int packets_size_max; /** number of packets needed to compute the available video bandwidth */
+	unsigned int trust_percentage; /** percentage for which the chosen bandwidth value in all available will be inferior */
+} OrtpVideoBandwidthEstimatorParams;
+
 
 
 
@@ -685,7 +695,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
 ORTP_PUBLIC void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled);
-ORTP_PUBLIC void rtp_session_enable_video_bandwidth_estimator(RtpSession *session, bool_t enabled);
+ORTP_PUBLIC void rtp_session_enable_video_bandwidth_estimator(RtpSession *session, const OrtpVideoBandwidthEstimatorParams *params);
 
 ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value( RtpSession *session, const int value );
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value );

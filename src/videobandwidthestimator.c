@@ -25,8 +25,8 @@
 OrtpVideoBandwidthEstimator * ortp_video_bandwidth_estimator_new(RtpSession *session) {
 	OrtpVideoBandwidthEstimator *vbe = (OrtpVideoBandwidthEstimator*)ortp_malloc0(sizeof(OrtpVideoBandwidthEstimator));
 	vbe->session = session;
-	vbe->packet_count_min = 7;
-	vbe->packets_size_max = 30;
+	vbe->packet_count_min = 5;
+	vbe->packets_size_max = 3;
 	vbe->trust_percentage = 90;
     vbe->nb_packets_computed = 0;
     vbe->packets = NULL;
@@ -76,7 +76,7 @@ static int compare_float(const float *v1, const float *v2) {
 	return -1;
 }
 
-int ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(OrtpVideoBandwidthEstimator *vbe) {
+float ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(OrtpVideoBandwidthEstimator *vbe) {
     bctbx_list_t *bitrate_sorted = NULL;
     bctbx_list_t *elem;
     float *result = NULL;
@@ -87,7 +87,7 @@ int ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(OrtpVideoBa
     }
     result = (float *)bctbx_list_nth_data(bitrate_sorted, index);
     bctbx_list_free(bitrate_sorted);
-    return (int)*result;
+    return (float)*result;
 }
 
 static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwidthEstimator *vbe, OrtpVideoBandwidthEstimatorPacket *packet) {

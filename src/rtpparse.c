@@ -285,6 +285,11 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 	jitter_control_new_packet(&session->rtp.jittctl,rtp->timestamp,local_str_ts);
 
+	if (session->video_bandwidth_estimator_enabled && session->rtp.video_bw_estimator) {
+		int overhead = ortp_stream_is_ipv6(&session->rtp.gs) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+		ortp_video_bandwidth_estimator_process_packet(session->rtp.video_bw_estimator, rtp->timestamp, &mp->timestamp, msgsize + overhead, rtp->markbit == 1);
+	}
+
 	if (session->congestion_detector_enabled && session->rtp.congdetect){
 		if (ortp_congestion_detector_record(session->rtp.congdetect,rtp->timestamp,local_str_ts)) {
 			OrtpEvent *ev=ortp_event_new(ORTP_EVENT_CONGESTION_STATE_CHANGED);
@@ -292,11 +297,6 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			ed->info.congestion_detected = session->rtp.congdetect->state == CongestionStateDetected;
 			rtp_session_dispatch_event(session,ev);
 		}
-	}
-
-	if (session->video_bandwidth_estimator_enabled && session->rtp.video_bw_estimator) {
-		int overhead = ortp_stream_is_ipv6(&session->rtp.gs) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-		ortp_video_bandwidth_estimator_process_packet(session->rtp.video_bw_estimator, rtp->timestamp, &mp->timestamp, msgsize + overhead, rtp->markbit == 1);
 	}
 	
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);

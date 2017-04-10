@@ -52,7 +52,7 @@ struct _OrtpEventData{
 		OrtpSocketType socket_type;
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
-		int video_bandwidth_available;
+		float video_bandwidth_available;
 	} info;
 };
 

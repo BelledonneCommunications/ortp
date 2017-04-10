@@ -327,15 +327,17 @@ void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled
 	session->congestion_detector_enabled = enabled;
 }
 
-void rtp_session_enable_video_bandwidth_estimator(RtpSession *session, bool_t enabled){
-	if (enabled){
-		if (!session->rtp.video_bw_estimator){
+void rtp_session_enable_video_bandwidth_estimator(RtpSession *session, const OrtpVideoBandwidthEstimatorParams *params) {
+	if (params->enabled) {
+		if (!session->rtp.video_bw_estimator) {
 			session->rtp.video_bw_estimator = ortp_video_bandwidth_estimator_new(session);
-		}else{
-			if (!session->video_bandwidth_estimator_enabled) ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator); 
 		}
+		if (params->packet_count_min > 0) session->rtp.video_bw_estimator->packet_count_min = params->packet_count_min;
+		if (params->packets_size_max > 0) session->rtp.video_bw_estimator->packets_size_max = params->packets_size_max;
+		if (params->trust_percentage > 0) session->rtp.video_bw_estimator->trust_percentage = params->trust_percentage;
+		if (!session->video_bandwidth_estimator_enabled) ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator);
 	}
-	session->video_bandwidth_estimator_enabled = enabled;
+	session->video_bandwidth_estimator_enabled = params->enabled;
 }
 
 void jb_parameters_init(JBParameters *jbp) {
