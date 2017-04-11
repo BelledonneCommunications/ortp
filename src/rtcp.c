@@ -687,8 +687,8 @@ void ortp_loss_rate_estimator_init(OrtpLossRateEstimator *obj, int min_packet_co
 bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj, const RtpSession *session, const report_block_t *rb){
 	int32_t cum_loss=report_block_get_cum_packet_lost(rb);
 	int32_t extseq=report_block_get_high_ext_seq(rb);
-	int32_t diff_unique_outgoing=(int32_t)(session->stats.packet_sent-obj->last_packet_sent_count);
-	int32_t diff_total_outgoing=diff_unique_outgoing+(int32_t)(session->stats.packet_dup_sent-obj->last_dup_packet_sent_count);
+	//int32_t diff_unique_outgoing=(int32_t)(session->stats.packet_sent-obj->last_packet_sent_count);
+	//int32_t diff_total_outgoing=diff_unique_outgoing+(int32_t)(session->stats.packet_dup_sent-obj->last_dup_packet_sent_count);
 	int32_t diff;
 	uint64_t curtime;
 	bool_t got_value=FALSE;
@@ -718,17 +718,28 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 	}else if (diff>obj->min_packet_count_interval && curtime-obj->last_estimate_time_ms>=obj->min_time_ms_interval){
 		/*we have sufficient interval*/
 		int32_t new_losses=cum_loss-obj->last_cum_loss;
+		
+#if 0 /*SM: the following code try to takes into account sent duplicates - however by doing this it creates a bias in the loss rate computation
+		that can sometimes result in a negative loss rate, even if there is no duplicate.
+		Since the rate control doesn't use duplicates anymore, there is no good reason to take this into account.
+		*/
 		/*if we are using duplicates, they will not be visible in 'diff' variable.
 		But since we are the emitter, we can retrieve the total count of packet we
 		sent and use this value to compute the loss rate instead.*/
 		obj->loss_rate = 100.f * (1.f - MAX(0, (diff_unique_outgoing - new_losses) * 1.f / diff_total_outgoing));
+#endif
+		obj->loss_rate = 100.f * (float) new_losses / (float)( extseq - obj->last_ext_seq);
 
 		/*update last values with current*/
 		got_value=TRUE;
 		obj->last_estimate_time_ms=curtime;
 
 		if (obj->loss_rate>100.f){
+			obj->loss_rate = 100.f;
 			ortp_error("ortp_loss_rate_estimator_process %p: Loss rate MUST NOT be greater than 100%%", obj);
+		}else if(obj->loss_rate < 0){
+			obj->loss_rate = 0;
+			ortp_error("ortp_loss_rate_estimator_process %p: Loss rate MUST NOT be negative", obj);
 		}
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
