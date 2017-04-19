@@ -44,12 +44,12 @@ struct _OrtpEventData{
 		bool_t dtls_stream_encrypted;
 		bool_t zrtp_stream_encrypted;
 		bool_t ice_processing_successful;
-		struct _ZrtpSas{
+		struct _ZrtpInfo{
 			char sas[32]; // up to 31 + null characters
 			bool_t verified;
-			bool_t pad[3];
-		} zrtp_sas;
-		bool_t zrtp_cache_mismatch;
+			bool_t cache_mismatch;
+			bool_t pad[2];
+		} zrtp_info;
 		OrtpSocketType socket_type;
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
