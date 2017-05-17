@@ -97,7 +97,7 @@ if(ENABLE_STATIC)
 endif()
 if(ENABLE_SHARED)
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
-	if(APPLE)
+	if(IOS)
 		set_target_properties(ortp PROPERTIES
 			FRAMEWORK TRUE
 			MACOSX_FRAMEWORK_IDENTIFIER com.belledonne-communications.ortp
