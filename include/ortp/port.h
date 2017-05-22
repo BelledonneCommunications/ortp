@@ -21,6 +21,9 @@
 #ifndef ORTP_PORT_H
 #define ORTP_PORT_H
 
+#if __APPLE__
+#include "TargetConditionals.h"
+#endif
 
 #if !defined(_WIN32) && !defined(_WIN32_WCE)
 /********************************/
@@ -385,7 +388,7 @@ ORTP_PUBLIC	bool_t ortp_is_multicast_addr(const struct sockaddr *addr);
 /*define __ios when we are compiling for ios.
  The TARGET_OS_IPHONE macro is stupid, it is defined to 0 when compiling on mac os x.
 */
-#if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE==1
+#if TARGET_OS_IPHONE
 #define __ios 1
 #endif
 
