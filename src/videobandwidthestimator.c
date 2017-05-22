@@ -26,7 +26,7 @@ OrtpVideoBandwidthEstimator * ortp_video_bandwidth_estimator_new(RtpSession *ses
 	OrtpVideoBandwidthEstimator *vbe = (OrtpVideoBandwidthEstimator*)ortp_malloc0(sizeof(OrtpVideoBandwidthEstimator));
 	vbe->session = session;
 	vbe->packet_count_min = 5;
-	vbe->packets_size_max = 3;
+	vbe->packets_size_max = 30;
 	vbe->trust_percentage = 90;
     vbe->nb_packets_computed = 0;
     vbe->packets = NULL;
