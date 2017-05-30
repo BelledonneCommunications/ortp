@@ -50,7 +50,7 @@ PayloadType *payload_type_clone(const PayloadType *payload)
 {
 	PayloadType *newpayload=(PayloadType *)ortp_new0(PayloadType,1);
 	memcpy(newpayload,payload,sizeof(PayloadType));
-	newpayload->mime_type=ortp_strdup(payload->mime_type);
+	newpayload->mime_type=payload->mime_type;
 	if (payload->recv_fmtp!=NULL) {
 		newpayload->recv_fmtp=ortp_strdup(payload->recv_fmtp);
 	}
@@ -139,7 +139,6 @@ bool_t payload_type_is_vbr(const PayloadType *pt) {
 **/
 void payload_type_destroy(PayloadType *pt)
 {
-	if (pt->mime_type) ortp_free(pt->mime_type);
 	if (pt->recv_fmtp) ortp_free(pt->recv_fmtp);
 	if (pt->send_fmtp) ortp_free(pt->send_fmtp);
 	ortp_free(pt);
