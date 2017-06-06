@@ -32,3 +32,4 @@ stamp-h1
 *.vcxproj.*
 compile
 git-clang-format.diff
+*.DS_Store

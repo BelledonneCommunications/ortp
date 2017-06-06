@@ -98,9 +98,16 @@ endif()
 if(ENABLE_SHARED)
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	if(IOS)
+		if(IOS)
+			set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})
+		else()
+			set(MIN_OS ${CMAKE_OSX_DEPLOYMENT_TARGET})
+		endif()
+		set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/build/osx/")
 		set_target_properties(ortp PROPERTIES
 			FRAMEWORK TRUE
-			MACOSX_FRAMEWORK_IDENTIFIER com.belledonne-communications.ortp
+			MACOSX_FRAMEWORK_IDENTIFIER org.linphone.ortp
+  			MACOSX_FRAMEWORK_INFO_PLIST Info.plist.in
 			PUBLIC_HEADER "${ORTP_HEADER_FILES}"
 		)
 	endif()
