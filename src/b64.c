@@ -11,11 +11,11 @@
  * Copyright (c) 2004-2008, Matthew Wilson and Synesis Software
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
  * - Redistributions of source code must retain the above copyright notice, this
- *   list of conditions and the following disclaimer. 
+ *   list of conditions and the following disclaimer.
  * - Redistributions in binary form must reproduce the above copyright notice,
  *   this list of conditions and the following disclaimer in the documentation
  *   and/or other materials provided with the distribution.
@@ -59,6 +59,8 @@
 #include "ortp/port.h"
 #include "ortp/b64.h"
 
+#include <bctoolbox/defs.h>
+
 #include <assert.h>
 #include <string.h>
 /* /////////////////////////////////////////////////////////////////////////////
@@ -93,15 +95,15 @@
 
 static const char           b64_chars[] =   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static const signed char    b64_indexes[]   =   
+static const signed char    b64_indexes[]   =
 {
     /* 0 - 31 / 0x00 - 0x1f */
-        -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
+        -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
     ,   -1, -1, -1, -1, -1, -1, -1, -1
     /* 32 - 63 / 0x20 - 0x3f */
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
     ,   -1, -1, -1, 62, -1, -1, -1, 63  /* ... , '+', ... '/' */
     ,   52, 53, 54, 55, 56, 57, 58, 59  /* '0' - '7' */
     ,   60, 61, -1, -1, -1, -1, -1, -1  /* '8', '9', ... */
@@ -116,25 +118,25 @@ static const signed char    b64_indexes[]   =
     ,   41, 42, 43, 44, 45, 46, 47, 48  /* 'p' - 'w' */
     ,   49, 50, 51, -1, -1, -1, -1, -1  /* 'x', 'y', 'z', ... */
 
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
 
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
 
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
 
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
-    ,   -1, -1, -1, -1, -1, -1, -1, -1  
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
+    ,   -1, -1, -1, -1, -1, -1, -1, -1
 };
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -183,17 +185,17 @@ static size_t b64_encode_(  unsigned char const *src
         {
             unsigned char    characters[NUM_ENCODED_DATA_BYTES];
 
-            /* 
-             * 
+            /*
+             *
              * |       0       |       1       |       2       |
              *
              * |               |               |               |
              * |       |       |       |       |       |       |
              * |   |   |   |   |   |   |   |   |   |   |   |   |
              * | | | | | | | | | | | | | | | | | | | | | | | | |
-             * 
+             *
              * |     0     |     1     |     2     |     3     |
-             * 
+             *
              */
 
             /* characters[0] is the 6 left-most bits of src[0] */
@@ -274,7 +276,7 @@ static size_t b64_encode_(  unsigned char const *src
     }
 }
 
-/** This function reads in a character string in 4-character chunks, and writes 
+/** This function reads in a character string in 4-character chunks, and writes
  * out the converted form in 3-byte chunks to the destination.
  */
 static size_t b64_decode_(  char const      *src
@@ -313,7 +315,7 @@ static size_t b64_decode_(  char const      *src
         /* Now we iterate through the src, collecting together four characters
          * at a time from the Base-64 alphabet, until the end-point is reached.
          *
-         * 
+         *
          */
 
         char const          *begin      =   src;
@@ -343,9 +345,9 @@ static size_t b64_decode_(  char const      *src
                 {
                     switch(ch)
                     {
-                        case    ' ':
-                        case    '\t':
-                        case    '\b':
+                        case    ' ':BCTBX_NO_BREAK; /*intentionally no break*/
+                        case    '\t':BCTBX_NO_BREAK; /*intentionally no break*/
+                        case    '\b':BCTBX_NO_BREAK; /*intentionally no break*/
                         case    '\v':
                             if(B64_F_STOP_ON_UNEXPECTED_WS & flags)
                             {
@@ -355,9 +357,9 @@ static size_t b64_decode_(  char const      *src
                             }
                             else
                             {
-                                /* Fall through */
+                                BCTBX_NO_BREAK; /* Fall through */
                             }
-                        case    '\r':
+                        case    '\r':BCTBX_NO_BREAK; /*intentionally no break*/
                         case    '\n':
                             continue;
                         default:
@@ -454,7 +456,7 @@ size_t b64_encode2( void const  *src
             {
                 break;
             }
-            /* Fall through to 64 */
+            BCTBX_NO_BREAK; /* Fall through to 64 */
         case    B64_F_LINE_LEN_64:
             lineLen = 64;
             break;
@@ -581,7 +583,7 @@ static char const *b64_LookupErrorStringA_(int error, size_t *len)
     SEVERITY_STR_DECL(B64_RC_TRUNCATED_INPUT        ,   "The input did not represent a fully formed stream of octet couplings"  );
     SEVERITY_STR_DECL(B64_RC_DATA_ERROR             ,   "Invalid data"                                                          );
 
-    static const b64ErrorString_t_    *s_strings[] = 
+    static const b64ErrorString_t_    *s_strings[] =
     {
         SEVERITY_STR_ENTRY(B64_RC_OK),
         SEVERITY_STR_ENTRY(B64_RC_INSUFFICIENT_BUFFER),
