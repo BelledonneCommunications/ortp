@@ -1334,7 +1334,7 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		ret = bytes_received;
 #endif
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
-			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SO_TIMESTAMP) {
+			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SCM_TIMESTAMP) {
 				memcpy(&msg->timestamp, (struct timeval *)CMSG_DATA(cmsghdr), sizeof(struct timeval));
 			}
 #ifdef IP_PKTINFO
@@ -1377,6 +1377,15 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 				msg->ttl_or_hl = (*ptr & 0xFF);
 			}
 #endif
+		}
+
+		if (msg->timestamp.tv_sec == 0){
+			static int warn_once = 1; /*VERY BAD to use a static but there is no context in this function to hold this variable*/
+			if (warn_once){
+				ortp_warning("This platform doesn't implement SO_TIMESTAMP, will use gettimeofday() instead.");
+				warn_once = 0;
+			}
+			ortp_gettimeofday(&msg->timestamp, NULL);
 		}
 		/*store recv addr for use by modifiers*/
 		if (from && fromlen) {
