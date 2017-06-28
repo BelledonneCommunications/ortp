@@ -209,6 +209,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 			}
 		}
 
+#ifdef SO_TIMESTAMP
 		optval=1;
 		err = setsockopt (sock, SOL_SOCKET, SO_TIMESTAMP,
 			(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
@@ -216,18 +217,19 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		{
 			ortp_warning ("Fail to set rtp timestamp: %s.",getSocketError());
 		}
+#endif
 		err = 0;
 		optval=1;
 		switch (res->ai_family) {
 			default:
 			case AF_INET:
 #ifdef IP_RECVTTL
-				err = setsockopt(sock, IPPROTO_IP, IP_RECVTTL, &optval, sizeof(optval));
+				err = setsockopt(sock, IPPROTO_IP, IP_RECVTTL, (SOCKET_OPTION_VALUE)&optval, sizeof(optval));
 #endif
 				break;
 			case AF_INET6:
 #ifdef IPV6_RECVHOPLIMIT
-				err = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &optval, sizeof(optval));
+				err = setsockopt(sock, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, (SOCKET_OPTION_VALUE)&optval, sizeof(optval));
 #endif
 				break;
 		}
@@ -1334,9 +1336,11 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		ret = bytes_received;
 #endif
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
+#ifdef SO_TIMESTAMP
 			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SCM_TIMESTAMP) {
 				memcpy(&msg->timestamp, (struct timeval *)CMSG_DATA(cmsghdr), sizeof(struct timeval));
 			}
+#endif
 #ifdef IP_PKTINFO
 			if ((cmsghdr->cmsg_level == IPPROTO_IP) && (cmsghdr->cmsg_type == IP_PKTINFO)) {
 				struct in_pktinfo *pi = (struct in_pktinfo *)CMSG_DATA(cmsghdr);

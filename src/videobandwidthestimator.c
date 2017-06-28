@@ -92,7 +92,7 @@ float ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(OrtpVideo
 
 static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwidthEstimator *vbe, OrtpVideoBandwidthEstimatorPacket *packet) {
 	float difftime = (float)(packet->recv_last_timestamp.tv_sec - packet->recv_first_timestamp.tv_sec) 
-		+ 1e-6*(packet->recv_last_timestamp.tv_usec - packet->recv_first_timestamp.tv_usec);
+		+ 1e-6f*(packet->recv_last_timestamp.tv_usec - packet->recv_first_timestamp.tv_usec);
 	packet->bitrate = (packet->bytes * 8 / difftime);
 	ortp_debug("[VBE] Bitrate is %f kbits/s computed using %f timedif and %u size", packet->bitrate / 1000, difftime, packet->bytes);
 

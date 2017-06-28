@@ -34,7 +34,7 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv){
 
 void ortp_bw_estimator_init(OrtpBwEstimator *obj, float alpha, float step){
 	obj->one_minus_alpha = 1.0f - alpha;
-	obj->inv_step = 1.0/step;
+	obj->inv_step = 1.0f/step;
 	obj->exp_constant = logf(alpha) * obj->inv_step;
 	obj->last_packet_recv.tv_sec = 0;
 	obj->last_packet_recv.tv_usec = 0;
@@ -45,10 +45,10 @@ void ortp_bw_estimator_packet_received (OrtpBwEstimator *obj, size_t bytes, cons
 	float diff_time;
 	
 	if (obj->last_packet_recv.tv_sec == 0){
-		diff_time = 1.0/obj->inv_step;
+		diff_time = 1.0f/obj->inv_step;
 		ortp_message("First estimation");
 	}else{
-		diff_time = (float)(recv_time->tv_sec - obj->last_packet_recv.tv_sec) + 1e-6*(recv_time->tv_usec - obj->last_packet_recv.tv_usec);
+		diff_time = (float)(recv_time->tv_sec - obj->last_packet_recv.tv_sec) + 1e-6f*(recv_time->tv_usec - obj->last_packet_recv.tv_usec);
 	}
 	obj->value = ((float)bytes * obj->one_minus_alpha) + expf(diff_time * obj->exp_constant)*obj->value;
 	obj->last_packet_recv = *recv_time;
@@ -58,6 +58,6 @@ float ortp_bw_estimator_get_value(OrtpBwEstimator *obj){
 	struct timeval current;
 	bctbx_gettimeofday(&current, NULL);
 	ortp_bw_estimator_packet_received(obj, 0, &current);
-	return obj->value * 8.0 * obj->inv_step;
+	return obj->value * 8.0f * obj->inv_step;
 }
 

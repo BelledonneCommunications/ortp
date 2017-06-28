@@ -308,8 +308,8 @@ rtp_session_init (RtpSession * session, int mode)
 	}
 	session->tev_send_pt = -1; /*check in rtp profile when needed*/
 	
-	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95, 0.01);
-	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95, 0.01);
+	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95f, 0.01f);
+	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95f, 0.01f);
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
