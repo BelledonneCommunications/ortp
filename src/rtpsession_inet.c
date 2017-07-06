@@ -1148,7 +1148,7 @@ static void update_recv_bytes(OrtpStream *os, size_t nbytes, const struct timeva
 	if ((os->recv_bytes == 0) && (os->recv_bw_start.tv_sec == 0) && (os->recv_bw_start.tv_usec == 0)) {
 		ortp_gettimeofday(&os->recv_bw_start, NULL);
 	}
-	os->recv_bytes += nbytes + overhead;
+	os->recv_bytes += (unsigned int)(nbytes + overhead);
 	ortp_bw_estimator_packet_received(&os->recv_bw_estimator, nbytes + overhead, recv_time);
 }
 
