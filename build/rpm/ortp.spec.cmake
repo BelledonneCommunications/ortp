@@ -93,7 +93,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc %{_docdir}/ortp-%{version}/README
+%doc %{_docdir}/ortp-%{version}/README.md
 %doc %{_docdir}/ortp-%{version}/ChangeLog
 %doc %{_docdir}/ortp-%{version}/COPYING
 %doc %{_docdir}/ortp-%{version}/AUTHORS
