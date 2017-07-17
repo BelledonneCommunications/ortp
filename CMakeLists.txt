@@ -46,7 +46,6 @@ include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
 
-add_subdirectory(build)
 
 if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_FULL_LIBDIR})
@@ -66,6 +65,8 @@ if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
 else()
 	find_package(BcToolbox 0.2.0 REQUIRED)
 endif()
+
+add_subdirectory(build)
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)

@@ -37,39 +37,12 @@ set(CPACK_SOURCE_IGNORE_FILES
 "${CMAKE_BINARY_DIR}"
 "^${PROJECT_SOURCE_DIR}/.git*"
 )
-find_program (WC wc)
+bc_project_build_version(${PROJECT_VERSION} PROJECT_VERSION_BUILD)
 
-if (WC)
-        set(GIT_MINIMUN_VERSION 1.7.1) #might be even lower
-else()
-        set(GIT_MINIMUN_VERSION 1.7.10) # --count option of git rev-list is available only since (more or less) git 1.7.10)
-endif()
+set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-${PROJECT_VERSION_BUILD}")
 
-find_package(Git ${GIT_MINIMUN_VERSION})
-string(COMPARE GREATER "${GIT_VERSION_STRING}" "1.7.10" GIT_REV_LIST_HAS_COUNT)
+message("Package file name is ${CPACK_PACKAGE_FILE_NAME}" )
 
-if (GIT_REV_LIST_HAS_COUNT)
-        set(GIT_REV_LIST_COMMAND "${GIT_EXECUTABLE}" "rev-list" "--count" "${PROJECT_VERSION}..HEAD")
-        set(WC_COMMAND  "more") #nop
-else()
-        set(GIT_REV_LIST_COMMAND "${GIT_EXECUTABLE}" "rev-list" "${PROJECT_VERSION}..HEAD")
-        set(WC_COMMAND "${WC}"  "-l")
-endif()
-
-if(GIT_EXECUTABLE)
-        execute_process(
-                COMMAND ${GIT_REV_LIST_COMMAND}
-                COMMAND ${WC_COMMAND}
-                OUTPUT_VARIABLE PROJECT_VERSION_BUILD
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-                WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-        )
-        # if BUILD VERSION is available, append it to package filename
-if (PROJECT_VERSION_BUILD)
-        set (CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_FILE_NAME}-${PROJECT_VERSION_BUILD}")
-endif()
-	message("Package file name is ${CPACK_PACKAGE_FILE_NAME}" )
-endif()
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/rpm/ortp.spec.cmake ${CMAKE_CURRENT_SOURCE_DIR}/../ortp.spec)
 
