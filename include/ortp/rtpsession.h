@@ -241,6 +241,7 @@ typedef enum {
 } OrtpRtcpXrRcvrRttMode;
 
 typedef enum {
+	OrtpRtcpXrStatSummaryNone = 0,
 	OrtpRtcpXrStatSummaryLoss = (1 << 7),
 	OrtpRtcpXrStatSummaryDup = (1 << 6),
 	OrtpRtcpXrStatSummaryJitt = (1 << 5),
