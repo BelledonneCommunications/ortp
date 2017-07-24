@@ -249,7 +249,11 @@ const char * ortp_strerror(DWORD value);
 
 #endif
 
-ORTP_PUBLIC const char *getWinSocketError(int error);
+#ifdef __cplusplus
+extern "C" {
+#endif
+	
+	ORTP_PUBLIC const char *getWinSocketError(int error);
 #ifndef getSocketErrorCode
 #define getSocketErrorCode() WSAGetLastError()
 #endif
@@ -262,13 +266,11 @@ ORTP_PUBLIC const char *getWinSocketError(int error);
 #endif
 
 
-#ifdef __cplusplus
-extern "C"{
-#endif
 ORTP_PUBLIC int ortp_gettimeofday (struct timeval *tv, void* tz);
 #ifdef _WORKAROUND_MINGW32_BUGS
 char * WSAAPI gai_strerror(int errnum);
 #endif
+
 #ifdef __cplusplus
 }
 #endif
