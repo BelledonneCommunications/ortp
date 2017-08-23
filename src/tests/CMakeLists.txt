@@ -25,7 +25,7 @@ if (NOT IOS)
 	foreach(executable ${EXECUTABLES})
 		bc_apply_compile_flags(${executable}.c STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
 		add_executable(${executable} ${executable}.c)
-		target_link_libraries(${executable} ortp)
+		target_link_libraries(${executable} ortp ${BCTOOLBOX_CORE_LIBRARIES})
 	endforeach()
 
 	install(TARGETS ${EXECUTABLES}

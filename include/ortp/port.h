@@ -318,9 +318,13 @@ ORTP_PUBLIC int close_socket(ortp_socket_t sock);
 ORTP_PUBLIC int set_non_blocking_socket(ortp_socket_t sock);
 
 ORTP_PUBLIC char *ortp_strndup(const char *str,int n);
-ORTP_PUBLIC char *ortp_strdup_printf(const char *fmt,...);
-ORTP_PUBLIC char *ortp_strdup_vprintf(const char *fmt, va_list ap);
-ORTP_PUBLIC char *ortp_strcat_printf(char *dst, const char *fmt,...);
+#define ortp_strdup_printf bctbx_strdup_printf
+/*ORTP_PUBLIC char *ortp_strdup_printf(const char *fmt,...);*/
+#define ortp_strdup_vprintf bctbx_strdup_vprintf
+/*ORTP_PUBLIC char *ortp_strdup_vprintf(const char *fmt, va_list ap);*/
+#define ortp_strcat_printf bctbx_strcat_printf
+/*ORTP_PUBLIC char *ortp_strcat_printf(char *dst, const char *fmt,...);*/
+
 ORTP_PUBLIC char *ortp_strcat_vprintf(char *dst, const char *fmt, va_list ap);
 
 ORTP_PUBLIC int ortp_file_exist(const char *pathname);

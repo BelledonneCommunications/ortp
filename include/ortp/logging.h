@@ -28,76 +28,86 @@
 
 #include <ortp/port.h>
 
-#ifndef ORTP_LOG_DOMAIN
-#define ORTP_LOG_DOMAIN NULL
+#ifdef BCTBX_LOG_DOMAIN
+#undef BCTBX_LOG_DOMAIN
 #endif
+#ifndef ORTP_LOG_DOMAIN
+#define ORTP_LOG_DOMAIN "ortp"
+#endif
+
+#define BCTBX_LOG_DOMAIN ORTP_LOG_DOMAIN
+
+#include "bctoolbox/logging.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-typedef enum {
-	ORTP_DEBUG=1,
-	ORTP_TRACE=1<<1,
-	ORTP_MESSAGE=1<<2,
-	ORTP_WARNING=1<<3,
-	ORTP_ERROR=1<<4,
-	ORTP_FATAL=1<<5,
-	ORTP_LOGLEV_END=1<<6
-} OrtpLogLevel;
+/***************/
+/* logging api */
+/***************/
+	
+#define ORTP_FATAL BCTBX_LOG_FATAL
+#define	ORTP_ERROR BCTBX_LOG_ERROR
+#define	ORTP_WARNING BCTBX_LOG_WARNING
+#define	ORTP_MESSAGE BCTBX_LOG_MESSAGE
+#define	ORTP_TRACE	BCTBX_LOG_TRACE
+#define	ORTP_DEBUG	BCTBX_LOG_DEBUG
+#define	ORTP_END BCTBX_LOG_END
+#define ORTP_LOGLEV_END BCTBX_LOG_LOGLEV_END
+#define OrtpLogLevel BctbxLogLevel
+	
+#define OrtpLogFunc BctbxLogFunc
 
+	
 
-typedef void (*OrtpLogFunc)(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args);
-
+/*#define ortp_set_log_file bctbx_set_log_file*/
 ORTP_PUBLIC void ortp_set_log_file(FILE *file);
+
+/*#define ortp_set_log_handler bctbx_set_log_handler*/
 ORTP_PUBLIC void ortp_set_log_handler(OrtpLogFunc func);
-ORTP_PUBLIC OrtpLogFunc ortp_get_log_handler(void);
 
-ORTP_PUBLIC void ortp_logv_out(const char *domain, OrtpLogLevel level, const char *fmt, va_list args);
 
-#define ortp_log_level_enabled(domain, level)	(ortp_get_log_level_mask(domain) & (level))
+/* This function does not have any means by now, as even bctbx_set_log_handler is deprecated. use bctbx_log_handler_t instead*/
+ ORTP_PUBLIC OrtpLogFunc ortp_get_log_handler(void);
 
-ORTP_PUBLIC void ortp_logv(const char *domain, OrtpLogLevel level, const char *fmt, va_list args);
+
+#define ortp_logv_out bctbx_logv_out
+/*ORTP_PUBLIC void ortp_logv_out(const char *domain, OrtpLogLevel level, const char *fmt, va_list args);*/
+
+#define ortp_log_level_enabled(domain, level)	(bctbx_get_log_level_mask(domain) & (level))
+#define ortp_logv bctbx_logv
+/*ORTP_PUBLIC void ortp_logv(const char *domain, OrtpLogLevel level, const char *fmt, va_list args);*/
 
 /**
  * Flushes the log output queue.
  * WARNING: Must be called from the thread that has been defined with ortp_set_log_thread_id().
  */
-ORTP_PUBLIC void ortp_logv_flush(void);
+#define ortp_logv_flush bctbx_logv_flush
+/*ORTP_PUBLIC void ortp_logv_flush(void);*/
 
 /**
  * Activate all log level greater or equal than specified level argument.
 **/
-ORTP_PUBLIC void ortp_set_log_level(const char *domain, OrtpLogLevel level);
+#define ortp_set_log_level bctbx_set_log_level
+/*ORTP_PUBLIC void ortp_set_log_level(const char *domain, OrtpLogLevel level);*/
 
-ORTP_PUBLIC void ortp_set_log_level_mask(const char *domain, int levelmask);
-ORTP_PUBLIC unsigned int ortp_get_log_level_mask(const char *domain);
+#define ortp_set_log_level_mask bctbx_set_log_level_mask
+/*ORTP_PUBLIC void ortp_set_log_level_mask(const char *domain, int levelmask);*/
+#define ortp_get_log_level_mask bctbx_get_log_level_mask
+/*ORTP_PUBLIC unsigned int ortp_get_log_level_mask(const char *domain);*/
 
 /**
  * Tell oRTP the id of the thread used to output the logs.
  * This is meant to output all the logs from the same thread to prevent deadlock problems at the application level.
  * @param[in] thread_id The id of the thread that will output the logs (can be obtained using ortp_thread_self()).
  */
-ORTP_PUBLIC void ortp_set_log_thread_id(unsigned long thread_id);
+#define ortp_set_log_thread_id bctbx_set_log_thread_id
+/*ORTP_PUBLIC void ortp_set_log_thread_id(unsigned long thread_id);*/
 
-#ifdef __GNUC__
-#define CHECK_FORMAT_ARGS(m,n) __attribute__((format(printf,m,n)))
-#else
-#define CHECK_FORMAT_ARGS(m,n)
-#endif
-#ifdef __clang__
-/*in case of compile with -g static inline can produce this type of warning*/
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
 #ifdef ORTP_DEBUG_MODE
-static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_debug(const char *fmt,...)
-{
-  va_list args;
-  va_start (args, fmt);
-  ortp_logv(ORTP_LOG_DOMAIN, ORTP_DEBUG, fmt, args);
-  va_end (args);
-}
+#define ortp_debug bctbx_debug
 #else
 
 #define ortp_debug(...)
@@ -115,47 +125,19 @@ static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_debug(const char *fmt,...)
 static ORTP_INLINE void CHECK_FORMAT_ARGS(2,3) ortp_log(OrtpLogLevel lev, const char *fmt,...) {
 	va_list args;
 	va_start (args, fmt);
-	ortp_logv(ORTP_LOG_DOMAIN, lev, fmt, args);
+	bctbx_logv(ORTP_LOG_DOMAIN, lev, fmt, args);
 	va_end (args);
 }
-
-static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_message(const char *fmt,...)
-{
-	va_list args;
-	va_start (args, fmt);
-	ortp_logv(ORTP_LOG_DOMAIN, ORTP_MESSAGE, fmt, args);
-	va_end (args);
-}
-
-static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_warning(const char *fmt,...)
-{
-	va_list args;
-	va_start (args, fmt);
-	ortp_logv(ORTP_LOG_DOMAIN, ORTP_WARNING, fmt, args);
-	va_end (args);
-}
-
-#endif
-
-static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_error(const char *fmt,...)
-{
-	va_list args;
-	va_start (args, fmt);
-	ortp_logv(ORTP_LOG_DOMAIN, ORTP_ERROR, fmt, args);
-	va_end (args);
-}
-
-static ORTP_INLINE void CHECK_FORMAT_ARGS(1,2) ortp_fatal(const char *fmt,...)
-{
-	va_list args;
-	va_start (args, fmt);
-	ortp_logv(ORTP_LOG_DOMAIN, ORTP_FATAL, fmt, args);
-	va_end (args);
-}
-
-
+	
+#define ortp_message bctbx_message
+#define ortp_warning bctbx_warning
+#define ortp_error bctbx_error
+#define ortp_fatal bctbx_fatal
+#endif /*ORTP_NOMESSAGE_MODE*/
+	
 #ifdef __QNX__
-void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args);
+#define ortp_qnx_log_handler bctbx_qnx_log_handler
+/*void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt, va_list args);*/
 #endif
 
 

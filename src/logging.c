@@ -17,6 +17,71 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#include "ortp/utils.h"
+#include "ortp/logging.h"
+
+
+static bctbx_log_handler_t * __ortp_logger = NULL;
+static OrtpLogFunc __ortp_log_func = bctbx_logv_out;
+static unsigned int ortp_init_logger_refcount = 0;
+
+static void wrapper(void* info,const char *domain, BctbxLogLevel lev, const char *fmt, va_list args) {
+	BctbxLogFunc func = (BctbxLogFunc)info;
+	if (func) func(domain, lev, fmt,  args);
+}
+
+void ortp_init_logger(void){
+	if (ortp_init_logger_refcount++ > 0) return; /*already initialized*/
+	bctbx_init_logger(FALSE);
+	__ortp_logger = bctbx_create_log_handler(wrapper, bctbx_logv_out_destroy, __ortp_log_func);
+	bctbx_log_handler_set_domain(__ortp_logger, ORTP_LOG_DOMAIN);
+	bctbx_add_log_handler(__ortp_logger);
+	
+}
+
+void ortp_uninit_logger(void){
+	if (--ortp_init_logger_refcount <= 0) {
+		bctbx_remove_log_handler(__ortp_logger);
+		bctbx_uninit_logger();
+	}
+}
+
+void ortp_set_log_handler(OrtpLogFunc func){
+	__ortp_log_func = func ;
+	if (__ortp_logger)
+		bctbx_log_handler_set_user_data(__ortp_logger,func);
+}
+OrtpLogFunc ortp_get_log_handler(void){
+	return __ortp_log_func;
+}
+/**
+ *@param file a FILE pointer where to output the ortp logs.
+ *
+ **/
+void ortp_set_log_file(FILE *file){
+	if (!__ortp_logger) {
+		ortp_init_logger();
+		ortp_error("ortp_init_logger must be call before ortp_set_log_file, please fix it!");
+	}
+
+	/*first remove log handler*/
+	bctbx_remove_log_handler(__ortp_logger);
+	
+	if (file) {
+		__ortp_logger = bctbx_create_file_log_handler(0, "unknown","unknown", file);
+		
+	} else {
+		/*restaure default loguer*/
+		__ortp_logger = bctbx_create_log_handler(wrapper, bctbx_logv_out_destroy, ortp_logv_out);
+	}
+	bctbx_log_handler_set_domain(__ortp_logger, ORTP_LOG_DOMAIN);
+	bctbx_add_log_handler(__ortp_logger);
+
+	
+}
+
+
+#if 0
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
@@ -429,3 +494,4 @@ void ortp_qnx_log_handler(const char *domain, OrtpLogLevel lev, const char *fmt,
 	slog2c(slog2_buffer_handle[buffer_idx], 0, severity, msg);
 }
 #endif /* __QNX__ */
+#endif
