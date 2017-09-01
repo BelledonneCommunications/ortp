@@ -79,7 +79,7 @@ develop programs using the oRTP library.
 %setup -n %{name}-%{version}-%build_number
 
 %build
-%{expand:%%%cmake_name} . -DCMAKE_INSTALL_LIBDIR:PATH=%{_libdir} -DCMAKE_PREFIX_PATH:PATH=%{_prefix}
+%{expand:%%%cmake_name} . -DCMAKE_INSTALL_LIBDIR=%{_lib} -DCMAKE_PREFIX_PATH:PATH=%{_prefix}
 make %{?_smp_mflags}
 
 %install
