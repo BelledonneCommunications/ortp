@@ -239,6 +239,15 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 	int32_t diff = packet_ts - cur_str_ts;
 	int deviation;
 	bool_t jb_size_updated = FALSE;
+	
+	if (ctl->is_diverging){
+		int32_t elapsed = (int32_t)(cur_str_ts - ctl->diverged_start_ts);
+		if (elapsed >= ctl->clock_rate){
+			ortp_error("Jitter buffer stays unconverged for one second, reset it.");
+			ctl->count = 0;
+			ctl->is_diverging = FALSE;
+		}
+	}
 
 	if (ctl->count==0){
 		ctl->clock_offset_ts = ctl->prev_clock_offset_ts = (int32_t)packet_ts;
@@ -272,8 +281,15 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 	if (.5f<ctl->kalman_rls.m && ctl->kalman_rls.m<2.f){
 		/*realistic clock ratio, the filter is well converged*/
 		ctl->clock_offset_ts = (int32_t)((int32_t)ctl->kalman_rls.b + ctl->remote_ts_start);
+		if (ctl->is_diverging){
+			ctl->is_diverging = FALSE;
+		}
 	}else{
 		ctl->clock_offset_ts = diff;
+		if (!ctl->is_diverging){
+			ctl->is_diverging = TRUE;
+			ctl->diverged_start_ts = cur_str_ts;
+		}
 	}
 	
 	/*ortp_message("deviation=%g ms", 1000.0*deviation/(double)ctl->clock_rate);*/

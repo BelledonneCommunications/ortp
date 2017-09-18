@@ -102,6 +102,9 @@ typedef struct _JitterControl
 	uint32_t last_log_ts;
 	uint32_t local_ts_start;
 	uint32_t remote_ts_start;
+	uint32_t diverged_start_ts;
+	bool_t is_diverging;
+	bool_t pad[3];
 } JitterControl;
 
 typedef struct _WaitPoint
