@@ -129,15 +129,15 @@ static ORTP_INLINE uint32_t report_block_get_fraction_lost(const report_block_t 
 	return (ntohl(rb->fl_cnpl)>>24);
 }
 static ORTP_INLINE int32_t report_block_get_cum_packet_lost(const report_block_t * rb){
-	int cum_loss = ntohl(rb->fl_cnpl);
+	int cum_loss = (int)ntohl(rb->fl_cnpl);
 	if (((cum_loss>>23)&1)==0)
-		return 0x00FFFFFF & cum_loss;
+		return (int32_t) (0x00FFFFFF & cum_loss);
 	else
-		return 0xFF000000 | (cum_loss-0xFFFFFF-1);
+		return (int32_t)0xFF000000 | cum_loss-0xFFFFFF-1;
 }
 
 static ORTP_INLINE void report_block_set_fraction_lost(report_block_t * rb, int fl){
-	rb->fl_cnpl = htonl( (ntohl(rb->fl_cnpl) & 0xFFFFFF) | (fl&0xFF)<<24);
+	rb->fl_cnpl = htonl( (ntohl(rb->fl_cnpl) & 0xFFFFFF) | (uint32_t) (fl&0xFF)<<24);
 }
 
 static ORTP_INLINE void report_block_set_cum_packet_lost(report_block_t * rb, int64_t cpl) {
