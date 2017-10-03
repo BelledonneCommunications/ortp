@@ -98,7 +98,7 @@ static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwid
 	
 	if (difftime > MIN_DIFFTIME) {
 		packet->bitrate = (packet->bytes * 8 / difftime);
-		ortp_message("[VBE] Bitrate is %f kbits/s computed using %.15g timedif and %u size", packet->bitrate / 1000, difftime, packet->bytes);
+		ortp_debug("[VBE] Bitrate is %f kbits/s computed using %f timedif and %u size", packet->bitrate / 1000, difftime, packet->bytes);
 
 		vbe->nb_packets_computed += 1;
 		vbe->packets = bctbx_list_prepend(vbe->packets, packet);
@@ -112,7 +112,7 @@ static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwid
 			OrtpEvent *ev = ortp_event_new(ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE);
 			OrtpEventData *ed = ortp_event_get_data(ev);
 			ed->info.video_bandwidth_available = ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(vbe);
-			ortp_message("[VBE] Dispatching event ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE with value %f kbits/s", ed->info.video_bandwidth_available / 1000);
+			ortp_debug("[VBE] Dispatching event ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE with value %f kbits/s", ed->info.video_bandwidth_available / 1000);
 			rtp_session_dispatch_event(vbe->session, ev);
 		}
 	}
