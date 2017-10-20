@@ -1567,6 +1567,7 @@ void rtp_session_uninit (RtpSession * session)
 {
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
+	ortp_thread_join(session->rtp.win_t, NULL);
 	flushq(&session->rtp.winrq, FLUSHALL);
 	ortp_mutex_destroy(&session->rtp.winrq_lock);
 #endif
