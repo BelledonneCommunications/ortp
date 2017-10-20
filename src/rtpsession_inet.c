@@ -1661,7 +1661,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 		int ret = WSAPoll(&fdarray, 1, 10);
 		
 		if (ret == SOCKET_ERROR) {
-			ortp_warning("Error rtp recv sync thread for windows: error while polling [%i]", WSAGetLastError());
+			ortp_warning("Error rtp recv async thread for windows: error while polling [%i]", WSAGetLastError());
 		} else if (ret > 0) {
 #endif
 			bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);

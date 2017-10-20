@@ -2507,3 +2507,9 @@ bool_t ortp_stream_is_ipv6(OrtpStream *os) {
 	}
 	return FALSE;
 }
+
+void rtp_session_stop_async_recvfrom(RtpSession *session) {
+	session->rtp.is_win_thread_running = FALSE;
+	ortp_thread_join(session->rtp.win_t, NULL);
+	flushq(&session->rtp.winrq, FLUSHALL);
+}
