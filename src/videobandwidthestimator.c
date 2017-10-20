@@ -22,8 +22,6 @@
 #include <math.h>
 #include <ortp/rtpsession.h>
 
-#define MIN_DIFFTIME 0.00001f
-
 OrtpVideoBandwidthEstimator * ortp_video_bandwidth_estimator_new(RtpSession *session) {
 	OrtpVideoBandwidthEstimator *vbe = (OrtpVideoBandwidthEstimator*)ortp_malloc0(sizeof(OrtpVideoBandwidthEstimator));
 	vbe->session = session;
@@ -96,25 +94,23 @@ static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwid
 	float difftime = (float)(packet->recv_last_timestamp.tv_sec - packet->recv_first_timestamp.tv_sec) 
 		+ 1e-6f*(packet->recv_last_timestamp.tv_usec - packet->recv_first_timestamp.tv_usec);
 	
-	if (difftime > MIN_DIFFTIME) {
-		packet->bitrate = (packet->bytes * 8 / difftime);
-		ortp_debug("[VBE] Bitrate is %f kbits/s computed using %f timedif and %u size", packet->bitrate / 1000, difftime, packet->bytes);
+	packet->bitrate = (packet->bytes * 8 / difftime);
+	ortp_debug("[VBE] Bitrate is %f kbits/s computed using %f timedif and %u size", packet->bitrate / 1000, difftime, packet->bytes);
 
-		vbe->nb_packets_computed += 1;
-		vbe->packets = bctbx_list_prepend(vbe->packets, packet);
+	vbe->nb_packets_computed += 1;
+	vbe->packets = bctbx_list_prepend(vbe->packets, packet);
 
-		if (bctbx_list_size(vbe->packets) > vbe->packets_size_max) {
-			void *old_data = bctbx_list_nth_data(vbe->packets, vbe->packets_size_max);
-			vbe->packets = bctbx_list_remove(vbe->packets, old_data);
-		}
+	if (bctbx_list_size(vbe->packets) > vbe->packets_size_max) {
+		void *old_data = bctbx_list_nth_data(vbe->packets, vbe->packets_size_max);
+		vbe->packets = bctbx_list_remove(vbe->packets, old_data);
+	}
 
-		if (vbe->nb_packets_computed % vbe->packets_size_max == 0) {
-			OrtpEvent *ev = ortp_event_new(ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE);
-			OrtpEventData *ed = ortp_event_get_data(ev);
-			ed->info.video_bandwidth_available = ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(vbe);
-			ortp_debug("[VBE] Dispatching event ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE with value %f kbits/s", ed->info.video_bandwidth_available / 1000);
-			rtp_session_dispatch_event(vbe->session, ev);
-		}
+	if (vbe->nb_packets_computed % vbe->packets_size_max == 0) {
+		OrtpEvent *ev = ortp_event_new(ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE);
+		OrtpEventData *ed = ortp_event_get_data(ev);
+		ed->info.video_bandwidth_available = ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(vbe);
+		ortp_debug("[VBE] Dispatching event ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE with value %f kbits/s", ed->info.video_bandwidth_available / 1000);
+		rtp_session_dispatch_event(vbe->session, ev);
 	}
 }
 
