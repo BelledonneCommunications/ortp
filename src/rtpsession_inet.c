@@ -1656,6 +1656,10 @@ void* rtp_session_recvfrom_async(void* obj) {
 	fdarray.fd = session->rtp.gs.socket;
 	fdarray.events = POLLRDNORM;
 	
+	if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST)){
+		ms_warning("Error rtp recv async thread for windows: SetThreadPriority() failed [%d]\n", (int)GetLastError());
+	}
+	
 	while(session->rtp.is_win_thread_running)
 	{
 		int ret = WSAPoll(&fdarray, 1, 10);
