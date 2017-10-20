@@ -357,6 +357,10 @@ typedef struct _RtpStream
 	jitter_stats_t jitter_stats;
 	struct _OrtpCongestionDetector *congdetect;
 	struct _OrtpVideoBandwidthEstimator *video_bw_estimator;
+	ortp_thread_t win_t;
+	volatile bool_t is_win_thread_running;
+	queue_t winrq;
+	ortp_mutex_t winrq_lock;
 }RtpStream;
 
 typedef struct _RtcpStream

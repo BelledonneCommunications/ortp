@@ -310,6 +310,12 @@ rtp_session_init (RtpSession * session, int mode)
 	
 	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95f, 0.01f);
 	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95f, 0.01f);
+	
+#if defined(_WIN32) || defined(_WIN32_WCE)
+	session->rtp.is_win_thread_running = FALSE;
+	qinit(&session->rtp.winrq);
+	ortp_mutex_init(&session->rtp.winrq_lock);
+#endif
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -1559,6 +1565,12 @@ static void ortp_stream_uninit(OrtpStream *os){
 
 void rtp_session_uninit (RtpSession * session)
 {
+#if defined(_WIN32) || defined(_WIN32_WCE)
+	session->rtp.is_win_thread_running = FALSE;
+	flushq(&session->rtp.winrq, FLUSHALL);
+	ortp_mutex_destroy(&session->rtp.winrq_lock);
+#endif
+	
 	RtpTransport *rtp_meta_transport = NULL;
 	RtpTransport *rtcp_meta_transport = NULL;
 	/* first of all remove the session from the scheduler */
