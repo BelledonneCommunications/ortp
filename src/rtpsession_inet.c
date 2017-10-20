@@ -1706,9 +1706,9 @@ void* rtp_session_recvfrom_async(void* obj) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 		}
 	}
-	
-	ortp_thread_exit(NULL);
 #endif
+	
+	return NULL;
 }
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {

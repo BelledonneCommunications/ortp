@@ -314,7 +314,7 @@ rtp_session_init (RtpSession * session, int mode)
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
 	qinit(&session->rtp.winrq);
-	ortp_mutex_init(&session->rtp.winrq_lock);
+	ortp_mutex_init(&session->rtp.winrq_lock, NULL);
 #endif
 }
 
