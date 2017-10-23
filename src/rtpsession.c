@@ -263,6 +263,7 @@ rtp_session_init (RtpSession * session, int mode)
 	session->multicast_loopback=RTP_DEFAULT_MULTICAST_LOOPBACK;
 	qinit(&session->rtp.rq);
 	qinit(&session->rtp.tev_rq);
+	qinit(&session->rtp.winrq);
 	qinit(&session->contributing_sources);
 	session->eventqs=NULL;
 
@@ -315,7 +316,6 @@ rtp_session_init (RtpSession * session, int mode)
 	session->rtp.is_win_thread_running = FALSE;
 	ortp_mutex_init(&session->rtp.winrq_lock, NULL);
 #endif
-	qinit(&session->rtp.winrq);
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -1564,7 +1564,11 @@ static void ortp_stream_uninit(OrtpStream *os){
 }
 
 void rtp_session_uninit (RtpSession * session)
-{
+{	
+	RtpTransport *rtp_meta_transport = NULL;
+	RtpTransport *rtcp_meta_transport = NULL;
+	
+	/* If rtp async thread is running stop it and wait fot it to finish */
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	if (session->rtp.is_win_thread_running) {
 		session->rtp.is_win_thread_running = FALSE;
@@ -1572,18 +1576,17 @@ void rtp_session_uninit (RtpSession * session)
 	}
 	ortp_mutex_destroy(&session->rtp.winrq_lock);
 #endif
-	flushq(&session->rtp.winrq, FLUSHALL);
 	
-	RtpTransport *rtp_meta_transport = NULL;
-	RtpTransport *rtcp_meta_transport = NULL;
 	/* first of all remove the session from the scheduler */
 	if (session->flags & RTP_SESSION_SCHEDULED)
 	{
 		rtp_scheduler_remove_session (session->sched,session);
 	}
+	
 	/*flush all queues */
 	flushq(&session->rtp.rq, FLUSHALL);
 	flushq(&session->rtp.tev_rq, FLUSHALL);
+	flushq(&session->rtp.winrq, FLUSHALL);
 
 	if (session->eventqs!=NULL) o_list_free(session->eventqs);
 	/* close sockets */
@@ -2510,8 +2513,10 @@ bool_t ortp_stream_is_ipv6(OrtpStream *os) {
 	return FALSE;
 }
 
-void rtp_session_stop_async_recvfrom(RtpSession *session) {
+void rtp_session_reset_recvfrom(RtpSession *session) {
+#if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
 	ortp_thread_join(session->rtp.win_t, NULL);
+#endif
 	flushq(&session->rtp.winrq, FLUSHALL);
 }
