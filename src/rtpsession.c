@@ -313,9 +313,9 @@ rtp_session_init (RtpSession * session, int mode)
 	
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
-	qinit(&session->rtp.winrq);
 	ortp_mutex_init(&session->rtp.winrq_lock, NULL);
 #endif
+	qinit(&session->rtp.winrq);
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -1566,11 +1566,13 @@ static void ortp_stream_uninit(OrtpStream *os){
 void rtp_session_uninit (RtpSession * session)
 {
 #if defined(_WIN32) || defined(_WIN32_WCE)
-	session->rtp.is_win_thread_running = FALSE;
-	ortp_thread_join(session->rtp.win_t, NULL);
-	flushq(&session->rtp.winrq, FLUSHALL);
+	if (session->rtp.is_win_thread_running) {
+		session->rtp.is_win_thread_running = FALSE;
+		ortp_thread_join(session->rtp.win_t, NULL);
+	}
 	ortp_mutex_destroy(&session->rtp.winrq_lock);
 #endif
+	flushq(&session->rtp.winrq, FLUSHALL);
 	
 	RtpTransport *rtp_meta_transport = NULL;
 	RtpTransport *rtcp_meta_transport = NULL;
