@@ -28,14 +28,7 @@
 
 #include <ortp/port.h>
 
-#ifdef BCTBX_LOG_DOMAIN
-#undef BCTBX_LOG_DOMAIN
-#endif
-#ifndef ORTP_LOG_DOMAIN
-#define ORTP_LOG_DOMAIN "ortp"
-#endif
-
-#define BCTBX_LOG_DOMAIN ORTP_LOG_DOMAIN
+#define ORTP_LOG_DOMAIN BCTBX_LOG_DOMAIN
 
 #include "bctoolbox/logging.h"
 

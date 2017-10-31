@@ -64,6 +64,10 @@ set(ORTP_SOURCE_FILES_C
 )
 set(ORTP_SOURCE_FILES_CXX )
 
+add_definitions(
+	-DBCTBX_LOG_DOMAIN="ortp"
+)
+
 if(WIN32)
 	list(APPEND ORTP_SOURCE_FILES_C dll_entry.c)
 	if(CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone")
