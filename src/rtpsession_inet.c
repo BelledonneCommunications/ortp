@@ -1383,14 +1383,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 #endif
 		}
 
-		if (msg->timestamp.tv_sec == 0){
-			static int warn_once = 1; /*VERY BAD to use a static but there is no context in this function to hold this variable*/
-			if (warn_once){
-				ortp_warning("This platform doesn't implement SO_TIMESTAMP, will use gettimeofday() instead.");
-				warn_once = 0;
-			}
-			ortp_gettimeofday(&msg->timestamp, NULL);
-		}
 		/*store recv addr for use by modifiers*/
 		if (from && fromlen) {
 			memcpy(&msg->net_addr,from,*fromlen);
@@ -1681,6 +1673,15 @@ void* rtp_session_recvfrom_async(void* obj) {
 			}
 			
 			if (error > 0) {
+				if (mp->timestamp.tv_sec == 0){
+					static int warn_once = 1; /*VERY BAD to use a static but there is no context in this function to hold this variable*/
+					if (warn_once){
+						ortp_warning("The transport layer doesn't implement SO_TIMESTAMP, will use gettimeofday() instead.");
+						warn_once = 0;
+					}
+					ortp_gettimeofday(&mp->timestamp, NULL);
+				}
+				
 				mp->b_wptr+=error;
 			
 #if	defined(_WIN32) || defined(_WIN32_WCE)
