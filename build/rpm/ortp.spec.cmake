@@ -13,6 +13,8 @@
 %{?_with_bc: %define 	_prefix		/opt/belledonne-communications}
 %define 		srtp 		%{?_without_srtp:0}%{?!_without_srtp:1}
 
+%define     pkg_prefix %{?_with_bc:bc-}%{!?_with_bc:}
+
 # re-define some directories for older RPMBuild versions which don't. This messes up the doc/ dir
 # taken from https://fedoraproject.org/wiki/Packaging:RPMMacros?rd=Packaging/RPMMacros
 %define _datarootdir       %{_prefix}/share
@@ -45,6 +47,8 @@ BuildArch:	i686
 %global cmake_name cmake
 %define ctest_name ctest
 %endif
+
+Requires:	%{pkg_prefix}bctoolbox
 
 %description
 oRTP is a GPL licensed C library implementing the RTP protocol
