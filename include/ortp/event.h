@@ -85,6 +85,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ZRTP_CACHE_MISMATCH			17
 #define ORTP_EVENT_ZRTP_PEER_VERSION_OBSOLETE		18
 #define ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE             19
+#define ORTP_EVENT_ICE_DEACTIVATION_NEEDED		20
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
