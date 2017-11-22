@@ -2515,8 +2515,10 @@ bool_t ortp_stream_is_ipv6(OrtpStream *os) {
 
 void rtp_session_reset_recvfrom(RtpSession *session) {
 #if defined(_WIN32) || defined(_WIN32_WCE)
-	session->rtp.is_win_thread_running = FALSE;
-	ortp_thread_join(session->rtp.win_t, NULL);
+	if (session->rtp.is_win_thread_running) {
+		session->rtp.is_win_thread_running = FALSE;
+		ortp_thread_join(session->rtp.win_t, NULL);
+	}
 #endif
 	flushq(&session->rtp.winrq, FLUSHALL);
 }
