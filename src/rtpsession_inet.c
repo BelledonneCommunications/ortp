@@ -1771,7 +1771,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
 
-		mp = msgb_allocator_alloc(&session->rtp.gs.allocator, RTCP_MAX_RECV_BUFSIZE);
+		mp = msgb_allocator_alloc(&session->rtcp.gs.allocator, RTCP_MAX_RECV_BUFSIZE);
 		mp->reserved1 = session->rtp.rcv_last_app_ts;
 
 		if (sock_connected){
