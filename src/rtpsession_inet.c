@@ -346,6 +346,9 @@ void _rtp_session_apply_socket_sizes(RtpSession * session){
 int
 rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_port, int rtcp_port)
 {
+	// Stop async rtp recv thread before recreating the socket
+	rtp_session_reset_recvfrom(session);
+
 	ortp_socket_t sock;
 	int sockfamily;
 	if (session->rtp.gs.socket!=(ortp_socket_t)-1){
