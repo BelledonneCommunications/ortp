@@ -314,6 +314,7 @@ rtp_session_init (RtpSession * session, int mode)
 	
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
+	ortp_mutex_init(&session->rtp.winthread_lock, NULL);
 	ortp_mutex_init(&session->rtp.winrq_lock, NULL);
 #endif
 }
@@ -1574,6 +1575,7 @@ void rtp_session_uninit (RtpSession * session)
 		session->rtp.is_win_thread_running = FALSE;
 		ortp_thread_join(session->rtp.win_t, NULL);
 	}
+	ortp_mutex_destroy(&session->rtp.winthread_lock);
 	ortp_mutex_destroy(&session->rtp.winrq_lock);
 #endif
 	
@@ -2515,10 +2517,12 @@ bool_t ortp_stream_is_ipv6(OrtpStream *os) {
 
 void rtp_session_reset_recvfrom(RtpSession *session) {
 #if defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_lock(&session->rtp.winthread_lock);
 	if (session->rtp.is_win_thread_running) {
 		session->rtp.is_win_thread_running = FALSE;
 		ortp_thread_join(session->rtp.win_t, NULL);
 	}
+	ortp_mutex_unlock(&session->rtp.winthread_lock);
 #endif
 	flushq(&session->rtp.winrq, FLUSHALL);
 }

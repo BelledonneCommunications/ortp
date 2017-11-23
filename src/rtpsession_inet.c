@@ -1727,6 +1727,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	while (1)
 	{
 #if	defined(_WIN32) || defined(_WIN32_WCE)
+		ortp_mutex_lock(&session->rtp.winthread_lock);
 		if (!session->rtp.is_win_thread_running) {
 			int errnum;
 			
@@ -1737,6 +1738,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 				return -1;
 			}
 		}
+		ortp_mutex_unlock(&session->rtp.winthread_lock);
 #else
 		rtp_session_recvfrom_async((void*)session);
 #endif

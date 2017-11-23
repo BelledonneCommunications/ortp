@@ -359,6 +359,7 @@ typedef struct _RtpStream
 	struct _OrtpVideoBandwidthEstimator *video_bw_estimator;
 	ortp_thread_t win_t;
 	volatile bool_t is_win_thread_running;
+	ortp_mutex_t winthread_lock;
 	queue_t winrq;
 	ortp_mutex_t winrq_lock;
 }RtpStream;
