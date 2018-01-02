@@ -46,12 +46,12 @@ void rtcp_rewind(mblk_t *m){
 const rtcp_common_header_t * rtcp_get_common_header(const mblk_t *m){
 	size_t size=msgdsize(m);
 	rtcp_common_header_t *ch;
-	if (m->b_cont!=NULL){
-		ortp_fatal("RTCP parser does not work on fragmented mblk_t. Use msgpullup() before to re-assemble the packet.");
-		return NULL;
-	}
 	if (size<sizeof(rtcp_common_header_t)){
 		ortp_warning("Bad RTCP packet, too short [%i b]. on block [%p]",(int)size,m);
+		return NULL;
+	}
+	if (m->b_cont!=NULL){
+		ortp_fatal("RTCP parser does not work on fragmented mblk_t. Use msgpullup() before to re-assemble the packet.");
 		return NULL;
 	}
 	ch=(rtcp_common_header_t*)m->b_rptr;
