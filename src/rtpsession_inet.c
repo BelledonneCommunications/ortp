@@ -240,7 +240,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		*sock_family=res->ai_family;
 		err = bind(sock, res->ai_addr, (int)res->ai_addrlen);
 		if (err != 0){
-			ortp_error ("Fail to bind rtp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
+			ortp_error ("Fail to bind rtp/rtcp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket(sock);
 			sock=-1;
 			continue;
@@ -1056,7 +1056,11 @@ int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags,
 		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
 	}else{
 		ortp_socket_t sockfd = rtp_session_get_socket(session, is_rtp);
-		ret=_ortp_sendto(sockfd, m, flags, destaddr, destlen);
+		if (sockfd != (ortp_socket_t)-1){
+			ret=_ortp_sendto(sockfd, m, flags, destaddr, destlen);
+		}else{
+			ret = -1;
+		}
 	}
 	return ret;
 }
