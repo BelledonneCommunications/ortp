@@ -373,8 +373,9 @@ void msgb_allocator_uninit(msgb_allocator_t *a){
 /*Same as ownb(), but invoke it for each mblk_t of the chain*/
 mblk_t * msgown(mblk_t *mp){
 	int single_owner_ref = (mp->b_datap->db_freefn == msgb_allocator_free_db) ? 2 : 1;
-	//ortp_message("msgown(): db_ref=%i  single_owner_ref=%i", mp->b_datap->db_ref, single_owner_ref);
+	
 	if (mp->b_datap->db_ref > single_owner_ref){
+		//ortp_message("msgown(): datab copied db_ref=%i  single_owner_ref=%i", mp->b_datap->db_ref, single_owner_ref);
 		msgpullup(mp, msgdsize(mp));
 	}
 	return mp;
