@@ -66,8 +66,6 @@ else()
 	find_package(BcToolbox 0.2.0 REQUIRED)
 endif()
 
-add_subdirectory(build)
-
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
 if(NOT ANDROID)
@@ -191,6 +189,10 @@ set(ORTPDEPS_LIBS )
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+
+
+add_subdirectory(build)
+
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(

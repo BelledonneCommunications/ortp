@@ -1,6 +1,6 @@
 ############################################################################
 # CMakeLists.txt
-# Copyright (C) 2017  Belledonne Communications, Grenoble France
+# Copyright (C) 2017-2018  Belledonne Communications, Grenoble France
 #
 ############################################################################
 #
@@ -46,7 +46,8 @@ endif()
 message("Package file name is ${CPACK_PACKAGE_FILE_NAME}" )
 
 set(CPACK_SOURCE_PACKAGE_FILE_NAME ${CPACK_PACKAGE_FILE_NAME})
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/rpm/ortp.spec.cmake ${CMAKE_CURRENT_SOURCE_DIR}/../ortp.spec)
+
+bc_generate_rpm_specfile("rpm/ortp.spec.cmake" "${PROJECT_SOURCE_DIR}/ortp.spec")
 
 include(CPack)
 
