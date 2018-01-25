@@ -147,6 +147,10 @@ ORTP_PUBLIC void msgappend(mblk_t *mp, const char *data, size_t size, bool_t pad
 
 ORTP_PUBLIC mblk_t *concatb(mblk_t *mp, mblk_t *newm);
 
+/*Make sure the message has a unique owner, if not duplicate the underlying data buffer so that it can be changed without impacting others.
+ Note that in case of copy, the message will be un-fragmented, exactly the way msgpullup() does. Always returns mp.*/
+ORTP_PUBLIC mblk_t * msgown(mblk_t *mp);
+
 #define qempty(q) (&(q)->_q_stopper==(q)->_q_stopper.b_next)
 #define qfirst(q) ((q)->_q_stopper.b_next!=&(q)->_q_stopper ? (q)->_q_stopper.b_next : NULL)
 #define qbegin(q) ((q)->_q_stopper.b_next)

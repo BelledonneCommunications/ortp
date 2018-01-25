@@ -21,6 +21,7 @@
 #include "ortp-config.h"
 #endif
 
+#include "ortp/ortp.h"
 #include "ortp/str_utils.h"
 #include "utils.h"
 
@@ -342,6 +343,9 @@ void msgb_allocator_init(msgb_allocator_t *a){
 	qinit(&a->q);
 }
 
+static void msgb_allocator_free_db(void *unused){
+}
+
 mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 	queue_t *q=&a->q;
 	mblk_t *m,*found=NULL;
@@ -355,6 +359,8 @@ mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 	}
 	if (found==NULL){
 		found=allocb(size,0);
+		/*Hack: we put a special freefn impletation to be able to recognize mblk_t allocated by the msgb_allocator_t */
+		found->b_datap->db_freefn = msgb_allocator_free_db;
 		putq(q,found);
 	}
 	return dupb(found);
@@ -363,6 +369,17 @@ mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 void msgb_allocator_uninit(msgb_allocator_t *a){
 	flushq(&a->q,-1);
 }
+
+/*Same as ownb(), but invoke it for each mblk_t of the chain*/
+mblk_t * msgown(mblk_t *mp){
+	int single_owner_ref = (mp->b_datap->db_freefn == msgb_allocator_free_db) ? 2 : 1;
+	//ortp_message("msgown(): db_ref=%i  single_owner_ref=%i", mp->b_datap->db_ref, single_owner_ref);
+	if (mp->b_datap->db_ref > single_owner_ref){
+		msgpullup(mp, msgdsize(mp));
+	}
+	return mp;
+}
+
 
 void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen) {
 	if (recvaddr->family == AF_INET) {
