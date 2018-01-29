@@ -102,9 +102,15 @@ rm -rf $RPM_BUILD_ROOT
 
 %files devel
 %defattr(-,root,root,-)
+%if @ENABLE_DOC@
 %doc %{_docdir}/ortp-%{version}/html/*
+%endif
+%if @ENABLE_STATIC@
 %{_libdir}/*.a
+%endif
+%if @ENABLE_SHARED@
 %{_libdir}/*.so
+%endif
 %{_libdir}/pkgconfig/*.pc
 %{_includedir}/*
 %{_datadir}/oRTP/cmake/ORTPConfig.cmake 
