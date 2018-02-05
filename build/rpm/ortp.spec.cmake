@@ -113,10 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 %{_libdir}/pkgconfig/*.pc
 %{_includedir}/*
-%{_datadir}/oRTP/cmake/ORTPConfig.cmake 
-%{_datadir}/oRTP/cmake/ORTPConfigVersion.cmake
-%{_datadir}/oRTP/cmake/ORTPTargets-noconfig.cmake
-%{_datadir}/oRTP/cmake/ORTPTargets.cmake
+%{_datadir}/oRTP/cmake/ORTPConfig*.cmake 
+%{_datadir}/oRTP/cmake/ORTPTargets*.cmake
 
 %changelog
 * Tue Oct 25 2005 Francois-Xavier Kowalski <fix@hp.com>
