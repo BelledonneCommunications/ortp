@@ -1644,6 +1644,11 @@ void rtp_session_uninit (RtpSession * session)
 		session->rtp.QoSHandle=NULL;
 	}
 #endif
+
+	if (session->rtcp.tmmbr_info.received)
+		freemsg(session->rtcp.tmmbr_info.received);
+	if (session->rtcp.send_algo.fb_packets)
+		freemsg(session->rtcp.send_algo.fb_packets);
 }
 
 /**
