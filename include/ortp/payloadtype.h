@@ -178,6 +178,7 @@ ORTP_VAR_PUBLIC PayloadType payload_type_h263_2000;
 ORTP_VAR_PUBLIC PayloadType payload_type_mp4v;
 ORTP_VAR_PUBLIC PayloadType payload_type_theora;
 ORTP_VAR_PUBLIC PayloadType payload_type_h264;
+ORTP_VAR_PUBLIC PayloadType payload_type_h265;
 ORTP_VAR_PUBLIC PayloadType payload_type_x_snow;
 ORTP_VAR_PUBLIC PayloadType payload_type_jpeg;
 ORTP_VAR_PUBLIC PayloadType payload_type_vp8;
