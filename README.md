@@ -1,3 +1,5 @@
+[![pipeline status](https://gitlab.linphone.org/BC/public/ortp/badges/master/pipeline.svg)](https://gitlab.linphone.org/BC/public/ortp/commits/master)
+
 oRTP
 ====
 
