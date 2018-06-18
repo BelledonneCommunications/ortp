@@ -45,7 +45,7 @@ set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS 
 include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
-
+include(CheckCSourceCompiles)
 
 if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_FULL_LIBDIR})
@@ -71,7 +71,15 @@ check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
 if(NOT ANDROID)
 	check_include_file(sys/shm.h HAVE_SYS_SHM_H)
 endif()
-check_include_file(stdatomic.h HAVE_STDATOMIC_H)
+check_c_source_compiles("#include <stdatomic.h>
+int main(int argc, char *argv[]) {
+atomic_int currrent_ref;
+atomic_init(&currrent_ref, 1);
+atomic_int previous_ref = atomic_fetch_sub_explicit(&currrent_ref, 1, memory_order_release);
+return 0;
+}"
+        HAVE_STDATOMIC_H)
+
 check_function_exists(arc4random HAVE_ARC4RANDOM)
 
 include(TestBigEndian)

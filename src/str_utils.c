@@ -55,7 +55,11 @@ dblk_t *datab_alloc(size_t size){
 	db=(dblk_t *) ortp_malloc(total_size);
 	db->db_base=(uint8_t*)db+sizeof(dblk_t);
 	db->db_lim=db->db_base+size;
+#if HAVE_STDATOMIC_H
+	atomic_store(&db->db_ref, 1);
+#else
 	db->db_ref=1;
+#endif
 	db->db_freefn=NULL;	/* the buffer pointed by db_base must never be freed !*/
 	return db;
 }
