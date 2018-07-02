@@ -176,13 +176,17 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	if (*port==0) reuse_addr=FALSE;
 
 	res0 = bctbx_name_to_addrinfo(AF_UNSPEC, SOCK_DGRAM, addr, *port);
-	if (res0 == NULL) return -1;
+	if (res0 == NULL){
+		ortp_error("Cannot create addrinfo from address [%s], port [%i].", addr, *port);
+		return -1;
+	}
 
 	for (res = res0; res; res = res->ai_next) {
 		sock = socket(res->ai_family, res->ai_socktype, 0);
-		if (sock==-1)
+		if (sock==-1){
+			ortp_error("Cannot create a socket with family=[%i] and socktype=[%i]: %s", res->ai_family, res->ai_socktype, getSocketError());
 			continue;
-
+		}
 		if (reuse_addr){
 			err = setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
 					(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
