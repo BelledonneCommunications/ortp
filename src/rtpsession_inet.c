@@ -253,8 +253,6 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		set_multicast_group(sock, addr);
 		break;
 	}
-	memcpy(bound_addr,res0->ai_addr,res0->ai_addrlen);
-	*bound_addr_len=(socklen_t)res0->ai_addrlen;
 
 	bctbx_freeaddrinfo(res0);
 
@@ -279,6 +277,9 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 				close_socket(sock);
 				return (ortp_socket_t)-1;
 			}
+			/*update the bind address, especially useful if requested port was 0 (random)*/
+			memcpy(bound_addr,&saddr,slen);
+			*bound_addr_len=slen;
 			err = bctbx_sockaddr_to_ip_address((struct sockaddr *)&saddr, slen, NULL, 0, port);
 			if (err!=0){
 				close_socket(sock);
