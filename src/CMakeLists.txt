@@ -102,6 +102,7 @@ if(ENABLE_STATIC)
 endif()
 if(ENABLE_SHARED)
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
+	set_target_properties(ortp PROPERTIES LINKER_LANGUAGE CXX)
 	#TODO: replace by if(APPLE) when we want to make apple framework on linphone-desktop too
 	if(IOS)
 		if(IOS)
