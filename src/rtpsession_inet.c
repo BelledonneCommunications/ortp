@@ -267,19 +267,20 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	}
 #endif
 	if (sock!=-1){
+		struct sockaddr_storage saddr;
+		socklen_t slen=sizeof(saddr);
+		
 		set_non_blocking_socket (sock);
+		err=getsockname(sock,(struct sockaddr*)&saddr,&slen);
+		if (err==-1){
+			ortp_error("getsockname(): %s",getSocketError());
+			close_socket(sock);
+			return (ortp_socket_t)-1;
+		}
+		/*update the bind address, especially useful if requested port was 0 (random)*/
+		memcpy(bound_addr,&saddr,slen);
+		*bound_addr_len=slen;
 		if (*port==0){
-			struct sockaddr_storage saddr;
-			socklen_t slen=sizeof(saddr);
-			err=getsockname(sock,(struct sockaddr*)&saddr,&slen);
-			if (err==-1){
-				ortp_error("getsockname(): %s",getSocketError());
-				close_socket(sock);
-				return (ortp_socket_t)-1;
-			}
-			/*update the bind address, especially useful if requested port was 0 (random)*/
-			memcpy(bound_addr,&saddr,slen);
-			*bound_addr_len=slen;
 			err = bctbx_sockaddr_to_ip_address((struct sockaddr *)&saddr, slen, NULL, 0, port);
 			if (err!=0){
 				close_socket(sock);
