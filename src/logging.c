@@ -282,8 +282,7 @@ char * ortp_strcat_vprintf(char* dst, const char *fmt, va_list ap){
 	retlen = strlen(ret);
 
 	if ((dst = ortp_realloc(dst, dstlen+retlen+1)) != NULL){
-		strncat(dst,ret,retlen);
-		dst[dstlen+retlen] = '\0';
+		strcat(dst,ret);
 		ortp_free(ret);
 		return dst;
 	} else {
