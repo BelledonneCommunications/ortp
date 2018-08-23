@@ -30,6 +30,8 @@
 #cmakedefine HAVE_SYS_SHM_H 1
 #cmakedefine HAVE_STDATOMIC_H 1
 #cmakedefine HAVE_ARC4RANDOM 1
+#cmakedefine HAVE_RECVMSG 1
+#cmakedefine HAVE_SENDMSG 1
 
 #cmakedefine ORTP_BIGENDIAN
 

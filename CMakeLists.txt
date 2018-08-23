@@ -81,6 +81,8 @@ return 0;
         HAVE_STDATOMIC_H)
 
 check_function_exists(arc4random HAVE_ARC4RANDOM)
+check_symbol_exists(recvmsg "sys/socket.h" HAVE_RECVMSG)
+check_symbol_exists(sendmsg "sys/socket.h" HAVE_SENDMSG)
 
 include(TestBigEndian)
 test_big_endian(WORDS_BIGENDIAN)

@@ -50,7 +50,12 @@
 
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
+#ifdef HAVE_RECVMSG
+#define USE_RECVMSG 1
+#endif
+#ifdef HAVE_SENDMSG
 #define USE_SENDMSG 1
+#endif
 #endif
 
 #define can_connect(s)	( (s)->use_connect && !(s)->symmetric_rtp)
@@ -1032,15 +1037,14 @@ ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
 	return is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
 }
 
-int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
+int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
 	int error;
 #ifdef USE_SENDMSG
-	error=rtp_sendmsg(sockfd,m,destaddr,destlen);
+	error = rtp_sendmsg(sockfd, m, destaddr, destlen);
 #else
-	if (m->b_cont!=NULL)
-		msgpullup(m,-1);
-	error = sendto (sockfd, (char*)m->b_rptr, (int) (m->b_wptr - m->b_rptr),
-		0,destaddr,destlen);
+	if (m->b_cont != NULL)
+		msgpullup(m, -1);
+	error = sendto(sockfd, (char*)m->b_rptr, (int)(m->b_wptr - m->b_rptr), 0, destaddr, destlen);
 #endif
 	return error;
 }
@@ -1295,31 +1299,34 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 	return error;
 }
 
+#ifdef USE_RECVMSG
+static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen, struct msghdr *msghdr, int bufsz) {
+	char control[512];
+	struct iovec iov;
+	int error;
+
+	memset(&iov, 0, sizeof(iov));
+	iov.iov_base = msg->b_wptr;
+	iov.iov_len = bufsz;
+	if ((from != NULL) && (fromlen != NULL)) {
+		msghdr->msg_name = from;
+		msghdr->msg_namelen = *fromlen;
+	}
+	msghdr->msg_iov = &iov;
+	msghdr->msg_iovlen = 1;
+	msghdr->msg_control = &control;
+	msghdr->msg_controllen = sizeof(control);
+	error = recvmsg(socket, msghdr, flags);
+	if (fromlen != NULL)
+		*fromlen = msghdr->msg_namelen;
+	return error;
+}
+#endif
+
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int ret;
 	int bufsz = (int) (msg->b_datap->db_lim - msg->b_datap->db_base);
-#ifndef _WIN32
-	struct iovec   iov;
-	struct msghdr  msghdr;
-	struct cmsghdr *cmsghdr;
-	char control[512];
-	memset(&msghdr, 0, sizeof(msghdr));
-	memset(&iov, 0, sizeof(iov));
-	iov.iov_base = msg->b_wptr;
-	iov.iov_len  = bufsz;
-	if(from != NULL && fromlen != NULL) {
-		msghdr.msg_name = from;
-		msghdr.msg_namelen = *fromlen;
-	}
-	msghdr.msg_iov     = &iov;
-	msghdr.msg_iovlen  = 1;
-	msghdr.msg_control = &control;
-	msghdr.msg_controllen = sizeof(control);
-	ret = recvmsg(socket, &msghdr, flags);
-	if(fromlen != NULL)
-		*fromlen = msghdr.msg_namelen;
-	if(ret >= 0) {
-#else
+#ifdef _WIN32
 	char control[512];
 	WSAMSG msghdr;
 	WSACMSGHDR *cmsghdr;
@@ -1348,6 +1355,16 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		*fromlen = msghdr.namelen;
 	if(ret >= 0) {
 		ret = bytes_received;
+#else
+	struct msghdr msghdr;
+	memset(&msghdr, 0, sizeof(msghdr));
+#ifdef USE_RECVMSG
+	ret = rtp_recvmsg(socket, msg, flags, from, fromlen, &msghdr, bufsz);
+#else
+	ret = recvfrom(socket, msg->b_wptr, bufsz, flags, from, fromlen);
+#endif
+	if(ret >= 0) {
+		struct cmsghdr *cmsghdr;
 #endif
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
 #ifdef SO_TIMESTAMP
