@@ -1301,7 +1301,6 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 
 #ifdef USE_RECVMSG
 static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen, struct msghdr *msghdr, int bufsz) {
-	char control[512];
 	struct iovec iov;
 	int error;
 
@@ -1314,8 +1313,6 @@ static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sock
 	}
 	msghdr->msg_iov = &iov;
 	msghdr->msg_iovlen = 1;
-	msghdr->msg_control = &control;
-	msghdr->msg_controllen = sizeof(control);
 	error = recvmsg(socket, msghdr, flags);
 	if (fromlen != NULL)
 		*fromlen = msghdr->msg_namelen;
@@ -1326,9 +1323,9 @@ static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sock
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int ret;
 	int bufsz = (int) (msg->b_datap->db_lim - msg->b_datap->db_base);
+	char control[512] = {0};
 #ifdef _WIN32
-	char control[512];
-	WSAMSG msghdr;
+	WSAMSG msghdr = {0};
 	WSACMSGHDR *cmsghdr;
 	WSABUF data_buf;
 	DWORD bytes_received;
@@ -1337,8 +1334,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		return recvfrom(socket, (char *)msg->b_wptr, bufsz, flags, from, fromlen);
 	}
 
-	memset(&msghdr, 0, sizeof(msghdr));
-	memset(control, 0, sizeof(control));
 	if(from != NULL && fromlen != NULL) {
 		msghdr.name = from;
 		msghdr.namelen = *fromlen;
@@ -1356,8 +1351,9 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	if(ret >= 0) {
 		ret = bytes_received;
 #else
-	struct msghdr msghdr;
-	memset(&msghdr, 0, sizeof(msghdr));
+	struct msghdr msghdr = {0};
+	msghdr.msg_control = control;
+	msghdr.msg_controllen = sizeof(control);
 #ifdef USE_RECVMSG
 	ret = rtp_recvmsg(socket, msg, flags, from, fromlen, &msghdr, bufsz);
 #else
