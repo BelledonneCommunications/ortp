@@ -87,14 +87,14 @@ typedef struct jitter_stats
 	float jitter_buffer_size_ms;/* mean jitter buffer size in milliseconds.*/
 } jitter_stats_t;
 
-#define RTP_TIMESTAMP_IS_NEWER_THAN(ts1,ts2) \
-	((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2))< (uint32_t)(1<<31))
+#define RTP_TIMESTAMP_IS_NEWER_THAN(ts1, ts2) \
+	((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2)) < ((uint32_t)1 << 31))
 
-#define RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(ts1,ts2) \
-	( ((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2))< (uint32_t)(1<<31)) && (ts1)!=(ts2) )
+#define RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(ts1, ts2) \
+	(((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2)) < ((uint32_t)1 << 31)) && (ts1) != (ts2))
 
-#define RTP_SEQ_IS_STRICTLY_GREATER_THAN(seq1,seq2)\
-	(((uint16_t)((uint16_t)(seq1) - (uint16_t)(seq2))< (uint16_t)(1<<15)) && (seq1!=seq2))
+#define RTP_SEQ_IS_STRICTLY_GREATER_THAN(seq1, seq2) \
+	(((uint16_t)((uint16_t)(seq1) - (uint16_t)(seq2)) < ((uint16_t)1 << 15)) && (seq1) != (seq2))
 
 #define TIME_IS_NEWER_THAN(t1,t2) RTP_TIMESTAMP_IS_NEWER_THAN(t1,t2)
 
