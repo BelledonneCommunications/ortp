@@ -56,7 +56,7 @@ build-bctoolbox:
     - git clone https://gitlab.linphone.org/BC/public/bctoolbox.git
     - cd bctoolbox
     - mkdir -p build-bctoolbox && cd build-bctoolbox
-    - cmake .. -DCMAKE_INSTALL_PREFIX=../install
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../../install
     - cmake --build . --target install
   dependencies:
     - build-decaf
@@ -94,7 +94,7 @@ build-ortp:
   script:
     #we already have the files needed, no need to clone
     - mkdir -p build-ortp && cd build-ortp
-    - cmake .. -DCMAKE_INSTALL_PREFIX=../../install
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../install
     - cmake --build . --target install
   dependencies:
     #- test-bctoolbox
