@@ -1,0 +1,99 @@
+#build test of ortp before testing mediastreamer
+#we use for testing purposes the docker container of linphone-sdk
+image: gitlab.linphone.org:4567/bc/public/linphone-sdk/bc-dev-debian:9
+stages:
+  - build-dependencies
+  - build
+  - test-bctoolbox
+  -build-ortp
+build-decaf:
+  stage: build-dependencies
+  tags: [ "docker" ] #needed for the stage to be runned
+  script:
+    - git clone https://gitlab.linphone.org/BC/public/external/decaf.git
+    - cd decaf
+    - mkdir -p build-decaf && cd build-decaf
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../../install
+    - cmake --build . --target install
+  #uploading the artifacts for the next stage    
+  artifacts:
+    paths:
+      - install/*
+    
+build-mbedtls:
+  stage: build-dependencies
+  tags: [ "docker" ] #needed for the stage to be runned
+  script:
+    - git clone https://gitlab.linphone.org/BC/public/external/mbedtls.git
+    - cd mbedtls
+    - mkdir -p build-mbedtls && cd build-mbedtls
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../../install
+    - cmake --build . --target install
+  #uploading the artifacts for the next stage    
+  artifacts:
+    paths:
+      - install/*
+      
+build-bcunit:
+  stage: build-dependencies
+  tags: [ "docker" ] #needed for the stage to be runned
+  script:
+    - git clone https://gitlab.linphone.org/BC/public/bcunit.git
+    - cd bcunit
+    - mkdir -p build-bcunit && cd build-bcunit
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../../install
+    - cmake --build . --target install
+  #uploading the artifacts for the next stage    
+  artifacts:
+    paths:
+      - install/*
+
+      
+build-bctoolbox:
+  stage: build
+  tags: [ "docker" ] #needed for the stage to be runned
+  script:
+    - git clone https://gitlab.linphone.org/BC/public/bctoolbox.git
+    - cd bctoolbox
+    - mkdir -p build-bctoolbox && cd build-bctoolbox
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../install
+    - cmake --build . --target install
+  dependencies:
+    - build-decaf
+    - build-mbedtls
+    - build-bcunit
+  #uploading the artifacts for the next stage    
+  artifacts:
+    paths:
+      - build-bctoolbox/tester/*
+      - install/*
+      
+test-bctoolbox:
+  variables:
+    GIT_STRATEGY: none
+    GIT_CHECKOUT: "false"
+  stage: test
+  tags: [ "docker" ]
+  
+  #ugly... It's better to use a proper docker image for this instead of 
+  #installing each time the container is run
+  #before_script: 
+   #- sudo apt-get update
+   #- sudo apt-get install kmod -y
+  script:
+    #- cd build-bctoolbox/tester
+    #- lsmod | grep -qw ipv6 && echo "IPv6 kernel driver loaded and configured." || echo "IPv6 not configured and/or driver loaded on the system."
+    #- ./bctoolbox_tester
+  dependencies:
+    - build-bctoolbox
+    
+build-ortp:
+  stage: build-ortp
+  tags: [ "docker" ] #needed for the stage to be runned
+  script:
+    #we already have the files needed, no need to clone
+    - mkdir -p build-ortp && cd build-ortp
+    - cmake .. -DCMAKE_INSTALL_PREFIX=../../install
+    - cmake --build . --target install
+  dependencies:
+    - test-bctoolbox
