@@ -5,7 +5,7 @@ stages:
   - build-dependencies
   - build
   - test-bctoolbox
-  -build-ortp
+  - build-ortp
 build-decaf:
   stage: build-dependencies
   tags: [ "docker" ] #needed for the stage to be runned
