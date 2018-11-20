@@ -98,4 +98,4 @@ build-ortp:
     - cmake --build . --target install
   dependencies:
     #- test-bctoolbox
-    - build
+    - build-bctoolbox
