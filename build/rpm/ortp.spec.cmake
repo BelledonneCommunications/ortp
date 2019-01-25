@@ -86,6 +86,11 @@ make %{?_smp_mflags}
 %install
 make install DESTDIR=%{buildroot}
 
+# Dirty workaround to give exec rights for all shared libraries. Debian packaging needs this
+# TODO : set CMAKE_INSTALL_SO_NO_EXE for a cleaner workaround
+chmod +x `find %{buildroot} *.so.*`
+
+
 %check
 %{ctest_name} -V %{?_smp_mflags}
 
