@@ -142,26 +142,6 @@ int ortp_file_exist(const char *pathname) {
 }
 #endif /*_WIN32_WCE*/
 
-#if	!defined(_WIN32) && !defined(_WIN32_WCE)
-	/* Use UNIX inet_aton method */
-#else
-	int inet_aton (const char * cp, struct in_addr * addr)
-	{
-		unsigned long retval;
-
-		retval = inet_addr (cp);
-
-		if (retval == INADDR_NONE)
-		{
-			return -1;
-		}
-		else
-		{
-			addr->S_un.S_addr = retval;
-			return 1;
-		}
-	}
-#endif
 
 char *ortp_strndup(const char *str,int n){
 	int min=MIN((int)strlen(str),n)+1;
