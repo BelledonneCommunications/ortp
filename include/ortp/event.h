@@ -54,6 +54,7 @@ struct _OrtpEventData{
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
 		float video_bandwidth_available;
+		int jitter_min_size_for_nack;
 	} info;
 };
 
@@ -86,6 +87,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_ZRTP_PEER_VERSION_OBSOLETE		18
 #define ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE             19
 #define ORTP_EVENT_ICE_DEACTIVATION_NEEDED		20
+#define ORTP_EVENT_JITTER_UPDATE_FOR_NACK		21
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);

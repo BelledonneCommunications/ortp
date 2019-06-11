@@ -40,6 +40,7 @@ set(ORTP_SOURCE_FILES_C
 	jitterctl.c
 	kalmanrls.c
 	logging.c
+	nack.c
 	netsim.c
 	ortp.c
 	payloadtype.c
