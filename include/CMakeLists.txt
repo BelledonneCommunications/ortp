@@ -24,6 +24,7 @@ set(HEADER_FILES
 	b64.h
 	event.h
 	logging.h
+	nack.h
 	ortp.h
 	payloadtype.h
 	port.h

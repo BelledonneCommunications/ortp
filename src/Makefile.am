@@ -27,6 +27,7 @@ libortp_la_SOURCES=	\
 			kalmanrls.c \
 			jitterctl.c jitterctl.h \
 			logging.c \
+			nack.c \
 			netsim.c \
 			ortp.c \
 			payloadtype.c \

@@ -47,6 +47,7 @@
 #define ORTP_AVPF_FEATURE_NONE 0
 #define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
 #define ORTP_AVPF_FEATURE_GENERIC_NACK (1 << 1)
+#define ORTP_AVPF_FEATURE_IMMEDIATE_NACK (1 << 2)
 
 
 typedef enum {
@@ -105,6 +106,7 @@ typedef struct _JitterControl
 	uint32_t diverged_start_ts;
 	bool_t is_diverging;
 	bool_t pad[3];
+	bool_t jb_size_updated;
 } JitterControl;
 
 typedef struct _WaitPoint
@@ -212,6 +214,7 @@ typedef struct OrtpRtcpSendAlgorithm {
 
 typedef struct OrtpRtcpFbConfiguration {
 	bool_t generic_nack_enabled;
+	bool_t immediate_nack_enabled;
 	bool_t tmmbr_enabled;
 } OrtpRtcpFbConfiguration;
 
@@ -332,7 +335,8 @@ typedef struct _RtpStream
 	uint32_t snd_time_offset;/*the scheduler time when the application send its first timestamp*/
 	uint32_t snd_ts_offset;	/* the first application timestamp sent by the application */
 	uint32_t snd_rand_offset;	/* a random number added to the user offset to make the stream timestamp*/
-	uint32_t snd_last_ts;	/* the last stream timestamp sended */
+	uint32_t snd_last_ts;	/* the last stream timestamp sent */
+	uint16_t snd_last_nack;	/* the last nack sent when in immediate mode */
 	uint32_t rcv_time_offset; /*the scheduler time when the application ask for its first timestamp*/
 	uint32_t rcv_ts_offset;  /* the first stream timestamp */
 	uint32_t rcv_query_ts_offset;	/* the first user timestamp asked by the application */
@@ -768,6 +772,7 @@ ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTran
 
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
+ORTP_PUBLIC void meta_rtp_transport_prepend_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
 
 ORTP_PUBLIC int rtp_session_splice(RtpSession *session, RtpSession *to_session);
 ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session);
