@@ -46,6 +46,7 @@ include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
 include(CheckCSourceCompiles)
+include(CheckSymbolExists)
 
 if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_FULL_LIBDIR})
