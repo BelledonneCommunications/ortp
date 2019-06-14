@@ -37,6 +37,8 @@ struct _OrtpNackContext {
 	bctbx_mutex_t sent_packets_mutex;
 	unsigned int max_packets;
 	int min_jitter_before_nack;
+	bool_t decrease_jitter_timer_running;
+	uint64_t decrease_jitter_timer_start;
 };
 
 typedef struct _OrtpNackContext OrtpNackContext;
@@ -46,7 +48,7 @@ ORTP_PUBLIC void ortp_nack_context_destroy(OrtpNackContext *ctx);
 
 ORTP_PUBLIC void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, unsigned int max);
 
-ORTP_PUBLIC void ortp_nack_context_save_packet(OrtpNackContext *ctx, mblk_t *msg);
+ORTP_PUBLIC void ortp_nack_context_process_timer(OrtpNackContext *ctx);
 
 #ifdef __cplusplus
 }

@@ -20,6 +20,8 @@
 #include "ortp/logging.h"
 #include "ortp/nack.h"
 
+#define DECREASE_JITTER_DELAY 5000
+
 static int compare_sequence_number(const void *msg, const void *sequence_number) {
 	if (ntohs(rtp_get_seqnumber((mblk_t *) msg)) == *((uint16_t *) sequence_number)) return 0;
 	return -1;
@@ -66,12 +68,27 @@ static void generic_nack_received(const OrtpEventData *evd, OrtpNackContext *ctx
 	}
 }
 
-
-
 static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
 	OrtpNackContext *userData = (OrtpNackContext *) t->data;
 
-	ortp_nack_context_save_packet(userData, msg);
+	if (rtp_get_version(msg) == 2) {
+		bctbx_mutex_lock(&userData->sent_packets_mutex);
+
+		// Remove the oldest packet if the cache is full
+		if (bctbx_list_size(userData->sent_packets) >= userData->max_packets) {
+			void *erase;
+			userData->sent_packets = bctbx_list_pop_front(userData->sent_packets, &erase);
+
+			if (erase != NULL) freemsg((mblk_t *) erase);
+		}
+
+		// Stock the packet before sending it
+		userData->sent_packets = bctbx_list_append(userData->sent_packets, dupmsg(msg));
+
+		//ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", userData, ntohs(rtp_get_seqnumber(msg)), userData->session->rtp.snd_seq);
+
+		bctbx_mutex_unlock(&userData->sent_packets_mutex);
+	}
 
 	return (int) msgdsize(msg);
 }
@@ -95,23 +112,33 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 			if (rtt == 0) rtt = 200;
 
 			rtp_session_get_jitter_buffer_params(userData->session, &jitter_params);
-			userData->min_jitter_before_nack = jitter_params.min_size;
 
-			if (jitter_params.min_size + rtt >= jitter_params.max_size) {
-				jitter_params.min_size = jitter_params.max_size - 20;
-			} else {
-				jitter_params.min_size += rtt;
+			if (userData->min_jitter_before_nack == 0) {
+				/* We keep the min_size at the first sent NACK to know at which value it has to come back */
+				userData->min_jitter_before_nack = jitter_params.min_size;
 			}
 
-			rtp_session_set_jitter_buffer_params(userData->session, &jitter_params);
+			if (userData->min_jitter_before_nack + rtt != jitter_params.min_size) {
+				if (userData->min_jitter_before_nack + rtt >= jitter_params.max_size) {
+					jitter_params.min_size = jitter_params.max_size - 20;
+				} else {
+					jitter_params.min_size = userData->min_jitter_before_nack + rtt;
+				}
 
-			ortp_message("OrtpNackContext [%p]: Sending NACK... increasing jitter min size to %dms", userData, jitter_params.min_size);
+				rtp_session_set_jitter_buffer_params(userData->session, &jitter_params);
 
-			// Send an event that the video jitter has been updated so that we can update the audio too
-			ev = ortp_event_new(ORTP_EVENT_JITTER_UPDATE_FOR_NACK);
-			evd = ortp_event_get_data(ev);
-			evd->info.jitter_min_size_for_nack = jitter_params.min_size;
-			rtp_session_dispatch_event(userData->session, ev);
+				ortp_message("OrtpNackContext [%p]: Sending NACK... increasing jitter min size to %dms", userData, jitter_params.min_size);
+
+				// Send an event that the video jitter has been updated so that we can update the audio too
+				ev = ortp_event_new(ORTP_EVENT_JITTER_UPDATE_FOR_NACK);
+				evd = ortp_event_get_data(ev);
+				evd->info.jitter_min_size_for_nack = jitter_params.min_size;
+				rtp_session_dispatch_event(userData->session, ev);
+			}
+
+			// Start the timer that will decrase the min jitter if no NACK is sent
+			userData->decrease_jitter_timer_running = TRUE;
+			userData->decrease_jitter_timer_start = ortp_get_cur_time_ms();
 
 			break;
 		}
@@ -199,23 +226,27 @@ void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, unsigned int max) {
 	ctx->max_packets = max;
 }
 
-void ortp_nack_context_save_packet(OrtpNackContext *ctx, mblk_t *msg) {
-	if (rtp_get_version(msg) == 2) {
-		bctbx_mutex_lock(&ctx->sent_packets_mutex);
+void ortp_nack_context_process_timer(OrtpNackContext *ctx) {
+	if (ctx->decrease_jitter_timer_running) {
+		uint64_t current_time = ortp_get_cur_time_ms();
+		if (current_time - ctx->decrease_jitter_timer_start >= DECREASE_JITTER_DELAY) {
+			OrtpEvent *ev;
+			OrtpEventData *evd;
+			JBParameters jitter_params;
 
-		// Remove the oldest packet if the cache is full
-		if (bctbx_list_size(ctx->sent_packets) >= ctx->max_packets) {
-			void *erase;
-			ctx->sent_packets = bctbx_list_pop_front(ctx->sent_packets, &erase);
+			ortp_message("OrtpNackContext [%p]: No NACK sent in the last %d seconds, decreasing jitter min size to %dms...", ctx, DECREASE_JITTER_DELAY / 1000, ctx->min_jitter_before_nack);
 
-			if (erase != NULL) freemsg((mblk_t *) erase);
+			rtp_session_get_jitter_buffer_params(ctx->session, &jitter_params);
+			jitter_params.min_size = ctx->min_jitter_before_nack;
+			rtp_session_set_jitter_buffer_params(ctx->session, &jitter_params);
+
+			// Send an event that the video jitter has been updated so that we can update the audio too
+			ev = ortp_event_new(ORTP_EVENT_JITTER_UPDATE_FOR_NACK);
+			evd = ortp_event_get_data(ev);
+			evd->info.jitter_min_size_for_nack = jitter_params.min_size;
+			rtp_session_dispatch_event(ctx->session, ev);
+
+			ctx->decrease_jitter_timer_running = FALSE;
 		}
-
-		// Stock the packet before sending it
-		ctx->sent_packets = bctbx_list_append(ctx->sent_packets, dupmsg(msg));
-
-		//ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", ctx, ntohs(rtp_get_seqnumber(msg)), ctx->session->rtp.snd_seq);
-
-		bctbx_mutex_unlock(&ctx->sent_packets_mutex);
 	}
 }
