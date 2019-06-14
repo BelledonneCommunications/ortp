@@ -106,6 +106,7 @@ static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwid
 		if (bctbx_list_size(vbe->packets) > vbe->packets_size_max) {
 			void *old_data = bctbx_list_nth_data(vbe->packets, vbe->packets_size_max);
 			vbe->packets = bctbx_list_remove(vbe->packets, old_data);
+			ortp_free(old_data);
 		}
 
 		if (vbe->nb_packets_computed % vbe->packets_size_max == 0) {
@@ -115,6 +116,8 @@ static void compute_bitrate_add_to_list_and_remove_oldest_value(OrtpVideoBandwid
 			ortp_debug("[VBE] Dispatching event ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE with value %f kbits/s", ed->info.video_bandwidth_available / 1000);
 			rtp_session_dispatch_event(vbe->session, ev);
 		}
+	} else {
+		ortp_free(packet);
 	}
 }
 
