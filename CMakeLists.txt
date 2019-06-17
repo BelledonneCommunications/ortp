@@ -61,11 +61,7 @@ endif()
 find_package(Threads)
 find_library(LIBM NAMES m)
 
-if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
-	include("${EP_bctoolbox_CONFIG_DIR}/BcToolboxConfig.cmake")
-else()
-	find_package(BcToolbox 0.2.0 REQUIRED)
-endif()
+find_package(bctoolbox 0.2.0 REQUIRED)
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
@@ -157,13 +153,7 @@ if(STRICT_OPTIONS_C)
 	list(REMOVE_DUPLICATES STRICT_OPTIONS_C)
 endif()
 
-
-if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
-	set(EXPORT_TARGETS_NAME "LinphoneBuilder")
-else()
-	set(EXPORT_TARGETS_NAME "ORTP")
-endif()
-
+set(EXPORT_TARGET_NAME ortp)
 
 add_subdirectory(include)
 add_subdirectory(src)
@@ -202,38 +192,39 @@ set(ORTPDEPS_LIBS )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
-
 add_subdirectory(build)
 
-
 include(CMakePackageConfigHelpers)
+set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_DATADIR}/${EXPORT_TARGET_NAME}/cmake")
+
 write_basic_package_version_file(
-	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
 	VERSION ${ORTP_VERSION}
 	COMPATIBILITY AnyNewerVersion
 )
-export(EXPORT ${EXPORT_TARGETS_NAME}Targets
-	FILE "${CMAKE_CURRENT_BINARY_DIR}/ORTPTargets.cmake"
-)
-configure_file(ORTPConfig.cmake.in
-	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
-	@ONLY
+export(EXPORT "${EXPORT_TARGET_NAME}Targets"
+	FILE "${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Targets.cmake"
 )
 
-set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/cmake")
-install(EXPORT ${EXPORT_TARGETS_NAME}Targets
-	FILE ORTPTargets.cmake
+configure_package_config_file(ORTPConfig.cmake.in
+	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
+	INSTALL_DESTINATION ${CONFIG_PACKAGE_LOCATION}
+	NO_SET_AND_CHECK_MACRO
+)
+
+install(EXPORT ${EXPORT_TARGET_NAME}Targets
+	FILE "${EXPORT_TARGET_NAME}Targets.cmake"
 	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
+
 install(FILES
-	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfig.cmake"
-	"${CMAKE_CURRENT_BINARY_DIR}/ORTPConfigVersion.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
 	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
 install(FILES 	"${CMAKE_CURRENT_SOURCE_DIR}/README.md" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/ChangeLog" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/COPYING" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS" 
-	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}")
-
-
+	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}"
+)
