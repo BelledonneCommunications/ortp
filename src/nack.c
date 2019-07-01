@@ -22,9 +22,16 @@
 
 #define DECREASE_JITTER_DELAY 5000
 
-static int compare_sequence_number(const void *msg, const void *sequence_number) {
-	if (ntohs(rtp_get_seqnumber((mblk_t *) msg)) == *((uint16_t *) sequence_number)) return 0;
-	return -1;
+static mblk_t *find_packet_with_sequence_number(const queue_t *q, const uint16_t seq_number) {
+	mblk_t *tmp;
+
+	for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, tmp)) {
+		if (ntohs(rtp_get_seqnumber(tmp)) == seq_number) {
+			return tmp;
+		}
+	}
+
+	return NULL;
 }
 
 static void generic_nack_received(const OrtpEventData *evd, OrtpNackContext *ctx) {
@@ -32,7 +39,7 @@ static void generic_nack_received(const OrtpEventData *evd, OrtpNackContext *ctx
 		RtpTransport *rtpt = NULL;
 		rtcp_fb_generic_nack_fci_t *fci;
 		uint16_t pid, blp, seq;
-		bctbx_list_t *lost_msg;
+		mblk_t *lost_msg;
 
 		/* get RTP transport from session */
 		rtp_session_get_transports(ctx->session, &rtpt, NULL);
@@ -43,23 +50,23 @@ static void generic_nack_received(const OrtpEventData *evd, OrtpNackContext *ctx
 
 		bctbx_mutex_lock(&ctx->sent_packets_mutex);
 
-		lost_msg = bctbx_list_find_custom(ctx->sent_packets, compare_sequence_number, &pid);
+		lost_msg = find_packet_with_sequence_number(&ctx->sent_packets, pid);
 		if (lost_msg != NULL) {
-			meta_rtp_transport_modifier_inject_packet_to_send(rtpt, ctx->rtp_modifier, bctbx_list_get_data(lost_msg), 0);
-			ortp_message("OrtpNackContext [%p]: Resending missing packet with pid=%hu", ctx, pid);
+			meta_rtp_transport_modifier_inject_packet_to_send(rtpt, ctx->rtp_modifier, lost_msg, 0);
+			ortp_message("OrtpNackContext [%p]: Resending missing packet with seq=%hu", ctx, pid);
 		} else {
-			ortp_warning("OrtpNackContext [%p]: Cannot find missing packet with pid=%hu", ctx, pid);
+			ortp_warning("OrtpNackContext [%p]: Cannot find missing packet with seq=%hu", ctx, pid);
 		}
 		++pid;
 
 		for (seq = blp; seq != 0; seq >>= 1, ++pid) {
 			if (seq & 1) {
-				lost_msg = bctbx_list_find_custom(ctx->sent_packets, compare_sequence_number, &pid);
+				lost_msg = find_packet_with_sequence_number(&ctx->sent_packets, pid);
 				if (lost_msg != NULL) {
-					meta_rtp_transport_modifier_inject_packet_to_send(rtpt, ctx->rtp_modifier, bctbx_list_get_data(lost_msg), 0);
-					ortp_message("OrtpNackContext [%p]: Resending missing packet with pid=%hu", ctx, pid);
+					meta_rtp_transport_modifier_inject_packet_to_send(rtpt, ctx->rtp_modifier, lost_msg, 0);
+					ortp_message("OrtpNackContext [%p]: Resending missing packet with seq=%hu", ctx, pid);
 				} else {
-					ortp_warning("OrtpNackContext [%p]: Cannot find missing packet with pid=%hu", ctx, pid);
+					ortp_warning("OrtpNackContext [%p]: Cannot find missing packet with seq=%hu", ctx, pid);
 				}
 			}
 		}
@@ -75,15 +82,15 @@ static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
 		bctbx_mutex_lock(&userData->sent_packets_mutex);
 
 		// Remove the oldest packet if the cache is full
-		if (bctbx_list_size(userData->sent_packets) >= userData->max_packets) {
-			void *erase;
-			userData->sent_packets = bctbx_list_pop_front(userData->sent_packets, &erase);
+		if (userData->sent_packets.q_mcount >= userData->max_packets) {
+			mblk_t *erase = qbegin(&userData->sent_packets);
+			remq(&userData->sent_packets, erase);
 
-			if (erase != NULL) freemsg((mblk_t *) erase);
+			if (erase != NULL) freemsg(erase);
 		}
 
 		// Stock the packet before sending it
-		userData->sent_packets = bctbx_list_append(userData->sent_packets, dupmsg(msg));
+		putq(&userData->sent_packets, dupmsg(msg));
 
 		//ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", userData, ntohs(rtp_get_seqnumber(msg)), userData->session->rtp.snd_seq);
 
@@ -197,6 +204,7 @@ OrtpNackContext *ortp_nack_context_new(OrtpEvDispatcher *evt) {
 	userData->ev_dispatcher = evt;
 	userData->max_packets = 100;
 
+	qinit(&userData->sent_packets);
 	bctbx_mutex_init(&userData->sent_packets_mutex, NULL);
 
 	ortp_ev_dispatcher_connect(userData->ev_dispatcher
@@ -215,14 +223,14 @@ void ortp_nack_context_destroy(OrtpNackContext *ctx) {
 									, (OrtpEvDispatcherCb)generic_nack_received);
 
 	bctbx_mutex_lock(&ctx->sent_packets_mutex);
-	bctbx_list_free_with_data(ctx->sent_packets, (bctbx_list_free_func)freemsg);
+	flushq(&ctx->sent_packets, FLUSHALL);
 	bctbx_mutex_unlock(&ctx->sent_packets_mutex);
 
 	bctbx_mutex_destroy(&ctx->sent_packets_mutex);
 	ortp_free(ctx);
 }
 
-void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, unsigned int max) {
+void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, int max) {
 	ctx->max_packets = max;
 }
 

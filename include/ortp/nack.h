@@ -33,9 +33,9 @@ struct _OrtpNackContext {
 	RtpSession *session;
 	OrtpEvDispatcher *ev_dispatcher;
 	RtpTransportModifier *rtp_modifier;
-	bctbx_list_t *sent_packets;
+	queue_t sent_packets;
 	bctbx_mutex_t sent_packets_mutex;
-	unsigned int max_packets;
+	int max_packets;
 	int min_jitter_before_nack;
 	bool_t decrease_jitter_timer_running;
 	uint64_t decrease_jitter_timer_start;
@@ -46,7 +46,7 @@ typedef struct _OrtpNackContext OrtpNackContext;
 ORTP_PUBLIC OrtpNackContext *ortp_nack_context_new(OrtpEvDispatcher *evt);
 ORTP_PUBLIC void ortp_nack_context_destroy(OrtpNackContext *ctx);
 
-ORTP_PUBLIC void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, unsigned int max);
+ORTP_PUBLIC void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, int max);
 
 ORTP_PUBLIC void ortp_nack_context_process_timer(OrtpNackContext *ctx);
 
