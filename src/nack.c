@@ -114,7 +114,7 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 			OrtpEvent *ev;
 			OrtpEventData *evd;
 			JBParameters jitter_params;
-			int rtt = userData->session->rtt;
+			int rtt = (int) userData->session->rtt;
 
 			if (rtt == 0) rtt = 200;
 
