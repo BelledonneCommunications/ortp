@@ -154,7 +154,8 @@ bool_t rtp_session_jitter_buffer_enabled(const RtpSession *session){
 void rtp_session_set_jitter_buffer_params(RtpSession *session, const JBParameters *par){
 	if (par == &session->rtp.jittctl.params) return;
 	memcpy(&session->rtp.jittctl.params, par, sizeof (JBParameters));
-	rtp_session_init_jitter_buffer(session);
+	//rtp_session_init_jitter_buffer(session);
+	session->rtp.jittctl.jb_size_updated = TRUE;
 }
 
 void rtp_session_get_jitter_buffer_params(RtpSession *session, JBParameters *par){
@@ -238,7 +239,6 @@ static uint32_t jitter_control_local_ts_to_remote_ts_rls(JitterControl *ctl, uin
 void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint32_t cur_str_ts){
 	int32_t diff = packet_ts - cur_str_ts;
 	int deviation;
-	bool_t jb_size_updated = FALSE;
 	
 	if (ctl->is_diverging){
 		int32_t elapsed = (int32_t)(cur_str_ts - ctl->diverged_start_ts);
@@ -297,20 +297,20 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 	jitter_control_update_interarrival_jitter(ctl, diff);
 	cur_str_ts -= ctl->local_ts_start;
 	
-	if (ctl->params.adaptive){
+	if (ctl->params.adaptive || ctl->jb_size_updated){
 		bool_t max_updated = ortp_extremum_record_max(&ctl->max_ts_deviation, cur_str_ts, (float)deviation);
 		float max_deviation = MAX(ortp_extremum_get_previous(&ctl->max_ts_deviation), ortp_extremum_get_current(&ctl->max_ts_deviation));
 		if (max_updated && max_deviation > ctl->adapt_jitt_comp_ts){
 			ctl->adapt_jitt_comp_ts=(int)max_deviation;
-			jb_size_updated = TRUE;
+			ctl->jb_size_updated = TRUE;
 		}else if (max_deviation < ctl->params.ramp_threshold/100.f*ctl->adapt_jitt_comp_ts){
 			/*Jitter is decreasing. Make a smooth descent to avoid dropping lot of packets*/
 			if ( (int32_t)(cur_str_ts - ctl->adapt_refresh_prev_ts) > ((ctl->params.ramp_refresh_ms*ctl->clock_rate)/1000)) {
 				ctl->adapt_jitt_comp_ts -= (ctl->params.ramp_step_ms * ctl->clock_rate) / 1000;
-				jb_size_updated = TRUE;
+				ctl->jb_size_updated = TRUE;
 			}
 		}
-		if (jb_size_updated){
+		if (ctl->jb_size_updated){
 			int min_size_ts = (ctl->params.min_size * ctl->clock_rate) / 1000;
 			int max_size_ts = (ctl->params.max_size * ctl->clock_rate) / 1000;
 			if (ctl->adapt_jitt_comp_ts < min_size_ts){
@@ -319,11 +319,11 @@ void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint3
 				ctl->adapt_jitt_comp_ts = max_size_ts;
 			}
 			ctl->adapt_refresh_prev_ts = cur_str_ts;
-			jb_size_updated = TRUE;
+			ctl->jb_size_updated = FALSE;
 		}
 	}
 	if (time_for_log(ctl, cur_str_ts)){
-		ortp_message("jitter buffer %s: target-size: %f ms, effective-size: %f (min: %i nom: %i, max: %i)",jb_size_updated ? "updated" : "stable",
+		ortp_message("jitter buffer %s: target-size: %f ms, effective-size: %f (min: %i nom: %i, max: %i)",ctl->jb_size_updated ? "updated" : "stable",
 			((float)ctl->adapt_jitt_comp_ts/(float)ctl->clock_rate)*1000.0,
 			ctl->jitter_buffer_mean_size,
 			ctl->params.min_size, ctl->params.nom_size, ctl->params.max_size);

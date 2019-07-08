@@ -1285,7 +1285,17 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		{
 			payload_type_changed_notify(session, rtp->paytype);
 		}
-		check_for_seq_number_gap(session, rtp);
+
+		if ((rtp_session_avpf_enabled(session) == TRUE)
+			&& (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GENERIC_NACK) == TRUE)
+			&& (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK) == FALSE)) {
+			/*
+			 * If immediate nack is disabled then we check for missing packets here instead of
+			 * rtp_session_rtp_parse
+			 */
+			check_for_seq_number_gap(session, rtp);
+		}
+
 		/* update the packet's timestamp so that it corrected by the
 		adaptive jitter buffer mechanism */
 		if (session->rtp.jittctl.params.adaptive){
@@ -2475,6 +2485,16 @@ void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *t
 		tpm->session = tp->session;
 	}
 }
+
+void meta_rtp_transport_prepend_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	tpm->transport = tp;
+	m->modifiers=o_list_prepend(m->modifiers, tpm);
+	if(m->has_set_session) {
+		tpm->session = tp->session;
+	}
+}
+
 bool_t rtp_session_get_symmetric_rtp(const RtpSession *session) {
 	return session->symmetric_rtp;
 }

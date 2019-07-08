@@ -124,6 +124,42 @@ static void update_rtcp_xr_stat_summary(RtpSession *session, mblk_t *mp, uint32_
 	session->rtcp_xr_stats.last_jitter_diff_since_last_stat_summary = diff;
 }
 
+static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
+	uint16_t pid;
+	uint16_t i;
+
+	/*don't check anything before first packet delivered*/
+	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED
+		&& RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.rcv_last_seq + 1)
+		&& RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.snd_last_nack + 1)
+	) {
+		uint16_t first_missed_seq = session->rtp.rcv_last_seq + 1;
+		uint16_t diff;
+
+		if (first_missed_seq <= session->rtp.snd_last_nack) {
+			first_missed_seq = session->rtp.snd_last_nack + 1;
+		}
+
+		diff = rtp->seq_number - first_missed_seq;
+		pid = first_missed_seq;
+
+		for (i = 0; i <= (diff / 16); i++) {
+			uint16_t seq;
+			uint16_t blp = 0;
+			for (seq = pid + 1; (seq < rtp->seq_number) && ((seq - pid) < 16); seq++) {
+				blp |= (1 << (seq - pid - 1));
+			}
+			rtp_session_send_rtcp_fb_generic_nack(session, pid, blp);
+			pid = seq;
+		}
+	}
+
+	if (session->rtp.snd_last_nack < rtp->seq_number) {
+		/* We update the last_nack since we received this packet we don't need a nack for it */
+		session->rtp.snd_last_nack = rtp->seq_number;
+	}
+}
+
 void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen)
 {
 	int i;
@@ -327,6 +363,16 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			session->rtcp_xr_stats.discarded_count++;
 			return;
 		}
+	}
+
+	if ((rtp_session_avpf_enabled(session) == TRUE)
+		&& (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GENERIC_NACK) == TRUE)
+		&& (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK) == TRUE)) {
+		/*
+		 * If immediate nack is enabled then we check for missing packets here instead of
+		 * rtp_session_recvm_with_ts
+		 */
+		check_for_seq_number_gap(session, rtp);
 	}
 
 	if (queue_packet(&session->rtp.rq,session->rtp.jittctl.params.max_packets,mp,rtp,&discarded,&duplicate))
