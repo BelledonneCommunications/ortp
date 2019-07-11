@@ -147,19 +147,11 @@ int ortp_file_exist(const char *pathname) {
 #else
 	int inet_aton (const char * cp, struct in_addr * addr)
 	{
-		unsigned long retval;
+		int retval;
 
-		retval = inet_addr (cp);
+		retval = inet_pton (AF_INET, cp, addr);
 
-		if (retval == INADDR_NONE)
-		{
-			return -1;
-		}
-		else
-		{
-			addr->S_un.S_addr = retval;
-			return 1;
-		}
+		return retval == 1 ? 1 : 0;
 	}
 #endif
 
