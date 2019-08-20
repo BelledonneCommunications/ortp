@@ -1,7 +1,6 @@
-Copyright (c) 2010-2013 Belledonne Communications SARL <sales@belledonne-communications.com>
-Simon MORLAT (simon dot morlat at linphone dot org) is the author the oRTP library.
+- Simon MORLAT (simon dot morlat at linphone dot org) is the original author the oRTP library.
 
-Contributors:
+## Contributors:
 
 * Copyright (c) 2013 Vadim Zhukov <persgray@gmail.com>
 

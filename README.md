@@ -3,25 +3,36 @@
 oRTP
 ====
 
-What is it ?
-------------
 
-oRTP is a GPLv2 licensed C library implementing the RTP protocol (rfc3550). It is available
+oRTP is a C library implementing the RTP protocol (rfc3550). It is available
 for most unix clones (primilarly Linux and HP-UX), and Microsoft Windows.
 
-Prior to version 1.0.0, oRTP was licensed under LGPLv2. Due to inclusion of new code licensed under GPLv2, oRTP has become GPLv2.
-For the sake of clarity, all source files headers were updated to mention the GPLv2 only.
+For additional information, please [visit oRTP's homepage on **linphone.org**](http://www.linphone.org/technical-corner/ortp).
+
+
+License
+-------
+
+<Copyright © Belledonne Communications?>
+
+Liblinphone is dual licensed, available either
+- under a GNU GPLv3 license for free (see LICENSE.txt file for details)
+- under a proprietary license, for closed source projects. Contact sales@belledonne-communications.com for costs and other service information.
+
+Prior to version 1.0.0, oRTP was licensed under LGPLv2. Due to inclusion of new code licensed under GPLv2, oRTP has become GPLv2,
+and later in version 1.1.0, GPLv3.
+For the sake of clarity, all source files headers were updated to mention the GPLv3 only.
 oRTP versions prior to 1.0.0 of course remain LGPLv2.
 
 
-What are the build prequisites ?
---------------------------------
+Dependencies
+------------
 
 *bctoolbox[1]*: portability layer
 
 
-What build instructions
------------------------
+Compilation
+-----------
 
 Autotools procedure is deprecated. Use CMake to configure the source code.
 
@@ -75,39 +86,6 @@ Is there some documentation ?
 See the doxygen generated API documentation in docs/html. Program examples are a very good
 starting point.
 
-
-What are the current features ?
--------------------------------
-
-- works with ipv6
-- packet scheduler
-- adaptive jitter compensation
-- automatic sending of RTCP SR or RR coumpounded with a SDES
-- RTCP parser API
-
-
-What are the planned features ?
--------------------------------
-
-- multi-endpoint rtp sessions.
-
-
-In which application oRTP is being used ?
------------------------------------------
-
-- linphone (http://www.linphone.org) was the first.
-- the OCMP platform (a Hewlett Packard product).
-
-
-How to compile my program using ortp ?
---------------------------------------
-gcc -o myprogram  `pkg-config --cflags ortp` myprogram.c  \
-			`pkg-config --libs ortp`
-
-
-What about Windows port ?
--------------------------
-There are instructions and Microsoft Visual C++ project files in build/win32native/oRTP.
 
 
 ----------------------------------------
