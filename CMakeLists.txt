@@ -46,6 +46,7 @@ include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
 include(CheckCSourceCompiles)
+include(CheckSymbolExists)
 
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
