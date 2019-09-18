@@ -7,129 +7,195 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
-## [1.0.2] - 2017-07-20
+## [1.1.0] - 2019-09-18
+
+### Added
+- Immediate NACK handling, to handle retransmission of lost packets.
+
+### Changed
+- License is now GNU GPLv3.
+
+
+
+## [1.0.0] - 2017-01-10
+
+### Added
+- new adaptive jitter buffer algorithm, with improved performance.
+
+### Changed
+- License is changed from LGPLv2 to GPLv2.
+
+
+
+## [0.27.0] - 2016-06-01
+
+### Changed
+- bctoolbox is added as dependency.
 
 ### Fixed
-- Various issues.
+- DSCP handling on Windows.
+- IPv6 handling for Windows and Android.
+
+
+## [0.25.0] - 2015-11-02
+
+### Added
+- AVPF generic NACK
+- Payload type definitions for real time text and codec2.
+
+### Fixed
+- Various things.
+
+
+## [0.24.1] - 2015-05-31
+
+### Added
+- TMMBR and TMMBN handling (RFC5104).
+
+
+## [0.24.0] - 2015-03-11
+
+### Added
+- RTCP send algorithm as describe in RFC3550.
+- RTCP XR (RFC3611).
+- RTCP send algorithm for AVPF streams as described in RFC4585.
 
 
 
+## [0.23.0] - 2014-02-19
 
-February 23, 2017: ortp-1.0.1
-	- minor enhancements and bugfixes
+### Changed
+- network simulator improvements.
+- updated to use ZRTPCPP>=4
 
-January 10, 2017: ortp-1.0.0
-	- oRTP license is changed to be GPLv2
-	- new adaptive jitter buffer algorithm added
+### Fixed
+- security issues.
+	
 
-June 1st 2016: ortp-0.27.0
+## [0.22.0] - 2012-05-27
 
-May XX, 2016: 
-	- Fix DSCP on Windows.
-	- bctoolbox added as dependency
-	- fixes around IPv6 support for windows and android
+### Changed
+- Network simulator improvements for simulating random lost packets.
 
-January 22, 2016: ortp-0.26.0
+### Fixed
+- SRTP initialization.
 
-November 2, 2015: ortp-0.25.0
-	- Support AVPF generic NACK
-	- Add payload types for RTT (Real-Time Text) and Codec2
-	- Bug fixes
+	
+## [0.19.0] - 2012-02-17
 
-May 6, 2015: ortp-0.24.2
-	- Bug fixes
+### Added
+- ZRTP media encryption.
 
-Mar 31, 2015: ortp-0.24.1
-	- Add support of TMMBR and TMMBN (RFC 5104)
 
-Mar 11, 2015: ortp-0.24.0
-	- RTCP send algorithm as describe in RFC3550
-	- RTCP XR (RFC3611)
-	- RTCP send algorithm as describe in RFC4585: AVPF streams
+## [0.18.0] - 2011-12-22
 
-Feb 19, 2014: ortp-0.23.0
-	- network simulator improvements
-	- updated to use ZRTPCPP>=4.0 
-	- security bugfixes
+### Added
+- SRTP media encryption
 
-May 27, 2012: ortp-0.22.0
-	- network simulator improvements for simulating random lost packets
-	- srtp initialization bugfix
 
-February 22th, 2012: ortp-0.20.0
-	- fix an issue on video call with ZRTP
+## [0.17.0] - 2011-05-??
 
-February 17th, 2012: ortp-0.19.0
-	- ZRTP media encryption
+### Added
+- rtp_session_get_round_trip_propagation()
 
-December 22th, 2011: ortp-0.18.0
-	- SRTP media encryption
+### Fixed
+- RTCP support.
 
-May XXth, 2011: ortp-0.17.0
-	- RTCP support fixes
-	- add rtp_session_get_round_trip_propagation()
 
-March 28th, 2011: ortp-0.16.5
-	- optimisations in session-set intersection computation
+## [0.16.0] - 2010-05-10
 
-February 7, 2011: ortp-0.16.4
-	- workaround fix for some versions of uclibc
+### Added
+- DSCP handling on Windows.
+- Accessors to struct PayloadType.
+- new payload type definitions.
 
-June 3, 2010 : ortp-0.16.3
-	- cosmetics improvements for compilation.
+### Changed
+- update stun api to support new RFC.
 
-May 10, 2010 : ortp-0.16.2
-	- add support for setting dscp on windows
-	- add accessors to struct PayloadType
+### Fixed
+- gcc warnings.
 
-September 17, 2009: ortp-0.16.1
-	- minor compilation fixes
 
-May 4, 2009 : ortp-0.16.0
-	- update stun api to support new RFC
-	- fix gcc warnings
-	- added new PayloadType
+## [0.15.0] - 2008-10-13
 
-October 13, 2008:	ortp-0.15.0
-	- telephone event detection bugfix
-	- reduce number of memory allocation: !! attention here ABI/API change !!
+### Changed
+- reduce number of memory allocation: !! attention here ABI/API change !!
 		If you are using mp=rtp_session_recvm_with_ts(), the payload data is no more pointed by mp->b_cont->b_rptr.
 		Instead you can use the following to skip the header:
 			rtp_get_payload(mp,mp->b_rptr);
 
-March 14, 2007: ortp-0.14.3
-	- new ortp_set_memory_functions() method
-	- jitter buffer bugfixes, simplification and improvements
+### Fixed
+- telephone event presence detection bug.
 
-July 27, 2007: ortp-0.14.0
-	- a few optimisations
-	- support for number of channels in PayloadType (interface changed !)
-	- srtp optional support (using libsrtp from http://srtp.sf.net)
 
-April, 11 2007: ortp-0.13.1:
-	- do not recv rtcp packets from rtp_session_sendm_with_ts() when session is not send-only.
-	- removed gtk-doc, using doxygen instead.
-	- minor patches
+## [0.14.3] - 2008-03-14
 
-January, 23 2007: ortp-0.13.0
-	- add support for a pluggable transport layer
-	- enables use of different RtpProfile for send and recv directions
-	- fix RTCP memleak
-	- new telephone-event types added.
+### Added
+- new ortp_set_memory_functions() method.
 
-November, 9 2006: ortp-0.12.0
-	- fix statistics
-	- jitter buffer accuracy improved
-	- enable 0 ms jitter buffer (implies permissive dequeuing of packets)
-	- enable optional connected mode: the udp socket is connect()ed so only 
+### Changed
+- jitter buffer simplification and improvements
+
+
+## [0.14.0] - 2007-07-27
+
+### Added
+- Number of channels in PayloadType (interface changed !).
+- srtp optional support (using libsrtp from http://srtp.sf.net)
+
+### Changed
+- optimisations.
+
+
+## [0.13.1] - 2007-04-11
+
+### Changed
+- do not recv rtcp packets from rtp_session_sendm_with_ts() when session is not send-only.
+- removed gtk-doc, using doxygen instead.
+
+
+## [0.13.0] - 2007-01-23
+
+### Added
+- new telephone-event types.
+- pluggable transport layer.
+
+### Changed
+- enables use of different RtpProfile for send and recv directions.
+
+### Fixed
+- RTCP memory leak.
+
+
+## [0.12.0] - 2006-11-09
+
+### Added
+- enable 0 ms jitter buffer (implies permissive dequeuing of packets).
+- enable optional connected mode: the udp socket is connect()ed so only 
 	  packets coming from the connected destination are received.
 
-August, 22 2006: ortp-0.11.0
-	- added rtp_session_set_dscp, rtp_session_send_rtcp_APP
-	- fixed statistics little bugs.
+### Changed
+- jitter buffer accuracy improved.
 
-May, 30 2006:	ortp-0.10.0
-	- new RTCP parser
-	- new event api
-	- stun helper routines
-	- permissive algorithm for video packet enqueueing
+### Fixed
+- statistics.
+
+
+## [0.11.0] - 2006-08-22
+
+### Added
+- rtp_session_set_dscp(), rtp_session_send_rtcp_APP().
+
+### Fixed
+- statistics.
+
+
+## [0.10.0] - 2006-05-30
+
+### Added
+- new RTCP parser
+- new event api
+- stun helper routines
+- permissive algorithm for video packet enqueueing
+
+
