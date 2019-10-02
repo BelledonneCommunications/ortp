@@ -248,7 +248,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 			packet_loss = (int)(expected_packets - stream->hwrcv_since_last_SR);
 			session->stats.cum_packet_loss += packet_loss;
 		}
-		if (expected_packets>0){/*prevent division by zero and negative loss fraction*/
+		if (expected_packets>0 && packet_loss > 0){/*prevent division by zero and negative loss fraction*/
 			loss_fraction=(int)( 256 * packet_loss) / expected_packets;
 			/*make sure this fits into 8 bit unsigned*/
 			if (loss_fraction>255) loss_fraction=255;

@@ -207,6 +207,8 @@ OrtpNackContext *ortp_nack_context_new(OrtpEvDispatcher *evt) {
 	qinit(&userData->sent_packets);
 	bctbx_mutex_init(&userData->sent_packets_mutex, NULL);
 
+	rtp_session_enable_avpf_feature(userData->session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK, TRUE);
+
 	ortp_ev_dispatcher_connect(userData->ev_dispatcher
 								, ORTP_EVENT_RTCP_PACKET_RECEIVED
 								, RTCP_RTPFB
@@ -221,6 +223,8 @@ void ortp_nack_context_destroy(OrtpNackContext *ctx) {
 									, ORTP_EVENT_RTCP_PACKET_RECEIVED
 									, RTCP_RTPFB
 									, (OrtpEvDispatcherCb)generic_nack_received);
+
+	rtp_session_enable_avpf_feature(ctx->session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK, FALSE);
 
 	bctbx_mutex_lock(&ctx->sent_packets_mutex);
 	flushq(&ctx->sent_packets, FLUSHALL);

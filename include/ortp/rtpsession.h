@@ -214,7 +214,6 @@ typedef struct OrtpRtcpSendAlgorithm {
 
 typedef struct OrtpRtcpFbConfiguration {
 	bool_t generic_nack_enabled;
-	bool_t immediate_nack_enabled;
 	bool_t tmmbr_enabled;
 } OrtpRtcpFbConfiguration;
 
