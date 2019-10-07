@@ -118,7 +118,7 @@ rm -rf $RPM_BUILD_ROOT
 %endif
 %{_libdir}/pkgconfig/*.pc
 %{_includedir}/*
-%{_datadir}/ortp/cmake/*
+%{_libdir}/cmake/ortp/*
 
 
 %changelog

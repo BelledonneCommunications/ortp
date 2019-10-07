@@ -195,7 +195,8 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_L
 add_subdirectory(build)
 
 include(CMakePackageConfigHelpers)
-set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_DATADIR}/${EXPORT_TARGET_NAME}/cmake")
+
+set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_TARGET_NAME}")
 
 write_basic_package_version_file(
 	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
