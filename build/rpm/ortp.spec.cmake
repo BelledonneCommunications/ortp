@@ -27,7 +27,7 @@ Epoch:		1
 License:	GPL
 Group:		Applications/Communications
 URL:		http://linphone.org/ortp/
-Source0:	%{name}-%{version}-%build_number.tar.gz
+Source0:	%{name}-%{version}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
 %ifarch %ix86
 BuildArch:	i686
@@ -77,7 +77,7 @@ develop programs using the oRTP library.
 %custom_debug_package
 
 %prep
-%setup -n %{name}-%{version}-%build_number
+%setup -n %{name}-%{version}
 
 %build
 %{expand:%%%cmake_name} . -DCMAKE_BUILD_TYPE=@CMAKE_BUILD_TYPE@ -DCMAKE_PREFIX_PATH:PATH=%{_prefix} @RPM_ALL_CMAKE_OPTIONS@
@@ -101,7 +101,7 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,-)
 %doc %{_docdir}/ortp-%{version}/README.md
 %doc %{_docdir}/ortp-%{version}/CHANGELOG.md
-%doc %{_docdir}/ortp-%{version}/LICENCE.txt
+%doc %{_docdir}/ortp-%{version}/LICENSE.txt
 %doc %{_docdir}/ortp-%{version}/AUTHORS.md
 %{_libdir}/*.so.*
 
