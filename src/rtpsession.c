@@ -2061,6 +2061,159 @@ int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext){
 	return -1;
 }
 
+/**
+ * Add an extension to the extension header
+ * @param packet the RTP packet.
+ * @param id the identifier of the extension to add.
+ * @param size the size in bytes of the extension to add.
+ * @param data the buffer to the extension data.
+**/
+ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
+	if (size <= 0 || data == NULL) {
+		ortp_warning("Cannot add an extension with empty data");
+		return;
+	}
+
+	if (!rtp_get_extbit(packet)) {
+		uint16_t *header_p;
+		uint8_t *ext_p;
+		size_t padding = 0;
+
+		if ((size + 1) % 4 != 0) {
+			padding = 4 - (size + 1) % 4;
+		}
+
+		rtp_set_extbit(packet, 0x1);
+		msgpullup(packet, msgdsize(packet) + size + 5 + padding);
+
+		header_p = (uint16_t *) (packet->b_wptr);
+		*header_p++ = htons(0xBEDE); // Set the defining profile
+		*header_p++ = htons((uint16_t) ((size + 1 + padding) / 4));
+
+		ext_p = (uint8_t *)header_p;
+		*ext_p++ = (uint8_t) ((id << 4) | (size - 1));
+		memcpy(ext_p, data, size);
+
+		if (padding) {
+			ext_p += size;
+			memset(ext_p, 0, padding);
+		}
+
+		packet->b_wptr += size + 5 + padding;
+	} else {
+		uint8_t *ext_header, *tmp;
+		uint16_t profile;
+		size_t ext_header_size, used_size;
+		size_t used_padding = 0, padding = 0;
+
+		ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+
+		if (profile != 0xBEDE) {
+			ortp_warning("Cannot add extension, profile is not set to 1-byte header");
+			return;
+		}
+
+		// Use existing padding if there is since we place it at the end of the extension header
+		tmp = ext_header;
+		while (tmp < ext_header + ext_header_size && *tmp != 0) {
+			tmp += (size_t)(*tmp & 0xF) + 1 + 1; // Length is a 4-bit number minus 1
+		}
+
+		used_size = tmp - ext_header;
+		used_padding = ext_header_size - used_size;
+
+		if ((used_size + size + 1) % 4 != 0) {
+			padding = 4 - (used_size + size + 1) % 4;
+		}
+
+		if (size + 1 + padding > used_padding) {
+			uint16_t *ext_header_size_p;
+
+			msgpullup(packet, msgdsize(packet) + size + 1 + padding - used_padding);
+			packet->b_wptr += size + 1 + padding - used_padding;
+
+			// msgpullup invalidates packet pointer, so we get them back again
+			ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+			tmp = ext_header + used_size;
+
+			used_size += size + 1;
+			ext_header_size_p = (uint16_t *) (ext_header - 2);
+			*ext_header_size_p = htons((uint16_t) ((used_size + padding) / 4));
+		}
+
+		*tmp++ = (uint8_t) ((id << 4) | (size - 1));
+		memcpy(tmp, data, size);
+
+		if (padding) {
+			tmp += size;
+			memset(tmp, 0, padding);
+		}
+	}
+}
+
+/**
+ * Obtain the desired extension in the extension header
+ * @param packet the RTP packet.
+ * @param id the identifier of the wanted extension
+ * @param data pointer that will be set to the beginning of the extension data.
+ * @return the size of the wanted extension in bytes, -1 if there is no extension header or the wanted extension was not found.
+**/
+ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
+	uint8_t *ext_header, *tmp;
+	uint16_t profile;
+	size_t ext_header_size, size;
+
+	if (!rtp_get_extbit(packet)) return -1;
+
+	ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+
+	if (ext_header_size == (size_t)-1) {
+		ortp_warning("Extension header is empty!");
+		return -1;
+	}
+
+	// If the profile is set to 0xBEDE then all extensions are represented by a 1-byte header
+	// If not then by a 2-byte header (cf RFC 8285)
+	tmp = ext_header;
+	if (profile == 0xBEDE) {
+		while (tmp < ext_header + ext_header_size) {
+			if ((int)*tmp == 15) break;
+
+			if ((int)*tmp == 0) {
+				tmp += 1; // Padding
+			} else {
+				size = (size_t)(*tmp & 0xF) + 1; // Length is a 4-bit number minus 1
+
+				if (id == (int)(*tmp >> 4)) {
+					if (data) *data = tmp + 1;
+					return size;
+				}
+
+				tmp += size + 1;
+			}
+		}
+	} else {
+		while (tmp < ext_header + ext_header_size) {
+			if ((int)*tmp == 15) break;
+
+			if ((int)*tmp == 0) {
+				tmp += 1;
+			} else {
+				size = (size_t)(*(tmp + 1));
+
+				if (id == (int)*tmp) {
+					if (data) *data = tmp + 2;
+					return size;
+				}
+
+				tmp += size + 2;
+			}
+		}
+	}
+
+	return -1;
+}
+
 
 /**
  *  Gets last time a valid RTP or RTCP packet was received.
