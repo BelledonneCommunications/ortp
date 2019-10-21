@@ -21,7 +21,7 @@
 #include "ortp/ortp.h"
 #include "utils.h"
 
-static size_t rtcp_get_size(const mblk_t *m){
+size_t rtcp_get_size(const mblk_t *m) {
 	const rtcp_common_header_t *ch=rtcp_get_common_header(m);
 	if (ch==NULL) return 0;
 	return (1+rtcp_common_header_get_length(ch))*4;

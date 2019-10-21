@@ -63,7 +63,9 @@ set(ORTP_SOURCE_FILES_C
 	videobandwidthestimator.c
 	utils.c
 )
-set(ORTP_SOURCE_FILES_CXX )
+set(ORTP_SOURCE_FILES_CXX
+	rtpbundle.cc
+)
 
 add_definitions(
 	-DBCTBX_LOG_DOMAIN="ortp"
@@ -93,6 +95,7 @@ bc_apply_compile_flags(ORTP_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_C
 if(ENABLE_STATIC)
 	add_library(ortp-static STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	set_target_properties(ortp-static PROPERTIES OUTPUT_NAME ortp)
+	set_target_properties(ortp-static PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
 	target_compile_definitions(ortp-static PRIVATE "ORTP_EXPORTS")
 	target_link_libraries(ortp-static INTERFACE ${LIBS})
 	install(TARGETS ortp-static EXPORT ${EXPORT_TARGET_NAME}Targets
@@ -103,6 +106,7 @@ endif()
 if(ENABLE_SHARED)
 	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 	set_target_properties(ortp PROPERTIES LINKER_LANGUAGE CXX)
+	set_target_properties(ortp PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
 	if(APPLE)
 		if(IOS)
 			set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})

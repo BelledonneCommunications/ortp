@@ -57,8 +57,12 @@ typedef struct rtp_header
 	uint32_t csrc[16];
 } rtp_header_t;
 
-
-
+/* MAX is 15 because we use 1-byte header */
+typedef enum {
+	RTP_EXTENSION_NONE = 0,
+	RTP_EXTENSION_MID = 1,
+	RTP_EXTENSION_MAX = 15
+} rtp_extension_type_t;
 
 typedef struct rtp_stats
 {
@@ -107,7 +111,8 @@ extern "C"{
 
 /* packet api */
 /* the first argument is a mblk_t. The header is supposed to be not splitted  */
-#define rtp_set_markbit(mp,value)		((rtp_header_t*)((mp)->b_rptr))->markbit=(value)
+#define rtp_set_markbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->markbit=(value)
+#define rtp_set_extbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->extbit=(value)
 #define rtp_set_seqnumber(mp,seq)	((rtp_header_t*)((mp)->b_rptr))->seq_number=(seq)
 #define rtp_set_timestamp(mp,ts)	((rtp_header_t*)((mp)->b_rptr))->timestamp=(ts)
 #define rtp_set_ssrc(mp,_ssrc)		((rtp_header_t*)((mp)->b_rptr))->ssrc=(_ssrc)
@@ -126,6 +131,10 @@ ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
 
 ORTP_PUBLIC int rtp_get_payload(mblk_t *packet, unsigned char **start);
 ORTP_PUBLIC int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext);
+
+/* Extension header api */
+ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
+ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data);
 
 #ifdef __cplusplus
 }

@@ -109,7 +109,7 @@ static mblk_t * sdes_chunk_set_minimal_items(mblk_t *m, const char *cname) {
 
 static mblk_t * sdes_chunk_set_full_items(mblk_t *m, const char *cname,
 	const char *name, const char *email, const char *phone, const char *loc,
-	const char *tool, const char *note) {
+	const char *tool, const char *note, const char *mid) {
 	m = sdes_chunk_set_minimal_items(m, cname);
 	m = sdes_chunk_append_item(m, RTCP_SDES_NAME, name);
 	m = sdes_chunk_append_item(m, RTCP_SDES_EMAIL, email);
@@ -117,6 +117,7 @@ static mblk_t * sdes_chunk_set_full_items(mblk_t *m, const char *cname,
 	m = sdes_chunk_append_item(m, RTCP_SDES_LOC, loc);
 	m = sdes_chunk_append_item(m, RTCP_SDES_TOOL, tool);
 	m = sdes_chunk_append_item(m, RTCP_SDES_NOTE, note);
+	m = sdes_chunk_append_item(m, RTCP_SDES_MID, mid);
 	m = sdes_chunk_pad(m);
 	return m;
 }
@@ -128,6 +129,7 @@ static mblk_t * sdes_chunk_set_full_items(mblk_t *m, const char *cname,
 void rtp_session_set_source_description(RtpSession *session, const char *cname,
 	const char *name, const char *email, const char *phone, const char *loc,
 	const char *tool, const char *note) {
+	const char* mid = NULL;
 	mblk_t *m;
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
 	if (strlen(cname)>255) {
@@ -141,12 +143,18 @@ void rtp_session_set_source_description(RtpSession *session, const char *cname,
 		ortp_warning("Cname [%s] too long for session [%p]",cname,session);
 	}
 
-	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note);
+	/* Add mid to chunck if there is a bundle */
+	if (session->bundle) {
+		mid = rtp_bundle_get_session_mid(session->bundle, session);
+	}
+
+	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, mid);
 	if (session->full_sdes != NULL)
 		freemsg(session->full_sdes);
 	session->full_sdes = chunk;
 	chunk = sdes_chunk_new(session->snd.ssrc);
 	m = sdes_chunk_set_minimal_items(chunk, cname);
+	m = sdes_chunk_append_item(m, RTCP_SDES_MID, mid);
 	m = sdes_chunk_pad(m);
 	if (session->minimal_sdes != NULL)
 		freemsg(session->minimal_sdes);
@@ -156,8 +164,15 @@ void rtp_session_set_source_description(RtpSession *session, const char *cname,
 void rtp_session_add_contributing_source(RtpSession *session, uint32_t csrc,
 	const char *cname, const char *name, const char *email, const char *phone,
 	const char *loc, const char *tool, const char *note) {
+	const char* mid = NULL;
 	mblk_t *chunk = sdes_chunk_new(csrc);
-	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note);
+
+	/* Add mid to chunck if there is a bundle */
+	if (session->bundle) {
+		mid = rtp_bundle_get_session_mid(session->bundle, session);
+	}
+
+	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, mid);
 	putq(&session->contributing_sources, chunk);
 }
 

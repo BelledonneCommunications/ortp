@@ -317,6 +317,9 @@ rtp_session_init (RtpSession * session, int mode)
 	ortp_mutex_init(&session->rtp.winthread_lock, NULL);
 	ortp_mutex_init(&session->rtp.winrq_lock, NULL);
 #endif
+
+	session->bundle = NULL;
+	session->is_primary = FALSE;
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -486,6 +489,7 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
 }
 
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
+	ortp_message("RtpSession: target upload bandwidth set to %i", target_bandwidth);
 	session->target_upload_bandwidth = target_bandwidth;
 }
 int rtp_session_get_target_upload_bandwidth(RtpSession *session) {
@@ -878,8 +882,18 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 	mp=allocb(msglen,BPRI_MED);
 	rtp=(rtp_header_t*)mp->b_rptr;
 	rtp_header_init_from_session(rtp,session);
-	/*copy the payload, if any */
 	mp->b_wptr+=header_size;
+
+	/*add the mid from the bundle if any*/
+	if (session->bundle) {
+		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+		if (mid != NULL) {
+			rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		}
+	}
+
+	/*copy the payload, if any */
 	if (payload_size){
 		memcpy(mp->b_wptr,payload,payload_size);
 		mp->b_wptr+=payload_size;
@@ -928,6 +942,18 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
 	rtp=(rtp_header_t*)mp->b_rptr;
 	rtp_header_init_from_session(rtp,session);
 	mp->b_wptr+=header_size;
+
+	/*add the mid from the bundle if any*/
+	if (session->bundle) {
+		if (session->rtp.snd_seq < 50) {
+			const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+			if (mid != NULL) {
+				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+			}
+		}
+	}
+
 	/* create a mblk_t around the user supplied payload buffer */
 	mpayload=esballoc(payload,payload_size,BPRI_MED,freefn);
 	mpayload->b_wptr+=payload_size;
@@ -2061,6 +2087,157 @@ int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext){
 	return -1;
 }
 
+/**
+ * Add an extension to the extension header
+ * @param packet the RTP packet.
+ * @param id the identifier of the extension to add.
+ * @param size the size in bytes of the extension to add.
+ * @param data the buffer to the extension data.
+**/
+ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
+	if (size <= 0 || data == NULL) {
+		ortp_warning("Cannot add an extension with empty data");
+		return;
+	}
+
+	if (!rtp_get_extbit(packet)) {
+		uint16_t *header_p;
+		uint8_t *ext_p;
+		size_t padding = 0;
+
+		if ((size + 1) % 4 != 0) {
+			padding = 4 - (size + 1) % 4;
+		}
+
+		rtp_set_extbit(packet, 0x1);
+		msgpullup(packet, msgdsize(packet) + size + 5 + padding);
+
+		header_p = (uint16_t *) (packet->b_wptr);
+		*header_p++ = htons(0xBEDE); // Set the defining profile
+		*header_p++ = htons((uint16_t) ((size + 1 + padding) / 4));
+
+		ext_p = (uint8_t *)header_p;
+		*ext_p++ = (uint8_t) ((id << 4) | (size - 1));
+		memcpy(ext_p, data, size);
+
+		if (padding) {
+			ext_p += size;
+			memset(ext_p, 0, padding);
+		}
+
+		packet->b_wptr += size + 5 + padding;
+	} else {
+		uint8_t *ext_header, *tmp;
+		uint16_t profile;
+		size_t ext_header_size, used_size;
+		size_t used_padding = 0, padding = 0;
+
+		ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+
+		if (profile != 0xBEDE) {
+			ortp_warning("Cannot add extension, profile is not set to 1-byte header");
+			return;
+		}
+
+		// Use existing padding if there is since we place it at the end of the extension header
+		tmp = ext_header;
+		while (tmp < ext_header + ext_header_size && *tmp != 0) {
+			tmp += (size_t)(*tmp & 0xF) + 1 + 1; // Length is a 4-bit number minus 1
+		}
+
+		used_size = tmp - ext_header;
+		used_padding = ext_header_size - used_size;
+
+		if ((used_size + size + 1) % 4 != 0) {
+			padding = 4 - (used_size + size + 1) % 4;
+		}
+
+		if (size + 1 + padding > used_padding) {
+			uint16_t *ext_header_size_p;
+
+			msgpullup(packet, msgdsize(packet) + size + 1 + padding - used_padding);
+			packet->b_wptr += size + 1 + padding - used_padding;
+
+			// msgpullup invalidates packet pointer, so we get them back again
+			ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+			tmp = ext_header + used_size;
+
+			used_size += size + 1;
+			ext_header_size_p = (uint16_t *) (ext_header - 2);
+			*ext_header_size_p = htons((uint16_t) ((used_size + padding) / 4));
+		}
+
+		*tmp++ = (uint8_t) ((id << 4) | (size - 1));
+		memcpy(tmp, data, size);
+
+		if (padding) {
+			tmp += size;
+			memset(tmp, 0, padding);
+		}
+	}
+}
+
+/**
+ * Obtain the desired extension in the extension header
+ * @param packet the RTP packet.
+ * @param id the identifier of the wanted extension
+ * @param data pointer that will be set to the beginning of the extension data.
+ * @return the size of the wanted extension in bytes, -1 if there is no extension header or the wanted extension was not found.
+**/
+ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
+	uint8_t *ext_header, *tmp;
+	uint16_t profile;
+	size_t ext_header_size, size;
+
+	if (!rtp_get_extbit(packet)) return -1;
+
+	ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+
+	if (ext_header_size == (size_t)-1) {
+		ortp_warning("Extension header is empty!");
+		return -1;
+	}
+
+	// If the profile is set to 0xBEDE then all extensions are represented by a 1-byte header
+	// If not then by a 2-byte header (cf RFC 8285)
+	tmp = ext_header;
+	if (profile == 0xBEDE) {
+		while (tmp < ext_header + ext_header_size) {
+			if ((int)*tmp == RTP_EXTENSION_MAX) break;
+
+			if ((int)*tmp == RTP_EXTENSION_NONE) {
+				tmp += 1; // Padding
+			} else {
+				size = (size_t)(*tmp & 0xF) + 1; // Length is a 4-bit number minus 1
+
+				if (id == (int)(*tmp >> 4)) {
+					if (data) *data = tmp + 1;
+					return size;
+				}
+
+				tmp += size + 1;
+			}
+		}
+	} else {
+		while (tmp < ext_header + ext_header_size) {
+			if ((int)*tmp == RTP_EXTENSION_NONE) {
+				tmp += 1;
+			} else {
+				size = (size_t)(*(tmp + 1));
+
+				if (id == (int)*tmp) {
+					if (data) *data = tmp + 2;
+					return size;
+				}
+
+				tmp += size + 2;
+			}
+		}
+	}
+
+	return -1;
+}
+
 
 /**
  *  Gets last time a valid RTP or RTCP packet was received.
@@ -2194,6 +2371,11 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
 	}
+
+	if (t->session && t->session->bundle && !t->session->is_primary) {
+		return rtp_bundle_send_through_primary(t->session->bundle, m->is_rtp, msg, flags, to, tolen);
+	}
+
 	prev_ret=msgdsize(msg);
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
@@ -2275,11 +2457,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTra
 		}
 	}
 
-	if (m->endpoint != NULL) {
-		ret = m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
-	} else {
-		ret = rtp_session_sendto(t->session, m->is_rtp, msg, flags, to, tolen);
-	}
+	ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
 	update_sent_bytes(&t->session->rtp.gs, ret);
 	return ret;
 }
@@ -2347,23 +2525,23 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
 	}
 
-	if (m->endpoint!=NULL){
-		ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
+	if (m->endpoint != NULL) {
+		ret = m->endpoint->t_recvfrom(m->endpoint, msg, flags, from, fromlen);
 		if (ret > 0) {
 			/*store recv addr for use by modifiers*/
 			if (from && fromlen) {
-				memcpy(&msg->net_addr,from,*fromlen);
+				memcpy(&msg->net_addr, from, *fromlen);
 				msg->net_addrlen = *fromlen;
 			}
 		}
-	}else{
-		ret=rtp_session_recvfrom(t->session,m->is_rtp,msg,flags,from,fromlen);
+	} else {
+		ret = rtp_session_recvfrom(t->session, m->is_rtp, msg, flags, from, fromlen);
 	}
 
 	if (ret <= 0){
 		return ret;
 	}
-	msg->b_wptr+=ret;
+	msg->b_wptr += ret;
 
 	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
 	if (t->session->rtcp_mux && m->is_rtp){
@@ -2376,19 +2554,36 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		}
 	}
 
-	if (received_via_rtcp_mux){
-		if (m->other_meta_rtp){
+	if (received_via_rtcp_mux) {
+		if (m->other_meta_rtp) {
 			_meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
+
+			if (t->session && t->session->bundle && t->session->is_primary) {
+				if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+					return 0;
+				}
+			}
+
 			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, received_via_rtcp_mux);
 			ret = 0; /*since we directly inject in the RtpSession this RTCP packet, we shall return 0 and pass a duplicate of the message,
 			because rtp_session_rtp_recv() is going to free it.*/
-		}else{
+		} else {
 			ortp_error("RTCP packet received via rtcp-mux but RTCP transport is not set !");
 		}
-	}else ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
+	} else {
+		ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
+
+		if (t->session && t->session->bundle && t->session->is_primary) {
+			if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+				return 0;
+			}
+
+			ret = msgdsize(msg);
+		}
+	}
 
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
-	msg->b_wptr-= ret;
+	msg->b_wptr -= ret;
 
 	return ret;
 }

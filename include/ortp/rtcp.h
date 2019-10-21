@@ -161,7 +161,8 @@ typedef enum {
 	RTCP_SDES_TOOL = 6,
 	RTCP_SDES_NOTE = 7,
 	RTCP_SDES_PRIV = 8,
-	RTCP_SDES_MAX = 9
+	RTCP_SDES_MID = 10, /* TODO: change this value when his identifier will be assigned */
+	RTCP_SDES_MAX = 11
 } rtcp_sdes_type_t;
 
 typedef struct sdes_chunk
@@ -414,6 +415,8 @@ ORTP_PUBLIC void rtp_session_rtcp_process_recv(struct _RtpSession *s);
 
 /* packet parsing api */
 
+/*return the size of the rtcp packet*/
+ORTP_PUBLIC size_t rtcp_get_size(const mblk_t *m);
 /*in case of coumpound packet, set read pointer of m to the beginning of the next RTCP
 packet */
 ORTP_PUBLIC bool_t rtcp_next_packet(mblk_t *m);

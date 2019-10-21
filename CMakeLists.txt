@@ -128,6 +128,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp-config.h.cmake ${CMAKE_CURRENT_B
 set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/ortp-config.h PROPERTIES GENERATED ON)
 add_definitions(-DHAVE_CONFIG_H)
 
+# Enable stdint.h limit macros on C++ files. (Windows only.)
+if(MSVC)
+	add_definitions("-D__STDC_LIMIT_MACROS")
+endif()
+
 set(STRICT_OPTIONS_CPP )
 set(STRICT_OPTIONS_C )
 if(MSVC)

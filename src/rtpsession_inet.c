@@ -1008,18 +1008,24 @@ void rtp_session_flush_sockets(RtpSession *session){
 
 
 #ifdef USE_SENDMSG
-#define MAX_IOV 30
+#define MAX_IOV 64
 static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
 	int error;
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
+
 	for(iovlen=0; iovlen<MAX_IOV && m!=NULL; m=m->b_cont,iovlen++){
 		iov[iovlen].iov_base=m->b_rptr;
 		iov[iovlen].iov_len=m->b_wptr-m->b_rptr;
 	}
 	if (iovlen==MAX_IOV){
-		ortp_error("Too long msgb, didn't fit into iov, end discarded.");
+		int count = 0;
+		while (m!=NULL){
+			count++;
+			m=m->b_cont;
+		}
+		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_IOV+count);
 	}
 	msg.msg_name=(void*)rem_addr;
 	msg.msg_namelen=addr_len;
@@ -1750,30 +1756,38 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 
 	while (1)
 	{
+		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
-		ortp_mutex_lock(&session->rtp.winthread_lock);
-		if (!session->rtp.is_win_thread_running) {
-			int errnum;
-			
-			session->rtp.is_win_thread_running = TRUE;
-			if ((errnum = ortp_thread_create(&session->rtp.win_t, NULL, rtp_session_recvfrom_async, (void*)session)) != 0) {
-				ortp_warning("Error creating rtp recv async thread for windows: error [%i]", errnum);
-				session->rtp.is_win_thread_running = FALSE;
-				return -1;
-			}
-		}
-		ortp_mutex_unlock(&session->rtp.winthread_lock);
-#else
-		rtp_session_recvfrom_async((void*)session);
-#endif
+			ortp_mutex_lock(&session->rtp.winthread_lock);
+			if (!session->rtp.is_win_thread_running) {
+				int errnum;
 
-#if	defined(_WIN32) || defined(_WIN32_WCE)
-		ortp_mutex_lock(&session->rtp.winrq_lock);
+				session->rtp.is_win_thread_running = TRUE;
+				if ((errnum = ortp_thread_create(&session->rtp.win_t, NULL, rtp_session_recvfrom_async, (void*)session)) != 0) {
+					ortp_warning("Error creating rtp recv async thread for windows: error [%i]", errnum);
+					session->rtp.is_win_thread_running = FALSE;
+					return -1;
+				}
+			}
+			ortp_mutex_unlock(&session->rtp.winthread_lock);
+#else
+			rtp_session_recvfrom_async((void*)session);
 #endif
-		mp = getq(&session->rtp.winrq);
+		}
+
+		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
-		ortp_mutex_unlock(&session->rtp.winrq_lock);
+			ortp_mutex_lock(&session->rtp.winrq_lock);
 #endif
+			mp = getq(&session->rtp.winrq);
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+			ortp_mutex_unlock(&session->rtp.winrq_lock);
+#endif
+		} else {
+			ortp_mutex_lock(&session->bundleq_lock);
+			mp = getq(&session->bundleq);
+			ortp_mutex_unlock(&session->bundleq_lock);
+		}
 		
 		if (mp != NULL) {
 			mp->reserved1 = user_ts;
@@ -1795,7 +1809,12 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 
 	if (session->rtcp.gs.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no RTCP sockets for the moment*/
 
-
+	/* In bundle mode, rtcp-mux is used. There is nothing that needs to be read on the rtcp socket.
+	 * The RTCP packets are received on the RTP socket, and dispatched to the "bundleq" of their corresponding session.
+	 * These RTCP packets queued on the bundleq will be processed by rtp_session_rtp_recv(), which has the ability to
+	 * manage rtcp-mux.
+	 */
+	if (session->bundle) return 0;
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
@@ -1852,7 +1871,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	return error;
 }
 
-int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {
+int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {
 	struct sockaddr_storage * rem_addr = NULL;
 	socklen_t *rem_addrlen;
 	const char* socket_type;
@@ -1862,6 +1881,10 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 	if (!rtp_session_get_symmetric_rtp(session))
 		return -1; /*nothing to try if not rtp symetric*/
 
+	if (session->bundle && !session->is_primary){
+		/* A session part of a bundle not owning the transport layer shall not update remote address.*/
+		return -1;
+	}
 	if (is_rtp) {
 		rem_addr = &session->rtp.gs.rem_addr;
 		rem_addrlen = &session->rtp.gs.rem_addrlen;
