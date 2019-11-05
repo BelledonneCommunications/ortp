@@ -13,11 +13,13 @@ For additional information, please [visit oRTP's homepage on **linphone.org**](h
 License
 -------
 
-<Copyright © Belledonne Communications?>
+Copyright © Belledonne Communications
 
-Liblinphone is dual licensed, available either
-- under a GNU GPLv3 license for free (see LICENSE.txt file for details)
-- under a proprietary license, for closed source projects. Contact sales@belledonne-communications.com for costs and other service information.
+oRTP is dual licensed, and is available either :
+
+ - under a [GNU/GPLv3 license](https://www.gnu.org/licenses/gpl-3.0.en.html), for free (open source). Please make sure that you understand and agree with the terms of this license before using it (see LICENSE.txt file for details).
+
+ - under a proprietary license, for a fee, to be used in closed source applications. Contact [Belledonne Communications](https://www.linphone.org/contact) for any question about costs and services.
 
 Prior to version 1.0.0, oRTP was licensed under LGPLv2. Due to inclusion of new code licensed under GPLv2, oRTP has become GPLv2,
 and later in version 1.1.0, GPLv3.
