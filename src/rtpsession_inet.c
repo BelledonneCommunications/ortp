@@ -1821,6 +1821,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 		if (error > 0)
 		{
 			mp->b_wptr += error;
+			if (mp->timestamp.tv_sec == 0) ortp_gettimeofday(&mp->timestamp, NULL);
 			rtp_session_process_incoming(session, mp, FALSE, session->rtp.rcv_last_app_ts, FALSE);
 		}
 		else
