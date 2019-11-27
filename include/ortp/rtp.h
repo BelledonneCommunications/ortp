@@ -57,8 +57,12 @@ typedef struct rtp_header
 	uint32_t csrc[16];
 } rtp_header_t;
 
-
-
+/* MAX is 15 because we use 1-byte header */
+typedef enum {
+	RTP_EXTENSION_NONE = 0,
+	RTP_EXTENSION_MID = 1,
+	RTP_EXTENSION_MAX = 15
+} rtp_extension_type_t;
 
 typedef struct rtp_stats
 {

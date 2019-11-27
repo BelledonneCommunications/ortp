@@ -459,6 +459,12 @@ struct _RtpSession
 	bool_t is_spliced;
 	bool_t congestion_detector_enabled;
 	bool_t video_bandwidth_estimator_enabled;
+
+	/* bundle mode */
+	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
+	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
+	queue_t bundleq;
+	ortp_mutex_t bundleq_lock;
 };
 
 /**
@@ -750,6 +756,8 @@ ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
 
 ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
+ORTP_PUBLIC int meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
+
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen);
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
@@ -777,6 +785,25 @@ ORTP_PUBLIC int rtp_session_splice(RtpSession *session, RtpSession *to_session);
 ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session);
 
 ORTP_PUBLIC bool_t ortp_stream_is_ipv6(OrtpStream *os);
+
+/* RtpBundle api */
+typedef struct _RtpBundle RtpBundle;
+
+ORTP_PUBLIC RtpBundle* rtp_bundle_new(void);
+ORTP_PUBLIC void rtp_bundle_delete(RtpBundle *bundle);
+
+ORTP_PUBLIC void rtp_bundle_add_session(RtpBundle *bundle, const char *mid, RtpSession *session);
+ORTP_PUBLIC void rtp_bundle_remove_session(RtpBundle *bundle, const char *mid);
+ORTP_PUBLIC void rtp_bundle_clear(RtpBundle *bundle);
+
+ORTP_PUBLIC RtpSession* rtp_bundle_get_primary_session(RtpBundle *bundle);
+ORTP_PUBLIC void rtp_bundle_set_primary_session(RtpBundle *bundle, const char * mid);
+
+ORTP_PUBLIC char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session);
+
+ORTP_PUBLIC int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
+/* Returns FALSE if the rtp packet or at least one of the RTCP packet (compound) was for the primary */
+ORTP_PUBLIC bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, bool_t received_by_rtcp_mux);
 
 #ifdef __cplusplus
 }

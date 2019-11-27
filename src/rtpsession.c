@@ -317,6 +317,9 @@ rtp_session_init (RtpSession * session, int mode)
 	ortp_mutex_init(&session->rtp.winthread_lock, NULL);
 	ortp_mutex_init(&session->rtp.winrq_lock, NULL);
 #endif
+
+	session->bundle = NULL;
+	session->is_primary = FALSE;
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -878,8 +881,21 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 	mp=allocb(msglen,BPRI_MED);
 	rtp=(rtp_header_t*)mp->b_rptr;
 	rtp_header_init_from_session(rtp,session);
-	/*copy the payload, if any */
 	mp->b_wptr+=header_size;
+
+	/*add the mid from the bundle if any*/
+	if (session->bundle) {
+		if (session->rtp.snd_seq < 50) {
+			char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+			if (mid != NULL) {
+				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+				ortp_free(mid);
+			}
+		}
+	}
+
+	/*copy the payload, if any */
 	if (payload_size){
 		memcpy(mp->b_wptr,payload,payload_size);
 		mp->b_wptr+=payload_size;
@@ -928,6 +944,19 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
 	rtp=(rtp_header_t*)mp->b_rptr;
 	rtp_header_init_from_session(rtp,session);
 	mp->b_wptr+=header_size;
+
+	/*add the mid from the bundle if any*/
+	if (session->bundle) {
+		if (session->rtp.snd_seq < 50) {
+			char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+			if (mid != NULL) {
+				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+				ortp_free(mid);
+			}
+		}
+	}
+
 	/* create a mblk_t around the user supplied payload buffer */
 	mpayload=esballoc(payload,payload_size,BPRI_MED,freefn);
 	mpayload->b_wptr+=payload_size;
@@ -2177,9 +2206,9 @@ ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data)
 	tmp = ext_header;
 	if (profile == 0xBEDE) {
 		while (tmp < ext_header + ext_header_size) {
-			if ((int)*tmp == 15) break;
+			if ((int)*tmp == RTP_EXTENSION_MAX) break;
 
-			if ((int)*tmp == 0) {
+			if ((int)*tmp == RTP_EXTENSION_NONE) {
 				tmp += 1; // Padding
 			} else {
 				size = (size_t)(*tmp & 0xF) + 1; // Length is a 4-bit number minus 1
@@ -2194,9 +2223,7 @@ ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data)
 		}
 	} else {
 		while (tmp < ext_header + ext_header_size) {
-			if ((int)*tmp == 15) break;
-
-			if ((int)*tmp == 0) {
+			if ((int)*tmp == RTP_EXTENSION_NONE) {
 				tmp += 1;
 			} else {
 				size = (size_t)(*(tmp + 1));
@@ -2326,9 +2353,13 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 	m->has_set_session=TRUE;
 }
 
-static int _meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen){
+int meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen){
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	int ret;
+
+	if (t->session && t->session->bundle && !t->session->is_primary) {
+		return rtp_bundle_send_through_primary(t->session->bundle, m->is_rtp, msg, flags, to, tolen);
+	}
 
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
@@ -2362,11 +2393,11 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	if (!m->is_rtp && t->session->rtcp_mux){ /*if this meta transport is handling RTCP and using rtcp-mux, then we should expedite the packet
 		through the rtp endpoint.*/
 		if (m->other_meta_rtp){
-			ret = _meta_rtp_transport_send_through_endpoint(m->other_meta_rtp, msg, flags, to, tolen);
+			ret = meta_rtp_transport_send_through_endpoint(m->other_meta_rtp, msg, flags, to, tolen);
 		}else{
 			ortp_error("meta_rtp_transport_sendto(): rtcp-mux enabled but no RTP meta transport is specified !");
 		}
-	} else ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
+	} else ret = meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
 	return ret;
 }
 
@@ -2428,11 +2459,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTra
 		}
 	}
 
-	if (m->endpoint != NULL) {
-		ret = m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
-	} else {
-		ret = rtp_session_sendto(t->session, m->is_rtp, msg, flags, to, tolen);
-	}
+	ret = meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
 	update_sent_bytes(&t->session->rtp.gs, ret);
 	return ret;
 }
@@ -2487,6 +2514,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	int ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem;
+	bool_t receive_msg = TRUE;
 	bool_t received_via_rtcp_mux = FALSE;
 
 	if (!m->has_set_session){
@@ -2500,23 +2528,36 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
 	}
 
-	if (m->endpoint!=NULL){
-		ret=m->endpoint->t_recvfrom(m->endpoint,msg,flags,from,fromlen);
-		if (ret > 0) {
-			/*store recv addr for use by modifiers*/
-			if (from && fromlen) {
-				memcpy(&msg->net_addr,from,*fromlen);
-				msg->net_addrlen = *fromlen;
-			}
+	if (t->session && t->session->bundle && !t->session->is_primary) {
+		ortp_mutex_lock(&t->session->bundleq_lock);
+		if (peekq(&t->session->bundleq) != NULL) {
+			freemsg(msg);
+			msg = getq(&t->session->bundleq);
+			ret = msgdsize(msg);
+			receive_msg = FALSE;
 		}
-	}else{
-		ret=rtp_session_recvfrom(t->session,m->is_rtp,msg,flags,from,fromlen);
+		ortp_mutex_unlock(&t->session->bundleq_lock);
 	}
 
-	if (ret <= 0){
-		return ret;
+	if (receive_msg) {
+		if (m->endpoint != NULL) {
+			ret = m->endpoint->t_recvfrom(m->endpoint, msg, flags, from, fromlen);
+			if (ret > 0) {
+				/*store recv addr for use by modifiers*/
+				if (from && fromlen) {
+					memcpy(&msg->net_addr, from, *fromlen);
+					msg->net_addrlen = *fromlen;
+				}
+			}
+		} else {
+			ret = rtp_session_recvfrom(t->session, m->is_rtp, msg, flags, from, fromlen);
+		}
+
+		if (ret <= 0){
+			return ret;
+		}
+		msg->b_wptr += ret;
 	}
-	msg->b_wptr+=ret;
 
 	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
 	if (t->session->rtcp_mux && m->is_rtp){
@@ -2529,19 +2570,27 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		}
 	}
 
-	if (received_via_rtcp_mux){
-		if (m->other_meta_rtp){
+	if (t->session && t->session->bundle && t->session->is_primary) {
+		if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+			return 0;
+		}
+	}
+
+	if (received_via_rtcp_mux) {
+		if (m->other_meta_rtp) {
 			_meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
 			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, received_via_rtcp_mux);
 			ret = 0; /*since we directly inject in the RtpSession this RTCP packet, we shall return 0 and pass a duplicate of the message,
 			because rtp_session_rtp_recv() is going to free it.*/
-		}else{
+		} else {
 			ortp_error("RTCP packet received via rtcp-mux but RTCP transport is not set !");
 		}
-	}else ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
+	} else {
+		ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
+	}
 
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv
-	msg->b_wptr-= ret;
+	msg->b_wptr -= ret;
 
 	return ret;
 }

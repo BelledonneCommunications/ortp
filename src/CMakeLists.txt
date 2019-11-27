@@ -63,7 +63,9 @@ set(ORTP_SOURCE_FILES_C
 	videobandwidthestimator.c
 	utils.c
 )
-set(ORTP_SOURCE_FILES_CXX )
+set(ORTP_SOURCE_FILES_CXX
+	rtpbundle.cc
+)
 
 add_definitions(
 	-DBCTBX_LOG_DOMAIN="ortp"
