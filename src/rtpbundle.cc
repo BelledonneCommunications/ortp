@@ -73,6 +73,10 @@ extern "C" bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *
 
 // C++ - Implementation
 
+RtpBundleCxx::~RtpBundleCxx() {
+	clear();
+}
+
 void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 	sessions.emplace(mid, session);
 
@@ -177,6 +181,8 @@ static void checkForSessionSdesCallback(void *userData, uint32_t ssrc, rtcp_sdes
 						 "correspond to any sessions",
 						 bundle, value.c_str());
 		}
+
+		bundle->sdesParseMid = value;
 	}
 }
 
@@ -216,7 +222,15 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 		} else {
 			if (rtcp_is_SDES(m)) {
 				rtcp_sdes_parse(m, checkForSessionSdesCallback, this);
+
+				if (sdesParseMid.empty()) {
+					return NULL;
+				} else {
+					mid = sdesParseMid;
+					sdesParseMid = "";
+				}
 			}
+			return NULL;
 		}
 	} else {
 		mid = it->second;

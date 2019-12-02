@@ -2531,7 +2531,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	if (t->session && t->session->bundle && !t->session->is_primary) {
 		ortp_mutex_lock(&t->session->bundleq_lock);
 		if (peekq(&t->session->bundleq) != NULL) {
-			freemsg(msg);
+			//freeb(msg);
 			msg = getq(&t->session->bundleq);
 			ret = msgdsize(msg);
 			receive_msg = FALSE;
