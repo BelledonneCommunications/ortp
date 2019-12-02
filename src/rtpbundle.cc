@@ -191,6 +191,11 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 
 	std::string mid;
 	uint32_t ssrc = rtp_get_ssrc(m);
+	rtp_header_t * rtp=(rtp_header_t*)m->b_rptr;
+	if (isRtp && rtp->version != 2){
+		/* STUN packet*/
+		return primary;
+	}
 
 	auto it = ssrcToMid.find(ssrc);
 	if (it == ssrcToMid.end()) {
@@ -287,6 +292,7 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 			putq(&session->bundleq, tmp);
 			ortp_mutex_unlock(&session->bundleq_lock);
 		} else {
+			ortp_warning("No session for this RTCP packet.");
 			freeb(tmp);
 		}
 
