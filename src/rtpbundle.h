@@ -38,8 +38,12 @@ class RtpBundleCxx {
 	RtpBundleCxx(const RtpBundleCxx &) = delete;
 	RtpBundleCxx(RtpBundleCxx &&) = delete;
 
+	int getMidId() const;
+	void setMidId(int id);
+
 	void addSession(const std::string &mid, RtpSession *session);
 	void removeSession(const std::string &mid);
+	void removeSession(RtpSession *session);
 	void clear();
 
 	RtpSession *getPrimarySession() const;
@@ -55,14 +59,16 @@ class RtpBundleCxx {
   private:
 	RtpSession *checkForSession(mblk_t *m, bool isRtp);
 
-	bool dispatchMessage(mblk_t *m, bool isRtp);
+	bool dispatchRtpMessage(mblk_t *m);
 	bool dispatchRtcpMessage(mblk_t *m);
 
 	RtpSession *primary = NULL;
 	std::map<uint32_t, std::string> ssrcToMid;
 	std::map<std::string, RtpSession *> sessions;
 	std::mutex ssrcToMidMutex;
+
 	std::string sdesParseMid = "";
+	int midId = -1;
 };
 
 #endif /* RTPBUNDLE_H */

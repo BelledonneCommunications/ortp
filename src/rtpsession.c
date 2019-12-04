@@ -2530,10 +2530,16 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 
 	if (t->session && t->session->bundle && !t->session->is_primary) {
 		ortp_mutex_lock(&t->session->bundleq_lock);
-		if (peekq(&t->session->bundleq) != NULL) {
-			//freeb(msg);
-			msg = getq(&t->session->bundleq);
-			ret = msgdsize(msg);
+		if (!qempty(&t->session->bundleq)) {
+			mblk_t *tmp = getq(&t->session->bundleq);
+
+			// TODO: Fix this when possible
+			int len = tmp->b_wptr - tmp->b_rptr;
+			memcpy(msg->b_rptr, tmp->b_rptr, len);
+			msg->b_wptr += len;
+			ret = len;
+
+			freemsg(tmp);
 			receive_msg = FALSE;
 		}
 		ortp_mutex_unlock(&t->session->bundleq_lock);
@@ -2574,6 +2580,8 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
 			return 0;
 		}
+
+		ret = msgdsize(msg);
 	}
 
 	if (received_via_rtcp_mux) {
