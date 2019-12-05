@@ -2529,20 +2529,12 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	}
 
 	if (t->session && t->session->bundle && !t->session->is_primary) {
-		ortp_mutex_lock(&t->session->bundleq_lock);
-		if (!qempty(&t->session->bundleq)) {
-			mblk_t *tmp = getq(&t->session->bundleq);
-
-			// TODO: Fix this when possible
-			int len = tmp->b_wptr - tmp->b_rptr;
-			memcpy(msg->b_rptr, tmp->b_rptr, len);
-			msg->b_wptr += len;
-			ret = len;
-
-			freemsg(tmp);
+		// If the msg contains data, then it is not a buffer allocated for reception
+		// but it is a message that has been put in the session bundle queue
+		// so we use it directly and we do not call t_recvfrom
+		if (msgdsize(msg) > 0) {
 			receive_msg = FALSE;
 		}
-		ortp_mutex_unlock(&t->session->bundleq_lock);
 	}
 
 	if (receive_msg) {

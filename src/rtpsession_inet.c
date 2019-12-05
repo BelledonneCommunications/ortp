@@ -1689,13 +1689,27 @@ void* rtp_session_recvfrom_async(void* obj) {
 #endif
 			bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 
-			mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
-
 			if (sock_connected){
+				mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, NULL, NULL);
 			}else if (rtp_session_using_transport(session, rtp)) {
+				if (session->bundle && !session->is_primary) {
+					ortp_mutex_lock(&session->bundleq_lock);
+					if (!qempty(&session->bundleq)) {
+						mp = getq(&session->bundleq);
+					} else {
+						mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+					}
+					ortp_mutex_unlock(&session->bundleq_lock);
+				} else {
+					mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+				}
+
 				error = (session->rtp.gs.tr->t_recvfrom)(session->rtp.gs.tr, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 			} else {
+				mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 			}
 			
@@ -1800,19 +1814,36 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
 
-		mp = msgb_allocator_alloc(&session->rtcp.gs.allocator, session->recv_buf_size);
-		mp->reserved1 = session->rtp.rcv_last_app_ts;
 
 		if (sock_connected){
+			mp = msgb_allocator_alloc(&session->rtcp.gs.allocator, session->recv_buf_size);
+			mp->reserved1 = session->rtp.rcv_last_app_ts;
+
 			error=rtp_session_recvfrom(session, FALSE, mp, 0, NULL, NULL);
 		}else{
 			addrlen=sizeof (remaddr);
 
 			if (rtp_session_using_transport(session, rtcp)){
+				if (session->bundle && !session->is_primary) {
+					ortp_mutex_lock(&session->bundleq_lock);
+					if (!qempty(&session->bundleq)) {
+						mp = getq(&session->bundleq);
+					} else {
+						mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+					}
+					ortp_mutex_unlock(&session->bundleq_lock);
+				} else {
+					mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+				}
+				mp->reserved1 = session->rtp.rcv_last_app_ts;
+
 				error=(session->rtcp.gs.tr->t_recvfrom)(session->rtcp.gs.tr, mp, 0,
 					(struct sockaddr *) &remaddr,
 					&addrlen);
 			}else{
+				mp = msgb_allocator_alloc(&session->rtcp.gs.allocator, session->recv_buf_size);
+				mp->reserved1 = session->rtp.rcv_last_app_ts;
+
 				error=rtp_session_recvfrom(session, FALSE, mp, 0,
 					(struct sockaddr *) &remaddr,
 					&addrlen);
