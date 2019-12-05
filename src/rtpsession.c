@@ -2530,7 +2530,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		// If the msg contains data, then it is not a buffer allocated for reception
 		// but it is a message that has been put in the session bundle queue
 		// so we use it directly and we do not call t_recvfrom
-		if (msgdsize(msg) > 0) {
+		if ((ret = msgdsize(msg)) > 0) {
 			receive_msg = FALSE;
 		}
 	}
