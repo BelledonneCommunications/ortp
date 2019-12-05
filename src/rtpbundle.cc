@@ -354,7 +354,11 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 
 		RtpSession *session = checkForSession(tmp, false);
 		if (session == primary) {
-			primarymsg = primarymsg ? concatb(primarymsg, tmp) : tmp;
+			if (primarymsg) {
+				concatb(primarymsg, tmp);
+			} else {
+				primarymsg = tmp;
+			}
 		} else if (session != NULL) {
 			ortp_mutex_lock(&session->bundleq_lock);
 			putq(&session->bundleq, tmp);
