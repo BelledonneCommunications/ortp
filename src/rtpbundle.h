@@ -31,6 +31,7 @@ static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, cons
 
 class RtpBundleCxx {
 	friend void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
+
   public:
 	RtpBundleCxx() = default;
 	~RtpBundleCxx();

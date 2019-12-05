@@ -796,7 +796,8 @@ ORTP_PUBLIC int rtp_bundle_get_mid_extension_id(RtpBundle *bundle);
 ORTP_PUBLIC void rtp_bundle_set_mid_extension_id(RtpBundle *bundle, int id);
 
 ORTP_PUBLIC void rtp_bundle_add_session(RtpBundle *bundle, const char *mid, RtpSession *session);
-ORTP_PUBLIC void rtp_bundle_remove_session(RtpBundle *bundle, const char *mid);
+ORTP_PUBLIC void rtp_bundle_remove_session_by_id(RtpBundle *bundle, const char *mid);
+ORTP_PUBLIC void rtp_bundle_remove_session(RtpBundle *bundle, RtpSession *session);
 ORTP_PUBLIC void rtp_bundle_clear(RtpBundle *bundle);
 
 ORTP_PUBLIC RtpSession* rtp_bundle_get_primary_session(RtpBundle *bundle);

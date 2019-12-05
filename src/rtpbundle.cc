@@ -45,8 +45,12 @@ extern "C" void rtp_bundle_add_session(RtpBundle *bundle, const char *mid, RtpSe
 	((RtpBundleCxx *)bundle)->addSession(mid, session);
 }
 
-extern "C" void rtp_bundle_remove_session(RtpBundle *bundle, const char *mid) {
+extern "C" void rtp_bundle_remove_session_by_id(RtpBundle *bundle, const char *mid) {
 	((RtpBundleCxx *)bundle)->removeSession(mid);
+}
+
+extern "C" void rtp_bundle_remove_session(RtpBundle *bundle, RtpSession *session) {
+	((RtpBundleCxx *)bundle)->removeSession(session);
 }
 
 extern "C" void rtp_bundle_clear(RtpBundle *bundle) {
@@ -115,11 +119,21 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 			primary = NULL;
 		}
 
+		ssrcToMidMutex.lock();
+		for (auto it = ssrcToMid.begin(); it != ssrcToMid.end();) {
+			if (it->second == mid) {
+				ssrcToMid.erase(it++);
+			} else {
+				it++;
+			}
+		}
+		ssrcToMidMutex.unlock();
+
+		sessions.erase(mid);
+
 		session->second->bundle = NULL;
 		flushq(&session->second->bundleq, FLUSHALL);
 		ortp_mutex_destroy(&session->second->bundleq_lock);
-
-		sessions.erase(mid);
 	}
 }
 
