@@ -61,11 +61,12 @@ extern "C" void rtp_bundle_set_primary_session(RtpBundle *bundle, const char *mi
 	((RtpBundleCxx *)bundle)->setPrimarySession(mid);
 }
 
-extern "C" char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
-	const std::string mid = ((RtpBundleCxx *)bundle)->getSessionMid(session);
-	if (!mid.empty()) {
-		return ortp_strdup(mid.c_str());
-	} else {
+extern "C" const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
+	try {
+		auto mid = ((RtpBundleCxx *)bundle)->getSessionMid(session);
+		return mid.c_str();
+	} catch (std::string const &e) {
+		ortp_warning("Rtp Bundle [%p]: cannot get mid for session (%p), must be in the bundle!", bundle, session);
 		return NULL;
 	}
 }
@@ -162,12 +163,16 @@ void RtpBundleCxx::setPrimarySession(const std::string &mid) {
 	}
 }
 
-const std::string RtpBundleCxx::getSessionMid(RtpSession *session) const {
+const std::string &RtpBundleCxx::getSessionMid(RtpSession *session) const {
 	auto it =
 		std::find_if(sessions.begin(), sessions.end(),
 					 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
-	return it != sessions.end() ? it->first : std::string();
+	if (it != sessions.end()) {
+		return it->first;
+	}
+
+	throw std::string("the session must be in the bundle!");
 }
 
 int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const struct sockaddr *destaddr,

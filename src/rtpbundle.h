@@ -49,7 +49,7 @@ class RtpBundleCxx {
 	RtpSession *getPrimarySession() const;
 	void setPrimarySession(const std::string &mid);
 
-	const std::string getSessionMid(RtpSession *session) const;
+	const std::string &getSessionMid(RtpSession *session) const;
 
 	int sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) const;
 	bool dispatch(bool isRtp, mblk_t *m, bool receivedByRtcpMux);

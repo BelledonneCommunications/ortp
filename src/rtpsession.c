@@ -886,11 +886,10 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 	/*add the mid from the bundle if any*/
 	if (session->bundle) {
 		if (session->rtp.snd_seq < 50) {
-			char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+			const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 			if (mid != NULL) {
 				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-				ortp_free(mid);
 			}
 		}
 	}
@@ -948,11 +947,10 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
 	/*add the mid from the bundle if any*/
 	if (session->bundle) {
 		if (session->rtp.snd_seq < 50) {
-			char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+			const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 			if (mid != NULL) {
 				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-				ortp_free(mid);
 			}
 		}
 	}

@@ -802,7 +802,7 @@ ORTP_PUBLIC void rtp_bundle_clear(RtpBundle *bundle);
 ORTP_PUBLIC RtpSession* rtp_bundle_get_primary_session(RtpBundle *bundle);
 ORTP_PUBLIC void rtp_bundle_set_primary_session(RtpBundle *bundle, const char * mid);
 
-ORTP_PUBLIC char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session);
+ORTP_PUBLIC const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session);
 
 ORTP_PUBLIC int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 /* Returns FALSE if the rtp packet or at least one of the RTCP packet (compound) was for the primary */
