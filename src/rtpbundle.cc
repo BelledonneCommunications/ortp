@@ -70,7 +70,7 @@ extern "C" const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession 
 		auto & mid = ((RtpBundleCxx *)bundle)->getSessionMid(session);
 		return mid.c_str();
 	} catch (std::string const &e) {
-		ortp_warning("Rtp Bundle [%p]: cannot get mid for session (%p), must be in the bundle!", bundle, session);
+		ortp_warning("Rtp Bundle [%p]: cannot get mid for session (%p): %s", bundle, session, e.c_str());
 		return NULL;
 	}
 }
