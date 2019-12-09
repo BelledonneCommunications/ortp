@@ -1,6 +1,6 @@
 ############################################################################
 # CMakeLists.txt
-# Copyright (C) 2014  Belledonne Communications, Grenoble France
+# Copyright (C) 2010-2019  Belledonne Communications, Grenoble France
 #
 ############################################################################
 #
@@ -20,8 +20,8 @@
 #
 ############################################################################
 
-cmake_minimum_required(VERSION 3.1)
-project(oRTP VERSION 1.1.0)
+cmake_minimum_required(VERSION 3.11) # we need CMake 3.11 for defining 'package_source' target as custom target
+project(oRTP VERSION 4.3.0)
 
 
 set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})

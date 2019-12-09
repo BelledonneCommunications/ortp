@@ -7,6 +7,7 @@
 
 %define _prefix    @CMAKE_INSTALL_PREFIX@
 %define pkg_prefix @BC_PACKAGE_NAME_PREFIX@
+%define package_name @CPACK_PACKAGE_NAME@-${FULL_VERSION}
 
 # re-define some directories for older RPMBuild versions which don't. This messes up the doc/ dir
 # taken from https://fedoraproject.org/wiki/Packaging:RPMMacros?rd=Packaging/RPMMacros
@@ -17,17 +18,16 @@
 %ifarch %ix86
 %define		ortp_cpu	pentium4
 %endif
-%define build_number @PROJECT_VERSION_BUILD@
 Summary:	Real-time Transport Protocol Stack
 Name:		@CPACK_PACKAGE_NAME@
-Version:	@PROJECT_VERSION@
-Release:	%build_number%{?dist}
+Version:	${RPM_VERSION}
+Release:	${RPM_RELEASE}%{?dist}
 #to be alined with redhat which changed epoc to 1 for an unknown reason
 Epoch:		1
 License:	GPL
 Group:		Applications/Communications
 URL:		http://linphone.org/ortp/
-Source0:	%{name}-%{version}.tar.gz
+Source0:	%{package_name}.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-buildroot
 %ifarch %ix86
 BuildArch:	i686
@@ -77,7 +77,7 @@ develop programs using the oRTP library.
 %custom_debug_package
 
 %prep
-%setup -n %{name}-%{version}
+%setup -n %{package_name}
 
 %build
 %{expand:%%%cmake_name} . -DCMAKE_BUILD_TYPE=@CMAKE_BUILD_TYPE@ -DCMAKE_PREFIX_PATH:PATH=%{_prefix} @RPM_ALL_CMAKE_OPTIONS@
