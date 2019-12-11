@@ -20,7 +20,7 @@
 #
 ############################################################################
 
-cmake_minimum_required(VERSION 3.11) # we need CMake 3.11 for defining 'package_source' target as custom target
+cmake_minimum_required(VERSION 3.1)
 project(oRTP VERSION 4.3.0)
 
 
@@ -29,6 +29,7 @@ set(ORTP_MINOR_VERSION ${PROJECT_VERSION_MINOR})
 set(ORTP_MICRO_VERSION ${PROJECT_VERSION_PATCH})
 set(ORTP_VERSION ${PROJECT_VERSION})
 set(ORTP_SO_VERSION "14") # incremented on September 17, 2019
+set(ORTP_DOC_VERSION "${ORTP_VERSION_MAJOR}.${ORTP_VERSION_MINOR}")
 
 
 option(ENABLE_SHARED "Build shared library." YES)
@@ -39,6 +40,7 @@ option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increas
 option(ENABLE_STRICT "Build with strict compile options." YES)
 option(ENABLE_TESTS "Enable compilation of test programs." NO)
 option(ENABLE_DEBUG_LOGS "Turn on or off debug level logs." NO)
+option(ENABLE_PACKAGE_SOURCE "Create 'package_source' target for source archive making (CMake >= 3.11)" OFF)
 set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
@@ -192,7 +194,9 @@ set(ORTPDEPS_LIBS )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
-add_subdirectory(build)
+if (ENABLE_PACKAGE_SOURCE)
+	add_subdirectory(build)
+endif()
 
 include(CMakePackageConfigHelpers)
 
@@ -227,5 +231,5 @@ install(FILES 	"${CMAKE_CURRENT_SOURCE_DIR}/README.md"
 	"${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG.md" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt" 
 	"${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS.md" 
-	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}"
+	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_DOC_VERSION}"
 )
