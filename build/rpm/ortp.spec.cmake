@@ -99,10 +99,10 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
-%doc %{_docdir}/ortp-%{version}/README.md
-%doc %{_docdir}/ortp-%{version}/CHANGELOG.md
-%doc %{_docdir}/ortp-%{version}/LICENSE.txt
-%doc %{_docdir}/ortp-%{version}/AUTHORS.md
+%doc %{_docdir}/ortp-@ORTP_DOC_VERSION@/README.md
+%doc %{_docdir}/ortp-@ORTP_DOC_VERSION@/CHANGELOG.md
+%doc %{_docdir}/ortp-@ORTP_DOC_VERSION@/LICENSE.txt
+%doc %{_docdir}/ortp-@ORTP_DOC_VERSION@/AUTHORS.md
 %{_libdir}/*.so.*
 
 %files devel
