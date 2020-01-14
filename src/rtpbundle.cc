@@ -364,6 +364,15 @@ bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 	mblk_t *primarymsg = NULL;
 
+	// Check if the packet contains a SDES first
+	do {
+		if (rtcp_is_SDES(m)) {
+			// call checkForSession that will update the mid table
+			checkForSession(m, false);
+		}
+	} while (rtcp_next_packet(m));
+	rtcp_rewind(m);
+
 	do {
 		mblk_t *tmp = dupmsg(m);
 		tmp->b_rptr = m->b_rptr;
