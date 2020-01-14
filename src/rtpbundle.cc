@@ -67,7 +67,7 @@ extern "C" void rtp_bundle_set_primary_session(RtpBundle *bundle, const char *mi
 
 extern "C" const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
 	try {
-		auto & mid = ((RtpBundleCxx *)bundle)->getSessionMid(session);
+		auto &mid = ((RtpBundleCxx *)bundle)->getSessionMid(session);
 		return mid.c_str();
 	} catch (std::string const &e) {
 		ortp_warning("Rtp Bundle [%p]: cannot get mid for session (%p): %s", bundle, session, e.c_str());
@@ -121,7 +121,7 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 
 		ssrcToMidMutex.lock();
 		for (auto it = ssrcToMid.begin(); it != ssrcToMid.end();) {
-			if (it->second == mid) {
+			if (it->second.mid == mid) {
 				ssrcToMid.erase(it++);
 			} else {
 				it++;
@@ -205,12 +205,32 @@ int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const str
 	return meta_rtp_transport_send_through_endpoint(primaryTransport, m, flags, destaddr, destlen);
 }
 
-bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc) {
+bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp) {
 	auto session = sessions.find(mid);
 	if (session != sessions.end()) {
-		ssrcToMid[ssrc] = mid;
-		return true;
+		auto entry = ssrcToMid.find(ssrc);
+		if (entry == ssrcToMid.end()) {
+			Mid value = {mid, isRtp ? sequenceNumber : (uint16_t)0};
+			ssrcToMid[ssrc] = value;
+
+			return true;
+		} else {
+			if (isRtp) {
+				if (entry->second.sequenceNumber < sequenceNumber) {
+					Mid value = {mid, sequenceNumber};
+					ssrcToMid[ssrc] = value;
+
+					return true;
+				}
+			} else {
+				// We should normally update the mid but we chose not to for simplicity
+				// since RTCP does not have a sequence number.
+				// https://tools.ietf.org/html/draft-ietf-mmusic-sdp-bundle-negotiation-54#page-24
+				ortp_warning("Rtp Bundle [%p]: received a mid update via RTCP, ignoring it.", this);
+			}
+		}
 	}
+
 	return false;
 }
 
@@ -267,7 +287,7 @@ static void checkForSessionSdesCallback(void *userData, uint32_t ssrc, rtcp_sdes
 
 	if (t == RTCP_SDES_MID) {
 		// Update the mid map with the corresponding session
-		if (!bundle->updateMid(value, ssrc)) {
+		if (!bundle->updateMid(value, ssrc, UINT16_MAX, false)) {
 			ortp_warning("Rtp Bundle [%p]: SDES mid \"%s\" from msg does not "
 						 "correspond to any sessions",
 						 bundle, value.c_str());
@@ -286,54 +306,64 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 		return primary;
 	}
 
-	std::string mid;
 	uint32_t ssrc = getSsrcFromMessage(m, isRtp);
 
 	auto it = ssrcToMid.find(ssrc);
-	if (it == ssrcToMid.end()) {
-		if (isRtp) {
-			if (rtp_get_extbit(m)) {
-				size_t midSize;
-				uint8_t *data;
 
-				midSize = rtp_get_extension_header(m, midId != -1 ? midId : RTP_EXTENSION_MID, &data);
-				if (midSize != (size_t)-1) {
-					mid = std::string((char *)data, midSize);
+	if (isRtp) {
+		if (rtp_get_extbit(m)) {
+			size_t midSize;
+			uint8_t *data;
 
-					// Update the mid map with the corresponding session
-					if (!updateMid(mid, ssrc)) {
+			midSize = rtp_get_extension_header(m, midId != -1 ? midId : RTP_EXTENSION_MID, &data);
+			if (midSize != (size_t)-1) {
+				std::string mid = std::string((char *)data, midSize);
+
+				// Update the mid map with the corresponding session
+				if (!updateMid(mid, ssrc, rtp_get_seqnumber(m), true)) {
+					if (it == ssrcToMid.end()) {
 						ortp_warning("Rtp Bundle [%p]: mid \"%s\" from msg (%d) does not correspond to any sessions",
 									 this, mid.c_str(), (int)rtp_get_seqnumber(m));
 						return NULL;
 					}
-				} else {
+				}
+			} else {
+				if (it == ssrcToMid.end()) {
 					ortp_warning("Rtp Bundle [%p]: msg (%d) does not have a mid extension header", this,
 								 (int)rtp_get_seqnumber(m));
 					return NULL;
 				}
-			} else {
+			}
+		} else {
+			if (it == ssrcToMid.end()) {
 				ortp_warning("Rtp Bundle [%p]: msg (%d) does not have an extension header", this,
 							 (int)rtp_get_seqnumber(m));
 				return NULL;
 			}
-		} else {
-			if (rtcp_is_SDES(m)) {
-				rtcp_sdes_parse(m, checkForSessionSdesCallback, this);
-
-				if (sdesParseMid.empty()) {
-					return NULL;
-				} else {
-					mid = sdesParseMid;
-					sdesParseMid = "";
-				}
-			}
-			return NULL;
 		}
 	} else {
-		mid = it->second;
+		if (rtcp_is_SDES(m)) {
+			rtcp_sdes_parse(m, checkForSessionSdesCallback, this);
+
+			if (sdesParseMid.empty()) {
+				if (it == ssrcToMid.end()) {
+					return NULL;
+				}
+			} else {
+				sdesParseMid = "";
+			}
+		} else {
+			if (it == ssrcToMid.end()) {
+				ortp_warning("Rtp Bundle [%p]: Cannot look at mid in RTCP as it is not a SDES", this);
+				return NULL;
+			}
+		}
 	}
 
-	auto session = sessions.at(mid);
+	// Get the value again in case it has been updated
+	it = ssrcToMid.find(ssrc);
+
+	auto session = sessions.at(it->second.mid);
 	return session;
 }
 

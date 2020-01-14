@@ -55,16 +55,21 @@ class RtpBundleCxx {
 	int sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) const;
 	bool dispatch(bool isRtp, mblk_t *m, bool receivedByRtcpMux);
 
-	bool updateMid(const std::string &mid, const uint32_t ssrc);
+	bool updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp);
 
   private:
+	struct Mid {
+		std::string mid;
+		uint16_t sequenceNumber;
+	};
+
 	RtpSession *checkForSession(mblk_t *m, bool isRtp);
 
 	bool dispatchRtpMessage(mblk_t *m);
 	bool dispatchRtcpMessage(mblk_t *m);
 
 	RtpSession *primary = NULL;
-	std::map<uint32_t, std::string> ssrcToMid;
+	std::map<uint32_t, Mid> ssrcToMid;
 	std::map<std::string, RtpSession *> sessions;
 	std::mutex ssrcToMidMutex;
 
