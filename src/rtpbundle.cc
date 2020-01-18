@@ -200,7 +200,13 @@ int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const str
 	} else {
 		rtp_session_get_transports(primary, NULL, &primaryTransport);
 	}
-
+	if (isRtp){
+		destaddr = (struct sockaddr*)&primary->rtp.gs.rem_addr;
+		destlen = primary->rtp.gs.rem_addrlen;
+	}else{
+		destaddr = (struct sockaddr*)&primary->rtcp.gs.rem_addr;
+		destlen = primary->rtcp.gs.rem_addrlen;
+	}
 	// This will bypass the modifiers of the primary transport
 	return meta_rtp_transport_send_through_endpoint(primaryTransport, m, flags, destaddr, destlen);
 }

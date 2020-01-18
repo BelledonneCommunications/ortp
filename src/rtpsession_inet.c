@@ -1882,7 +1882,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	return error;
 }
 
-int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {
+int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {
 	struct sockaddr_storage * rem_addr = NULL;
 	socklen_t *rem_addrlen;
 	const char* socket_type;
@@ -1892,6 +1892,10 @@ int  rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool
 	if (!rtp_session_get_symmetric_rtp(session))
 		return -1; /*nothing to try if not rtp symetric*/
 
+	if (session->bundle && !session->is_primary){
+		/* A session part of a bundle not owning the transport layer shall not update remote address.*/
+		return -1;
+	}
 	if (is_rtp) {
 		rem_addr = &session->rtp.gs.rem_addr;
 		rem_addrlen = &session->rtp.gs.rem_addrlen;
