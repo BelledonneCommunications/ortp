@@ -1809,7 +1809,12 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 
 	if (session->rtcp.gs.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no RTCP sockets for the moment*/
 
-
+	/* In bundle mode, rtcp-mux is used. There is nothing that needs to be read on the rtcp socket.
+	 * The RTCP packets are received on the RTP socket, and dispatched to the "bundleq" of their corresponding session.
+	 * These RTCP packets queued on the bundleq will be processed by rtp_session_rtp_recv(), which has the ability to
+	 * manage rtcp-mux.
+	 */
+	if (session->bundle) return 0;
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);

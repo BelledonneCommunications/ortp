@@ -43,9 +43,7 @@ void mblk_meta_copy(const mblk_t *source, mblk_t *dest) {
 	dest->reserved2 = source->reserved2;
 	memcpy(&dest->net_addr,&source->net_addr,source->net_addrlen);
 	dest->net_addrlen = source->net_addrlen;
-#if defined(ORTP_TIMESTAMP)
 	dest->timestamp = source->timestamp;
-#endif
 	dest->ttl_or_hl = source->ttl_or_hl;
 }
 
