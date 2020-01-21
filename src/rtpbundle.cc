@@ -99,6 +99,15 @@ void RtpBundleCxx::setMidId(int id) {
 }
 
 void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
+	auto it =
+		std::find_if(sessions.begin(), sessions.end(),
+					 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
+
+	if (it != sessions.end()) {
+		ortp_error("RtpBundle [%p]: Cannot add session (%p) has it is already in the bundle", this, session);
+		return;
+	}
+
 	sessions.emplace(mid, session);
 
 	session->bundle = (RtpBundle *)this;
