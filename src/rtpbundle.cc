@@ -282,9 +282,9 @@ static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
 	case RTCP_APP:
 		return rtcp_APP_get_ssrc(m);
 	case RTCP_RTPFB:
-		return rtcp_RTPFB_get_media_source_ssrc(m);
+		return rtcp_RTPFB_get_packet_sender_ssrc(m);
 	case RTCP_PSFB:
-		return rtcp_PSFB_get_media_source_ssrc(m);
+		return rtcp_PSFB_get_packet_sender_ssrc(m);
 	case RTCP_XR:
 		return rtcp_XR_get_ssrc(m);
 	default:
