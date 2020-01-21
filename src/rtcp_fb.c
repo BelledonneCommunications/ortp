@@ -89,8 +89,8 @@ static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
 	h->b_wptr += sizeof(rtcp_fb_fir_fci_t);
 	fci2 = (rtcp_fb_fir_fci_t *)h->b_wptr;
 	h->b_wptr += sizeof(rtcp_fb_fir_fci_t);
-	fbh->packet_sender_ssrc = htonl(0);
-	fbh->media_source_ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
+	fbh->media_source_ssrc = htonl(0);
 	fci1->ssrc = htonl(rtp_session_get_send_ssrc(session));
 	fci1->seq_nr = session->rtcp.rtcp_fb_fir_seq_nr;
 	fci1->pad1 = 0;
