@@ -209,11 +209,11 @@ int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const str
 	} else {
 		rtp_session_get_transports(primary, NULL, &primaryTransport);
 	}
-	if (isRtp){
-		destaddr = (struct sockaddr*)&primary->rtp.gs.rem_addr;
+	if (isRtp) {
+		destaddr = (struct sockaddr *)&primary->rtp.gs.rem_addr;
 		destlen = primary->rtp.gs.rem_addrlen;
-	}else{
-		destaddr = (struct sockaddr*)&primary->rtcp.gs.rem_addr;
+	} else {
+		destaddr = (struct sockaddr *)&primary->rtcp.gs.rem_addr;
 		destlen = primary->rtcp.gs.rem_addrlen;
 	}
 	// This will bypass the modifiers of the primary transport
@@ -288,7 +288,9 @@ static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
 	case RTCP_XR:
 		return rtcp_XR_get_ssrc(m);
 	default:
-		ortp_warning("Unknown RTCP packet type while retrieving it's SSRC");
+		ortp_warning("Unknown RTCP packet type (%u) while retrieving it's SSRC",
+					 rtcp_common_header_get_packet_type(ch));
+		//abort();
 		break;
 	}
 
@@ -303,9 +305,9 @@ static void checkForSessionSdesCallback(void *userData, uint32_t ssrc, rtcp_sdes
 	if (t == RTCP_SDES_MID) {
 		// Update the mid map with the corresponding session
 		if (!bundle->updateMid(value, ssrc, UINT16_MAX, false)) {
-			ortp_warning("Rtp Bundle [%p]: SDES mid \"%s\" from msg does not "
+			ortp_warning("Rtp Bundle [%p]: SSRC %u not found and SDES mid \"%s\" from msg does not "
 						 "correspond to any sessions",
-						 bundle, value.c_str());
+						 bundle, ssrc, value.c_str());
 		}
 
 		bundle->sdesParseMid = value;
@@ -337,22 +339,23 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 				// Update the mid map with the corresponding session
 				if (!updateMid(mid, ssrc, rtp_get_seqnumber(m), true)) {
 					if (it == ssrcToMid.end()) {
-						ortp_warning("Rtp Bundle [%p]: mid \"%s\" from msg (%d) does not correspond to any sessions",
-									 this, mid.c_str(), (int)rtp_get_seqnumber(m));
+						ortp_warning("Rtp Bundle [%p]: SSRC %u not found and mid \"%s\" from msg (%d) does not "
+									 "correspond to any sessions",
+									 this, ssrc, mid.c_str(), (int)rtp_get_seqnumber(m));
 						return NULL;
 					}
 				}
 			} else {
 				if (it == ssrcToMid.end()) {
-					ortp_warning("Rtp Bundle [%p]: msg (%d) does not have a mid extension header", this,
-								 (int)rtp_get_seqnumber(m));
+					ortp_warning("Rtp Bundle [%p]: SSRC %u not found and msg (%d) does not have a mid extension header",
+								 this, ssrc, (int)rtp_get_seqnumber(m));
 					return NULL;
 				}
 			}
 		} else {
 			if (it == ssrcToMid.end()) {
-				ortp_warning("Rtp Bundle [%p]: msg (%d) does not have an extension header", this,
-							 (int)rtp_get_seqnumber(m));
+				ortp_warning("Rtp Bundle [%p]: SSRC %u not found and msg (%d) does not have an extension header", this,
+							 ssrc, (int)ntohl(rtp_get_seqnumber(m)));
 				return NULL;
 			}
 		}
@@ -369,7 +372,7 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 			}
 		} else {
 			if (it == ssrcToMid.end()) {
-				ortp_warning("Rtp Bundle [%p]: Cannot look at mid in RTCP as it is not a SDES", this);
+				// Cannot look at mid in RTCP as it is not a SDES
 				return NULL;
 			}
 		}
