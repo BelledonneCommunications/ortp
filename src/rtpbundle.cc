@@ -242,6 +242,8 @@ bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const 
 				// since RTCP does not have a sequence number.
 				// https://tools.ietf.org/html/draft-ietf-mmusic-sdp-bundle-negotiation-54#page-24
 				ortp_warning("Rtp Bundle [%p]: received a mid update via RTCP, ignoring it.", this);
+
+				return true;
 			}
 		}
 	}
@@ -290,7 +292,6 @@ static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
 	default:
 		ortp_warning("Unknown RTCP packet type (%u) while retrieving it's SSRC",
 					 rtcp_common_header_get_packet_type(ch));
-		//abort();
 		break;
 	}
 
