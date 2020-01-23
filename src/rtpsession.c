@@ -2349,13 +2349,9 @@ void meta_rtp_set_session(RtpSession *s,MetaRtpTransportImpl *m){
 	m->has_set_session=TRUE;
 }
 
-int meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen){
+static int _meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen){
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	int ret;
-
-	if (t->session && t->session->bundle && !t->session->is_primary) {
-		return rtp_bundle_send_through_primary(t->session->bundle, m->is_rtp, msg, flags, to, tolen);
-	}
 
 	if (m->endpoint!=NULL){
 		ret=m->endpoint->t_sendto(m->endpoint, msg, flags, to, tolen);
@@ -2374,6 +2370,11 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
 	}
+
+	if (t->session && t->session->bundle && !t->session->is_primary) {
+		return rtp_bundle_send_through_primary(t->session->bundle, m->is_rtp, msg, flags, to, tolen);
+	}
+
 	prev_ret=msgdsize(msg);
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
@@ -2389,11 +2390,11 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 	if (!m->is_rtp && t->session->rtcp_mux){ /*if this meta transport is handling RTCP and using rtcp-mux, then we should expedite the packet
 		through the rtp endpoint.*/
 		if (m->other_meta_rtp){
-			ret = meta_rtp_transport_send_through_endpoint(m->other_meta_rtp, msg, flags, to, tolen);
+			ret = _meta_rtp_transport_send_through_endpoint(m->other_meta_rtp, msg, flags, to, tolen);
 		}else{
 			ortp_error("meta_rtp_transport_sendto(): rtcp-mux enabled but no RTP meta transport is specified !");
 		}
-	} else ret = meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
+	} else ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
 	return ret;
 }
 
@@ -2455,7 +2456,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTra
 		}
 	}
 
-	ret = meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
+	ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
 	update_sent_bytes(&t->session->rtp.gs, ret);
 	return ret;
 }
@@ -2510,7 +2511,6 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	int ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem;
-	bool_t receive_msg = TRUE;
 	bool_t received_via_rtcp_mux = FALSE;
 
 	if (!m->has_set_session){
@@ -2524,34 +2524,23 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		if (rtm->t_process_on_schedule) rtm->t_process_on_schedule(rtm);
 	}
 
-	if (t->session && t->session->bundle && !t->session->is_primary) {
-		// If the msg contains data, then it is not a buffer allocated for reception
-		// but it is a message that has been put in the session bundle queue
-		// so we use it directly and we do not call t_recvfrom
-		if ((ret = msgdsize(msg)) > 0) {
-			receive_msg = FALSE;
-		}
-	}
-
-	if (receive_msg) {
-		if (m->endpoint != NULL) {
-			ret = m->endpoint->t_recvfrom(m->endpoint, msg, flags, from, fromlen);
-			if (ret > 0) {
-				/*store recv addr for use by modifiers*/
-				if (from && fromlen) {
-					memcpy(&msg->net_addr, from, *fromlen);
-					msg->net_addrlen = *fromlen;
-				}
+	if (m->endpoint != NULL) {
+		ret = m->endpoint->t_recvfrom(m->endpoint, msg, flags, from, fromlen);
+		if (ret > 0) {
+			/*store recv addr for use by modifiers*/
+			if (from && fromlen) {
+				memcpy(&msg->net_addr, from, *fromlen);
+				msg->net_addrlen = *fromlen;
 			}
-		} else {
-			ret = rtp_session_recvfrom(t->session, m->is_rtp, msg, flags, from, fromlen);
 		}
-
-		if (ret <= 0){
-			return ret;
-		}
-		msg->b_wptr += ret;
+	} else {
+		ret = rtp_session_recvfrom(t->session, m->is_rtp, msg, flags, from, fromlen);
 	}
+
+	if (ret <= 0){
+		return ret;
+	}
+	msg->b_wptr += ret;
 
 	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
 	if (t->session->rtcp_mux && m->is_rtp){
@@ -2564,17 +2553,16 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		}
 	}
 
-	if (t->session && t->session->bundle && t->session->is_primary) {
-		if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
-			return 0;
-		}
-
-		ret = msgdsize(msg);
-	}
-
 	if (received_via_rtcp_mux) {
 		if (m->other_meta_rtp) {
 			_meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
+
+			if (t->session && t->session->bundle && t->session->is_primary) {
+				if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+					return 0;
+				}
+			}
+
 			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, received_via_rtcp_mux);
 			ret = 0; /*since we directly inject in the RtpSession this RTCP packet, we shall return 0 and pass a duplicate of the message,
 			because rtp_session_rtp_recv() is going to free it.*/
@@ -2583,6 +2571,14 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		}
 	} else {
 		ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
+
+		if (t->session && t->session->bundle && t->session->is_primary) {
+			if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+				return 0;
+			}
+
+			ret = msgdsize(msg);
+		}
 	}
 
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv

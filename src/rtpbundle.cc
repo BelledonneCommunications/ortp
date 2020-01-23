@@ -111,8 +111,6 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 	sessions.emplace(mid, session);
 
 	session->bundle = (RtpBundle *)this;
-	qinit(&session->bundleq);
-	ortp_mutex_init(&session->bundleq_lock, NULL);
 
 	if (!primary) {
 		primary = session;
@@ -141,8 +139,6 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 		sessions.erase(mid);
 
 		session->second->bundle = NULL;
-		flushq(&session->second->bundleq, FLUSHALL);
-		ortp_mutex_destroy(&session->second->bundleq_lock);
 	}
 }
 
@@ -158,11 +154,7 @@ void RtpBundleCxx::removeSession(RtpSession *session) {
 
 void RtpBundleCxx::clear() {
 	for (const auto &entry : sessions) {
-		RtpSession *session = entry.second;
-
-		session->bundle = NULL;
-		flushq(&session->bundleq, FLUSHALL);
-		ortp_mutex_destroy(&session->bundleq_lock);
+		entry.second->bundle = NULL;
 	}
 
 	primary = NULL;
@@ -209,6 +201,7 @@ int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const str
 	} else {
 		rtp_session_get_transports(primary, NULL, &primaryTransport);
 	}
+
 	if (isRtp) {
 		destaddr = (struct sockaddr *)&primary->rtp.gs.rem_addr;
 		destlen = primary->rtp.gs.rem_addrlen;
@@ -216,8 +209,9 @@ int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const str
 		destaddr = (struct sockaddr *)&primary->rtcp.gs.rem_addr;
 		destlen = primary->rtcp.gs.rem_addrlen;
 	}
+
 	// This will bypass the modifiers of the primary transport
-	return meta_rtp_transport_send_through_endpoint(primaryTransport, m, flags, destaddr, destlen);
+	return meta_rtp_transport_sendto(primaryTransport, m, flags, destaddr, destlen);
 }
 
 bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp) {
@@ -400,9 +394,7 @@ bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 		return true;
 
 	if (session != primary) {
-		ortp_mutex_lock(&session->bundleq_lock);
-		putq(&session->bundleq, dupmsg(m));
-		ortp_mutex_unlock(&session->bundleq_lock);
+		rtp_session_process_incoming(session, dupmsg(m), TRUE, m->reserved1, FALSE);
 
 		return true;
 	}
@@ -437,9 +429,8 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 				primarymsg = tmp;
 			}
 		} else if (session != NULL) {
-			ortp_mutex_lock(&session->bundleq_lock);
-			putq(&session->bundleq, tmp);
-			ortp_mutex_unlock(&session->bundleq_lock);
+			tmp->reserved1 = m->reserved1;
+			rtp_session_process_incoming(session, tmp, FALSE, tmp->reserved1, TRUE);
 		} else {
 			const rtcp_common_header_t *ch = rtcp_get_common_header(tmp);
 			ortp_warning("Rtp Bundle [%p]: Rctp msg (%d) ssrc=%u does not correspond to any sessions", this,

@@ -463,8 +463,6 @@ struct _RtpSession
 	/* bundle mode */
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
 	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
-	queue_t bundleq;
-	ortp_mutex_t bundleq_lock;
 };
 
 /**
@@ -756,7 +754,8 @@ ORTP_PUBLIC void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev);
 
 ORTP_PUBLIC void rtp_session_set_reuseaddr(RtpSession *session, bool_t yes);
 
-ORTP_PUBLIC int meta_rtp_transport_send_through_endpoint(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
+ORTP_PUBLIC void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts, bool_t received_via_rtcp_mux);
+ORTP_PUBLIC int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const struct sockaddr *to, socklen_t tolen);
 
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen);
