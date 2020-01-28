@@ -489,6 +489,7 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
 }
 
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
+	ortp_message("RtpSession: target upload bandwidth set to %i", target_bandwidth);
 	session->target_upload_bandwidth = target_bandwidth;
 }
 int rtp_session_get_target_upload_bandwidth(RtpSession *session) {

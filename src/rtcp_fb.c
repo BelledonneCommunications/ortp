@@ -28,6 +28,12 @@ static void rtp_session_add_fb_packet_to_send(RtpSession *session, mblk_t *m) {
 	if (session->rtcp.send_algo.fb_packets == NULL) {
 		session->rtcp.send_algo.fb_packets = m;
 	} else {
+		/*
+		 * CAUTION: there is no limit in the number of fb fragments that can be enqueued here.
+		 * When this exceeds MAX_IOV (from rtpsession_inet.c), the end will be discarded.
+		 * This may happen if the target upload bandwidth (rtp_session_set_target_upload_bandwidth() ) is too low 
+		 * too allow feedback packets to be sent in real time.
+		 */
 		concatb(session->rtcp.send_algo.fb_packets, m);
 	}
 }
@@ -305,11 +311,13 @@ void rtp_session_send_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, ui
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	mblk_t *m;
 	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_PLI) == TRUE)) {
+		bool_t can_send_immediately = FALSE;
 		if (rtp_session_rtcp_psfb_scheduled(session, RTCP_PSFB_PLI) != TRUE) {
 			m = make_rtcp_fb_pli(session);
+			can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
 			rtp_session_add_fb_packet_to_send(session, m);
 		}
-		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+		if (can_send_immediately) {
 			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 		}
 	}
@@ -318,11 +326,13 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 	mblk_t *m;
 	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_FIR) == TRUE)) {
+		bool_t can_send_immediately = FALSE;
 		if (rtp_session_rtcp_psfb_scheduled(session, RTCP_PSFB_FIR) != TRUE) {
 			m = make_rtcp_fb_fir(session);
+			can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
 			rtp_session_add_fb_packet_to_send(session, m);
 		}
-		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+		if (can_send_immediately) {
 			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 		}
 	}
@@ -334,9 +344,13 @@ void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t 
 		/* Only send SLI if SLI and RPSI features have been enabled. SLI without RPSI is not really useful. */
 		if ((rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_SLI) == TRUE)
 			&& (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
+			/* we check first if the packet can be sent immediately. is_fb_packet_to_be_sent_immediately() will return FALSE
+			 * if there are queued feedback packets, which we are going to do in rtp_session_add_fb_packet_to_send() just after.
+			 */
+			bool_t can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
 			m = make_rtcp_fb_sli(session, first, number, picture_id);
 			rtp_session_add_fb_packet_to_send(session, m);
-			if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+			if (can_send_immediately) {
 				rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 			}
 		} else {
@@ -349,9 +363,11 @@ void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t 
 void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	mblk_t *m;
 	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
+		bool_t can_send_immediately;
 		m = make_rtcp_fb_rpsi(session, bit_string, bit_string_len);
+		can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
 		rtp_session_add_fb_packet_to_send(session, m);
-		if (is_fb_packet_to_be_sent_immediately(session) == TRUE) {
+		if (can_send_immediately) {
 			rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 		}
 	}

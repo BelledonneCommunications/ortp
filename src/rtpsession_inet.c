@@ -1008,18 +1008,24 @@ void rtp_session_flush_sockets(RtpSession *session){
 
 
 #ifdef USE_SENDMSG
-#define MAX_IOV 30
+#define MAX_IOV 64
 static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
 	int error;
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
+
 	for(iovlen=0; iovlen<MAX_IOV && m!=NULL; m=m->b_cont,iovlen++){
 		iov[iovlen].iov_base=m->b_rptr;
 		iov[iovlen].iov_len=m->b_wptr-m->b_rptr;
 	}
 	if (iovlen==MAX_IOV){
-		ortp_error("Too long msgb, didn't fit into iov, end discarded.");
+		int count = 0;
+		while (m!=NULL){
+			count++;
+			m=m->b_cont;
+		}
+		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_IOV+count);
 	}
 	msg.msg_name=(void*)rem_addr;
 	msg.msg_namelen=addr_len;
