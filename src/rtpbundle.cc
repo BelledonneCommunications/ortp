@@ -111,6 +111,8 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 	sessions.emplace(mid, session);
 
 	session->bundle = (RtpBundle *)this;
+	qinit(&session->bundleq);
+	ortp_mutex_init(&session->bundleq_lock, NULL);
 
 	if (!primary) {
 		primary = session;
@@ -139,6 +141,8 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 		sessions.erase(mid);
 
 		session->second->bundle = NULL;
+		flushq(&session->second->bundleq, FLUSHALL);
+		ortp_mutex_destroy(&session->second->bundleq_lock);
 	}
 }
 
@@ -154,7 +158,11 @@ void RtpBundleCxx::removeSession(RtpSession *session) {
 
 void RtpBundleCxx::clear() {
 	for (const auto &entry : sessions) {
-		entry.second->bundle = NULL;
+		RtpSession *session = entry.second;
+
+		session->bundle = NULL;
+		flushq(&session->bundleq, FLUSHALL);
+		ortp_mutex_destroy(&session->bundleq_lock);
 	}
 
 	primary = NULL;
@@ -394,7 +402,9 @@ bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 		return true;
 
 	if (session != primary) {
-		rtp_session_process_incoming(session, dupmsg(m), TRUE, m->reserved1, FALSE);
+		ortp_mutex_lock(&session->bundleq_lock);
+		putq(&session->bundleq, dupmsg(m));
+		ortp_mutex_unlock(&session->bundleq_lock);
 
 		return true;
 	}
@@ -429,8 +439,9 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 				primarymsg = tmp;
 			}
 		} else if (session != NULL) {
-			tmp->reserved1 = m->reserved1;
-			rtp_session_process_incoming(session, tmp, FALSE, tmp->reserved1, TRUE);
+			ortp_mutex_lock(&session->bundleq_lock);
+			putq(&session->bundleq, tmp);
+			ortp_mutex_unlock(&session->bundleq_lock);
 		} else {
 			const rtcp_common_header_t *ch = rtcp_get_common_header(tmp);
 			ortp_warning("Rtp Bundle [%p]: Rctp msg (%d) ssrc=%u does not correspond to any sessions", this,

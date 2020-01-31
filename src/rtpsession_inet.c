@@ -1670,7 +1670,7 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 	}
 }
 
-void* rtp_session_recvfrom_async(void* obj, uint32_t user_ts) {
+void* rtp_session_recvfrom_async(void* obj) {
 	RtpSession *session = (RtpSession*) obj;
 	int error;
 	struct sockaddr_storage remaddr;
@@ -1696,7 +1696,6 @@ void* rtp_session_recvfrom_async(void* obj, uint32_t user_ts) {
 			bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 
 			mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
-			mp->reserved1 = user_ts;
 
 			if (sock_connected){
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, NULL, NULL);
@@ -1757,32 +1756,41 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 
 	while (1)
 	{
+		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
-		ortp_mutex_lock(&session->rtp.winthread_lock);
-		if (!session->rtp.is_win_thread_running) {
-			int errnum;
-			
-			session->rtp.is_win_thread_running = TRUE;
-			if ((errnum = ortp_thread_create(&session->rtp.win_t, NULL, rtp_session_recvfrom_async, (void*)session), user_ts) != 0) {
-				ortp_warning("Error creating rtp recv async thread for windows: error [%i]", errnum);
-				session->rtp.is_win_thread_running = FALSE;
-				return -1;
-			}
-		}
-		ortp_mutex_unlock(&session->rtp.winthread_lock);
-#else
-		rtp_session_recvfrom_async((void*)session, user_ts);
-#endif
+			ortp_mutex_lock(&session->rtp.winthread_lock);
+			if (!session->rtp.is_win_thread_running) {
+				int errnum;
 
-#if	defined(_WIN32) || defined(_WIN32_WCE)
-		ortp_mutex_lock(&session->rtp.winrq_lock);
+				session->rtp.is_win_thread_running = TRUE;
+				if ((errnum = ortp_thread_create(&session->rtp.win_t, NULL, rtp_session_recvfrom_async, (void*)session)) != 0) {
+					ortp_warning("Error creating rtp recv async thread for windows: error [%i]", errnum);
+					session->rtp.is_win_thread_running = FALSE;
+					return -1;
+				}
+			}
+			ortp_mutex_unlock(&session->rtp.winthread_lock);
+#else
+			rtp_session_recvfrom_async((void*)session);
 #endif
-		mp = getq(&session->rtp.winrq);
+		}
+
+		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
-		ortp_mutex_unlock(&session->rtp.winrq_lock);
+			ortp_mutex_lock(&session->rtp.winrq_lock);
 #endif
+			mp = getq(&session->rtp.winrq);
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+			ortp_mutex_unlock(&session->rtp.winrq_lock);
+#endif
+		} else {
+			ortp_mutex_lock(&session->bundleq_lock);
+			mp = getq(&session->bundleq);
+			ortp_mutex_unlock(&session->bundleq_lock);
+		}
 		
 		if (mp != NULL) {
+			mp->reserved1 = user_ts;
 			rtp_session_process_incoming(session, mp, TRUE, user_ts, FALSE);
 		} else {
 			rtp_session_process_incoming(session, NULL, TRUE, user_ts, FALSE);
@@ -1802,8 +1810,8 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	if (session->rtcp.gs.socket==(ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp)) return -1;  /*session has no RTCP sockets for the moment*/
 
 	/* In bundle mode, rtcp-mux is used. There is nothing that needs to be read on the rtcp socket.
-	 * The RTCP packets are received on the RTP socket, and then forwarded to their corresponding session.
-	 * These RTCP packets will be processed by rtp_session_rtp_recv(), which has the ability to
+	 * The RTCP packets are received on the RTP socket, and dispatched to the "bundleq" of their corresponding session.
+	 * These RTCP packets queued on the bundleq will be processed by rtp_session_rtp_recv(), which has the ability to
 	 * manage rtcp-mux.
 	 */
 	if (session->bundle) return 0;
