@@ -1670,8 +1670,14 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 	}
 }
 
-void* rtp_session_recvfrom_async(void* obj, uint32_t user_ts) {
-	RtpSession *session = (RtpSession*) obj;
+typedef struct _RtpRcvThreadCtx {
+	RtpSession *session;
+	uint32_t user_ts;
+} RtpRcvThreadCtx;
+
+void* rtp_session_recvfrom_async(void* obj) {
+	RtpRcvThreadCtx *ctx = (RtpRcvThreadCtx *) obj;
+	RtpSession *session = ctx->session;
 	int error;
 	struct sockaddr_storage remaddr;
 	socklen_t addrlen = sizeof (remaddr);
@@ -1696,7 +1702,7 @@ void* rtp_session_recvfrom_async(void* obj, uint32_t user_ts) {
 			bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 
 			mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
-			mp->reserved1 = user_ts;
+			mp->reserved1 = ctx->user_ts;
 
 			if (sock_connected){
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, NULL, NULL);
@@ -1757,13 +1763,14 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 
 	while (1)
 	{
+		RtpRcvThreadCtx ctx = {session, user_ts};
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 		ortp_mutex_lock(&session->rtp.winthread_lock);
 		if (!session->rtp.is_win_thread_running) {
 			int errnum;
 			
 			session->rtp.is_win_thread_running = TRUE;
-			if ((errnum = ortp_thread_create(&session->rtp.win_t, NULL, rtp_session_recvfrom_async, (void*)session), user_ts) != 0) {
+			if ((errnum = ortp_thread_create(&session->rtp.win_t, NULL, rtp_session_recvfrom_async, (void*)&ctx)) != 0) {
 				ortp_warning("Error creating rtp recv async thread for windows: error [%i]", errnum);
 				session->rtp.is_win_thread_running = FALSE;
 				return -1;
@@ -1771,7 +1778,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 		}
 		ortp_mutex_unlock(&session->rtp.winthread_lock);
 #else
-		rtp_session_recvfrom_async((void*)session, user_ts);
+		rtp_session_recvfrom_async((void*)&ctx);
 #endif
 
 #if	defined(_WIN32) || defined(_WIN32_WCE)
