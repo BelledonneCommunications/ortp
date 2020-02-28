@@ -2672,6 +2672,11 @@ void meta_rtp_transport_destroy(RtpTransport *tp) {
 	ortp_free(tp);
 }
 
+void meta_rtp_transport_remove_modifier(RtpTransport *tp, RtpTransportModifier *tpm) {
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
+	m->modifiers = o_list_remove(m->modifiers, tpm);
+}
+
 void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
 	tpm->transport = tp;
