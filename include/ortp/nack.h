@@ -33,6 +33,7 @@ struct _OrtpNackContext {
 	RtpSession *session;
 	OrtpEvDispatcher *ev_dispatcher;
 	RtpTransportModifier *rtp_modifier;
+	RtpTransportModifier *rtcp_modifier;
 	queue_t sent_packets;
 	bctbx_mutex_t sent_packets_mutex;
 	int max_packets;
