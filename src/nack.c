@@ -192,6 +192,7 @@ static OrtpNackContext *ortp_nack_configure_context(OrtpNackContext *userData) {
 	meta_rtp_transport_prepend_modifier(rtcpt, rtcp_modifier);
 
 	userData->rtp_modifier = rtp_modifier;
+	userData->rtcp_modifier = rtcp_modifier;
 
 	return userData;
 }
@@ -219,12 +220,20 @@ OrtpNackContext *ortp_nack_context_new(OrtpEvDispatcher *evt) {
 }
 
 void ortp_nack_context_destroy(OrtpNackContext *ctx) {
+	RtpTransport *rtpt = NULL, *rtcpt = NULL;
+
 	ortp_ev_dispatcher_disconnect(ctx->ev_dispatcher
 									, ORTP_EVENT_RTCP_PACKET_RECEIVED
 									, RTCP_RTPFB
 									, (OrtpEvDispatcherCb)generic_nack_received);
 
 	rtp_session_enable_avpf_feature(ctx->session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK, FALSE);
+
+	rtp_session_get_transports(ctx->session, &rtpt, &rtcpt);
+	meta_rtp_transport_remove_modifier(rtpt, ctx->rtp_modifier);
+	meta_rtp_transport_remove_modifier(rtcpt, ctx->rtcp_modifier);
+	ortp_nack_transport_modifier_destroy(ctx->rtp_modifier);
+	ortp_nack_transport_modifier_destroy(ctx->rtcp_modifier);
 
 	bctbx_mutex_lock(&ctx->sent_packets_mutex);
 	flushq(&ctx->sent_packets, FLUSHALL);

@@ -780,6 +780,7 @@ ORTP_PUBLIC void meta_rtp_transport_set_endpoint(RtpTransport *transport,RtpTran
 ORTP_PUBLIC void meta_rtp_transport_destroy(RtpTransport *tp);
 ORTP_PUBLIC void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
 ORTP_PUBLIC void meta_rtp_transport_prepend_modifier(RtpTransport *tp,RtpTransportModifier *tpm);
+ORTP_PUBLIC void meta_rtp_transport_remove_modifier(RtpTransport *tp, RtpTransportModifier *tpm);
 
 ORTP_PUBLIC int rtp_session_splice(RtpSession *session, RtpSession *to_session);
 ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session);
