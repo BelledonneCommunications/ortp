@@ -167,6 +167,7 @@ ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, size_t size);
 ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 
 ORTP_PUBLIC void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen);
+ORTP_PUBLIC void ortp_sockaddr_to_recvaddr(struct sockaddr * addr, ortp_recv_addr_t * recvaddr);
 
 #ifdef __cplusplus
 }
