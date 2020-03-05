@@ -1014,6 +1014,11 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
+	u_char controlBuffer[512];
+	mblk_t * mTemp = m;
+	char debugBuffer[512];	// TODO : Remove when test are over
+	int controlSize = 0;				// Used to reset msg.msg_controllen to the real control size
+	struct cmsghdr *cmsg;
 
 	for(iovlen=0; iovlen<MAX_IOV && m!=NULL; m=m->b_cont,iovlen++){
 		iov[iovlen].iov_base=m->b_rptr;
@@ -1031,10 +1036,61 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_namelen=addr_len;
 	msg.msg_iov=&iov[0];
 	msg.msg_iovlen=iovlen;
-	msg.msg_control=NULL;
-	msg.msg_controllen=0;
 	msg.msg_flags=0;
+	m = mTemp;
+	msg.msg_control=controlBuffer;
+	msg.msg_controllen=sizeof(controlBuffer);
+	cmsg = CMSG_FIRSTHDR(&msg);
+	memset(controlBuffer, 0, sizeof(controlBuffer));
+#ifdef IP_PKTINFO
+	if( m->recv_addr.family == AF_INET )
+	{// Add IPV4 to the message control
+		struct in_pktinfo *pktinfo;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
+		pktinfo->ipi_spec_dst = m->recv_addr.addr.ipi_addr;
+		controlSize += CMSG_SPACE(sizeof(struct in_pktinfo));
+		inet_ntop(AF_INET, &pktinfo->ipi_spec_dst,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
+		cmsg = CMSG_NXTHDR(&msg, cmsg);
+	}
+#endif
+#ifdef IPV6_PKTINFO
+	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
+	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
+		struct in6_pktinfo *pktinfo;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_PKTINFO;
+		pktinfo = (struct in6_pktinfo*) CMSG_DATA(cmsg);
+		pktinfo->ipi6_ifindex = 0;	// Set to 0 to let the kernel to use routable interface
+		pktinfo->ipi6_addr = m->recv_addr.addr.ipi6_addr;
+		controlSize += CMSG_SPACE(sizeof(struct in6_pktinfo));
+		inet_ntop(AF_INET6, &pktinfo->ipi6_addr,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
+		cmsg = CMSG_NXTHDR(&msg, cmsg);
+	}
+#endif
+	msg.msg_controllen = controlSize;
 	error=sendmsg(sock,&msg,0);
+	if( error == -1 && ( m->recv_addr.family != AF_INET6 || !IN6_IS_ADDR_LINKLOCAL(&m->recv_addr.addr.ipi6_addr) ))
+	{// TODO Remove when tests are over
+//		if( getSocketErrorCode() == BCTBX_ENETUNREACH)
+//		{// Network is not rechable, try to remove redirection. It can be used from ice
+//			msg.msg_controllen = 0;
+//			error=sendmsg(sock,&msg,0);
+//		}
+		if( error == -1)
+		{
+			char buffer[500];
+			inet_ntop(rem_addr->sa_family, rem_addr->sa_data,buffer,sizeof(buffer) );
+			if(msg.msg_controllen == 0)
+				ortp_message("cannot send to %s, %d",	buffer, getSocketErrorCode());
+			else
+				ortp_message("cannot send from %s to %s, %d", debugBuffer, buffer, getSocketErrorCode());
+			inet_ntop(rem_addr->sa_family, rem_addr->sa_data,buffer,sizeof(buffer) );
+		}
+	}
 	return error;
 }
 #endif
@@ -1219,7 +1275,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-
+	ortp_sockaddr_to_recvaddr((struct sockaddr*)&session->rtp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1290,7 +1346,9 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 		destaddr=NULL;
 		destlen=0;
 	}
-
+	ortp_sockaddr_to_recvaddr((struct sockaddr*)&session->rtcp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
+	//socklen_t loc_addrlen;
+	//struct sockaddr_storage loc_addr;
 	if (session->rtcp.enabled){
 		if ( (sockfd!=(ortp_socket_t)-1 && (destlen>0 || using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) {
@@ -1926,4 +1984,24 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 		return 0;
 	}
 	return -1;
+}
+
+void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr) {
+	struct addrinfo * sessionAddrInfo;
+	if(rtp_local_addr)
+	{
+		sessionAddrInfo = bctbx_ip_address_to_addrinfo(session->rtp.gs.sockfamily , SOCK_DGRAM ,rtp_local_addr, 0);
+		memcpy(&session->rtp.gs.loc_addr, sessionAddrInfo->ai_addr, sessionAddrInfo->ai_addrlen);
+		session->rtp.gs.loc_addrlen = (socklen_t)sessionAddrInfo->ai_addrlen;
+		bctbx_freeaddrinfo(sessionAddrInfo);
+		ortp_message("RtpSession : setting rtp source to %s",rtp_local_addr  );
+	}
+	if( rtcp_local_addr )
+	{
+		sessionAddrInfo = bctbx_ip_address_to_addrinfo(session->rtcp.gs.sockfamily , SOCK_DGRAM ,rtcp_local_addr, 0);
+		memcpy(&session->rtcp.gs.loc_addr, sessionAddrInfo->ai_addr, sessionAddrInfo->ai_addrlen);
+		session->rtcp.gs.loc_addrlen = (socklen_t)sessionAddrInfo->ai_addrlen;
+		bctbx_freeaddrinfo(sessionAddrInfo);
+		ortp_message("RtpSession : setting rtcp source to %s",rtcp_local_addr  );
+	}
 }
