@@ -1071,7 +1071,37 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		cmsg = CMSG_NXTHDR(&msg, cmsg);
 	}
 #endif
+#if defined(IP_RECVDSTADDR)
+	if( m->recv_addr.family == AF_INET )
+	{// Add IPV4 to the message control
+		struct in_addr *pktinfo;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_RECVDSTADDR;
+		pktinfo = (struct in_addr*) CMSG_DATA(cmsg);
+		*pktinfo = m->recv_addr.addr.ipi_addr;
+		controlSize += CMSG_SPACE(sizeof(struct in_addr));
+		inet_ntop(AF_INET, pktinfo,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
+		cmsg = CMSG_NXTHDR(&msg, cmsg);
+	}
+#endif
+#ifdef IPV6_RECVDSTADDR
+	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
+	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
+		struct in6_addr *pktinfo;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
+		cmsg->cmsg_level = IPPROTO_IPV6;
+		cmsg->cmsg_type = IPV6_RECVDSTADDR;
+		pktinfo = (struct in6_addr*) CMSG_DATA(cmsg);
+		*pktinfo = m->recv_addr.addr.ipi6_addr;
+		controlSize += CMSG_SPACE(sizeof(struct in6_addr));
+		inet_ntop(AF_INET6, &pktinfo,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
+		cmsg = CMSG_NXTHDR(&msg, cmsg);
+	}
+#endif
 	msg.msg_controllen = controlSize;
+	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
+		msg.msg_control = NULL;
 	error=sendmsg(sock,&msg,0);
 	if( error == -1 && ( m->recv_addr.family != AF_INET6 || !IN6_IS_ADDR_LINKLOCAL(&m->recv_addr.addr.ipi6_addr) ))
 	{// TODO Remove when tests are over
