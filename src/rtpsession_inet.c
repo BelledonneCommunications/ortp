@@ -1007,6 +1007,88 @@ void rtp_session_flush_sockets(RtpSession *session){
 }
 
 
+#if defined(_WIN32) || defined(_WIN32_WCE)
+#define MAX_BUF 64
+static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
+	WSAMSG wsamsg = {0};
+	WSABUF wsabuf[MAX_BUF];
+	DWORD dwBytes = 0;
+	CHAR CtrlBuf[512] = {0};
+	int controlSize = 0;
+	int wsabufLen;
+	int error;
+	mblk_t *mTemp = m;
+	PWSACMSGHDR cmsg = NULL;
+	struct sockaddr v4, v6Mapped;
+	socklen_t v4Len=0, v6MappedLen=0;
+	bool_t useV4 = FALSE;
+	
+
+	for (wsabufLen = 0; wsabufLen < MAX_BUF && m != NULL; m = m->b_cont, wsabufLen++) {
+		wsabuf[wsabufLen].buf = m->b_rptr;
+		wsabuf[wsabufLen].len = m->b_wptr - m->b_rptr;
+	}
+	wsamsg.lpBuffers = wsabuf; // contents
+	wsamsg.dwBufferCount = wsabufLen;
+	if (wsabufLen == MAX_BUF) {
+		int count = 0;
+		while (m != NULL) {
+			count++;
+			m = m->b_cont;
+		}
+		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_BUF + count);
+	}
+	m = mTemp;
+	wsamsg.name = (SOCKADDR *)rem_addr;
+	wsamsg.namelen = addr_len;
+	wsamsg.Control.buf = CtrlBuf;
+	wsamsg.Control.len = sizeof(CtrlBuf);
+	cmsg = WSA_CMSG_FIRSTHDR(&wsamsg);
+
+#ifdef IPV6_PKTINFO
+	if (m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) &&
+		!IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
+		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
+			useV4 = TRUE;
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, &v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
+		} else {
+			PIN6_PKTINFO pPktInfo = NULL;
+			cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
+			cmsg->cmsg_level = IPPROTO_IPV6;
+			cmsg->cmsg_type = IPV6_PKTINFO;
+			pPktInfo = (PIN6_PKTINFO)WSA_CMSG_DATA(cmsg);
+			pPktInfo->ipi6_addr = m->recv_addr.addr.ipi6_addr;
+			controlSize += WSA_CMSG_SPACE(sizeof(IN6_PKTINFO));
+			cmsg = WSA_CMSG_NXTHDR(&wsamsg, cmsg);
+		}
+	}
+#endif
+#ifdef IP_PKTINFO
+	if (m->recv_addr.family == AF_INET || useV4==TRUE) { // Add IPV4 to the message control
+		PIN_PKTINFO pPktInfo = NULL;
+		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN_PKTINFO));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		pPktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(cmsg);
+		if (useV4 == TRUE)
+			pPktInfo->ipi_addr = ((SOCKADDR_IN *)&v4)->sin_addr;
+		else
+			pPktInfo->ipi_addr = m->recv_addr.addr.ipi_addr;
+		controlSize += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));		
+	}
+#endif
+
+	wsamsg.Control.len = controlSize;
+	if (controlSize == 0)
+		wsamsg.Control.buf = NULL;
+	error = WSASendMsg(sock, &wsamsg, 0, &dwBytes, NULL, NULL);
+	if (error != 0) {
+		ortp_message("WSASendMsg error : %d => %d\n", error, WSAGetLastError());
+	}
+	return error;
+}
+#else
 #ifdef USE_SENDMSG
 #define MAX_IOV 64
 static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
@@ -1147,6 +1229,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	return error;
 }
 #endif
+#endif
 
 ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
 	return is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
@@ -1154,7 +1237,7 @@ ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
 
 int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
 	int error;
-#ifdef USE_SENDMSG
+#if defined(_WIN32) || defined(_WIN32_WCE) || defined(USE_SENDMSG)
 	error = rtp_sendmsg(sockfd, m, destaddr, destlen);
 #else
 	if (m->b_cont != NULL)
