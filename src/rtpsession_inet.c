@@ -1020,7 +1020,9 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	mblk_t *mTemp = m;
 	PWSACMSGHDR cmsg = NULL;
 	struct sockaddr v4, v6Mapped;
+	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
+	
 
 	for (wsabufLen = 0; wsabufLen < MAX_BUF && m != NULL; m = m->b_cont, wsabufLen++) {
 		wsabuf[wsabufLen].buf = m->b_rptr;
@@ -1047,10 +1049,9 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	if (m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) &&
 		!IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
 		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
-			socklen_t len;
-			ortp_recvaddr_to_sockaddr(&m->recv_addr, &v6Mapped, &len);
-			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &len);
 			useV4 = TRUE;
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, &v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
 		} else {
 			PIN6_PKTINFO pPktInfo = NULL;
 			cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
@@ -1064,13 +1065,13 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	}
 #endif
 #ifdef IP_PKTINFO
-	if (m->recv_addr.family == AF_INET || useV4) { // Add IPV4 to the message control
+	if (m->recv_addr.family == AF_INET || useV4==TRUE) { // Add IPV4 to the message control
 		PIN_PKTINFO pPktInfo = NULL;
 		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN_PKTINFO));
 		cmsg->cmsg_level = IPPROTO_IP;
 		cmsg->cmsg_type = IP_PKTINFO;
 		pPktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(cmsg);
-		if (useV4)
+		if (useV4 == TRUE)
 			pPktInfo->ipi_addr = ((SOCKADDR_IN *)&v4)->sin_addr;
 		else
 			pPktInfo->ipi_addr = m->recv_addr.addr.ipi_addr;
