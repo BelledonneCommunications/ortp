@@ -1010,41 +1010,37 @@ void rtp_session_flush_sockets(RtpSession *session){
 #if defined(_WIN32) || defined(_WIN32_WCE)
 #define MAX_BUF 64
 static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
-	WSAMSG wsamsg = {0};
+	WSAMSG msg = {0};
 	WSABUF wsabuf[MAX_BUF];
 	DWORD dwBytes = 0;
-	CHAR CtrlBuf[512] = {0};
+	CHAR ctrlBuffer[512] = {0};
 	int controlSize = 0;
 	int wsabufLen;
-	int error;
-	mblk_t *mTemp = m;
+	mblk_t *mTrack = m;
 	PWSACMSGHDR cmsg = NULL;
 	struct sockaddr v4, v6Mapped;
 	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
-	
 
-	for (wsabufLen = 0; wsabufLen < MAX_BUF && m != NULL; m = m->b_cont, wsabufLen++) {
-		wsabuf[wsabufLen].buf = m->b_rptr;
-		wsabuf[wsabufLen].len = m->b_wptr - m->b_rptr;
+	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen) {
+		wsabuf[wsabufLen].buf = mTrack->b_rptr;
+		wsabuf[wsabufLen].len = mTrack->b_wptr - mTrack->b_rptr;
 	}
-	wsamsg.lpBuffers = wsabuf; // contents
-	wsamsg.dwBufferCount = wsabufLen;
+	msg.lpBuffers = wsabuf; // contents
+	msg.dwBufferCount = wsabufLen;
 	if (wsabufLen == MAX_BUF) {
 		int count = 0;
-		while (m != NULL) {
-			count++;
-			m = m->b_cont;
+		while (mTrack != NULL) {
+			++count;
+			mTrack = mTrack->b_cont;
 		}
 		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_BUF + count);
 	}
-	m = mTemp;
-	wsamsg.name = (SOCKADDR *)rem_addr;
-	wsamsg.namelen = addr_len;
-	wsamsg.Control.buf = CtrlBuf;
-	wsamsg.Control.len = sizeof(CtrlBuf);
-	cmsg = WSA_CMSG_FIRSTHDR(&wsamsg);
-
+	msg.name = (SOCKADDR *)rem_addr;
+	msg.namelen = addr_len;
+	msg.Control.buf = ctrlBuffer;
+	msg.Control.len = sizeof(ctrlBuffer);
+	cmsg = WSA_CMSG_FIRSTHDR(&msg);
 #ifdef IPV6_PKTINFO
 	if (m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) &&
 		!IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
@@ -1060,7 +1056,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 			pPktInfo = (PIN6_PKTINFO)WSA_CMSG_DATA(cmsg);
 			pPktInfo->ipi6_addr = m->recv_addr.addr.ipi6_addr;
 			controlSize += WSA_CMSG_SPACE(sizeof(IN6_PKTINFO));
-			cmsg = WSA_CMSG_NXTHDR(&wsamsg, cmsg);
+			cmsg = WSA_CMSG_NXTHDR(&msg, cmsg);
 		}
 	}
 #endif
@@ -1079,41 +1075,35 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	}
 #endif
 
-	wsamsg.Control.len = controlSize;
+	msg.Control.len = controlSize;
 	if (controlSize == 0)
-		wsamsg.Control.buf = NULL;
-	error = WSASendMsg(sock, &wsamsg, 0, &dwBytes, NULL, NULL);
-	if (error != 0) {
-		ortp_message("WSASendMsg error : %d => %d\n", error, WSAGetLastError());
-	}
-	return error;
+		msg.Control.buf = NULL;
+	return WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
 }
 #else
 #ifdef USE_SENDMSG
 #define MAX_IOV 64
 static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
-	int error;
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
-	u_char controlBuffer[512];
-	mblk_t * mTemp = m;
-	char debugBuffer[512];	// TODO : Remove when test are over
+	u_char controlBuffer[512] = {0};
+	mblk_t * mTrack = m;
 	int controlSize = 0;				// Used to reset msg.msg_controllen to the real control size
 	struct cmsghdr *cmsg;
 	struct sockaddr v4, v6Mapped;
 	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
 
-	for(iovlen=0; iovlen<MAX_IOV && m!=NULL; m=m->b_cont,iovlen++){
-		iov[iovlen].iov_base=m->b_rptr;
-		iov[iovlen].iov_len=m->b_wptr-m->b_rptr;
+	for(iovlen=0; iovlen<MAX_IOV && mTrack!=NULL; mTrack=mTrack->b_cont,iovlen++){
+		iov[iovlen].iov_base=mTrack->b_rptr;
+		iov[iovlen].iov_len=mTrack->b_wptr-mTrack->b_rptr;
 	}
 	if (iovlen==MAX_IOV){
 		int count = 0;
-		while (m!=NULL){
+		while (mTrack!=NULL){
 			count++;
-			m=m->b_cont;
+			mTrack=mTrack->b_cont;
 		}
 		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_IOV+count);
 	}
@@ -1122,11 +1112,9 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_iov=&iov[0];
 	msg.msg_iovlen=iovlen;
 	msg.msg_flags=0;
-	m = mTemp;
 	msg.msg_control=controlBuffer;
 	msg.msg_controllen=sizeof(controlBuffer);
 	cmsg = CMSG_FIRSTHDR(&msg);
-	memset(controlBuffer, 0, sizeof(controlBuffer));
 #ifdef IPV6_PKTINFO
 	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
 	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
@@ -1143,7 +1131,6 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 			pktinfo->ipi6_ifindex = 0;	// Set to 0 to let the kernel to use routable interface
 			pktinfo->ipi6_addr = m->recv_addr.addr.ipi6_addr;
 			controlSize += CMSG_SPACE(sizeof(struct in6_pktinfo));
-			inet_ntop(AF_INET6, &pktinfo->ipi6_addr,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
 			cmsg = CMSG_NXTHDR(&msg, cmsg);
 		}
 	}
@@ -1161,7 +1148,6 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		else
 			pktinfo->ipi_spec_dst = m->recv_addr.addr.ipi_addr;
 		controlSize += CMSG_SPACE(sizeof(struct in_pktinfo));
-		inet_ntop(AF_INET, &pktinfo->ipi_spec_dst,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
 		cmsg = CMSG_NXTHDR(&msg, cmsg);
 	}
 #endif
@@ -1181,7 +1167,6 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		pktinfo = (struct in6_addr*) CMSG_DATA(cmsg);
 		*pktinfo = m->recv_addr.addr.ipi6_addr;
 		controlSize += CMSG_SPACE(sizeof(struct in6_addr));
-		inet_ntop(AF_INET6, &pktinfo,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
 		cmsg = CMSG_NXTHDR(&msg, cmsg);
 		}
 	}
@@ -1199,34 +1184,13 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		else
 			*pktinfo = m->recv_addr.addr.ipi_addr;
 		controlSize += CMSG_SPACE(sizeof(struct in_addr));
-		inet_ntop(AF_INET, pktinfo,debugBuffer,sizeof(debugBuffer) );	// TODO : Remove when test are over
-		cmsg = CMSG_NXTHDR(&msg, cmsg);
+//		cmsg = CMSG_NXTHDR(&msg, cmsg);		// Uncomment if you want to add interfaces
 	}
 #endif
-
 	msg.msg_controllen = controlSize;
 	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
 		msg.msg_control = NULL;
-	error=sendmsg(sock,&msg,0);
-	if( error == -1 && ( m->recv_addr.family != AF_INET6 || !IN6_IS_ADDR_LINKLOCAL(&m->recv_addr.addr.ipi6_addr) ))
-	{// TODO Remove when tests are over
-//		if( getSocketErrorCode() == BCTBX_ENETUNREACH)
-//		{// Network is not rechable, try to remove redirection. It can be used from ice
-//			msg.msg_controllen = 0;
-//			error=sendmsg(sock,&msg,0);
-//		}
-		if( error == -1)
-		{
-			char buffer[500];
-			inet_ntop(rem_addr->sa_family, rem_addr->sa_data,buffer,sizeof(buffer) );
-			if(msg.msg_controllen == 0)
-				ortp_message("cannot send to %s, %d",	buffer, getSocketErrorCode());
-			else
-				ortp_message("cannot send from %s to %s, %d", debugBuffer, buffer, getSocketErrorCode());
-			inet_ntop(rem_addr->sa_family, rem_addr->sa_data,buffer,sizeof(buffer) );
-		}
-	}
-	return error;
+	 return sendmsg(sock,&msg,0);
 }
 #endif
 #endif
