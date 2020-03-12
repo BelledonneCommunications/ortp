@@ -1686,6 +1686,8 @@ void rtp_session_resync(RtpSession *session){
 	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed
 	over all streams, ...). There should be only one stream per RTP session*/
+	session->rtp.rcv_last_seq = 0;
+	session->rtp.snd_last_nack = 0;
 	session->rtp.hwrcv_extseq = 0;
 	session->rtp.hwrcv_since_last_SR = 0;
 	session->rtp.hwrcv_seq_at_last_SR = 0;
@@ -1711,7 +1713,6 @@ void rtp_session_reset (RtpSession * session)
 	session->rtp.rcv_ts_offset = 0;
 	session->rtp.rcv_query_ts_offset = 0;
 	session->rtp.rcv_last_ts = 0;
-	session->rtp.rcv_last_seq = 0;
 	session->rtp.rcv_last_app_ts = 0;
 	session->rtp.hwrcv_extseq = 0;
 	session->rtp.hwrcv_since_last_SR=0;
