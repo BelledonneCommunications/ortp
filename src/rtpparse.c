@@ -152,7 +152,7 @@ static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 		}
 	}
 
-	if (session->rtp.snd_last_nack < rtp->seq_number) {
+	if (RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.snd_last_nack)) {
 		/* We update the last_nack since we received this packet we don't need a nack for it */
 		session->rtp.snd_last_nack = rtp->seq_number;
 	}
