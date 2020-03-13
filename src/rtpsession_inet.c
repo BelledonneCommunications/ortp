@@ -1411,7 +1411,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		return 0;
 	}
 	if( m->recv_addr.family == AF_UNSPEC)
-		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
+		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1482,7 +1482,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 		destaddr=NULL;
 		destlen=0;
 	}
-	ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
+	ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
 	if (session->rtcp.enabled){
 		if ( (sockfd!=(ortp_socket_t)-1 && (destlen>0 || using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) {
