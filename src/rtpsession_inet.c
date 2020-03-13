@@ -1014,6 +1014,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	WSABUF wsabuf[MAX_BUF];
 	DWORD dwBytes = 0;
 	CHAR ctrlBuffer[512] = {0};
+	int error;
 	int controlSize = 0;
 	int wsabufLen;
 	mblk_t *mTrack = m;
@@ -1074,11 +1075,20 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 		controlSize += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));		
 	}
 #endif
-
 	msg.Control.len = controlSize;
 	if (controlSize == 0)
 		msg.Control.buf = NULL;
-	return WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+	error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+	 if( error == SOCKET_ERROR && controlSize != 0){
+		int errorCode = WSAGetLastError();
+		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH)
+		{
+			msg.Control.len = 0;
+			msg.Control.buf = NULL;
+			error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+		}
+	 }
+	return error;
 }
 #else
 #ifdef USE_SENDMSG
@@ -1094,6 +1104,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	struct sockaddr v4, v6Mapped;
 	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
+	int error;
 
 	for(iovlen=0; iovlen<MAX_IOV && mTrack!=NULL; mTrack=mTrack->b_cont,iovlen++){
 		iov[iovlen].iov_base=mTrack->b_rptr;
@@ -1114,6 +1125,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_flags=0;
 	msg.msg_control=controlBuffer;
 	msg.msg_controllen=sizeof(controlBuffer);
+
 	cmsg = CMSG_FIRSTHDR(&msg);
 #ifdef IPV6_PKTINFO
 	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
@@ -1187,10 +1199,33 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 //		cmsg = CMSG_NXTHDR(&msg, cmsg);		// Uncomment if you want to add interfaces
 	}
 #endif
+
 	msg.msg_controllen = controlSize;
 	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
 		msg.msg_control = NULL;
-	 return sendmsg(sock,&msg,0);
+	 error = sendmsg(sock,&msg,0);
+	 if( error == -1 && (errno == EINVAL || errno==ENETUNREACH) && controlSize != 0)
+	 {
+		msg.msg_controllen =0;
+		msg.msg_control = NULL;
+		error = sendmsg(sock,&msg,0);
+	 }
+/*	 {
+		char to_addr_str[64], from_addr_str[64]={0};
+		socklen_t tl;
+		struct sockaddr addr;
+		if( m->recv_addr.family != AF_UNSPEC)
+		{
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, &addr, &tl);
+			bctbx_sockaddr_to_printable_ip_address(&addr, tl, from_addr_str, sizeof(from_addr_str));
+		}
+		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
+
+		ortp_message(" ORTP : Send packet : %d, to: %s, from:%s, size:%d", *m->b_rptr, to_addr_str, from_addr_str, error);
+	}
+	 if( error == -1)
+		ortp_warning(" ortp : Sendmsg error : %d", errno);
+*/	 return error;
 }
 #endif
 #endif
@@ -1375,7 +1410,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-	ortp_sockaddr_to_recvaddr((struct sockaddr*)&session->rtp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
+	ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1446,9 +1481,7 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 		destaddr=NULL;
 		destlen=0;
 	}
-	ortp_sockaddr_to_recvaddr((struct sockaddr*)&session->rtcp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
-	//socklen_t loc_addrlen;
-	//struct sockaddr_storage loc_addr;
+	ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
 	if (session->rtcp.enabled){
 		if ( (sockfd!=(ortp_socket_t)-1 && (destlen>0 || using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) {
@@ -1478,7 +1511,18 @@ static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sock
 	msghdr->msg_iov = &iov;
 	msghdr->msg_iovlen = 1;
 	error = recvmsg(socket, msghdr, flags);
-	if (fromlen != NULL)
+/*	if( error > 0)
+	{
+		if( from != NULL){
+			char from_addr_str[64];
+			bctbx_sockaddr_to_printable_ip_address(from, *fromlen, from_addr_str, sizeof(from_addr_str));
+			if( error == 240 && *msg->b_rptr == '\0')
+				ortp_message("Channel received : %d, from:%s, size:%d", *msg->b_rptr, from_addr_str, error);
+			else
+				ortp_message("Channel received : %d, from:%s, size:%d", *msg->b_rptr, from_addr_str, error);
+		}
+	 }
+*/	if (fromlen != NULL)
 		*fromlen = msghdr->msg_namelen;
 	return error;
 }
@@ -1573,7 +1617,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 			}
 #endif
 		}
-
 		/*store recv addr for use by modifiers*/
 		if (from && fromlen) {
 			memcpy(&msg->net_addr,from,*fromlen);
@@ -2087,6 +2130,7 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 }
 
 void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr) {
+
 	struct addrinfo * sessionAddrInfo;
 	if(rtp_local_addr)
 	{
@@ -2094,7 +2138,7 @@ void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_add
 		memcpy(&session->rtp.gs.loc_addr, sessionAddrInfo->ai_addr, sessionAddrInfo->ai_addrlen);
 		session->rtp.gs.loc_addrlen = (socklen_t)sessionAddrInfo->ai_addrlen;
 		bctbx_freeaddrinfo(sessionAddrInfo);
-		ortp_message("RtpSession : setting rtp source to %s",rtp_local_addr  );
+		ortp_message("RtpSession : Setting rtp source to %s",rtp_local_addr  );
 	}
 	if( rtcp_local_addr )
 	{
@@ -2102,6 +2146,7 @@ void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_add
 		memcpy(&session->rtcp.gs.loc_addr, sessionAddrInfo->ai_addr, sessionAddrInfo->ai_addrlen);
 		session->rtcp.gs.loc_addrlen = (socklen_t)sessionAddrInfo->ai_addrlen;
 		bctbx_freeaddrinfo(sessionAddrInfo);
-		ortp_message("RtpSession : setting rtcp source to %s",rtcp_local_addr  );
+		ortp_message("RtpSession : Setting rtcp source to %s",rtcp_local_addr  );
 	}
+
 }
