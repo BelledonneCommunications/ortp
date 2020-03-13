@@ -1203,29 +1203,14 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_controllen = controlSize;
 	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
 		msg.msg_control = NULL;
-	 error = sendmsg(sock,&msg,0);
-	 if( error == -1 && (errno == EINVAL || errno==ENETUNREACH) && controlSize != 0)
-	 {
+	error = sendmsg(sock,&msg,0);
+	if( error == -1 && (errno == EINVAL || errno==ENETUNREACH) && controlSize != 0)
+	{
 		msg.msg_controllen =0;
 		msg.msg_control = NULL;
 		error = sendmsg(sock,&msg,0);
-	 }
-/*	 {
-		char to_addr_str[64], from_addr_str[64]={0};
-		socklen_t tl;
-		struct sockaddr addr;
-		if( m->recv_addr.family != AF_UNSPEC)
-		{
-			ortp_recvaddr_to_sockaddr(&m->recv_addr, &addr, &tl);
-			bctbx_sockaddr_to_printable_ip_address(&addr, tl, from_addr_str, sizeof(from_addr_str));
-		}
-		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
-
-		ortp_message(" ORTP : Send packet : %d, to: %s, from:%s, size:%d", *m->b_rptr, to_addr_str, from_addr_str, error);
 	}
-	 if( error == -1)
-		ortp_warning(" ortp : Sendmsg error : %d", errno);
-*/	 return error;
+	return error;
 }
 #endif
 #endif
@@ -1512,18 +1497,7 @@ static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sock
 	msghdr->msg_iov = &iov;
 	msghdr->msg_iovlen = 1;
 	error = recvmsg(socket, msghdr, flags);
-/*	if( error > 0)
-	{
-		if( from != NULL){
-			char from_addr_str[64];
-			bctbx_sockaddr_to_printable_ip_address(from, *fromlen, from_addr_str, sizeof(from_addr_str));
-			if( error == 240 && *msg->b_rptr == '\0')
-				ortp_message("Channel received : %d, from:%s, size:%d", *msg->b_rptr, from_addr_str, error);
-			else
-				ortp_message("Channel received : %d, from:%s, size:%d", *msg->b_rptr, from_addr_str, error);
-		}
-	 }
-*/	if (fromlen != NULL)
+	if (fromlen != NULL)
 		*fromlen = msghdr->msg_namelen;
 	return error;
 }
