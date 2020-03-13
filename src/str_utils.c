@@ -399,7 +399,7 @@ void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr
 		*socklen = sizeof(struct sockaddr_in6);
 	}
 }
-void ortp_sockaddr_to_recvaddr(struct sockaddr * addr, ortp_recv_addr_t * recvaddr) {
+void ortp_sockaddr_to_recvaddr(const struct sockaddr * addr, ortp_recv_addr_t * recvaddr) {
 	if( addr->sa_family == AF_INET)
 	{
 		struct sockaddr_in * addr_in = (struct sockaddr_in *)addr;
