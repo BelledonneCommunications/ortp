@@ -307,6 +307,8 @@ typedef struct _OrtpStream {
 	struct sockaddr_storage rem_addr;
 	socklen_t loc_addrlen;
 	struct sockaddr_storage loc_addr;
+	socklen_t used_loc_addrlen;
+	struct sockaddr_storage used_loc_addr; /*Address used to redirect packets from this source*/
 	struct _RtpTransport *tr;
 	OrtpBwEstimator recv_bw_estimator;
 	struct timeval send_bw_start; /* used for bandwidth estimation */
