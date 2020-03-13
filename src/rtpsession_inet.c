@@ -1097,8 +1097,8 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
-	u_char controlBuffer[512] = {0};
-	mblk_t * mTrack = m;
+	u_char control_buffer[512] = {0};
+	mblk_t * m_track = m;
 	int controlSize = 0;				// Used to reset msg.msg_controllen to the real control size
 	struct cmsghdr *cmsg;
 	struct sockaddr v4, v6Mapped;
@@ -1106,15 +1106,15 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	bool_t useV4 = FALSE;
 	int error;
 
-	for(iovlen=0; iovlen<MAX_IOV && mTrack!=NULL; mTrack=mTrack->b_cont,iovlen++){
-		iov[iovlen].iov_base=mTrack->b_rptr;
-		iov[iovlen].iov_len=mTrack->b_wptr-mTrack->b_rptr;
+	for(iovlen=0; iovlen<MAX_IOV && m_track!=NULL; m_track=m_track->b_cont,iovlen++){
+		iov[iovlen].iov_base=m_track->b_rptr;
+		iov[iovlen].iov_len=m_track->b_wptr-m_track->b_rptr;
 	}
 	if (iovlen==MAX_IOV){
 		int count = 0;
-		while (mTrack!=NULL){
+		while (m_track!=NULL){
 			count++;
-			mTrack=mTrack->b_cont;
+			m_track=m_track->b_cont;
 		}
 		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_IOV+count);
 	}
@@ -1123,8 +1123,8 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_iov=&iov[0];
 	msg.msg_iovlen=iovlen;
 	msg.msg_flags=0;
-	msg.msg_control=controlBuffer;
-	msg.msg_controllen=sizeof(controlBuffer);
+	msg.msg_control=control_buffer;
+	msg.msg_controllen=sizeof(control_buffer);
 
 	cmsg = CMSG_FIRSTHDR(&msg);
 #ifdef IPV6_PKTINFO
@@ -1410,7 +1410,8 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-	ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
+	if( m->recv_addr.family == AF_UNSPEC)
+		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -2130,23 +2131,26 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 }
 
 void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr) {
-
-	struct addrinfo * sessionAddrInfo;
-	if(rtp_local_addr)
-	{
-		sessionAddrInfo = bctbx_ip_address_to_addrinfo(session->rtp.gs.sockfamily , SOCK_DGRAM ,rtp_local_addr, 0);
-		memcpy(&session->rtp.gs.loc_addr, sessionAddrInfo->ai_addr, sessionAddrInfo->ai_addrlen);
-		session->rtp.gs.loc_addrlen = (socklen_t)sessionAddrInfo->ai_addrlen;
-		bctbx_freeaddrinfo(sessionAddrInfo);
-		ortp_message("RtpSession : Setting rtp source to %s",rtp_local_addr  );
+	struct addrinfo * session_addr_info;
+	if(rtp_local_addr[0] != '\0')
+	{// rtp_local_addr should not be NULL
+		session_addr_info = bctbx_ip_address_to_addrinfo(session->rtp.gs.sockfamily , SOCK_DGRAM ,rtp_local_addr, 0);
+		memcpy(&session->rtp.gs.used_loc_addr, session_addr_info->ai_addr, session_addr_info->ai_addrlen);
+		session->rtp.gs.used_loc_addrlen = (socklen_t)session_addr_info->ai_addrlen;
+		bctbx_freeaddrinfo(session_addr_info);
+	}else {
+		session->rtp.gs.used_loc_addrlen = 0;
+		memset(&session->rtp.gs.used_loc_addr, 0, sizeof(session->rtp.gs.used_loc_addr));// To not let tracks on memory
 	}
-	if( rtcp_local_addr )
-	{
-		sessionAddrInfo = bctbx_ip_address_to_addrinfo(session->rtcp.gs.sockfamily , SOCK_DGRAM ,rtcp_local_addr, 0);
-		memcpy(&session->rtcp.gs.loc_addr, sessionAddrInfo->ai_addr, sessionAddrInfo->ai_addrlen);
-		session->rtcp.gs.loc_addrlen = (socklen_t)sessionAddrInfo->ai_addrlen;
-		bctbx_freeaddrinfo(sessionAddrInfo);
-		ortp_message("RtpSession : Setting rtcp source to %s",rtcp_local_addr  );
+	if(rtcp_local_addr[0] != '\0')
+	{// rtcp_local_addr should not be NULL
+		session_addr_info = bctbx_ip_address_to_addrinfo(session->rtcp.gs.sockfamily , SOCK_DGRAM ,rtcp_local_addr, 0);
+		memcpy(&session->rtcp.gs.used_loc_addr, session_addr_info->ai_addr, session_addr_info->ai_addrlen);
+		session->rtcp.gs.used_loc_addrlen = (socklen_t)session_addr_info->ai_addrlen;
+		bctbx_freeaddrinfo(session_addr_info);
+	}else {
+		session->rtcp.gs.used_loc_addrlen = 0;
+		memset(&session->rtcp.gs.used_loc_addr, 0, sizeof(session->rtcp.gs.used_loc_addr));// To not let tracks on memory
 	}
-
+	ortp_message("RtpSession sources to [%s] and [%s]",rtp_local_addr, rtcp_local_addr );
 }
