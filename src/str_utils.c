@@ -400,17 +400,15 @@ void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr
 	}
 }
 void ortp_sockaddr_to_recvaddr(const struct sockaddr * addr, ortp_recv_addr_t * recvaddr) {
-	if( addr->sa_family == AF_INET)
-	{
+	if( addr->sa_family == AF_INET) {
 		struct sockaddr_in * addr_in = (struct sockaddr_in *)addr;
+		recvaddr->family = AF_INET;
 		recvaddr->port = addr_in->sin_port;
-                recvaddr->family = addr_in->sin_family;
-                recvaddr->addr.ipi_addr = addr_in->sin_addr;
-	}else if( addr->sa_family == AF_INET6)
-        {
+		recvaddr->addr.ipi_addr = addr_in->sin_addr;
+	}else if( addr->sa_family == AF_INET6) {
 		struct sockaddr_in6 * addr_in6 = (struct sockaddr_in6 *)addr;
+		recvaddr->family = AF_INET6;
 		recvaddr->port = addr_in6->sin6_port;
-		recvaddr->family = addr_in6->sin6_family;
-                memcpy(&recvaddr->addr.ipi6_addr, &addr_in6->sin6_addr, sizeof(addr_in6->sin6_addr));
+		memcpy(&recvaddr->addr.ipi6_addr, &addr_in6->sin6_addr, sizeof(addr_in6->sin6_addr));
 	}
 }
