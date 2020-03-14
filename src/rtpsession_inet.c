@@ -1043,12 +1043,11 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	msg.Control.len = sizeof(ctrlBuffer);
 	cmsg = WSA_CMSG_FIRSTHDR(&msg);
 #ifdef IPV6_PKTINFO
-	if (m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) &&
-		!IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
+	if (m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
 		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
 			useV4 = TRUE;
-			ortp_recvaddr_to_sockaddr(&m->recv_addr, (struct sockaddr*&v6Mapped, &v6MappedLen);
-			bctbx_sockaddr_remove_v4_mapping((struct sockaddr *)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, (struct sockaddr*)&v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr*)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
 		} else {
 			PIN6_PKTINFO pPktInfo = NULL;
 			cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
@@ -1148,7 +1147,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	}
 #endif
 #ifdef IP_PKTINFO
-	if( m->recv_addr.family == AF_INET )
+	if( m->recv_addr.family == AF_INET || useV4==TRUE )
 	{// Add IPV4 to the message control
 		struct in_pktinfo *pktinfo;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
@@ -1167,24 +1166,24 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 #ifdef IPV6_RECVDSTADDR
 	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
 	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
-	if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
-		useV4 = TRUE;
-		ortp_recvaddr_to_sockaddr(&m->recv_addr, &v6Mapped, &v6MappedLen);
-		bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
-	} else {
-		struct in6_addr *pktinfo;
-		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
-		cmsg->cmsg_level = IPPROTO_IPV6;
-		cmsg->cmsg_type = IPV6_RECVDSTADDR;
-		pktinfo = (struct in6_addr*) CMSG_DATA(cmsg);
-		*pktinfo = m->recv_addr.addr.ipi6_addr;
-		controlSize += CMSG_SPACE(sizeof(struct in6_addr));
-		cmsg = CMSG_NXTHDR(&msg, cmsg);
+		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
+			useV4 = TRUE;
+			ortp_recvaddr_to_sockaddr(&m->recv_addr,(struct sockaddr*) &v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
+		} else {
+			struct in6_addr *pktinfo;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
+			cmsg->cmsg_level = IPPROTO_IPV6;
+			cmsg->cmsg_type = IPV6_RECVDSTADDR;
+			pktinfo = (struct in6_addr*) CMSG_DATA(cmsg);
+			*pktinfo = m->recv_addr.addr.ipi6_addr;
+			controlSize += CMSG_SPACE(sizeof(struct in6_addr));
+			cmsg = CMSG_NXTHDR(&msg, cmsg);
 		}
 	}
 #endif
 #if defined(IP_RECVDSTADDR)
-	if( m->recv_addr.family == AF_INET )
+	if( m->recv_addr.family == AF_INET || useV4==TRUE )
 	{// Add IPV4 to the message control
 		struct in_addr *pktinfo;
 		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
@@ -1208,7 +1207,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		msg.msg_controllen =0;
 		msg.msg_control = NULL;
 		error = sendmsg(sock,&msg,0);
-	}/*
+	}
 	if( error == -1 && errno == EFAULT)
 	{
 	    char to_addr_str[64];
@@ -1218,7 +1217,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	    char to_addr_str[64];
 	    bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
 	    ortp_message(" ORTP : SEND : : %d, to: %s, %d", *m->b_rptr, to_addr_str, controlSize);
-	}
+	}/*
 	{
 	       char to_addr_str[64], from_addr_str[64]={0};
 	       socklen_t tl;
