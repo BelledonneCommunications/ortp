@@ -274,7 +274,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	if (sock!=-1){
 		struct sockaddr_storage saddr;
 		socklen_t slen=sizeof(saddr);
-		
+
 		set_non_blocking_socket (sock);
 		err=getsockname(sock,(struct sockaddr*)&saddr,&slen);
 		if (err==-1){
@@ -1072,7 +1072,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 			pPktInfo->ipi_addr = ((SOCKADDR_IN *)&v4)->sin_addr;
 		else
 			pPktInfo->ipi_addr = m->recv_addr.addr.ipi_addr;
-		controlSize += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));		
+		controlSize += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));
 	}
 #endif
 	msg.Control.len = controlSize;
@@ -1081,7 +1081,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
 	 if( error == SOCKET_ERROR && controlSize != 0){
 		int errorCode = WSAGetLastError();
-		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH)
+		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH || errorCode==WSAEFAULT)
 		{
 			msg.Control.len = 0;
 			msg.Control.buf = NULL;
@@ -1204,12 +1204,34 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
 		msg.msg_control = NULL;
 	error = sendmsg(sock,&msg,0);
-	if( error == -1 && (errno == EINVAL || errno==ENETUNREACH) && controlSize != 0)
-	{
+	if( error == -1 && controlSize != 0 && (errno == EINVAL || errno==ENETUNREACH || errno==EFAULT)) {
 		msg.msg_controllen =0;
 		msg.msg_control = NULL;
 		error = sendmsg(sock,&msg,0);
+	}/*
+	if( error == -1 && errno == EFAULT)
+	{
+	    char to_addr_str[64];
+	    bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
+	    ortp_message(" ORTP : ERROR : : %d, to: %s, controlSize:%d", *m->b_rptr, to_addr_str, controlSize);
+	}else {
+	    char to_addr_str[64];
+	    bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
+	    ortp_message(" ORTP : SEND : : %d, to: %s, %d", *m->b_rptr, to_addr_str, controlSize);
 	}
+	{
+	       char to_addr_str[64], from_addr_str[64]={0};
+	       socklen_t tl;
+	       struct sockaddr addr;
+	       if( m->recv_addr.family != AF_UNSPEC)
+	       {
+		       ortp_recvaddr_to_sockaddr(&m->recv_addr, &addr, &tl);
+		       bctbx_sockaddr_to_printable_ip_address(&addr, tl, from_addr_str, sizeof(from_addr_str));
+	       }
+	       bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
+
+	       ortp_message(" ORTP : Send packet : %d, to: %s, from:%s, size:%d", *m->b_rptr, to_addr_str, from_addr_str, error);
+       }*/
 	return error;
 }
 #endif
@@ -1395,7 +1417,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-	if( m->recv_addr.family == AF_UNSPEC)
+	if( m->recv_addr.family == AF_UNSPEC && session->rtp.gs.used_loc_addrlen>0 )
 		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
@@ -1467,7 +1489,8 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 		destaddr=NULL;
 		destlen=0;
 	}
-	ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
+	if( m->recv_addr.family == AF_UNSPEC && session->rtcp.gs.used_loc_addrlen>0 )
+	    ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
 	if (session->rtcp.enabled){
 		if ( (sockfd!=(ortp_socket_t)-1 && (destlen>0 || using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) {
@@ -1680,7 +1703,7 @@ static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
  * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
  * @param session : the current session descriptor.
  * @param block : the block descriptor that may contain a SR RTCP message.
- * @return 0 if the packet is a real RTCP packet, -1 otherwise. 
+ * @return 0 if the packet is a real RTCP packet, -1 otherwise.
  * @note a basic parsing is done on the block structure. However, if it fails, no error is returned, and the session descriptor is left as is, so it does not induce any change in the caller procedure behaviour.
  * @note the packet is freed or is taken ownership if -1 is returned
  */
@@ -1704,7 +1727,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		if (stunlen + 20 == block->b_wptr - block->b_rptr) {
 			/* this looks like a stun packet */
 			rtp_session_update_remote_sock_addr(session, block, FALSE, TRUE);
-			
+
 			if (session->eventqs != NULL) {
 				OrtpEvent *ev = ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed = ortp_event_get_data(ev);
@@ -1768,7 +1791,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);
-	
+
 	rtp_session_update_remote_sock_addr(session, block, FALSE, FALSE);
 	return 0;
 }
@@ -1856,15 +1879,15 @@ void* rtp_session_recvfrom_async(void* obj) {
 	WSAPOLLFD fdarray = {0};
 	fdarray.fd = session->rtp.gs.socket;
 	fdarray.events = POLLRDNORM;
-	
+
 	if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST)){
 		ortp_warning("Error rtp recv async thread for windows: SetThreadPriority() failed [%d]\n", (int)GetLastError());
 	}
-	
+
 	while(session->rtp.is_win_thread_running)
 	{
 		int ret = WSAPoll(&fdarray, 1, 10);
-		
+
 		if (ret == SOCKET_ERROR) {
 			ortp_warning("Error rtp recv async thread for windows: error while polling [%i]", WSAGetLastError());
 		} else if (ret > 0) {
@@ -1880,7 +1903,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 			} else {
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 			}
-			
+
 			if (error > 0) {
 				if (mp->timestamp.tv_sec == 0){
 					static int warn_once = 1; /*VERY BAD to use a static but there is no context in this function to hold this variable*/
@@ -1890,9 +1913,9 @@ void* rtp_session_recvfrom_async(void* obj) {
 					}
 					ortp_gettimeofday(&mp->timestamp, NULL);
 				}
-				
+
 				mp->b_wptr+=error;
-			
+
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 				ortp_mutex_lock(&session->rtp.winrq_lock);
 #endif
@@ -1921,7 +1944,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 		}
 	}
 #endif
-	
+
 	return NULL;
 }
 
@@ -1964,7 +1987,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 			mp = getq(&session->bundleq);
 			ortp_mutex_unlock(&session->bundleq_lock);
 		}
-		
+
 		if (mp != NULL) {
 			mp->reserved1 = user_ts;
 			rtp_session_process_incoming(session, mp, TRUE, user_ts, FALSE);
@@ -2126,5 +2149,5 @@ void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_add
 		session->rtcp.gs.used_loc_addrlen = 0;
 		memset(&session->rtcp.gs.used_loc_addr, 0, sizeof(session->rtcp.gs.used_loc_addr));// To not let tracks on memory
 	}
-	ortp_message("RtpSession sources to [%s] and [%s]",rtp_local_addr, rtcp_local_addr );
+	ortp_message("RtpSession set sources to [%s] and [%s]",rtp_local_addr, rtcp_local_addr );
 }
