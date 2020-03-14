@@ -1169,7 +1169,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
 			useV4 = TRUE;
 			ortp_recvaddr_to_sockaddr(&m->recv_addr,(struct sockaddr*) &v6Mapped, &v6MappedLen);
-			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr*)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
 		} else {
 			struct in6_addr *pktinfo;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
@@ -1208,29 +1208,6 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 		msg.msg_control = NULL;
 		error = sendmsg(sock,&msg,0);
 	}
-	if( error == -1 && errno == EFAULT)
-	{
-	    char to_addr_str[64];
-	    bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
-	    ortp_message(" ORTP : ERROR : : %d, to: %s, controlSize:%d", *m->b_rptr, to_addr_str, controlSize);
-	}else {
-	    char to_addr_str[64];
-	    bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
-	    ortp_message(" ORTP : SEND : : %d, to: %s, %d", *m->b_rptr, to_addr_str, controlSize);
-	}/*
-	{
-	       char to_addr_str[64], from_addr_str[64]={0};
-	       socklen_t tl;
-	       struct sockaddr addr;
-	       if( m->recv_addr.family != AF_UNSPEC)
-	       {
-		       ortp_recvaddr_to_sockaddr(&m->recv_addr, &addr, &tl);
-		       bctbx_sockaddr_to_printable_ip_address(&addr, tl, from_addr_str, sizeof(from_addr_str));
-	       }
-	       bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, addr_len, to_addr_str, sizeof(to_addr_str));
-
-	       ortp_message(" ORTP : Send packet : %d, to: %s, from:%s, size:%d", *m->b_rptr, to_addr_str, from_addr_str, error);
-       }*/
 	return error;
 }
 #endif
