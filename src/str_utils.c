@@ -394,8 +394,8 @@ void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr
 	} else if (recvaddr->family == AF_INET6) {
 		struct sockaddr_in6 *addr_in6 = (struct sockaddr_in6 *)addr;
 		addr_in6->sin6_family = AF_INET6;
-		addr_in6->sin6_addr = recvaddr->addr.ipi6_addr;
 		addr_in6->sin6_port = recvaddr->port;
+		memcpy(&addr_in6->sin6_addr, &recvaddr->addr.ipi6_addr, sizeof(recvaddr->addr.ipi6_addr));
 		*socklen = sizeof(struct sockaddr_in6);
 	}
 }
@@ -404,13 +404,13 @@ void ortp_sockaddr_to_recvaddr(const struct sockaddr * addr, ortp_recv_addr_t * 
 	{
 		struct sockaddr_in * addr_in = (struct sockaddr_in *)addr;
 		recvaddr->port = addr_in->sin_port;
-		recvaddr->family = addr_in->sin_family;
-		recvaddr->addr.ipi_addr = addr_in->sin_addr;
+                recvaddr->family = addr_in->sin_family;
+                recvaddr->addr.ipi_addr = addr_in->sin_addr;
 	}else if( addr->sa_family == AF_INET6)
-	{
+        {
 		struct sockaddr_in6 * addr_in6 = (struct sockaddr_in6 *)addr;
 		recvaddr->port = addr_in6->sin6_port;
 		recvaddr->family = addr_in6->sin6_family;
-		recvaddr->addr.ipi6_addr = addr_in6->sin6_addr;
+                memcpy(&recvaddr->addr.ipi6_addr, &addr_in6->sin6_addr, sizeof(addr_in6->sin6_addr));
 	}
 }
