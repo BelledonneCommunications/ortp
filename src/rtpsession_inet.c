@@ -1019,7 +1019,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	int wsabufLen;
 	mblk_t *mTrack = m;
 	PWSACMSGHDR cmsg = NULL;
-	struct sockaddr v4, v6Mapped;
+	struct sockaddr_storage v4, v6Mapped;
 	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
 
@@ -1047,8 +1047,8 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 		!IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
 		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
 			useV4 = TRUE;
-			ortp_recvaddr_to_sockaddr(&m->recv_addr, &v6Mapped, &v6MappedLen);
-			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, (struct sockaddr*&v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr *)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
 		} else {
 			PIN6_PKTINFO pPktInfo = NULL;
 			cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
@@ -1101,7 +1101,7 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	mblk_t * m_track = m;
 	int controlSize = 0;				// Used to reset msg.msg_controllen to the real control size
 	struct cmsghdr *cmsg;
-	struct sockaddr v4, v6Mapped;
+	struct sockaddr_storage v4, v6Mapped;
 	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
 	int error;
@@ -1132,8 +1132,8 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
 		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
 			useV4 = TRUE;
-			ortp_recvaddr_to_sockaddr(&m->recv_addr, &v6Mapped, &v6MappedLen);
-			bctbx_sockaddr_remove_v4_mapping(&v6Mapped, &v4, &v4Len);
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, (struct sockaddr*)&v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr*)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
 		} else {
 			struct in6_pktinfo *pktinfo;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
