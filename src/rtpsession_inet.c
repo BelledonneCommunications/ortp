@@ -1314,6 +1314,10 @@ int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flag
 	int ret = rtp_session_rtp_recv_abstract(is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket, m, flags, from, fromlen);
 	if ((ret >= 0) && (session->use_pktinfo == TRUE)) {
 		if (m->recv_addr.family == AF_UNSPEC) {
+			if (!session->warn_non_working_pkt_info){
+				ortp_error("IP_PKTINFO/IP6_PKTINFO not working as expected for recevied packets. An unreliable fallback method will be used.");
+				session->warn_non_working_pkt_info = TRUE;
+			}
 			/* The receive address has not been filled, this typically happens on Mac OS X when receiving an IPv4 packet on
 			 * a dual stack socket. Try to guess the address because it is mandatory for ICE. */
 			const ortp_recv_addr_t *recv_addr = lookup_recv_addr(session, from, *fromlen);

@@ -461,10 +461,12 @@ struct _RtpSession
 	bool_t is_spliced;
 	bool_t congestion_detector_enabled;
 	bool_t video_bandwidth_estimator_enabled;
+	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
+	
+	bool_t warn_non_working_pkt_info;
 
 	/* bundle mode */
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
-	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
 	queue_t bundleq;
 	ortp_mutex_t bundleq_lock;
 };
