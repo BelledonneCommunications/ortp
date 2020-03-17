@@ -274,7 +274,7 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	if (sock!=-1){
 		struct sockaddr_storage saddr;
 		socklen_t slen=sizeof(saddr);
-		
+
 		set_non_blocking_socket (sock);
 		err=getsockname(sock,(struct sockaddr*)&saddr,&slen);
 		if (err==-1){
@@ -1007,23 +1007,113 @@ void rtp_session_flush_sockets(RtpSession *session){
 }
 
 
+#if defined(_WIN32) || defined(_WIN32_WCE)
+#define MAX_BUF 64
+static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
+	WSAMSG msg = {0};
+	WSABUF wsabuf[MAX_BUF];
+	DWORD dwBytes = 0;
+	CHAR ctrlBuffer[512] = {0};
+	int error;
+	int controlSize = 0;
+	int wsabufLen;
+	mblk_t *mTrack = m;
+	PWSACMSGHDR cmsg = NULL;
+	struct sockaddr_storage v4, v6Mapped;
+	socklen_t v4Len=0, v6MappedLen=0;
+	bool_t useV4 = FALSE;
+
+	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen) {
+		wsabuf[wsabufLen].buf = mTrack->b_rptr;
+		wsabuf[wsabufLen].len = mTrack->b_wptr - mTrack->b_rptr;
+	}
+	msg.lpBuffers = wsabuf; // contents
+	msg.dwBufferCount = wsabufLen;
+	if (wsabufLen == MAX_BUF) {
+		int count = 0;
+		while (mTrack != NULL) {
+			++count;
+			mTrack = mTrack->b_cont;
+		}
+		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_BUF + count);
+	}
+	msg.name = (SOCKADDR *)rem_addr;
+	msg.namelen = addr_len;
+	msg.Control.buf = ctrlBuffer;
+	msg.Control.len = sizeof(ctrlBuffer);
+	cmsg = WSA_CMSG_FIRSTHDR(&msg);
+#ifdef IPV6_PKTINFO
+	if (m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr)) {
+		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
+			useV4 = TRUE;
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, (struct sockaddr*)&v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr*)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
+		} else {
+			PIN6_PKTINFO pPktInfo = NULL;
+			cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN6_PKTINFO));
+			cmsg->cmsg_level = IPPROTO_IPV6;
+			cmsg->cmsg_type = IPV6_PKTINFO;
+			pPktInfo = (PIN6_PKTINFO)WSA_CMSG_DATA(cmsg);
+			pPktInfo->ipi6_addr = m->recv_addr.addr.ipi6_addr;
+			controlSize += WSA_CMSG_SPACE(sizeof(IN6_PKTINFO));
+			cmsg = WSA_CMSG_NXTHDR(&msg, cmsg);
+		}
+	}
+#endif
+#ifdef IP_PKTINFO
+	if (m->recv_addr.family == AF_INET || useV4==TRUE) { // Add IPV4 to the message control
+		PIN_PKTINFO pPktInfo = NULL;
+		cmsg->cmsg_len = WSA_CMSG_LEN(sizeof(IN_PKTINFO));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		pPktInfo = (PIN_PKTINFO)WSA_CMSG_DATA(cmsg);
+		if (useV4 == TRUE)
+			pPktInfo->ipi_addr = ((SOCKADDR_IN *)&v4)->sin_addr;
+		else
+			pPktInfo->ipi_addr = m->recv_addr.addr.ipi_addr;
+		controlSize += WSA_CMSG_SPACE(sizeof(IN_PKTINFO));
+	}
+#endif
+	msg.Control.len = controlSize;
+	if (controlSize == 0)
+		msg.Control.buf = NULL;
+	error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+	 if( error == SOCKET_ERROR && controlSize != 0){
+		int errorCode = WSAGetLastError();
+		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH || errorCode==WSAEFAULT)
+		{
+			msg.Control.len = 0;
+			msg.Control.buf = NULL;
+			error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+		}
+	 }
+	return error;
+}
+#else
 #ifdef USE_SENDMSG
 #define MAX_IOV 64
 static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
-	int error;
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
+	u_char control_buffer[512] = {0};
+	mblk_t * m_track = m;
+	int controlSize = 0;				// Used to reset msg.msg_controllen to the real control size
+	struct cmsghdr *cmsg;
+	struct sockaddr_storage v4, v6Mapped;
+	socklen_t v4Len=0, v6MappedLen=0;
+	bool_t useV4 = FALSE;
+	int error;
 
-	for(iovlen=0; iovlen<MAX_IOV && m!=NULL; m=m->b_cont,iovlen++){
-		iov[iovlen].iov_base=m->b_rptr;
-		iov[iovlen].iov_len=m->b_wptr-m->b_rptr;
+	for(iovlen=0; iovlen<MAX_IOV && m_track!=NULL; m_track=m_track->b_cont,iovlen++){
+		iov[iovlen].iov_base=m_track->b_rptr;
+		iov[iovlen].iov_len=m_track->b_wptr-m_track->b_rptr;
 	}
 	if (iovlen==MAX_IOV){
 		int count = 0;
-		while (m!=NULL){
+		while (m_track!=NULL){
 			count++;
-			m=m->b_cont;
+			m_track=m_track->b_cont;
 		}
 		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_IOV+count);
 	}
@@ -1031,12 +1121,96 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_namelen=addr_len;
 	msg.msg_iov=&iov[0];
 	msg.msg_iovlen=iovlen;
-	msg.msg_control=NULL;
-	msg.msg_controllen=0;
 	msg.msg_flags=0;
-	error=sendmsg(sock,&msg,0);
+	msg.msg_control=control_buffer;
+	msg.msg_controllen=sizeof(control_buffer);
+
+	cmsg = CMSG_FIRSTHDR(&msg);
+#ifdef IPV6_PKTINFO
+	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
+	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
+		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
+			useV4 = TRUE;
+			ortp_recvaddr_to_sockaddr(&m->recv_addr, (struct sockaddr*)&v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr*)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
+		} else {
+			struct in6_pktinfo *pktinfo;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+			cmsg->cmsg_level = IPPROTO_IPV6;
+			cmsg->cmsg_type = IPV6_PKTINFO;
+			pktinfo = (struct in6_pktinfo*) CMSG_DATA(cmsg);
+			pktinfo->ipi6_ifindex = 0;	// Set to 0 to let the kernel to use routable interface
+			pktinfo->ipi6_addr = m->recv_addr.addr.ipi6_addr;
+			controlSize += CMSG_SPACE(sizeof(struct in6_pktinfo));
+			cmsg = CMSG_NXTHDR(&msg, cmsg);
+		}
+	}
+#endif
+#ifdef IP_PKTINFO
+	if( m->recv_addr.family == AF_INET || useV4==TRUE )
+	{// Add IPV4 to the message control
+		struct in_pktinfo *pktinfo;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_pktinfo));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_PKTINFO;
+		pktinfo = (struct in_pktinfo*) CMSG_DATA(cmsg);
+		if(useV4 == TRUE)
+			pktinfo->ipi_spec_dst = ((struct sockaddr_in *)&v4)->sin_addr;
+		else
+			pktinfo->ipi_spec_dst = m->recv_addr.addr.ipi_addr;
+		controlSize += CMSG_SPACE(sizeof(struct in_pktinfo));
+		cmsg = CMSG_NXTHDR(&msg, cmsg);
+	}
+#endif
+
+#ifdef IPV6_RECVDSTADDR
+	if( m->recv_addr.family == AF_INET6 && !IN6_IS_ADDR_UNSPECIFIED(&m->recv_addr.addr.ipi6_addr) && !IN6_IS_ADDR_LOOPBACK(&m->recv_addr.addr.ipi6_addr))
+	{// Add IPV6 to the message control. We only add it if the IP is specified and is not link local
+		if (IN6_IS_ADDR_V4MAPPED(&m->recv_addr.addr.ipi6_addr)) {
+			useV4 = TRUE;
+			ortp_recvaddr_to_sockaddr(&m->recv_addr,(struct sockaddr*) &v6Mapped, &v6MappedLen);
+			bctbx_sockaddr_remove_v4_mapping((struct sockaddr*)&v6Mapped, (struct sockaddr*)&v4, &v4Len);
+		} else {
+			struct in6_addr *pktinfo;
+			cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
+			cmsg->cmsg_level = IPPROTO_IPV6;
+			cmsg->cmsg_type = IPV6_RECVDSTADDR;
+			pktinfo = (struct in6_addr*) CMSG_DATA(cmsg);
+			*pktinfo = m->recv_addr.addr.ipi6_addr;
+			controlSize += CMSG_SPACE(sizeof(struct in6_addr));
+			cmsg = CMSG_NXTHDR(&msg, cmsg);
+		}
+	}
+#endif
+#if defined(IP_RECVDSTADDR)
+	if( m->recv_addr.family == AF_INET || useV4==TRUE )
+	{// Add IPV4 to the message control
+		struct in_addr *pktinfo;
+		cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+		cmsg->cmsg_level = IPPROTO_IP;
+		cmsg->cmsg_type = IP_RECVDSTADDR;
+		pktinfo = (struct in_addr*) CMSG_DATA(cmsg);
+		if(useV4 == TRUE)
+			*pktinfo = ((struct sockaddr_in *)&v4)->sin_addr;
+		else
+			*pktinfo = m->recv_addr.addr.ipi_addr;
+		controlSize += CMSG_SPACE(sizeof(struct in_addr));
+//		cmsg = CMSG_NXTHDR(&msg, cmsg);		// Uncomment if you want to add interfaces
+	}
+#endif
+
+	msg.msg_controllen = controlSize;
+	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
+		msg.msg_control = NULL;
+	error = sendmsg(sock,&msg,0);
+	if( error == -1 && controlSize != 0 && (errno == EINVAL || errno==ENETUNREACH || errno==EFAULT)) {
+		msg.msg_controllen =0;
+		msg.msg_control = NULL;
+		error = sendmsg(sock,&msg,0);
+	}
 	return error;
 }
+#endif
 #endif
 
 ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
@@ -1045,7 +1219,7 @@ ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
 
 int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
 	int error;
-#ifdef USE_SENDMSG
+#if defined(_WIN32) || defined(_WIN32_WCE) || defined(USE_SENDMSG)
 	error = rtp_sendmsg(sockfd, m, destaddr, destlen);
 #else
 	if (m->b_cont != NULL)
@@ -1140,9 +1314,15 @@ int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flag
 	int ret = rtp_session_rtp_recv_abstract(is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket, m, flags, from, fromlen);
 	if ((ret >= 0) && (session->use_pktinfo == TRUE)) {
 		if (m->recv_addr.family == AF_UNSPEC) {
+			const ortp_recv_addr_t *recv_addr;
+			
+			if (!session->warn_non_working_pkt_info){
+				ortp_error("IP_PKTINFO/IP6_PKTINFO not working as expected for recevied packets. An unreliable fallback method will be used.");
+				session->warn_non_working_pkt_info = TRUE;
+			}
 			/* The receive address has not been filled, this typically happens on Mac OS X when receiving an IPv4 packet on
 			 * a dual stack socket. Try to guess the address because it is mandatory for ICE. */
-			const ortp_recv_addr_t *recv_addr = lookup_recv_addr(session, from, *fromlen);
+			recv_addr = lookup_recv_addr(session, from, *fromlen);
 			if (recv_addr == NULL) {
 				recv_addr = get_recv_addr(session, from, *fromlen);
 			}
@@ -1219,7 +1399,8 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-
+	if( m->recv_addr.family == AF_UNSPEC && session->rtp.gs.used_loc_addrlen>0 )
+		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1290,7 +1471,8 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 		destaddr=NULL;
 		destlen=0;
 	}
-
+	if( m->recv_addr.family == AF_UNSPEC && session->rtcp.gs.used_loc_addrlen>0 )
+	    ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
 	if (session->rtcp.enabled){
 		if ( (sockfd!=(ortp_socket_t)-1 && (destlen>0 || using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) {
@@ -1415,7 +1597,6 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 			}
 #endif
 		}
-
 		/*store recv addr for use by modifiers*/
 		if (from && fromlen) {
 			memcpy(&msg->net_addr,from,*fromlen);
@@ -1504,7 +1685,7 @@ static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
  * @brief : for SR packets, retrieves their timestamp, gets the date, and stores these information into the session descriptor. The date values may be used for setting some fields of the report block of the next RTCP packet to be sent.
  * @param session : the current session descriptor.
  * @param block : the block descriptor that may contain a SR RTCP message.
- * @return 0 if the packet is a real RTCP packet, -1 otherwise. 
+ * @return 0 if the packet is a real RTCP packet, -1 otherwise.
  * @note a basic parsing is done on the block structure. However, if it fails, no error is returned, and the session descriptor is left as is, so it does not induce any change in the caller procedure behaviour.
  * @note the packet is freed or is taken ownership if -1 is returned
  */
@@ -1528,7 +1709,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		if (stunlen + 20 == block->b_wptr - block->b_rptr) {
 			/* this looks like a stun packet */
 			rtp_session_update_remote_sock_addr(session, block, FALSE, TRUE);
-			
+
 			if (session->eventqs != NULL) {
 				OrtpEvent *ev = ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed = ortp_event_get_data(ev);
@@ -1592,7 +1773,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		}
 	}while (rtcp_next_packet(block));
 	rtcp_rewind(block);
-	
+
 	rtp_session_update_remote_sock_addr(session, block, FALSE, FALSE);
 	return 0;
 }
@@ -1680,15 +1861,15 @@ void* rtp_session_recvfrom_async(void* obj) {
 	WSAPOLLFD fdarray = {0};
 	fdarray.fd = session->rtp.gs.socket;
 	fdarray.events = POLLRDNORM;
-	
+
 	if(!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST)){
 		ortp_warning("Error rtp recv async thread for windows: SetThreadPriority() failed [%d]\n", (int)GetLastError());
 	}
-	
+
 	while(session->rtp.is_win_thread_running)
 	{
 		int ret = WSAPoll(&fdarray, 1, 10);
-		
+
 		if (ret == SOCKET_ERROR) {
 			ortp_warning("Error rtp recv async thread for windows: error while polling [%i]", WSAGetLastError());
 		} else if (ret > 0) {
@@ -1704,7 +1885,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 			} else {
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, (struct sockaddr *) &remaddr, &addrlen);
 			}
-			
+
 			if (error > 0) {
 				if (mp->timestamp.tv_sec == 0){
 					static int warn_once = 1; /*VERY BAD to use a static but there is no context in this function to hold this variable*/
@@ -1714,9 +1895,9 @@ void* rtp_session_recvfrom_async(void* obj) {
 					}
 					ortp_gettimeofday(&mp->timestamp, NULL);
 				}
-				
+
 				mp->b_wptr+=error;
-			
+
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 				ortp_mutex_lock(&session->rtp.winrq_lock);
 #endif
@@ -1745,7 +1926,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 		}
 	}
 #endif
-	
+
 	return NULL;
 }
 
@@ -1788,7 +1969,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 			mp = getq(&session->bundleq);
 			ortp_mutex_unlock(&session->bundleq_lock);
 		}
-		
+
 		if (mp != NULL) {
 			mp->reserved1 = user_ts;
 			rtp_session_process_incoming(session, mp, TRUE, user_ts, FALSE);
@@ -1926,4 +2107,29 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 		return 0;
 	}
 	return -1;
+}
+
+void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr) {
+	struct addrinfo * session_addr_info;
+	if(rtp_local_addr[0] != '\0')
+	{// rtp_local_addr should not be NULL
+		session_addr_info = bctbx_ip_address_to_addrinfo(session->rtp.gs.sockfamily , SOCK_DGRAM ,rtp_local_addr, 0);
+		memcpy(&session->rtp.gs.used_loc_addr, session_addr_info->ai_addr, session_addr_info->ai_addrlen);
+		session->rtp.gs.used_loc_addrlen = (socklen_t)session_addr_info->ai_addrlen;
+		bctbx_freeaddrinfo(session_addr_info);
+	}else {
+		session->rtp.gs.used_loc_addrlen = 0;
+		memset(&session->rtp.gs.used_loc_addr, 0, sizeof(session->rtp.gs.used_loc_addr));// To not let tracks on memory
+	}
+	if(rtcp_local_addr[0] != '\0')
+	{// rtcp_local_addr should not be NULL
+		session_addr_info = bctbx_ip_address_to_addrinfo(session->rtcp.gs.sockfamily , SOCK_DGRAM ,rtcp_local_addr, 0);
+		memcpy(&session->rtcp.gs.used_loc_addr, session_addr_info->ai_addr, session_addr_info->ai_addrlen);
+		session->rtcp.gs.used_loc_addrlen = (socklen_t)session_addr_info->ai_addrlen;
+		bctbx_freeaddrinfo(session_addr_info);
+	}else {
+		session->rtcp.gs.used_loc_addrlen = 0;
+		memset(&session->rtcp.gs.used_loc_addr, 0, sizeof(session->rtcp.gs.used_loc_addr));// To not let tracks on memory
+	}
+	ortp_message("RtpSession set sources to [%s] and [%s]",rtp_local_addr, rtcp_local_addr );
 }

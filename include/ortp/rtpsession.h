@@ -307,6 +307,8 @@ typedef struct _OrtpStream {
 	struct sockaddr_storage rem_addr;
 	socklen_t loc_addrlen;
 	struct sockaddr_storage loc_addr;
+	socklen_t used_loc_addrlen;
+	struct sockaddr_storage used_loc_addr; /*Address used to redirect packets from this source*/
 	struct _RtpTransport *tr;
 	OrtpBwEstimator recv_bw_estimator;
 	struct timeval send_bw_start; /* used for bandwidth estimation */
@@ -459,10 +461,12 @@ struct _RtpSession
 	bool_t is_spliced;
 	bool_t congestion_detector_enabled;
 	bool_t video_bandwidth_estimator_enabled;
+	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
+	
+	bool_t warn_non_working_pkt_info;
 
 	/* bundle mode */
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
-	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
 	queue_t bundleq;
 	ortp_mutex_t bundleq_lock;
 };
@@ -809,6 +813,7 @@ ORTP_PUBLIC const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession
 ORTP_PUBLIC int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 /* Returns FALSE if the rtp packet or at least one of the RTCP packet (compound) was for the primary */
 ORTP_PUBLIC bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, bool_t received_by_rtcp_mux);
+ORTP_PUBLIC void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr);
 
 #ifdef __cplusplus
 }
