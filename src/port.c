@@ -103,9 +103,23 @@ char * ortp_strdup(const char *tmp){
  */
 int set_non_blocking_socket (ortp_socket_t sock){
 #if	!defined(_WIN32) && !defined(_WIN32_WCE)
-	return fcntl (sock, F_SETFL, O_NONBLOCK);
+	return fcntl (sock, F_SETFL, fcntl(sock,F_GETFL) | O_NONBLOCK);
 #else
 	unsigned long nonBlock = 1;
+	return ioctlsocket(sock, FIONBIO , &nonBlock);
+#endif
+}
+
+/*
+ * this method is an utility method that calls fnctl() on UNIX or
+ * ioctlsocket on Win32.
+ * int retrun the result of the system method
+ */
+int set_blocking_socket (ortp_socket_t sock){
+#if	!defined(_WIN32) && !defined(_WIN32_WCE)
+	return fcntl (sock, F_SETFL, fcntl(sock, F_GETFL) & ~O_NONBLOCK);
+#else
+	unsigned long nonBlock = 0;
 	return ioctlsocket(sock, FIONBIO , &nonBlock);
 #endif
 }
