@@ -103,9 +103,23 @@ char * ortp_strdup(const char *tmp){
  */
 int set_non_blocking_socket (ortp_socket_t sock){
 #if	!defined(_WIN32) && !defined(_WIN32_WCE)
-	return fcntl (sock, F_SETFL, O_NONBLOCK);
+	return fcntl (sock, F_SETFL, fcntl(sock,F_GETFL) | O_NONBLOCK);
 #else
 	unsigned long nonBlock = 1;
+	return ioctlsocket(sock, FIONBIO , &nonBlock);
+#endif
+}
+
+/*
+ * this method is an utility method that calls fnctl() on UNIX or
+ * ioctlsocket on Win32.
+ * int retrun the result of the system method
+ */
+int set_blocking_socket (ortp_socket_t sock){
+#if	!defined(_WIN32) && !defined(_WIN32_WCE)
+	return fcntl (sock, F_SETFL, fcntl(sock, F_GETFL) & ~O_NONBLOCK);
+#else
+	unsigned long nonBlock = 0;
 	return ioctlsocket(sock, FIONBIO , &nonBlock);
 #endif
 }
@@ -360,29 +374,6 @@ int ortp_gettimeofday (struct timeval *tv, void* tz)
 }
 
 #endif
-
-const char *getWinSocketError(int error)
-{
-	static char buf[80];
-
-	switch (error)
-	{
-		case WSANOTINITIALISED: return "Windows sockets not initialized : call WSAStartup";
-		case WSAEADDRINUSE:		return "Local Address already in use";
-		case WSAEADDRNOTAVAIL:	return "The specified address is not a valid address for this machine";
-		case WSAEINVAL:			return "The socket is already bound to an address.";
-		case WSAENOBUFS:		return "Not enough buffers available, too many connections.";
-		case WSAENOTSOCK:		return "The descriptor is not a socket.";
-		case WSAECONNRESET:		return "Connection reset by peer";
-
-		default :
-			sprintf(buf, "Error code : %d", error);
-			return buf;
-		break;
-	}
-
-	return buf;
-}
 
 #ifdef _WORKAROUND_MINGW32_BUGS
 char * WSAAPI gai_strerror(int errnum){

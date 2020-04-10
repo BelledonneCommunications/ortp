@@ -111,6 +111,7 @@ unsigned long __ortp_thread_self(void);
 
 #define getSocketError() strerror(errno)
 #define getSocketErrorCode() (errno)
+#define getSocketErrorWithCode(code) strerror(code)
 #define ortp_gettimeofday(tv,tz) gettimeofday(tv,tz)
 #define ortp_log10f(x)	log10f(x)
 
@@ -260,6 +261,9 @@ extern "C" {
 #ifndef getSocketError
 #define getSocketError() getWinSocketError(WSAGetLastError())
 #endif
+#ifndef getSocketErrorWithCode
+#define getSocketErrorWithCode(code) getWinSocketError(code)
+#endif
 
 #ifndef F_OK
 #define F_OK 00 /* Visual Studio does not define F_OK */
@@ -316,6 +320,7 @@ void ortp_set_memory_functions(OrtpMemoryFunctions *functions);
 
 ORTP_PUBLIC int close_socket(ortp_socket_t sock);
 ORTP_PUBLIC int set_non_blocking_socket(ortp_socket_t sock);
+ORTP_PUBLIC int set_blocking_socket(ortp_socket_t sock);
 
 ORTP_PUBLIC char *ortp_strndup(const char *str,int n);
 #define ortp_strdup_printf bctbx_strdup_printf
