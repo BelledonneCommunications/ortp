@@ -316,6 +316,7 @@ void ortp_set_memory_functions(OrtpMemoryFunctions *functions);
 
 ORTP_PUBLIC int close_socket(ortp_socket_t sock);
 ORTP_PUBLIC int set_non_blocking_socket(ortp_socket_t sock);
+ORTP_PUBLIC int set_blocking_socket(ortp_socket_t sock);
 
 ORTP_PUBLIC char *ortp_strndup(const char *str,int n);
 #define ortp_strdup_printf bctbx_strdup_printf
