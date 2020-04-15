@@ -1635,12 +1635,14 @@ void rtp_session_uninit (RtpSession * session)
 		meta_rtp_transport_destroy(rtcp_meta_transport);
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
+#ifdef ENABLE_MICROSOFT_STORE_APP
+//#ifndef ENABLE_MICROSOFT_STORE_APP    // use it when ENABLE_MICROSOFT_STORE_APP is propagate
 	if (session->rtp.QoSFlowID != 0)
 	{
 		ortp_message("check OS support for qwave.lib");
 		if (IsWindowsVistaOrGreater()) {
 			BOOL QoSResult;
-			QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle, 0, session->rtp.QoSFlowID, 0);
+                        QoSResult = QOSRemoveSocketFromFlow(session->rtp.QoSHandle, 0, session->rtp.QoSFlowID, 0);
 			if (QoSResult != TRUE){
 				ortp_error("QOSRemoveSocketFromFlow failed to end a flow with error %d", GetLastError());
 			}
@@ -1653,6 +1655,7 @@ void rtp_session_uninit (RtpSession * session)
 		QOSCloseHandle(session->rtp.QoSHandle);
 		session->rtp.QoSHandle=NULL;
 	}
+#endif //ENABLE_MICROSOFT_STORE_APP
 #endif
 
 	if (session->rtcp.tmmbr_info.received)

@@ -127,8 +127,7 @@ if(ENABLE_SHARED)
 	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
 	target_include_directories(ortp
 		INTERFACE $<INSTALL_INTERFACE:include>
-	)
-	target_link_libraries(ortp PUBLIC bctoolbox PRIVATE ${LIBS})
+	)	
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 			install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_BUILD_TYPE}/ortp.pdb
@@ -136,7 +135,11 @@ if(ENABLE_SHARED)
 				PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 			)
 		endif()
+		message(STATUS "Force use WindowsApp for ortp : ${ENABLE_MICROSOFT_STORE_APP}")
+		set_target_properties(ortp PROPERTIES LINK_DIRECTORIES "\$(WindowsSDK_LibraryPath_x86);\$(NETFXKitsDir)Lib\\um\\x86;\$(VC_LibraryPath_VC_x86_store);\$(VC_ReferencesPath_ATL_x86);\$(VC_LibraryPath_VC_x86);\$(VC_LibraryPath_x86);C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\VS\\UnitTest\\lib;\$(LibraryPath)")
+		target_link_libraries(ortp PRIVATE "WindowsApp.lib")
 	endif()
+	target_link_libraries(ortp PUBLIC bctoolbox PRIVATE ${LIBS})
 	install(TARGETS ortp EXPORT ${EXPORT_TARGET_NAME}Targets
 		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
