@@ -89,8 +89,8 @@ RtpTimer posix_timer={	0,
 #else //_WIN32
 
 
-#ifndef ENABLE_MICROSOFT_STORE_APP
-//#ifdef ENABLE_MICROSOFT_STORE_APP // use it when ENABLE_MICROSOFT_STORE_APP is propagate
+
+#ifdef ENABLE_MICROSOFT_STORE_APP
 
 #include <windows.h>
 #include <mmsystem.h>
