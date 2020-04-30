@@ -1138,6 +1138,7 @@ rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number
 static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 	uint16_t pid;
 	uint16_t i;
+	
 	/*don't check anything before first packet delivered*/
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED && RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.rcv_last_seq + 1)) {
 		uint16_t first_missed_seq = session->rtp.rcv_last_seq + 1;
