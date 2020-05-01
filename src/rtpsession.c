@@ -1579,6 +1579,10 @@ void rtp_session_uninit (RtpSession * session)
 {	
 	RtpTransport *rtp_meta_transport = NULL;
 	RtpTransport *rtcp_meta_transport = NULL;
+
+	/* Stop and destroy network simulator first, as its thread must be stopped before we free anything else in the RtpSession. */
+	if (session->net_sim_ctx)
+		ortp_network_simulator_destroy(session->net_sim_ctx);
 	
 	/* If rtp async thread is running stop it and wait fot it to finish */
 #if defined(_WIN32) || defined(_WIN32_WCE)
@@ -1618,8 +1622,6 @@ void rtp_session_uninit (RtpSession * session)
 
 	session->signal_tables = o_list_free(session->signal_tables);
 
-	if (session->net_sim_ctx)
-		ortp_network_simulator_destroy(session->net_sim_ctx);
 	
 	if (session->rtp.congdetect){
 		ortp_congestion_detector_destroy(session->rtp.congdetect);
