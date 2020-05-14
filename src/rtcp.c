@@ -472,7 +472,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 }
 
 static float rtcp_rand(float t) {
-	return t * ((rand() / (RAND_MAX * 1.0f)) + 0.5f);
+	return t * ((rand() / ((float)RAND_MAX)) + 0.5f);
 }
 
 /**
