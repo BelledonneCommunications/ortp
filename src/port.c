@@ -785,7 +785,7 @@ void ortp_sleep_ms(int ms){
 }
 
 void ortp_sleep_until(const ortpTimeSpec *ts){
-#ifdef __linux
+#ifdef __linux__
 	struct timespec rq;
 	rq.tv_sec=ts->tv_sec;
 	rq.tv_nsec=ts->tv_nsec;
@@ -863,7 +863,7 @@ static int ortp_wincrypto_random(unsigned int *rand_number){
 	return 0;
 }
 #endif
-#elif defined(__QNXNTO__) || ((defined(__linux) || defined(__APPLE__)) && !defined(HAVE_ARC4RANDOM))
+#elif defined(__QNXNTO__) || ((defined(__linux__) || defined(__APPLE__)) && !defined(HAVE_ARC4RANDOM))
 
 static unsigned int ortp_urandom(void) {
 	static int fd=-1;
@@ -889,7 +889,7 @@ unsigned int ortp_random(void){
 #else
 	return arc4random();
 #endif
-#elif defined(__linux) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__)
 	return ortp_urandom();
 #elif defined(_WIN32)
 	static int initd=0;

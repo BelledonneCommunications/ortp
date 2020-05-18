@@ -40,7 +40,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#ifdef __linux
+#ifdef __linux__
 #include <stdint.h>
 #endif
 
