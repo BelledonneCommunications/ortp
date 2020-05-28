@@ -160,9 +160,13 @@ ORTP_PUBLIC mblk_t * msgown(mblk_t *mp);
 
 typedef struct _msgb_allocator{
 	queue_t q;
+	int max_blocks;
 }msgb_allocator_t;
 
 ORTP_PUBLIC void msgb_allocator_init(msgb_allocator_t *pa);
+/* Set a maximum number of blocks that can be managed by the allocator.
+   Only blocks satisfying the "size" argument of msgb_allocator_alloc() are counted.*/
+ORTP_PUBLIC void msgb_allocator_set_max_blocks(msgb_allocator_t *pa, int max_blocks);
 ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, size_t size);
 ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 

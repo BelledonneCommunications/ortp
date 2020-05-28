@@ -343,6 +343,11 @@ mblk_t *concatb(mblk_t *mp, mblk_t *newm){
 
 void msgb_allocator_init(msgb_allocator_t *a){
 	qinit(&a->q);
+	a->max_blocks = 0; /* no limit */
+}
+
+void msgb_allocator_set_max_blocks(msgb_allocator_t *pa, int max_blocks){
+	pa->max_blocks = max_blocks;
 }
 
 static void msgb_allocator_free_db(void *unused){
@@ -351,13 +356,21 @@ static void msgb_allocator_free_db(void *unused){
 mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){
 	queue_t *q=&a->q;
 	mblk_t *m,*found=NULL;
+	int busy_blocks = 0;
 
 	/*lookup for an unused msgb (data block with ref count ==1)*/
 	for(m=qbegin(q);!qend(q,m);m=qnext(q,m)){
-		if ((m->b_datap->db_ref == 1) && ((size_t)(m->b_datap->db_lim - m->b_datap->db_base) >= size)){
-			found=m;
-			break;
+		if ((size_t)(m->b_datap->db_lim - m->b_datap->db_base) >= size){
+			if (m->b_datap->db_ref == 1){
+				found=m;
+				break;
+			}else{
+				busy_blocks++;
+			}
 		}
+	}
+	if (a->max_blocks !=0 && busy_blocks >= a->max_blocks){
+		return NULL;
 	}
 	if (found==NULL){
 		found=allocb(size,0);
