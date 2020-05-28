@@ -148,17 +148,19 @@ void payload_type_destroy(PayloadType *pt)
 
 static const char *find_param_occurence_of(const char *fmtp, const char *param){
 	const char *pos=fmtp;
+	int param_len = (int)strlen(param);
 	do{
 		pos=strstr(pos,param);
 		if (pos){
 			/*check that the occurence found is not a subword of a parameter name*/
-			if (pos==fmtp) break;
-			if (pos[-1]==';' || pos[-1]==' '){
-				break;
+			if (pos==fmtp){
+				if (pos[param_len] == '=') break; /* found it */
+			}else if ((pos[-1]==';' || pos[-1]==' ') && pos[param_len] == '='){
+				break; /* found it */
 			}
 			pos+=strlen(param);
 		}
-	}while(pos!=NULL);
+	}while (pos!=NULL);
 	return pos;
 }
 
