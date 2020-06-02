@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [4.4.0] - 2019-06-03
+
+### Added
+- RTP bundling according to https://tools.ietf.org/html/draft-ietf-mmusic-sdp-bundle-negotiation-54
+- RTP extension header support
+- IP_PKTINFO for outgoing packets - useful for ICE. This let specify the source IP address to use while sending a packet.
+
+### Changed
+- Version number aligned with other linphone-sdk components, for simplicity.
+
+### Fixed
+- Random crash when network simulator is activated, while destroying an RtpSession.
+
+
+
 ## [1.1.0] - 2019-09-18
 
 ### Added
