@@ -1138,6 +1138,7 @@ rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number
 static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 	uint16_t pid;
 	uint16_t i;
+	
 	/*don't check anything before first packet delivered*/
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED && RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.rcv_last_seq + 1)) {
 		uint16_t first_missed_seq = session->rtp.rcv_last_seq + 1;
@@ -1578,6 +1579,10 @@ void rtp_session_uninit (RtpSession * session)
 {	
 	RtpTransport *rtp_meta_transport = NULL;
 	RtpTransport *rtcp_meta_transport = NULL;
+
+	/* Stop and destroy network simulator first, as its thread must be stopped before we free anything else in the RtpSession. */
+	if (session->net_sim_ctx)
+		ortp_network_simulator_destroy(session->net_sim_ctx);
 	
 	/* If rtp async thread is running stop it and wait fot it to finish */
 #if defined(_WIN32) || defined(_WIN32_WCE)
@@ -1617,8 +1622,6 @@ void rtp_session_uninit (RtpSession * session)
 
 	session->signal_tables = o_list_free(session->signal_tables);
 
-	if (session->net_sim_ctx)
-		ortp_network_simulator_destroy(session->net_sim_ctx);
 	
 	if (session->rtp.congdetect){
 		ortp_congestion_detector_destroy(session->rtp.congdetect);

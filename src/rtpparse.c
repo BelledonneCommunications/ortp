@@ -122,7 +122,7 @@ static void update_rtcp_xr_stat_summary(RtpSession *session, mblk_t *mp, uint32_
 	session->rtcp_xr_stats.last_jitter_diff_since_last_stat_summary = diff;
 }
 
-static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
+static void check_for_seq_number_gap_immediate(RtpSession *session, rtp_header_t *rtp) {
 	uint16_t pid;
 	uint16_t i;
 
@@ -146,6 +146,15 @@ static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 			uint16_t blp = 0;
 			for (seq = pid + 1; (seq < rtp->seq_number) && ((seq - pid) < 16); seq++) {
 				blp |= (1 << (seq - pid - 1));
+			}
+			if (session->rtp.congdetect != NULL && session->rtp.congdetect->state == CongestionStateDetected) {
+				/*
+				* Do not send NACK in IMMEDIATE_NACK mode in congestion, because the retransmission by the other party of the missing packets
+				* will necessarily increase or at least sustain the congestion.
+				* Furthermore, due to the congestion, the retransmitted packets have very few chance to arrive in time.
+				*/
+				ortp_message("Immediate NACK not sent because of congestion.");
+				return;
 			}
 			rtp_session_send_rtcp_fb_generic_nack(session, pid, blp);
 			pid = seq;
@@ -370,7 +379,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		 * If immediate nack is enabled then we check for missing packets here instead of
 		 * rtp_session_recvm_with_ts
 		 */
-		check_for_seq_number_gap(session, rtp);
+		check_for_seq_number_gap_immediate(session, rtp);
 	}
 
 	if (queue_packet(&session->rtp.rq,session->rtp.jittctl.params.max_packets,mp,rtp,&discarded,&duplicate))
