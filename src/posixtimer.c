@@ -88,7 +88,140 @@ RtpTimer posix_timer={	0,
 							
 #else //_WIN32
 
-#ifdef ORTP_WINDOWS_DESKTOP
+
+#ifdef ENABLE_MICROSOFT_STORE_APP
+
+#include <windows.h>
+#include <mmsystem.h>
+
+
+PTP_TIMER timerId;
+HANDLE   TimeEvent;
+int      late_ticks;
+
+
+static DWORD posix_timer_time;
+static DWORD offset_time;
+
+#define TIME_INTERVAL           50
+#define TIME_RESOLUTION         10
+#define TIME_TIMEOUT            100
+
+static PTP_TIMER g_timerId = NULL;
+static PTP_CLEANUP_GROUP g_cleanupgroup = NULL;
+static PTP_POOL g_pool = NULL;
+
+
+VOID CALLBACK timerCb(PTP_CALLBACK_INSTANCE Instance,PVOID Context,PTP_TIMER Timer)
+{
+    if(Timer == g_timerId) {
+	SetEvent(TimeEvent);
+	posix_timer_time += TIME_INTERVAL;
+    }
+}
+
+
+void win_timer_init(void)
+{
+    BOOL bRet = FALSE;
+    PTP_WORK work = NULL;
+    FILETIME FileDueTime;
+    TP_CALLBACK_ENVIRON CallBackEnviron;
+
+    InitializeThreadpoolEnvironment(&CallBackEnviron);
+    g_pool = CreateThreadpool(NULL); // Create a custom, dedicated thread pool.
+    if (NULL == g_pool) {
+      ortp_warning("CreateThreadpool failed. LastError: %u\n", GetLastError());
+      return;
+    }
+    SetThreadpoolThreadMaximum(g_pool, 1); // The thread pool is made persistent simply by setting
+    bRet = SetThreadpoolThreadMinimum(g_pool, 1); // both the minimum and maximum threads to 1.
+    if (FALSE == bRet) {
+      ortp_warning("SetThreadpoolThreadMinimum failed. LastError: %u\n", GetLastError());
+      return;
+    }
+    g_cleanupgroup = CreateThreadpoolCleanupGroup(); // Create a cleanup group for this thread pool.
+    if (NULL == g_cleanupgroup) {
+      ortp_warning("CreateThreadpoolCleanupGroup failed. LastError: %u\n", GetLastError());
+      return;
+    }
+    SetThreadpoolCallbackPool(&CallBackEnviron, g_pool); // Associate the callback environment with our thread pool.
+    // Associate the cleanup group with our thread pool. Objects created with the same callback environment as the cleanup group become members of the cleanup group.
+    SetThreadpoolCallbackCleanupGroup(&CallBackEnviron, g_cleanupgroup, NULL);
+    g_timerId = CreateThreadpoolTimer(timerCb, NULL, &CallBackEnviron); // Create a timer with the same callback environment.
+    if (NULL == g_timerId) {
+      ortp_warning("CreateThreadpoolTimer failed. LastError: %u\n", GetLastError());
+      return;
+    }
+
+    SYSTEMTIME thesystemtime;
+    GetSystemTime(&thesystemtime);
+    thesystemtime.wYear++;
+    SystemTimeToFileTime(&thesystemtime,&FileDueTime);
+    //ULARGE_INTEGER ulDueTime;
+    //ulDueTime.QuadPart = (ULONGLONG)604800 * 10 * 1000 * 1000;
+    //FileDueTime.dwHighDateTime = ulDueTime.HighPart;
+    //FileDueTime.dwLowDateTime  = ulDueTime.LowPart;
+    SetThreadpoolTimer(timerId, &FileDueTime, TIME_INTERVAL, 0);
+    TimeEvent = CreateEvent(NULL,FALSE,FALSE,NULL);
+    late_ticks = 0;
+    offset_time = GetTickCount();
+    posix_timer_time=0;
+}
+
+
+void win_timer_do(void){
+    if(g_timerId) {
+	DWORD diff;
+	// If timer have expired while we where out of this method
+	// Try to run after lost time.
+	if (late_ticks > 0)
+	{
+		late_ticks--;
+		posix_timer_time+=TIME_INTERVAL;
+		return;
+	}
+	diff = GetTickCount() - posix_timer_time - offset_time;
+	if( diff>TIME_INTERVAL && (diff<(1<<31)))
+	{
+		late_ticks = diff/TIME_INTERVAL;
+		ortp_warning("we must catchup %i ticks.",late_ticks);
+		return;
+	}
+	WaitForSingleObject(TimeEvent,TIME_TIMEOUT);
+	return;
+    }
+}
+
+
+void win_timer_close(void)
+{
+    if( g_timerId != NULL) {
+	SetThreadpoolTimer(g_timerId, NULL, 0, 0);
+	CloseThreadpoolTimer(g_timerId);
+	g_timerId = NULL;
+    }
+    if(g_cleanupgroup != NULL ){ // Clean up the cleanup group members.
+	  CloseThreadpoolCleanupGroupMembers(g_cleanupgroup, FALSE, NULL);
+	  CloseThreadpoolCleanupGroup(g_cleanupgroup);
+	  g_cleanupgroup = NULL;
+    }
+    if(g_pool!=NULL ){ // Clean up the pool.
+	  CloseThreadpool(g_pool);
+	  g_pool = NULL;
+    }
+}
+
+RtpTimer toto;
+
+RtpTimer posix_timer={	0,
+						win_timer_init,
+						win_timer_do,
+						win_timer_close,
+						{0,TIME_INTERVAL * 1000}};
+
+#elif defined ORTP_WINDOWS_DESKTOP
+
 
 #include <windows.h>
 #include <mmsystem.h>

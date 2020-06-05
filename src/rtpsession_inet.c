@@ -662,6 +662,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
+#ifndef ENABLE_MICROSOFT_STORE_APP
 	ortp_message("check OS support for qwave.lib");
 	if (IsWindowsVistaOrGreater()) {
 		if (session->dscp==0)
@@ -705,6 +706,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			}
 		}
 	} else {
+#endif //ENABLE_MICROSOFT_STORE_APP
 #endif
 		// DSCP value is in the upper six bits of the TOS field
 		tos = (session->dscp << 2) & 0xFC;
@@ -734,7 +736,9 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			}
 		}
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
+#ifndef ENABLE_MICROSOFT_STORE_APP
 	}
+#endif // ENABLE_MICROSOFT_STORE_APP
 #endif
 	return retval;
 }
