@@ -233,6 +233,7 @@ rtp_session_init (RtpSession * session, int mode)
 		return;
 	}
 	memset (session, 0, sizeof (RtpSession));
+	ortp_mutex_init(&session->main_mutex, NULL);
 	session->mode = (RtpSessionMode) mode;
 	if ((mode == RTP_SESSION_RECVONLY) || (mode == RTP_SESSION_SENDRECV))
 	{
@@ -1690,6 +1691,7 @@ void rtp_session_uninit (RtpSession * session)
 		freemsg(session->rtcp.tmmbr_info.received);
 	if (session->rtcp.send_algo.fb_packets)
 		freemsg(session->rtcp.send_algo.fb_packets);
+	ortp_mutex_destroy(&session->main_mutex);
 }
 
 /**
