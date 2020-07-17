@@ -720,7 +720,8 @@ void ortp_shm_close(void *mem){
 
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(_WIN32)
-#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP)
+//#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP)
+#if defined( ORTP_WINDOWS_DESKTOP )
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();

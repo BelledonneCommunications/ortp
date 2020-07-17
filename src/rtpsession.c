@@ -1665,7 +1665,7 @@ void rtp_session_uninit (RtpSession * session)
 		meta_rtp_transport_destroy(rtcp_meta_transport);
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-#ifndef ENABLE_MICROSOFT_STORE_APP
+//#ifndef ENABLE_MICROSOFT_STORE_APP
 	if (session->rtp.QoSFlowID != 0)
 	{
 		ortp_message("check OS support for qwave.lib");
@@ -1684,7 +1684,7 @@ void rtp_session_uninit (RtpSession * session)
 		QOSCloseHandle(session->rtp.QoSHandle);
 		session->rtp.QoSHandle=NULL;
 	}
-#endif //ENABLE_MICROSOFT_STORE_APP
+//#endif //ENABLE_MICROSOFT_STORE_APP
 #endif
 
 	if (session->rtcp.tmmbr_info.received)

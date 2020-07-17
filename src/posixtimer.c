@@ -88,7 +88,7 @@ RtpTimer posix_timer={	0,
 							
 #else //_WIN32
 
-
+/*
 #ifdef ENABLE_MICROSOFT_STORE_APP
 
 #include <windows.h>
@@ -221,6 +221,8 @@ RtpTimer posix_timer={	0,
 						{0,TIME_INTERVAL * 1000}};
 
 #elif defined ORTP_WINDOWS_DESKTOP
+*/
+#if defined ORTP_WINDOWS_DESKTOP
 
 
 #include <windows.h>
