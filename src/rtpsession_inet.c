@@ -929,8 +929,10 @@ end:
 			ortp_free(aux_rtp);
 			ortp_free(aux_rtcp);
 		}else{
+			ortp_mutex_lock(&session->main_mutex);
 			session->rtp.gs.aux_destinations=o_list_append(session->rtp.gs.aux_destinations,aux_rtp);
 			session->rtcp.gs.aux_destinations=o_list_append(session->rtcp.gs.aux_destinations,aux_rtcp);
+			ortp_mutex_unlock(&session->main_mutex);
 		}
 	}
 	return err;
@@ -960,8 +962,10 @@ rtp_session_add_aux_remote_addr_full(RtpSession * session, const char * rtp_addr
 }
 
 void rtp_session_clear_aux_remote_addr(RtpSession * session){
+	ortp_mutex_lock(&session->main_mutex);
 	ortp_stream_clear_aux_addresses(&session->rtp.gs);
 	ortp_stream_clear_aux_addresses(&session->rtcp.gs);
+	ortp_mutex_unlock(&session->main_mutex);
 }
 
 void rtp_session_set_sockets(RtpSession *session, int rtpfd, int rtcpfd){
@@ -1424,10 +1428,12 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 	/*first send to main destination*/
 	error=rtp_session_rtp_sendto(session,m,destaddr,destlen,FALSE);
 	/*then iterate over auxiliary destinations*/
+	ortp_mutex_lock(&session->main_mutex);
 	for(elem=session->rtp.gs.aux_destinations;elem!=NULL;elem=elem->next){
 		OrtpAddress *addr=(OrtpAddress*)elem->data;
 		rtp_session_rtp_sendto(session,m,(struct sockaddr*)&addr->addr,addr->len,TRUE);
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 	freemsg(m);
 	return error;
 }

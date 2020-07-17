@@ -395,6 +395,7 @@ typedef struct _RtpSession RtpSession;
 **/
 struct _RtpSession
 {
+	ortp_mutex_t main_mutex; /* To protect data that can be accessed simultaneously by a control thread and the real-time thread in charge of sending/receiving. */
 	RtpSession *next;	/* next RtpSession, when the session are enqueued by the scheduler */
 	int mask_pos;	/* the position in the scheduler mask of RtpSession : do not move this field: it is part of the ABI since the session_set macros use it*/
 	struct {
