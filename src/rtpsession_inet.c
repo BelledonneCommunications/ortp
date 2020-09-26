@@ -1086,7 +1086,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	if (controlSize == 0)
 		msg.Control.buf = NULL;
 	error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
-	 if( error == SOCKET_ERROR && controlSize != 0){
+	if( error == SOCKET_ERROR && controlSize != 0){
 		int errorCode = WSAGetLastError();
 		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH || errorCode==WSAEFAULT)
 		{
@@ -1094,8 +1094,8 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 			msg.Control.buf = NULL;
 			error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
 		}
-	 }
-	return error;
+	}
+	return dwBytes;// Return the bytes that have been sent
 }
 #else
 #ifdef USE_SENDMSG
@@ -1226,15 +1226,15 @@ ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
 }
 
 int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
-	int error;
+	int sent_bytes;
 #if defined(_WIN32) || defined(_WIN32_WCE) || defined(USE_SENDMSG)
-	error = rtp_sendmsg(sockfd, m, destaddr, destlen);
+	sent_bytes = rtp_sendmsg(sockfd, m, destaddr, destlen);
 #else
 	if (m->b_cont != NULL)
 		msgpullup(m, -1);
-	error = sendto(sockfd, (char*)m->b_rptr, (int)(m->b_wptr - m->b_rptr), 0, destaddr, destlen);
+	sent_bytes = sendto(sockfd, (char*)m->b_rptr, (int)(m->b_wptr - m->b_rptr), 0, destaddr, destlen);
 #endif
-	return error;
+	return sent_bytes;
 }
 
 int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
