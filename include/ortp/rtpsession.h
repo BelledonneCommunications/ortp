@@ -425,6 +425,7 @@ struct _RtpSession
 	struct _RtpScheduler *sched;
 	uint32_t flags;
 	int dscp;
+	bool_t multicast;
 	int multicast_ttl;
 	int multicast_loopback;
 	float duplication_ratio; /* Number of times a packet should be duplicated */
@@ -568,6 +569,9 @@ ORTP_PUBLIC int rtp_session_get_dscp(const RtpSession *session);
 ORTP_PUBLIC int rtp_session_set_pktinfo(RtpSession *session, int activate);
 
 /* Multicast methods */
+ORTP_PUBLIC int rtp_session_set_multicast(RtpSession *session, bool_t yesno);
+ORTP_PUBLIC bool_t rtp_session_get_multicast(const RtpSession *session);
+
 ORTP_PUBLIC int rtp_session_set_multicast_ttl(RtpSession *session, int ttl);
 ORTP_PUBLIC int rtp_session_get_multicast_ttl(RtpSession *session);
 

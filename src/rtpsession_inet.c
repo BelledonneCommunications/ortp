@@ -171,14 +171,13 @@ static int set_multicast_group(ortp_socket_t sock, const char *addr){
 #endif
 }
 
-static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_family, bool_t reuse_addr,struct sockaddr_storage* bound_addr,socklen_t *bound_addr_len){
+static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_family, bool_t reuse_addr,struct sockaddr_storage* bound_addr,socklen_t *bound_addr_len, bool_t multicast_enabled){
 	int err;
 	int optval = 1;
 	ortp_socket_t sock=-1;
 	struct addrinfo *res0, *res;
 
 	if (*port==-1) *port=0;
-	if (*port==0) reuse_addr=FALSE;
 
 	res0 = bctbx_name_to_addrinfo(AF_UNSPEC, SOCK_DGRAM, addr, *port);
 	if (res0 == NULL){
@@ -187,12 +186,18 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	}
 
 	for (res = res0; res; res = res->ai_next) {
+
+		bool_t reuse_addr_internal = reuse_addr;
+		// If we let the OS choose the port, then the address and port cannot be reused unless multicast flag is set to true
+		if (*port == 0) {
+			reuse_addr_internal=multicast_enabled;
+		}
 		sock = socket(res->ai_family, res->ai_socktype, 0);
 		if (sock==-1){
 			ortp_error("Cannot create a socket with family=[%i] and socktype=[%i]: %s", res->ai_family, res->ai_socktype, getSocketError());
 			continue;
 		}
-		if (reuse_addr){
+		if (reuse_addr_internal){
 			err = setsockopt (sock, SOL_SOCKET, SO_REUSEADDR,
 					(SOCKET_OPTION_VALUE)&optval, sizeof (optval));
 			if (err < 0)
@@ -369,14 +374,14 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 	}
 	/* try to bind the rtp port */
 
-	sock=create_and_bind(addr,&rtp_port,&sockfamily,session->reuseaddr,&session->rtp.gs.loc_addr,&session->rtp.gs.loc_addrlen);
+	sock=create_and_bind(addr,&rtp_port,&sockfamily,session->reuseaddr,&session->rtp.gs.loc_addr,&session->rtp.gs.loc_addrlen,session->multicast);
 	if (sock!=-1){
 		session->rtp.gs.sockfamily=sockfamily;
 		session->rtp.gs.socket=sock;
 		session->rtp.gs.loc_port=rtp_port;
 		_rtp_session_apply_socket_sizes(session);
 		/*try to bind rtcp port */
-		sock=create_and_bind(addr,&rtcp_port,&sockfamily,session->reuseaddr,&session->rtcp.gs.loc_addr,&session->rtcp.gs.loc_addrlen);
+		sock=create_and_bind(addr,&rtcp_port,&sockfamily,session->reuseaddr,&session->rtcp.gs.loc_addr,&session->rtcp.gs.loc_addrlen,session->multicast);
 		if (sock!=(ortp_socket_t)-1){
 			session->rtcp.gs.sockfamily=sockfamily;
 			session->rtcp.gs.socket=sock;
@@ -755,6 +760,34 @@ int rtp_session_get_dscp(const RtpSession *session)
 {
 	return session->dscp;
 }
+
+/**
+ *rtp_session_set_multicast:
+ *@param session: a rtp session
+ *@param yesno: desired value of multicast
+ *
+ * Sets the flag multicast of the RTP session
+ *
+ * Returns: 0 on success.
+ *
+**/
+int rtp_session_set_multicast(RtpSession *session, bool_t yesno){
+	session->multicast = yesno;
+	return 0;
+}
+
+/**
+ *rtp_session_get_multicast:
+ *@param session: a rtp session
+ *
+ * Returns the value of the multicast flag
+ *
+**/
+bool_t rtp_session_get_multicast(const RtpSession *session)
+{
+	return session->multicast;
+}
+
 
 
 /**
