@@ -662,7 +662,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-#ifndef ENABLE_MICROSOFT_STORE_APP
+#if !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	ortp_message("check OS support for qwave.lib");
 	if (IsWindowsVistaOrGreater()) {
 		if (session->dscp==0)
@@ -736,7 +736,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			}
 		}
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-#ifndef ENABLE_MICROSOFT_STORE_APP
+#if !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	}
 #endif // ENABLE_MICROSOFT_STORE_APP
 #endif
@@ -1017,7 +1017,7 @@ void rtp_session_flush_sockets(RtpSession *session){
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
 #define MAX_BUF 64
-static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
+static int rtp_sendmsg(ortp_socket_t sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
 	WSAMSG msg = {0};
 	WSABUF wsabuf[MAX_BUF];
 	DWORD dwBytes = 0;
@@ -1033,7 +1033,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 
 	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen) {
 		wsabuf[wsabufLen].buf = mTrack->b_rptr;
-		wsabuf[wsabufLen].len = mTrack->b_wptr - mTrack->b_rptr;
+		wsabuf[wsabufLen].len = (ULONG)(mTrack->b_wptr - mTrack->b_rptr);
 	}
 	msg.lpBuffers = wsabuf; // contents
 	msg.dwBufferCount = wsabufLen;
@@ -1085,14 +1085,14 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	msg.Control.len = controlSize;
 	if (controlSize == 0)
 		msg.Control.buf = NULL;
-	error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+	error = WSASendMsg((SOCKET)sock, &msg, 0, &dwBytes, NULL, NULL);
 	if( error == SOCKET_ERROR && controlSize != 0){
 		int errorCode = WSAGetLastError();
 		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH || errorCode==WSAEFAULT)
 		{
 			msg.Control.len = 0;
 			msg.Control.buf = NULL;
-			error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+			error = WSASendMsg((SOCKET)sock, &msg, 0, &dwBytes, NULL, NULL);
 		}
 	}
 	return dwBytes;// Return the bytes that have been sent
@@ -1100,7 +1100,7 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 #else
 #ifdef USE_SENDMSG
 #define MAX_IOV 64
-static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
+static int rtp_sendmsg(ortp_socket_t sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
@@ -1210,11 +1210,11 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_controllen = controlSize;
 	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
 		msg.msg_control = NULL;
-	error = sendmsg(sock,&msg,0);
+	error = sendmsg((int)sock,&msg,0);
 	if( error == -1 && controlSize != 0 && (errno == EINVAL || errno==ENETUNREACH || errno==EFAULT)) {
 		msg.msg_controllen =0;
 		msg.msg_control = NULL;
-		error = sendmsg(sock,&msg,0);
+		error = sendmsg((int)sock,&msg,0);
 	}
 	return error;
 }
