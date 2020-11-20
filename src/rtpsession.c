@@ -1665,7 +1665,7 @@ void rtp_session_uninit (RtpSession * session)
 		meta_rtp_transport_destroy(rtcp_meta_transport);
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-#ifndef ENABLE_MICROSOFT_STORE_APP
+#if !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	if (session->rtp.QoSFlowID != 0)
 	{
 		ortp_message("check OS support for qwave.lib");
@@ -2220,7 +2220,7 @@ ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data)
 
 				if (id == (int)(*tmp >> 4)) {
 					if (data) *data = tmp + 1;
-					return size;
+					return (int)size;
 				}
 
 				tmp += size + 1;
@@ -2235,7 +2235,7 @@ ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data)
 
 				if (id == (int)*tmp) {
 					if (data) *data = tmp + 2;
-					return size;
+					return (int)size;
 				}
 
 				tmp += size + 2;
@@ -2586,7 +2586,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 				return 0;
 			}
 
-			ret = msgdsize(msg);
+			ret = (int)msgdsize(msg);
 		}
 	}
 
