@@ -26,6 +26,7 @@
 #include "ortp/str_utils.h"
 #include "utils.h"
 #include <bctoolbox/port.h>
+#include <bctoolbox/charconv.h>
 
 #if	defined(_WIN32) && !defined(_WIN32_WCE)
 #include <process.h>
@@ -533,8 +534,16 @@ ortp_pipe_t ortp_server_pipe_create(const char *name){
 #ifdef ORTP_WINDOWS_DESKTOP
 	ortp_pipe_t h;
 	char *pipename=make_pipe_name(name);
-	h=CreateNamedPipe(pipename,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
+
+	h=CreateNamedPipe(
+#ifdef ORTP_WINDOWS_UWP
+		    bctbx_string_to_wide_string(pipename)
+#else
+		    pipename
+#endif
+		    ,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
 						32768,32768,0,NULL);
+
 	ortp_free(pipename);
 	if (h==INVALID_HANDLE_VALUE){
 		ortp_error("Fail to create named pipe %s",pipename);
@@ -596,7 +605,7 @@ int ortp_server_pipe_close(ortp_pipe_t spipe){
 }
 
 ortp_pipe_t ortp_client_pipe_connect(const char *name){
-#ifdef ORTP_WINDOWS_DESKTOP
+#if defined( ORTP_WINDOWS_DESKTOP) && !defined(ORTP_WINDOWS_UWP)
 	char *pipename=make_pipe_name(name);
 	ortp_pipe_t hpipe = CreateFile(
 		 pipename,   // pipe name
@@ -658,12 +667,20 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 			PAGE_READWRITE,          // read/write access
 			0,                       // maximum object size (high-order DWORD)
 			size,                // maximum object size (low-order DWORD)
+#ifdef ORTP_WINDOWS_UWP
+			bctbx_string_to_wide_string(name));
+#else
 			name);                 // name of mapping object
+#endif
 	}else{
 		h = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
+#ifdef ORTP_WINDOWS_UWP
+			bctbx_string_to_wide_string(name));
+#else
 			name);               // name of mapping object
+#endif		
 	}
 	if (h==(HANDLE)-1) {
 		ortp_error("Fail to open file mapping (create=%i)",create);
@@ -720,7 +737,7 @@ void ortp_shm_close(void *mem){
 
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(_WIN32)
-#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP)
+#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();

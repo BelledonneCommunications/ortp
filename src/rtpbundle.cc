@@ -455,7 +455,7 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 		msgpullup(primarymsg, (size_t)-1);
 
 		// TODO: Fix when possible
-		int len = primarymsg->b_wptr - primarymsg->b_rptr;
+		size_t len = primarymsg->b_wptr - primarymsg->b_rptr;
 		memcpy(m->b_rptr, primarymsg->b_rptr, len);
 		m->b_wptr = m->b_rptr + len;
 

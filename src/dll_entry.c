@@ -86,7 +86,11 @@ BOOL WINAPI DllMain(
 											PAGE_READWRITE,			// read/write access
 											0,						// size: high 32-bits
 											SHMEMSIZE,				// size: low 32-bits
+#ifdef ORTP_WINDOWS_UWP
+											L"oRTPSharedMemory");  // name of map object
+#else
 											"oRTPSharedMemory");  // name of map object
+#endif
 
             if (hMapObject == NULL) 
                 return FALSE; 
