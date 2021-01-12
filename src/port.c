@@ -533,21 +533,24 @@ static HANDLE event=NULL;
 ortp_pipe_t ortp_server_pipe_create(const char *name){
 #ifdef ORTP_WINDOWS_DESKTOP
 	ortp_pipe_t h;
-	char *pipename=make_pipe_name(name);
-
-	h=CreateNamedPipe(
 #ifdef ORTP_WINDOWS_UWP
-		    bctbx_string_to_wide_string(pipename)
+	char *pipenameBuf=make_pipe_name(name);	
+	wchar_t * pipename = bctbx_string_to_wide_string(pipenameBuf);
+	ortp_free(pipenameBuf);
 #else
-		    pipename
-#endif
-		    ,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
-						32768,32768,0,NULL);
+	char *pipename=make_pipe_name(name);	
+#endif	
 
-	ortp_free(pipename);
+	h=CreateNamedPipe(pipename, PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT, 1, 32768, 32768, 0, NULL);
 	if (h==INVALID_HANDLE_VALUE){
 		ortp_error("Fail to create named pipe %s",pipename);
 	}
+
+#ifdef ORTP_WINDOWS_UWP
+	bctbx_free(pipename);
+#else
+	ortp_free(pipename);
+#endif
 	if (event==NULL) event=CreateEvent(NULL,TRUE,FALSE,NULL);
 	return h;
 #else
@@ -656,10 +659,17 @@ static OList *maplist=NULL;
 void *ortp_shm_open(unsigned int keyid, int size, int create){
 #ifdef ORTP_WINDOWS_DESKTOP
 	HANDLE h;
-	char name[64];
 	void *buf;
 
+#ifdef BCTBX_WINDOWS_UWP
+	char nameBuf[64];
+	snprintf(nameBuf,sizeof(nameBuf),"%x",keyid);
+	wchar_t * name = bctbx_string_to_wide_string(nameBuf);
+#else
+	char name[64];
 	snprintf(name,sizeof(name),"%x",keyid);
+#endif
+	
 	if (create){
 		h = CreateFileMapping(
 			INVALID_HANDLE_VALUE,    // use paging file
@@ -667,25 +677,20 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 			PAGE_READWRITE,          // read/write access
 			0,                       // maximum object size (high-order DWORD)
 			size,                // maximum object size (low-order DWORD)
-#ifdef ORTP_WINDOWS_UWP
-			bctbx_string_to_wide_string(name));
-#else
 			name);                 // name of mapping object
-#endif
 	}else{
 		h = OpenFileMapping(
 			FILE_MAP_ALL_ACCESS,   // read/write access
 			FALSE,                 // do not inherit the name
-#ifdef ORTP_WINDOWS_UWP
-			bctbx_string_to_wide_string(name));
-#else
 			name);               // name of mapping object
-#endif		
 	}
 	if (h==(HANDLE)-1) {
 		ortp_error("Fail to open file mapping (create=%i)",create);
 		return NULL;
 	}
+#ifdef BCTBX_WINDOWS_UWP
+	bctbx_free(name);
+#endif
 	buf = (LPTSTR) MapViewOfFile(h, // handle to map object
 		FILE_MAP_ALL_ACCESS,  // read/write permission
 		0,
