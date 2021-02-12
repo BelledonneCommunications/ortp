@@ -77,6 +77,7 @@ if(WIN32)
 		list(APPEND ORTP_SOURCE_FILES_CXX winrttimer.cpp winrttimer.h)
 		set_source_files_properties(winrttimer.cpp PROPERTIES COMPILE_FLAGS "/ZW /AI\$(WindowsSDK_MetadataPath)")
 	endif()
+	list(APPEND LIBS ws2_32)# symbols for in6addr_any
 endif()
 
 if(WIN32)
