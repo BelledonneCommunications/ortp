@@ -410,6 +410,8 @@ void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr
 		addr_in6->sin6_port = recvaddr->port;
 		memcpy(&addr_in6->sin6_addr, &recvaddr->addr.ipi6_addr, sizeof(recvaddr->addr.ipi6_addr));
 		*socklen = sizeof(struct sockaddr_in6);
+	}else{
+		*socklen = 0;
 	}
 }
 void ortp_sockaddr_to_recvaddr(const struct sockaddr * addr, ortp_recv_addr_t * recvaddr) {
