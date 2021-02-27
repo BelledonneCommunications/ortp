@@ -89,7 +89,7 @@ RtpTimer posix_timer={	0,
 #else //_WIN32
 
 
-#ifdef ENABLE_MICROSOFT_STORE_APP
+#if defined(ENABLE_MICROSOFT_STORE_APP) || defined(ORTP_WINDOWS_UWP)
 
 #include <windows.h>
 #include <mmsystem.h>

@@ -248,6 +248,27 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 
 		*sock_family=res->ai_family;
 		err = bind(sock, res->ai_addr, (int)res->ai_addrlen);
+#ifdef WIN32
+		if (err != 0){
+			int errorCode = WSAGetLastError();
+			if( errorCode == WSAEADDRNOTAVAIL){// On Windows, we cannot bind to an IP that is not in local contexte. We have to bind a wild card IP and join after the bind the multicast group with IP_ADD_MEMBERSHIP/IPV6_JOIN_GROUP
+				if(res->ai_family == AF_INET6){
+					struct sockaddr_in6 sin6;
+					sin6.sin6_family = AF_INET6;
+					sin6.sin6_flowinfo = 0;
+					sin6.sin6_port = htons(*port);
+					sin6.sin6_addr = in6addr_any;
+					err = bind(sock, (struct sockaddr *) &sin6, sizeof(sin6));
+				}else if(res->ai_family == AF_INET){
+					struct sockaddr_in name;
+					name.sin_family = res->ai_family;
+					name.sin_port = htons (*port);
+					name.sin_addr.s_addr = htonl (INADDR_ANY);
+					err = bind(sock, (struct sockaddr *) &name, sizeof(name));
+				}
+			}
+		}
+#endif
 		if (err != 0){
 			ortp_error ("Fail to bind rtp/rtcp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket(sock);
@@ -265,9 +286,9 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 	if (ortp_WSARecvMsg == NULL) {
 		GUID guid = WSAID_WSARECVMSG;
 		DWORD bytes_returned;
-		if (WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
+		if (  WSAIoctl(sock, SIO_GET_EXTENSION_FUNCTION_POINTER, &guid, sizeof(guid),
 			&ortp_WSARecvMsg, sizeof(ortp_WSARecvMsg), &bytes_returned, NULL, NULL) == SOCKET_ERROR) {
-			ortp_warning("WSARecvMsg function not found.");
+			ortp_warning("WSARecvMsg function not found [%d].", WSAGetLastError());
 		}
 	}
 #endif
@@ -662,7 +683,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 	if (session->rtp.gs.socket == (ortp_socket_t)-1) return 0;
 
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-#ifndef ENABLE_MICROSOFT_STORE_APP
+#if !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	ortp_message("check OS support for qwave.lib");
 	if (IsWindowsVistaOrGreater()) {
 		if (session->dscp==0)
@@ -736,7 +757,7 @@ int rtp_session_set_dscp(RtpSession *session, int dscp){
 			}
 		}
 #if (_WIN32_WINNT >= 0x0600) && defined(ORTP_WINDOWS_DESKTOP)
-#ifndef ENABLE_MICROSOFT_STORE_APP
+#if !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	}
 #endif // ENABLE_MICROSOFT_STORE_APP
 #endif
@@ -1017,7 +1038,7 @@ void rtp_session_flush_sockets(RtpSession *session){
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
 #define MAX_BUF 64
-static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
+static int rtp_sendmsg(ortp_socket_t sock, mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len) {
 	WSAMSG msg = {0};
 	WSABUF wsabuf[MAX_BUF];
 	DWORD dwBytes = 0;
@@ -1030,10 +1051,13 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	struct sockaddr_storage v4, v6Mapped;
 	socklen_t v4Len=0, v6MappedLen=0;
 	bool_t useV4 = FALSE;
+	struct sockaddr remote_address = {0};
+	struct addrinfo* feed_server = NULL;
 
 	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen) {
-		wsabuf[wsabufLen].buf = mTrack->b_rptr;
-		wsabuf[wsabufLen].len = mTrack->b_wptr - mTrack->b_rptr;
+		wsabuf[wsabufLen].len = (ULONG)(mTrack->b_wptr - mTrack->b_rptr);
+		wsabuf[wsabufLen].buf = malloc(sizeof(unsigned char)*wsabuf[wsabufLen].len);// buffer need to be in user allocation space or sending will result of WSAEFAULT
+		memcpy(wsabuf[wsabufLen].buf, mTrack->b_rptr, wsabuf[wsabufLen].len);
 	}
 	msg.lpBuffers = wsabuf; // contents
 	msg.dwBufferCount = wsabufLen;
@@ -1045,8 +1069,14 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 		}
 		ortp_error("Too long msgb (%i fragments) , didn't fit into iov, end discarded.", MAX_BUF + count);
 	}
-	msg.name = (SOCKADDR *)rem_addr;
-	msg.namelen = addr_len;
+	if( addr_len == 0){
+		// Get the local host information
+		msg.namelen = 0;
+		msg.name = NULL;
+	}else{
+		msg.namelen = addr_len;
+		msg.name = (SOCKADDR *)rem_addr;
+	}
 	msg.Control.buf = ctrlBuffer;
 	msg.Control.len = sizeof(ctrlBuffer);
 	cmsg = WSA_CMSG_FIRSTHDR(&msg);
@@ -1085,22 +1115,28 @@ static int rtp_sendmsg(int sock, mblk_t *m, const struct sockaddr *rem_addr, soc
 	msg.Control.len = controlSize;
 	if (controlSize == 0)
 		msg.Control.buf = NULL;
-	error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+	error = WSASendMsg((SOCKET)sock, &msg, 0, &dwBytes, NULL, NULL);
 	if( error == SOCKET_ERROR && controlSize != 0){
 		int errorCode = WSAGetLastError();
 		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH || errorCode==WSAEFAULT)
 		{
 			msg.Control.len = 0;
 			msg.Control.buf = NULL;
-			error = WSASendMsg(sock, &msg, 0, &dwBytes, NULL, NULL);
+			error = WSASendMsg((SOCKET)sock, &msg, 0, &dwBytes, NULL, NULL);
 		}
 	}
-	return dwBytes;// Return the bytes that have been sent
+	mTrack = m;
+	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen)
+		free(wsabuf[wsabufLen].buf);
+	if(error >= 0)
+		return dwBytes;// Return the bytes that have been sent
+	else
+		return error;
 }
 #else
 #ifdef USE_SENDMSG
 #define MAX_IOV 64
-static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
+static int rtp_sendmsg(ortp_socket_t sock,mblk_t *m, const struct sockaddr *rem_addr, socklen_t addr_len){
 	struct msghdr msg;
 	struct iovec iov[MAX_IOV];
 	int iovlen;
@@ -1210,11 +1246,11 @@ static int rtp_sendmsg(int sock,mblk_t *m, const struct sockaddr *rem_addr, sock
 	msg.msg_controllen = controlSize;
 	if( controlSize==0) // Have to reset msg_control to NULL as msg_controllen is not sufficient on some platforms
 		msg.msg_control = NULL;
-	error = sendmsg(sock,&msg,0);
+	error = sendmsg((int)sock,&msg,0);
 	if( error == -1 && controlSize != 0 && (errno == EINVAL || errno==ENETUNREACH || errno==EFAULT)) {
 		msg.msg_controllen =0;
 		msg.msg_control = NULL;
-		error = sendmsg(sock,&msg,0);
+		error = sendmsg((int)sock,&msg,0);
 	}
 	return error;
 }
@@ -1517,7 +1553,6 @@ static int rtp_recvmsg(ortp_socket_t socket, mblk_t *msg, int flags, struct sock
 	return error;
 }
 #endif
-
 int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int ret;
 	int bufsz = (int) (msg->b_datap->db_lim - msg->b_datap->db_base);
@@ -1526,8 +1561,8 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	WSAMSG msghdr = {0};
 	WSACMSGHDR *cmsghdr;
 	WSABUF data_buf;
-	DWORD bytes_received;
-
+	DWORD bytes_received=0;
+	int error = 0;
 	if (ortp_WSARecvMsg == NULL) {
 		return recvfrom(socket, (char *)msg->b_wptr, bufsz, flags, from, fromlen);
 	}
@@ -1538,8 +1573,8 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	}
 	data_buf.buf = (char *)msg->b_wptr;
 	data_buf.len = bufsz;
-	msghdr.lpBuffers = &data_buf;
 	msghdr.dwBufferCount = 1;
+	msghdr.lpBuffers = &data_buf;
 	msghdr.Control.buf = control;
 	msghdr.Control.len = sizeof(control);
 	msghdr.dwFlags = flags;
@@ -1612,6 +1647,7 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 			memcpy(&msg->net_addr,from,*fromlen);
 			msg->net_addrlen = *fromlen;
 		}
+	}else{
 	}
 	return ret;
 }
@@ -1921,7 +1957,11 @@ void* rtp_session_recvfrom_async(void* obj) {
 				{
 					if (session->on_network_error.count>0){
 						rtp_signal_table_emit3(&session->on_network_error,"Error receiving RTP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
-					}else ortp_warning("Error receiving RTP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
+	#ifdef _WIN32
+					}else if(errnum!=WSAECONNRESET) ortp_warning("Error receiving RTP packet err num [%i], error [%i]: %s",errnum,error,getSocketError());// Windows spam WSAECONNRESET and is not useful
+	#else
+					}else ortp_warning("Error receiving RTP packet err num [%i], error [%i]: %s",errnum,error,getSocketError());
+	#endif
 	#if TARGET_OS_IPHONE
 					/*hack for iOS and non-working socket because of background mode*/
 					if (errnum==ENOTCONN){
@@ -2041,7 +2081,11 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 			{
 				if (session->on_network_error.count>0){
 					rtp_signal_table_emit3(&session->on_network_error,"Error receiving RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
+#ifdef _WIN32
+				}else if(errnum!=WSAECONNRESET) ortp_warning("Error receiving RTCP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);// Windows spam WSAECONNRESET and is not useful
+#else
 				}else ortp_warning("Error receiving RTCP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
+#endif
 #if TARGET_OS_IPHONE
 				/*hack for iOS and non-working socket because of background mode*/
 				if (errnum==ENOTCONN){
