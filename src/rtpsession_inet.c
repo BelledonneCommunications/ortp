@@ -1056,8 +1056,7 @@ static int rtp_sendmsg(ortp_socket_t sock, mblk_t *m, const struct sockaddr *rem
 
 	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen) {
 		wsabuf[wsabufLen].len = (ULONG)(mTrack->b_wptr - mTrack->b_rptr);
-		wsabuf[wsabufLen].buf = malloc(sizeof(unsigned char)*wsabuf[wsabufLen].len);// buffer need to be in user allocation space or sending will result of WSAEFAULT
-		memcpy(wsabuf[wsabufLen].buf, mTrack->b_rptr, wsabuf[wsabufLen].len);
+		wsabuf[wsabufLen].buf = mTrack->b_rptr;
 	}
 	msg.lpBuffers = wsabuf; // contents
 	msg.dwBufferCount = wsabufLen;
@@ -1116,7 +1115,7 @@ static int rtp_sendmsg(ortp_socket_t sock, mblk_t *m, const struct sockaddr *rem
 	if (controlSize == 0)
 		msg.Control.buf = NULL;
 	error = WSASendMsg((SOCKET)sock, &msg, 0, &dwBytes, NULL, NULL);
-	if( error == SOCKET_ERROR && controlSize != 0){
+	if( error == SOCKET_ERROR && controlSize != 0){// Debug note : if unexpected WSAEFAULT, check the location of memory allocation of msg. It must be on ortp addresses space.
 		int errorCode = WSAGetLastError();
 		if( errorCode == WSAEINVAL || errorCode==WSAENETUNREACH || errorCode==WSAEFAULT)
 		{
@@ -1126,8 +1125,6 @@ static int rtp_sendmsg(ortp_socket_t sock, mblk_t *m, const struct sockaddr *rem
 		}
 	}
 	mTrack = m;
-	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen)
-		free(wsabuf[wsabufLen].buf);
 	if(error >= 0)
 		return dwBytes;// Return the bytes that have been sent
 	else
