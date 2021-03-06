@@ -26,6 +26,7 @@
 #include "ortp/str_utils.h"
 #include "utils.h"
 #include <bctoolbox/port.h>
+#include <bctoolbox/charconv.h>
 
 #if	defined(_WIN32) && !defined(_WIN32_WCE)
 #include <process.h>
@@ -532,13 +533,24 @@ static HANDLE event=NULL;
 ortp_pipe_t ortp_server_pipe_create(const char *name){
 #ifdef ORTP_WINDOWS_DESKTOP
 	ortp_pipe_t h;
-	char *pipename=make_pipe_name(name);
-	h=CreateNamedPipe(pipename,PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT,1,
-						32768,32768,0,NULL);
-	ortp_free(pipename);
+#ifdef ORTP_WINDOWS_UWP
+	char *pipenameBuf=make_pipe_name(name);	
+	wchar_t * pipename = bctbx_string_to_wide_string(pipenameBuf);
+	ortp_free(pipenameBuf);
+#else
+	char *pipename=make_pipe_name(name);	
+#endif	
+
+	h=CreateNamedPipe(pipename, PIPE_ACCESS_DUPLEX|FILE_FLAG_OVERLAPPED,PIPE_TYPE_MESSAGE|PIPE_WAIT, 1, 32768, 32768, 0, NULL);
 	if (h==INVALID_HANDLE_VALUE){
 		ortp_error("Fail to create named pipe %s",pipename);
 	}
+
+#ifdef ORTP_WINDOWS_UWP
+	bctbx_free(pipename);
+#else
+	ortp_free(pipename);
+#endif
 	if (event==NULL) event=CreateEvent(NULL,TRUE,FALSE,NULL);
 	return h;
 #else
@@ -596,7 +608,7 @@ int ortp_server_pipe_close(ortp_pipe_t spipe){
 }
 
 ortp_pipe_t ortp_client_pipe_connect(const char *name){
-#ifdef ORTP_WINDOWS_DESKTOP
+#if defined( ORTP_WINDOWS_DESKTOP) && !defined(ORTP_WINDOWS_UWP)
 	char *pipename=make_pipe_name(name);
 	ortp_pipe_t hpipe = CreateFile(
 		 pipename,   // pipe name
@@ -647,10 +659,17 @@ static OList *maplist=NULL;
 void *ortp_shm_open(unsigned int keyid, int size, int create){
 #ifdef ORTP_WINDOWS_DESKTOP
 	HANDLE h;
-	char name[64];
 	void *buf;
 
+#ifdef BCTBX_WINDOWS_UWP
+	char nameBuf[64];
+	snprintf(nameBuf,sizeof(nameBuf),"%x",keyid);
+	wchar_t * name = bctbx_string_to_wide_string(nameBuf);
+#else
+	char name[64];
 	snprintf(name,sizeof(name),"%x",keyid);
+#endif
+	
 	if (create){
 		h = CreateFileMapping(
 			INVALID_HANDLE_VALUE,    // use paging file
@@ -669,6 +688,9 @@ void *ortp_shm_open(unsigned int keyid, int size, int create){
 		ortp_error("Fail to open file mapping (create=%i)",create);
 		return NULL;
 	}
+#ifdef BCTBX_WINDOWS_UWP
+	bctbx_free(name);
+#endif
 	buf = (LPTSTR) MapViewOfFile(h, // handle to map object
 		FILE_MAP_ALL_ACCESS,  // read/write permission
 		0,
@@ -720,7 +742,7 @@ void ortp_shm_close(void *mem){
 
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(_WIN32)
-#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP)
+#if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
 	DWORD timemillis;
 #	if defined(_WIN32_WCE)
 	timemillis=GetTickCount();
