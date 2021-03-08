@@ -1687,6 +1687,8 @@ void rtp_session_uninit (RtpSession * session)
 #endif //ENABLE_MICROSOFT_STORE_APP
 #endif
 
+	if (session->rtcp.tmmbr_info.sent)
+		freemsg(session->rtcp.tmmbr_info.sent);
 	if (session->rtcp.tmmbr_info.received)
 		freemsg(session->rtcp.tmmbr_info.received);
 	if (session->rtcp.send_algo.fb_packets)
