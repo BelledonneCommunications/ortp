@@ -248,27 +248,6 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 
 		*sock_family=res->ai_family;
 		err = bind(sock, res->ai_addr, (int)res->ai_addrlen);
-#ifdef WIN32
-		if (err != 0){
-			int errorCode = WSAGetLastError();
-			if( errorCode == WSAEADDRNOTAVAIL){// On Windows, we cannot bind to an IP that is not in local contexte. We have to bind a wild card IP and join after the bind the multicast group with IP_ADD_MEMBERSHIP/IPV6_JOIN_GROUP
-				if(res->ai_family == AF_INET6){
-					struct sockaddr_in6 sin6;
-					sin6.sin6_family = AF_INET6;
-					sin6.sin6_flowinfo = 0;
-					sin6.sin6_port = htons(*port);
-					sin6.sin6_addr = in6addr_any;
-					err = bind(sock, (struct sockaddr *) &sin6, sizeof(sin6));
-				}else if(res->ai_family == AF_INET){
-					struct sockaddr_in name;
-					name.sin_family = res->ai_family;
-					name.sin_port = htons (*port);
-					name.sin_addr.s_addr = htonl (INADDR_ANY);
-					err = bind(sock, (struct sockaddr *) &name, sizeof(name));
-				}
-			}
-		}
-#endif
 		if (err != 0){
 			ortp_error ("Fail to bind rtp/rtcp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket(sock);
