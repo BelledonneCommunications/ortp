@@ -31,7 +31,7 @@
 #define RTP_DEFAULT_MULTICAST_TTL 5	/*hops*/
 #define RTP_DEFAULT_MULTICAST_LOOPBACK 0  /*false*/
 #define RTP_DEFAULT_DSCP 0x00  /*best effort*/
-
+#define RTP_MAX_MIXER_TO_CLIENT_AUDIO_LEVEL 14 /* 14 because we use 1-byte headers */
 
 
 typedef struct rtp_header
@@ -56,13 +56,6 @@ typedef struct rtp_header
 	uint32_t ssrc;
 	uint32_t csrc[16];
 } rtp_header_t;
-
-/* MAX is 15 because we use 1-byte header */
-typedef enum {
-	RTP_EXTENSION_NONE = 0,
-	RTP_EXTENSION_MID = 1,
-	RTP_EXTENSION_MAX = 15
-} rtp_extension_type_t;
 
 typedef struct rtp_stats
 {
@@ -90,6 +83,20 @@ typedef struct jitter_stats
 	uint64_t max_jitter_ts;		/* date (in ms since Epoch) of the biggest interarrival jitter */
 	float jitter_buffer_size_ms;/* mean jitter buffer size in milliseconds.*/
 } jitter_stats_t;
+
+/* MAX is 15 because we use 1-byte header */
+typedef enum {
+	RTP_EXTENSION_NONE = 0,
+	RTP_EXTENSION_MID = 1,
+	RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL = 2,
+	RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL = 3,
+	RTP_EXTENSION_MAX = 15
+} rtp_extension_type_t;
+
+typedef struct rtp_audio_level {
+	uint32_t csrc;
+	int dbov;
+} rtp_audio_level_t;
 
 #define RTP_TIMESTAMP_IS_NEWER_THAN(ts1, ts2) \
 	((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2)) < ((uint32_t)1 << 31))
@@ -135,6 +142,13 @@ ORTP_PUBLIC int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **s
 /* Extension header api */
 ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
 ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data);
+
+/* Audio Level api */
+ORTP_PUBLIC void rtp_add_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t voice_activity, int audio_level);
+ORTP_PUBLIC int rtp_get_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t *voice_activity);
+
+ORTP_PUBLIC void rtp_add_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels);
+ORTP_PUBLIC int rtp_get_mixer_to_client_audio_level(mblk_t *packet, int id, rtp_audio_level_t* audio_levels);
 
 #ifdef __cplusplus
 }
