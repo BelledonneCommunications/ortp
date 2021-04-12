@@ -890,7 +890,8 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 		if (mid != NULL) {
-			rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
 	}
 
@@ -950,7 +951,8 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
 			const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 			if (mid != NULL) {
-				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+				int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+				rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 			}
 		}
 	}
@@ -2102,7 +2104,7 @@ int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext){
  * @param size the size in bytes of the extension to add.
  * @param data the buffer to the extension data.
 **/
-ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
+void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
 	if (size <= 0 || data == NULL) {
 		ortp_warning("Cannot add an extension with empty data");
 		return;
@@ -2192,7 +2194,7 @@ ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, u
  * @param data pointer that will be set to the beginning of the extension data.
  * @return the size of the wanted extension in bytes, -1 if there is no extension header or the wanted extension was not found.
 **/
-ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
+int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
 	uint8_t *ext_header, *tmp;
 	uint16_t profile;
 	size_t ext_header_size, size;
