@@ -1,6 +1,6 @@
 ############################################################################
 # CMakeLists.txt
-# Copyright (C) 2014  Belledonne Communications, Grenoble France
+# Copyright (C) 2010-2021 Belledonne Communications, Grenoble France
 #
 ############################################################################
 #
@@ -133,7 +133,8 @@ if(ENABLE_SHARED)
 	endif()
 	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
 	target_include_directories(ortp
-		INTERFACE $<INSTALL_INTERFACE:include>
+		PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+		$<INSTALL_INTERFACE:include>
 	)
 	target_link_libraries(ortp PUBLIC bctoolbox PRIVATE ${LIBS})
 	if(MSVC)

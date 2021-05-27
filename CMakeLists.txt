@@ -1,6 +1,6 @@
 ############################################################################
 # CMakeLists.txt
-# Copyright (C) 2010-2019  Belledonne Communications, Grenoble France
+# Copyright (C) 2010-2021 Belledonne Communications, Grenoble France
 #
 ############################################################################
 #
@@ -20,7 +20,9 @@
 #
 ############################################################################
 
-cmake_minimum_required(VERSION 3.1)
+# CMake 3.13 required for new Flexisip build process.
+# See [CMP077](https://cmake.org/cmake/help/v3.13/policy/CMP0077.html).
+cmake_minimum_required(VERSION 3.13)
 project(oRTP VERSION 5.1.0)
 
 
@@ -44,6 +46,10 @@ option(ENABLE_PACKAGE_SOURCE "Create 'package_source' target for source archive 
 set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
+# Hidden non-cache options:
+# * DISABLE_BC_PACKAGE_SEARCH: skip find_package() for every BC package (bctoolbox, ortp, etc.)
+
+
 include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
@@ -63,7 +69,9 @@ endif()
 find_package(Threads)
 find_library(LIBM NAMES m)
 
-find_package(bctoolbox 0.2.0 REQUIRED)
+if(NOT DISABLE_BC_PACKAGE_SEARCH)
+	find_package(bctoolbox 0.2.0 REQUIRED)
+endif()
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
@@ -212,9 +220,11 @@ write_basic_package_version_file(
 	VERSION ${ORTP_VERSION}
 	COMPATIBILITY AnyNewerVersion
 )
-export(EXPORT "${EXPORT_TARGET_NAME}Targets"
-	FILE "${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Targets.cmake"
-)
+if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
+	export(EXPORT "${EXPORT_TARGET_NAME}Targets"
+		FILE "${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Targets.cmake"
+	)
+endif()
 
 configure_package_config_file(ORTPConfig.cmake.in
 	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
