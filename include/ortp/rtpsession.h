@@ -816,6 +816,9 @@ ORTP_PUBLIC int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp
 ORTP_PUBLIC bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, bool_t received_by_rtcp_mux);
 ORTP_PUBLIC void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr);
 
+ORTP_PUBLIC mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session);
+ORTP_PUBLIC mblk_t *source_packet_reconstruction(queue_t *source_packets, mblk_t *repair_packet, RtpSession *session, uint16_t seqnum);
+
 #ifdef __cplusplus
 }
 #endif
