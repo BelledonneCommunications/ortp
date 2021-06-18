@@ -1,14 +1,61 @@
 #include "ortp/ortp.h"
 #include "ortp/str_utils.h"
 #include "ortp/rtp.h"
+#include "ortp/fecstream.h"
 #include <arpa/inet.h>
 
-mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session){
+FecStream *fec_stream_new(RtpSession *source, RtpSession *fec, const FecParameters *params){
+    FecStream *fec_stream = malloc(sizeof (FecStream));
+    fec_stream->source_session = source;
+    fec_stream->fec_session = fec;
+    qinit(fec_stream->src_packets_for_fec);
+    qinit(fec_stream->source_packets_recvd);
+    qinit(fec_stream->repair_packets_recvd);
+    fec_stream->params = *params;
+    return fec_stream;
+}
+
+void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_packet){
+    putq(fec_stream->src_packets_for_fec, source_packet);
+    if(fec_stream->src_packets_for_fec->q_mcount == fec_stream->params.L){
+        mblk_t *repair_packet = fec_stream_create_repair_packet(fec_stream);
+        rtp_session_sendm_with_ts(fec_stream->fec_session, repair_packet, rtp_get_timestamp(repair_packet));
+        qinit(fec_stream->src_packets_for_fec);
+    }
+}
+
+void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *source_packet){
+    putq(fec_stream->source_packets_recvd, source_packet);
+    if(fec_stream->source_packets_recvd->q_mcount > fec_stream->params.size_of_source_queue){
+        remq(fec_stream->source_packets_recvd, qbegin(fec_stream->source_packets_recvd));
+    }
+    mblk_t *repair_packet = rtp_session_recvm_with_ts(fec_stream->fec_session, rtp_get_timestamp(source_packet));
+    if(repair_packet != NULL){
+        putq(fec_stream->repair_packets_recvd, repair_packet);
+    }
+}
+
+mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t seqnum){
+    mblk_t *repair_packet = fec_stream_find_repair_packet(fec_stream, seqnum);
+    if(repair_packet == NULL){
+        return NULL;
+    }
+    queue_t *packets_for_reconstruction = malloc(sizeof(queue_t));
+    qinit(packets_for_reconstruction);
+    bool_t find_all = fec_stream_find_source_packets(fec_stream, repair_packet, packets_for_reconstruction);
+    if(find_all){
+        mblk_t *packet = fec_stream_reconstruct_packet(fec_stream, packets_for_reconstruction, repair_packet, seqnum);
+        return packet;
+    }
+    return NULL;
+}
+
+mblk_t *fec_stream_create_repair_packet(FecStream *fec_stream){
 
     /* BITSTRING CREATION */
     mblk_t *tmp = NULL;
     size_t maxsize = 0;
-    for(tmp= qbegin(source_packets) ; !qend(source_packets, tmp) ; tmp = qnext(source_packets, tmp)){
+    for(tmp= qbegin(fec_stream->src_packets_for_fec) ; !qend(fec_stream->src_packets_for_fec, tmp) ; tmp = qnext(fec_stream->src_packets_to_send, tmp)){
         if(msgdsize(tmp) > maxsize){
             maxsize = msgdsize(tmp);
         }
@@ -16,11 +63,11 @@ mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session){
     uint8_t *bitstring = ortp_new0(uint8_t, 2 + 2 + 4 + (maxsize - RTP_FIXED_HEADER_SIZE));
     bitstring[0] = 1 << 6;
 
-    mblk_t *current_packet = qbegin(source_packets);
+    mblk_t *current_packet = qbegin(fec_stream->src_packets_for_fec);
 
     uint32_t SSRC = rtp_get_ssrc(current_packet);
 
-    while(!qend(source_packets, current_packet)){
+    while(!qend(fec_stream->src_packets_for_fec, current_packet)){
 
         bitstring[0] ^= rtp_get_padbit(current_packet) << 5;
         bitstring[0] ^= rtp_get_extbit(current_packet) << 4;
@@ -43,7 +90,7 @@ mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session){
     }
 
     /*  REPAIR PACKET BUILDING */
-    mblk_t *repair_packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, NULL, 0);
+    mblk_t *repair_packet = rtp_session_create_packet(fec_stream->fec_session, RTP_FIXED_HEADER_SIZE, NULL, 0);
 
     //RTP header init of the repair packet
     rtp_set_version(repair_packet, 2);
@@ -51,7 +98,7 @@ mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session){
     rtp_set_extbit(repair_packet, 0);
     rtp_set_markbit(repair_packet, 0);
 
-    msgpullup(repair_packet, msgdsize(repair_packet) + 8 * sizeof (uint8_t) + (source_packets->q_mcount + 1) * sizeof(uint32_t) + maxsize - RTP_FIXED_HEADER_SIZE);
+    msgpullup(repair_packet, msgdsize(repair_packet) + 8 * sizeof (uint8_t) + (fec_stream->src_packets_for_fec->q_mcount + 1) * sizeof(uint32_t) + maxsize - RTP_FIXED_HEADER_SIZE);
 
     //Add SSRC of source packets in CSRC fields
     rtp_add_csrc(repair_packet, SSRC);
@@ -64,12 +111,12 @@ mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session){
     //Add sequence numbers, L and D
     uint16_t *p16;
     uint8_t *p8;
-    for (tmp = qbegin(source_packets); !qend(source_packets, tmp); tmp = qnext(source_packets, tmp)){
+    for (tmp = qbegin(fec_stream->src_packets_for_fec); !qend(fec_stream->src_packets_for_fec, tmp); tmp = qnext(fec_stream->src_packets_for_fec, tmp)){
         p16 = (uint16_t *)repair_packet->b_wptr;
         *p16 = rtp_get_seqnumber(tmp);
         repair_packet->b_wptr += sizeof(uint16_t);
         p8 = repair_packet->b_wptr;
-        *p8 = 1;
+        *p8 = fec_stream->src_packets_for_fec->q_mcount;
         repair_packet->b_wptr++;
         p8 = repair_packet->b_wptr;
         *p8 = 0;
@@ -83,11 +130,11 @@ mblk_t *fec_create_repair_packet(queue_t *source_packets, RtpSession* session){
     return repair_packet;
 }
 
-mblk_t *source_packet_reconstruction(queue_t *source_packets, mblk_t *repair_packet, RtpSession *session, uint16_t seqnum){
+mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_packets_set, mblk_t *repair_packet, uint16_t seqnum){
 
     //Max size of source packets
     size_t maxsize = 0;
-    for(mblk_t *p= qbegin(source_packets) ; !qend(source_packets, p) ; p = qnext(source_packets, p)){
+    for(mblk_t *p= qbegin(source_packets_set) ; !qend(source_packets_set, p) ; p = qnext(source_packets_set, p)){
         if(msgdsize(p) - RTP_FIXED_HEADER_SIZE > maxsize){
             maxsize = msgdsize(p) - RTP_FIXED_HEADER_SIZE;
         }
@@ -97,7 +144,7 @@ mblk_t *source_packet_reconstruction(queue_t *source_packets, mblk_t *repair_pac
 
     //Creation of the bitstring
     uint8_t *bitstring = ortp_new0(uint8_t, 10);
-    for(mblk_t *tmp = qbegin(source_packets) ; !qend(source_packets, tmp) ; tmp = qnext(source_packets, tmp)){
+    for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
         for(size_t i = 0 ; i < 8 ; i++){
             bitstring[i] ^= *(uint8_t *) tmp->b_rptr+i;
             *(uint16_t *) &bitstring[8] ^= htons(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE);
@@ -110,7 +157,7 @@ mblk_t *source_packet_reconstruction(queue_t *source_packets, mblk_t *repair_pac
     }
 
     //Recreation of the lost packet
-    mblk_t *packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, NULL, 0);
+    mblk_t *packet = rtp_session_create_packet(fec_stream->source_session, RTP_FIXED_HEADER_SIZE, NULL, 0);
 
     rtp_set_version(packet, 2);
     rtp_set_padbit(packet, (bitstring[0] >> 5) & 1);
@@ -121,16 +168,16 @@ mblk_t *source_packet_reconstruction(queue_t *source_packets, mblk_t *repair_pac
     rtp_set_seqnumber(packet, seqnum);
     uint16_t packet_size = *(uint16_t *) &bitstring[2];
     rtp_set_timestamp(packet, *(uint32_t *) &bitstring[4]);
-    rtp_set_ssrc(packet, rtp_get_ssrc(qbegin(source_packets)));
+    rtp_set_ssrc(packet, rtp_get_ssrc(qbegin(source_packets_set)));
 
     /* PAYLOAD RECONSTRUCTION */
 
     uint8_t *payload_bitstring = ortp_new0(uint8_t, packet_size);
     msgpullup(packet, msgdsize(packet) + packet_size);
-    for(mblk_t *tmp = qbegin(source_packets) ; !qend(source_packets, tmp) ; tmp = qnext(source_packets, tmp)){
+    for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
         for(size_t i = 0 ; i < (msgdsize(tmp) - RTP_FIXED_HEADER_SIZE) ; i++){
             payload_bitstring[i] ^= *(uint8_t *) tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i;
-            payload_bitstring[i] ^= *(uint8_t *) repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 8 + 4*(source_packets->q_mcount+1) + i;
+            payload_bitstring[i] ^= *(uint8_t *) repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 8 + 4*(source_packets_set->q_mcount+1) + i;
         }
     }
 
@@ -142,4 +189,38 @@ mblk_t *source_packet_reconstruction(queue_t *source_packets, mblk_t *repair_pac
     packet->b_wptr += packet_size;
 
     return packet;
+}
+
+uint16_t *fec_stream_create_sequence_numbers_set(mblk_t *repair_packet, FecStream *fec_stream){
+    uint16_t *seqnum = (uint16_t *) malloc(fec_stream->params.L * sizeof(uint16_t));
+    for(int i = 0 ; i < fec_stream->params.L  ; i++){
+        seqnum[i] = *(uint16_t *) repair_packet + 8 + 4*i;
+    }
+    return seqnum;
+}
+
+mblk_t *fec_stream_find_repair_packet(FecStream *fec_stream, uint16_t seqnum){
+    mblk_t *tmp = qbegin(fec_stream->repair_packets_recvd);
+    while(!qend(fec_stream->repair_packets_recvd, tmp)){
+        uint16_t *seqnum_list = fec_stream_create_sequence_numbers_set(tmp, fec_stream);
+        for(int i = 0 ; i < fec_stream->params.L ; i++){
+            if(seqnum_list[i] == seqnum){
+                return tmp;
+            }
+        }
+        tmp = qnext(fec_stream->repair_packets_recvd, tmp);
+    }
+    return NULL;
+}
+
+bool_t fec_stream_find_source_packets(FecStream *fec_stream, mblk_t *repair_packet, queue_t *source_packets){
+    uint16_t *seqnum_list = fec_stream_create_sequence_numbers_set(repair_packet, fec_stream);
+    for(int i = 0 ; i < fec_stream->params.L ; i++){
+        for(mblk_t *tmp = qbegin(fec_stream->source_packets_recvd) ; !qend(fec_stream->source_packets_recvd, tmp) ; tmp = qnext(fec_stream->source_packets_recvd, tmp)){
+            if(rtp_get_seqnumber(tmp) == seqnum_list[i]){
+                putq(source_packets, tmp);
+            }
+        }
+    }
+    return (source_packets->q_mcount != fec_stream->params.L-1) ? FALSE : TRUE;
 }
