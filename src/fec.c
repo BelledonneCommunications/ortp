@@ -38,7 +38,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
     fec_stream->bitstring[1] ^= rtp_get_payload_type(source_packet);
 
     //Length
-    *(uint16_t *) &fec_stream->bitstring[2] ^= htons(msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE);
+    *(uint16_t *) &fec_stream->bitstring[2] ^= htons((uint16_t)(msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE));
 
     //Timestamp
     *(uint32_t *) &fec_stream->bitstring[4] ^= htonl(rtp_get_timestamp(source_packet));
@@ -106,7 +106,7 @@ mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t se
     mblk_t *repair_packet = fec_stream_find_repair_packet(fec_stream, seqnum);
     if(repair_packet != NULL){
         bool_t find_all;
-        queue_t packets_for_reconstruction = {0};
+        queue_t packets_for_reconstruction = {};
         qinit(&packets_for_reconstruction);
         find_all = fec_stream_find_source_packets(fec_stream, repair_packet, &packets_for_reconstruction);
         if(find_all){
@@ -138,7 +138,7 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
         for(size_t i = 0 ; i < 8 ; i++){
             bitstring[i] ^= *(uint8_t *) tmp->b_rptr+i;
-            *(uint16_t *) &bitstring[8] ^= htons(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE);
+            *(uint16_t *) &bitstring[8] ^= htons((uint16_t)(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE));
         }
     }
 
