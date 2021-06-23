@@ -106,7 +106,7 @@ mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t se
     mblk_t *repair_packet = fec_stream_find_repair_packet(fec_stream, seqnum);
     if(repair_packet != NULL){
         bool_t find_all;
-        queue_t packets_for_reconstruction = {};
+        queue_t packets_for_reconstruction;
         qinit(&packets_for_reconstruction);
         find_all = fec_stream_find_source_packets(fec_stream, repair_packet, &packets_for_reconstruction);
         if(find_all){
