@@ -30,7 +30,7 @@ mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t se
 
 mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_packets_set, mblk_t *repair_packet, uint16_t seqnum);
 
-uint16_t *fec_stream_create_sequence_numbers_set(mblk_t *repair_packet, FecStream *fec_stream);
+uint16_t *fec_stream_create_sequence_numbers_set(FecStream *fec_stream, mblk_t *repair_packet);
 
 mblk_t *fec_stream_find_repair_packet(FecStream *fec_stream, uint16_t seqnum);
 
