@@ -56,6 +56,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         uint16_t *p16 = NULL;
         uint8_t *p8 = NULL;
         mblk_t *repair_packet = rtp_session_create_packet(fec_stream->fec_session, RTP_FIXED_HEADER_SIZE, NULL, 0);
+
         rtp_set_version(repair_packet, 2);
         rtp_set_padbit(repair_packet, 0);
         rtp_set_extbit(repair_packet, 0);
@@ -84,8 +85,10 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], UDP_MAX_SIZE);
         repair_packet->b_wptr += UDP_MAX_SIZE;
 
-        putq(&fec_stream->repair_packets_recvd, repair_packet);
-        //rtp_session_sendm_with_ts(fec_stream->fec_session, repair_packet, rtp_get_timestamp(repair_packet));
+        fec_stream->bitstring = ortp_new0(uint8_t, UDP_MAX_SIZE);
+        fec_stream->cpt = 0;
+
+        rtp_session_sendm_with_ts(fec_stream->fec_session, repair_packet, rtp_get_timestamp(repair_packet));
     }
 }
 
@@ -102,7 +105,7 @@ void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *sou
 }
 
 mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t seqnum){
-    mblk_t * packet = NULL;
+    mblk_t *packet = NULL;
     mblk_t *repair_packet = fec_stream_find_repair_packet(fec_stream, seqnum);
     if(repair_packet != NULL){
         bool_t find_all;
@@ -181,7 +184,7 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
     return packet;
 }
 
-uint16_t *fec_stream_create_sequence_numbers_set(mblk_t *repair_packet, FecStream *fec_stream){
+uint16_t *fec_stream_create_sequence_numbers_set(FecStream *fec_stream, mblk_t *repair_packet){
     uint16_t *seqnum = (uint16_t *) malloc(fec_stream->params.L * sizeof(uint16_t));
     for(int i = 0 ; i < fec_stream->params.L  ; i++){
         seqnum[i] = *(uint16_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 4 + 8 + 4*i);
@@ -192,7 +195,7 @@ uint16_t *fec_stream_create_sequence_numbers_set(mblk_t *repair_packet, FecStrea
 mblk_t *fec_stream_find_repair_packet(FecStream *fec_stream, uint16_t seqnum){
     mblk_t *tmp = qbegin(&fec_stream->repair_packets_recvd);
     while(!qend(&fec_stream->repair_packets_recvd, tmp)){
-        uint16_t *seqnum_list = fec_stream_create_sequence_numbers_set(tmp, fec_stream);
+        uint16_t *seqnum_list = fec_stream_create_sequence_numbers_set(fec_stream, tmp);
         for(int i = 0 ; i < fec_stream->params.L ; i++){
             if(seqnum_list[i] == seqnum){
                 return tmp;
@@ -204,7 +207,7 @@ mblk_t *fec_stream_find_repair_packet(FecStream *fec_stream, uint16_t seqnum){
 }
 
 bool_t fec_stream_find_source_packets(FecStream *fec_stream, mblk_t *repair_packet, queue_t *source_packets){
-    uint16_t *seqnum_list = fec_stream_create_sequence_numbers_set(repair_packet, fec_stream);
+    uint16_t *seqnum_list = fec_stream_create_sequence_numbers_set(fec_stream, repair_packet);
     for(int i = 0 ; i < fec_stream->params.L ; i++){
         for(mblk_t *tmp = qbegin(&fec_stream->source_packets_recvd) ; !qend(&fec_stream->source_packets_recvd, tmp) ; tmp = qnext(&fec_stream->source_packets_recvd, tmp)){
             if(rtp_get_seqnumber(tmp) == seqnum_list[i]){
