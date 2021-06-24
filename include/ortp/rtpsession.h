@@ -43,6 +43,7 @@
 #include <ortp/utils.h>
 #include <ortp/rtpsignaltable.h>
 #include <ortp/event.h>
+#include <ortp/fecstream.h>
 
 #define ORTP_AVPF_FEATURE_NONE 0
 #define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
@@ -470,6 +471,9 @@ struct _RtpSession
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
 	queue_t bundleq;
 	ortp_mutex_t bundleq_lock;
+
+    /* fec option */
+    FecStream *fec_stream;
 };
 
 /**
