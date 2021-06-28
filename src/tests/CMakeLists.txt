@@ -21,7 +21,7 @@
 ############################################################################
 
 if (NOT IOS)
-	set(EXECUTABLES rtpsend rtprecv mrtpsend mrtprecv test_timer tevrtpsend tevrtprecv rtpsend_stupid rtpextensionheader)
+        set(EXECUTABLES rtpsend rtprecv mrtpsend mrtprecv test_timer tevrtpsend tevrtprecv rtpsend_stupid rtpextensionheader fectest)
 	foreach(executable ${EXECUTABLES})
 		bc_apply_compile_flags(${executable}.c STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
 		add_executable(${executable} ${executable}.c)
