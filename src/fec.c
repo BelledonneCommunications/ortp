@@ -1,18 +1,18 @@
-#include "ortp/ortp.h"
 #include "ortp/str_utils.h"
 #include "ortp/rtp.h"
+#include "ortp/rtpsession.h"
 #include "ortp/fecstream.h"
 #include "ortp/port.h"
 
-FecParameters *fec_params_new(int L, int D, int size){
+FecParameters *fec_params_new(int L, int D, int size_of_source_queue){
     FecParameters *fec_params = malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
-    fec_params->size_of_source_queue = size;
+    fec_params->size_of_source_queue = size_of_source_queue;
     return fec_params;
 }
 
-FecStream *fec_stream_new(RtpSession *source, RtpSession *fec, const FecParameters *params){
+FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params){
     FecStream *fec_stream = malloc(sizeof (FecStream));
     fec_stream->source_session = source;
     fec_stream->fec_session = fec;

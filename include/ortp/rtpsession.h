@@ -385,7 +385,6 @@ typedef struct _RtcpStream
 
 typedef struct _RtpSession RtpSession;
 
-
 /**
  * An object representing a bi-directional RTP session.
  * It holds sockets, jitter buffer, various counters (timestamp, sequence numbers...)
