@@ -1082,7 +1082,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 	/*otherwise it is done in rtp_session_recvm_with_ts */
 	if (session->mode==RTP_SESSION_SENDONLY) rtp_session_rtcp_recv(session);
 
-    if((session->fec_stream->source_session == session) && (error >= 0)){
+    if((session->fec_stream != NULL) && (error > 0)){
         fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
     }
 	return error;
@@ -1375,7 +1375,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		wait_point_unlock(&session->rcv.wp);
 	}
 
-    if(session->fec_stream->source_session == session && mp != NULL){
+    if(session->fec_stream != NULL && mp != NULL){
         fec_stream_on_new_source_packet_received(session->fec_stream, mp);
     }
 	return mp;
