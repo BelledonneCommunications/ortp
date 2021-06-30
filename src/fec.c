@@ -5,7 +5,7 @@
 #include "ortp/port.h"
 
 FecParameters *fec_params_new(int L, int D, int size_of_source_queue){
-    FecParameters *fec_params = malloc(sizeof(FecParameters));
+    FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
     fec_params->size_of_source_queue = size_of_source_queue;
@@ -13,18 +13,28 @@ FecParameters *fec_params_new(int L, int D, int size_of_source_queue){
 }
 
 FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params){
-    FecStream *fec_stream = malloc(sizeof (FecStream));
+    FecStream *fec_stream = (FecStream *) malloc(sizeof (FecStream));
     fec_stream->source_session = source;
     fec_stream->fec_session = fec;
     fec_stream->cpt = 0;
     qinit(&fec_stream->source_packets_recvd);
     qinit(&fec_stream->repair_packets_recvd);
     fec_stream->params = *params;
-    fec_stream->seqnumlist = malloc(fec_stream->params.L*sizeof (uint16_t));
+    fec_stream->seqnumlist = (uint16_t *) malloc(fec_stream->params.L*sizeof (uint16_t));
     return fec_stream;
 }
 
+void fec_stream_destroy(FecStream *fec_stream){
+    ortp_free(fec_stream->bitstring);
+    ortp_free(fec_stream->seqnumlist);
+    ortp_free(&fec_stream->source_packets_recvd);
+    ortp_free(&fec_stream->repair_packets_recvd);
+    ortp_free(&fec_stream->params);
+}
+
 void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_packet){
+    msgpullup(source_packet, -1);
+
     if(fec_stream->cpt == 0){
         fec_stream->SSRC = rtp_get_ssrc(source_packet);
         fec_stream->bitstring = ortp_new0(uint8_t, UDP_MAX_SIZE);
@@ -62,7 +72,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         rtp_set_extbit(repair_packet, 0);
         rtp_set_markbit(repair_packet, 0);
 
-        msgpullup(repair_packet, msgdsize(repair_packet) + UDP_MAX_SIZE);
+        msgpullup(repair_packet, msgdsize(repair_packet) + 4 + 8 + fec_stream->params.L*4 + UDP_MAX_SIZE - 8);
 
         rtp_add_csrc(repair_packet, fec_stream->SSRC);
         repair_packet->b_wptr += sizeof(uint32_t);
@@ -82,10 +92,10 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
             repair_packet->b_wptr++;
         }
 
-        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], UDP_MAX_SIZE);
-        repair_packet->b_wptr += UDP_MAX_SIZE;
+        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], UDP_MAX_SIZE - 8);
+        repair_packet->b_wptr += UDP_MAX_SIZE - 8;
 
-        fec_stream->bitstring = ortp_new0(uint8_t, UDP_MAX_SIZE);
+        ortp_free(fec_stream->bitstring);
         fec_stream->cpt = 0;
 
         rtp_session_sendm_with_ts(fec_stream->fec_session, repair_packet, rtp_get_timestamp(repair_packet));
@@ -94,9 +104,11 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
 
 void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *source_packet){
     mblk_t *repair_packet = NULL;
-    putq(&fec_stream->source_packets_recvd, source_packet);
+    putq(&fec_stream->source_packets_recvd, dupmsg(source_packet));
     if(fec_stream->source_packets_recvd.q_mcount > fec_stream->params.size_of_source_queue){
-        remq(&fec_stream->source_packets_recvd, qbegin(&fec_stream->source_packets_recvd));
+        mblk_t *mp = qbegin(&fec_stream->source_packets_recvd);
+        remq(&fec_stream->source_packets_recvd, mp);
+        freemsg(mp);
     }
     repair_packet = rtp_session_recvm_with_ts(fec_stream->fec_session, rtp_get_timestamp(source_packet));
     if(repair_packet != NULL){

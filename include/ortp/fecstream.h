@@ -26,6 +26,8 @@ FecParameters *fec_params_new(int L, int D, int size_of_source_queue);
 
 ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params);
 
+ORTP_PUBLIC void fec_stream_destroy(FecStream *fec_stream);
+
 void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_packet);
 
 void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *source_packet);

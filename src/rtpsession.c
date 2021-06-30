@@ -1074,6 +1074,10 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		error = rtp_session_rtp_send (session, copymsg(mp));
 		session->duplication_left -= 1.f;
 	}
+    if((session->fec_stream != NULL)){
+        fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
+    }
+
 	error = rtp_session_rtp_send (session, mp);
 
 	/*send RTCP packet if needed */
@@ -1082,9 +1086,6 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 	/*otherwise it is done in rtp_session_recvm_with_ts */
 	if (session->mode==RTP_SESSION_SENDONLY) rtp_session_rtcp_recv(session);
 
-    if((session->fec_stream != NULL) && (error > 0)){
-        fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
-    }
 	return error;
 }
 
