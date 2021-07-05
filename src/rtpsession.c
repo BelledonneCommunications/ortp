@@ -1074,6 +1074,10 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		error = rtp_session_rtp_send (session, copymsg(mp));
 		session->duplication_left -= 1.f;
 	}
+    if((session->fec_stream != NULL)){
+        fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
+    }
+
 	error = rtp_session_rtp_send (session, mp);
 
 	/*send RTCP packet if needed */
@@ -1081,6 +1085,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 	/* receives rtcp packet if session is send-only*/
 	/*otherwise it is done in rtp_session_recvm_with_ts */
 	if (session->mode==RTP_SESSION_SENDONLY) rtp_session_rtcp_recv(session);
+
 	return error;
 }
 
@@ -1247,7 +1252,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		if (user_ts==session->rtp.rcv_last_app_ts)
 			read_socket=FALSE;
 	}
-	session->rtp.rcv_last_app_ts = user_ts;
+    session->rtp.rcv_last_app_ts = user_ts;
 	if (read_socket){
 		rtp_session_rtp_recv (session, user_ts);
 		rtp_session_rtcp_recv(session);
@@ -1298,7 +1303,13 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	ortp_global_stats.outoftime+=rejected;
 	session->rtcp_xr_stats.discarded_count += rejected;
 
-	end:
+    end:
+    if(session->fec_stream != NULL && mp != NULL){
+        fec_stream_on_new_source_packet_received(session->fec_stream, mp);
+        if(session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
+            mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+        }
+    }
 	if (mp != NULL)
 	{
 		size_t msgsize = msgdsize(mp);	/* evaluate how much bytes (including header) is received by app */
@@ -1337,7 +1348,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is %u",packet_ts,rtp->timestamp);*/
 		}
 		session->rtp.rcv_last_ts = packet_ts;
-		session->rtp.rcv_last_seq = rtp->seq_number;
+        session->rtp.rcv_last_seq = rtp->seq_number;
 		if (!(session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)){
 			rtp_session_set_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 		}
@@ -1369,7 +1380,8 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		}
 		else session_set_set(&sched->r_sessions,session);	/*to unblock _select() immediately */
 		wait_point_unlock(&session->rcv.wp);
-	}
+    }
+
 	return mp;
 }
 
