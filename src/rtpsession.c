@@ -182,7 +182,7 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 				(*rejected)++;
 				freemsg(old);
 			}
-			ret=getq(q); /* dequeue the packet, since it has an interesting timestamp*/
+            ret=peekq(q); /* dequeue the packet, since it has an interesting timestamp*/
 			ts_found=tmprtp->timestamp;
 			ortp_debug("rtp_getq: Found packet with ts=%u",tmprtp->timestamp);
 
@@ -216,7 +216,7 @@ mblk_t *rtp_getq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
 	ortp_debug("rtp_getq_permissive: Seeing packet with ts=%i",tmprtp->timestamp);
 	if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmprtp->timestamp) )
 	{
-		ret=getq(q); /* dequeue the packet, since it has an interesting timestamp*/
+        ret=peekq(q); /* dequeue the packet, since it has an interesting timestamp*/
 		ortp_debug("rtp_getq_permissive: Found packet with ts=%i",tmprtp->timestamp);
 	}
 	return ret;
@@ -1307,8 +1307,17 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
     if(session->fec_stream != NULL && mp != NULL){
         fec_stream_on_new_source_packet_received(session->fec_stream, mp);
         if(session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
-            mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+            mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+            if (fec_mp != NULL){
+                mp = fec_mp;
+            } else {
+                if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+            }
+        } else {
+            if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
         }
+    } else {
+        if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
     }
 	if (mp != NULL)
 	{
