@@ -151,7 +151,7 @@ int rtp_putq(queue_t *q, mblk_t *mp)
 }
 
 
-mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
+mblk_t *rtp_peekq(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL,*old=NULL;
 	rtp_header_t *tmprtp;
@@ -196,7 +196,7 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 	return ret;
 }
 
-mblk_t *rtp_getq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
+mblk_t *rtp_peekq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL;
 	rtp_header_t *tmprtp;
@@ -1293,9 +1293,9 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	ts = jitter_control_get_compensated_timestamp(&session->rtp.jittctl,user_ts);
 	if (session->rtp.jittctl.params.enabled==TRUE){
 		if (session->permissive)
-			mp = rtp_getq_permissive(&session->rtp.rq, ts,&rejected);
+            mp = rtp_peekq_permissive(&session->rtp.rq, ts,&rejected);
 		else{
-			mp = rtp_getq(&session->rtp.rq, ts,&rejected);
+            mp = rtp_peekq(&session->rtp.rq, ts,&rejected);
 		}
 	}else mp=getq(&session->rtp.rq);/*no jitter buffer at all*/
 
