@@ -890,7 +890,8 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 		if (mid != NULL) {
-			rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
 	}
 
@@ -899,6 +900,43 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 		memcpy(mp->b_wptr,payload,payload_size);
 		mp->b_wptr+=payload_size;
 	}
+	return mp;
+}
+
+/**
+ *	This will do the same as rtp_session_create_packet() without payload data but it will also add 
+ *	mixer to client audio level indication through header extensions.
+ *
+ *@param session a rtp session.
+ *@param header_size the rtp header size. For standart size (without extensions), it is RTP_FIXED_HEADER_SIZE
+ *@param mtc_extension_id id of the mixer to client extension id.
+ *@param audio_levels_size size of audio levels contained in audio_levels parameter.
+ *@param audio_levels list of rtp_audio_level_t to add in this packet.
+ *@return a rtp packet in a mblk_t (message block) structure.
+**/
+mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels)
+{
+	mblk_t *mp;
+	rtp_header_t *rtp;
+
+	mp=allocb(header_size,BPRI_MED);
+	rtp=(rtp_header_t*)mp->b_rptr;
+	rtp_header_init_from_session(rtp,session);
+	mp->b_wptr+=header_size;
+
+	/*this has to be called before adding any other extensions since it changes the header size to add the csrcs*/
+	rtp_add_mixer_to_client_audio_level(mp, mtc_extension_id, audio_levels_size, audio_levels);
+
+	/*add the mid from the bundle if any*/
+	if (session->bundle) {
+		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+		if (mid != NULL) {
+			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		}
+	}
+
 	return mp;
 }
 
@@ -950,7 +988,8 @@ mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *paylo
 			const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 			if (mid != NULL) {
-				rtp_add_extension_header(mp, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+				int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+				rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 			}
 		}
 	}
@@ -2104,7 +2143,7 @@ int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext){
  * @param size the size in bytes of the extension to add.
  * @param data the buffer to the extension data.
 **/
-ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
+void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
 	if (size <= 0 || data == NULL) {
 		ortp_warning("Cannot add an extension with empty data");
 		return;
@@ -2194,7 +2233,7 @@ ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, u
  * @param data pointer that will be set to the beginning of the extension data.
  * @return the size of the wanted extension in bytes, -1 if there is no extension header or the wanted extension was not found.
 **/
-ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
+int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
 	uint8_t *ext_header, *tmp;
 	uint16_t profile;
 	size_t ext_header_size, size;
@@ -2204,7 +2243,6 @@ ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data)
 	ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
 
 	if (ext_header_size == (size_t)-1) {
-		ortp_warning("Extension header is empty!");
 		return -1;
 	}
 

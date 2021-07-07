@@ -29,6 +29,9 @@ int main(int argc, char *argv[]) {
 	char *foo = "foo";
 	char *bar = "bar123";
 	char *data;
+	rtp_audio_level_t audio_levels[15] = {0};
+	int audio_size, result;
+	bool_t voice_activity;
 
 	srand(time(NULL));
 
@@ -100,6 +103,38 @@ int main(int argc, char *argv[]) {
 			ortp_message("Data for id = %d is \"%s\" of size %d", (i + 1), cpy, size);
 			free(cpy);
 		}
+	}
+
+	freemsg(packet);
+
+	// Test client to mixer audio level api
+	packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, NULL, 0);
+
+	rtp_add_client_to_mixer_audio_level(packet, 2, TRUE, -64);
+	result = rtp_get_client_to_mixer_audio_level(packet, 2, &voice_activity);
+	if (result != -64) {
+		ortp_error("Client to mixer wrong value! %d", result);
+	} else {
+		ortp_message("Audio level for -64 with voice activity, value returned: %d, voice activity: %d", result, voice_activity ? 1 : 0);
+	}
+
+	freemsg(packet);
+
+	// Test mixer to client audio level api
+	packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, NULL, 0);
+	rtp_audio_level_t values[5] = {{1, -127}, {2, -115}, {0, -53}, {4, -28}, {5, 0}};
+
+	rtp_add_mixer_to_client_audio_level(packet, 2, 5, values);
+	audio_size = rtp_get_mixer_to_client_audio_level(packet, 2, audio_levels);
+
+	ortp_message("Audio levels' expected values: [1, -127], [2, -115], [0, -53], [4, -28], [5, 0]");
+	ortp_message("Results (%d):", audio_size);
+	if (audio_size != -1) {
+		for (i = 0; i < audio_size; i++) {
+			ortp_message("\tcsrc: %d, level: %d", audio_levels[i].csrc, audio_levels[i].dbov);
+		}
+	} else {
+		ortp_error("Mixer to client has no values!");
 	}
 
 	freemsg(packet);
