@@ -1258,7 +1258,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		rtp_session_rtcp_recv(session);
 	}
 	/* check for telephone event first */
-	mp=getq(&session->rtp.tev_rq);
+    mp=getq(&session->rtp.tev_rq);
 	if (mp!=NULL){
 		size_t msgsize=msgdsize(mp);
 		ortp_global_stats.recv += msgsize;
@@ -1305,7 +1305,6 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 
     end:
     if(session->fec_stream != NULL && mp != NULL){
-        fec_stream_on_new_source_packet_received(session->fec_stream, mp);
         if(session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
             mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
             if (fec_mp != NULL){

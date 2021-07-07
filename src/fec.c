@@ -113,7 +113,7 @@ void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *sou
     }
     repair_packet = rtp_session_recvm_with_ts(fec_stream->fec_session, rtp_get_timestamp(source_packet));
     if(repair_packet != NULL){
-        putq(&fec_stream->repair_packets_recvd, repair_packet);
+        putq(&fec_stream->repair_packets_recvd, dupmsg(repair_packet));
         if(fec_stream->repair_packets_recvd.q_mcount > fec_stream->params.L){
             mblk_t *rp = qbegin(&fec_stream->repair_packets_recvd);
             remq(&fec_stream->repair_packets_recvd, rp);
