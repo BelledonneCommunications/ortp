@@ -1287,7 +1287,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		session->rcv.ssrc = rtp->ssrc;
 		/* delete the recv synchronisation flag */
 		rtp_session_unset_flag (session, RTP_SESSION_RECV_SYNC);
-	}
+    }
 
 	/*calculate the stream timestamp from the user timestamp */
 	ts = jitter_control_get_compensated_timestamp(&session->rtp.jittctl,user_ts);
@@ -1297,7 +1297,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		else{
             mp = rtp_peekq(&session->rtp.rq, ts,&rejected);
 		}
-	}else mp=getq(&session->rtp.rq);/*no jitter buffer at all*/
+    }else mp=peekq(&session->rtp.rq);/*no jitter buffer at all*/
 
 	session->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
@@ -1319,6 +1319,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
     } else {
         if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
     }
+
 	if (mp != NULL)
 	{
 		size_t msgsize = msgdsize(mp);	/* evaluate how much bytes (including header) is received by app */
