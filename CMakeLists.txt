@@ -21,7 +21,7 @@
 ############################################################################
 
 cmake_minimum_required(VERSION 3.1)
-project(oRTP VERSION 5.0.0)
+project(oRTP VERSION 5.1.0)
 
 
 set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
