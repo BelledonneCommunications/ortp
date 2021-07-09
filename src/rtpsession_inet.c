@@ -1265,7 +1265,7 @@ int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags,
 		putq(&session->net_sim_ctx->send_q, m);
 		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
 	}else{
-		ortp_socket_t sockfd = rtp_session_get_socket(session, is_rtp);
+		ortp_socket_t sockfd = rtp_session_get_socket(session, is_rtp || session->rtcp_mux);
 		if (sockfd != (ortp_socket_t)-1){
 			ret=_ortp_sendto(sockfd, m, flags, destaddr, destlen);
 		}else{
@@ -1958,11 +1958,12 @@ void* rtp_session_recvfrom_async(void* obj) {
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	mblk_t *mp;
-
+	
 	if ((session->rtp.gs.socket==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
 
 	while (1)
 	{
+		bool_t packet_is_rtp = TRUE;
 		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 			ortp_mutex_lock(&session->rtp.winthread_lock);
@@ -1994,13 +1995,24 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 			ortp_mutex_lock(&session->bundleq_lock);
 			mp = getq(&session->bundleq);
 			ortp_mutex_unlock(&session->bundleq_lock);
+			
+			if (mp && session->rtcp_mux){
+				/* The packet could be a RTCP one */
+				if (rtp_get_version(mp) == 2){
+					int pt = rtp_get_payload_type(mp);
+					if (pt >= 64 && pt <= 95){
+						/*this is assumed to be an RTCP packet*/
+						packet_is_rtp = FALSE;
+					}
+				}
+			}
 		}
 
 		if (mp != NULL) {
 			mp->reserved1 = user_ts;
-			rtp_session_process_incoming(session, mp, TRUE, user_ts, FALSE);
+			rtp_session_process_incoming(session, mp, packet_is_rtp, user_ts, !packet_is_rtp);
 		} else {
-			rtp_session_process_incoming(session, NULL, TRUE, user_ts, FALSE);
+			rtp_session_process_incoming(session, NULL, packet_is_rtp, user_ts, FALSE);
 			return -1;
 		}
 	}
