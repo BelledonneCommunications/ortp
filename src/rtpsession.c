@@ -2560,7 +2560,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	int ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem;
-	bool_t received_via_rtcp_mux = FALSE;
+	bool_t packet_is_rtp = m->is_rtp; /* presume it is the same nature as the RtpTransport, but can be changed if rtcp-mux is used */
 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
@@ -2597,22 +2597,22 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 			int pt = rtp_get_payload_type(msg);
 			if (pt >= 64 && pt <= 95){
 				/*this is assumed to be an RTCP packet*/
-				received_via_rtcp_mux = TRUE;
+				packet_is_rtp = FALSE;
 			}
 		}
 	}
 
-	if (received_via_rtcp_mux) {
+	if (m->is_rtp && !packet_is_rtp) {
 		if (m->other_meta_rtp) {
 			_meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
 
 			if (t->session && t->session->bundle && t->session->is_primary) {
-				if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+				if (rtp_bundle_dispatch(t->session->bundle, packet_is_rtp, msg)) {
 					return 0;
 				}
 			}
 
-			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, received_via_rtcp_mux);
+			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, TRUE);
 			ret = 0; /*since we directly inject in the RtpSession this RTCP packet, we shall return 0 and pass a duplicate of the message,
 			because rtp_session_rtp_recv() is going to free it.*/
 		} else {
@@ -2622,7 +2622,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 		ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
 
 		if (t->session && t->session->bundle && t->session->is_primary) {
-			if (rtp_bundle_dispatch(t->session->bundle, m->is_rtp, msg, received_via_rtcp_mux)) {
+			if (rtp_bundle_dispatch(t->session->bundle, TRUE, msg)) {
 				return 0;
 			}
 
