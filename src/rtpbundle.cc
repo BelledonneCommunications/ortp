@@ -80,8 +80,8 @@ extern "C" int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp,
 	return ((RtpBundleCxx *)bundle)->sendThroughPrimary(is_rtp, m, flags, destaddr, destlen);
 }
 
-extern "C" bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, bool_t received_by_rtcp_mux) {
-	return ((RtpBundleCxx *)bundle)->dispatch(is_rtp, m, received_by_rtcp_mux);
+extern "C" bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m) {
+	return ((RtpBundleCxx *)bundle)->dispatch(is_rtp, m);
 }
 
 // C++ - Implementation
@@ -210,13 +210,8 @@ int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const str
 		rtp_session_get_transports(primary, NULL, &primaryTransport);
 	}
 
-	if (isRtp) {
-		destaddr = (struct sockaddr *)&primary->rtp.gs.rem_addr;
-		destlen = primary->rtp.gs.rem_addrlen;
-	} else {
-		destaddr = (struct sockaddr *)&primary->rtcp.gs.rem_addr;
-		destlen = primary->rtcp.gs.rem_addrlen;
-	}
+	destaddr = (struct sockaddr *)&primary->rtp.gs.rem_addr;
+	destlen = primary->rtp.gs.rem_addrlen;
 
 	// This will bypass the modifiers of the primary transport
 	return meta_rtp_transport_sendto(primaryTransport, m, flags, destaddr, destlen);
@@ -388,8 +383,8 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 	return session;
 }
 
-bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m, bool receivedByRtcpMux) {
-	if (isRtp && !receivedByRtcpMux) {
+bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
+	if (isRtp) {
 		return dispatchRtpMessage(m);
 	} else {
 		return dispatchRtcpMessage(m);
