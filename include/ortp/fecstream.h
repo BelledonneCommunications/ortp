@@ -20,6 +20,8 @@ typedef struct _FecStream{
     queue_t source_packets_recvd;
     queue_t repair_packets_recvd;
     FecParameters params;
+    int reconstruction_fail;
+    int total_lost_packets;
 } FecStream;
 
 FecParameters *fec_params_new(int L, int D, int size_of_source_queue);

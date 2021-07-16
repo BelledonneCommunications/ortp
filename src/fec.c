@@ -22,6 +22,8 @@ FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, c
     qinit(&fec_stream->repair_packets_recvd);
     fec_stream->params = *params;
     fec_stream->seqnumlist = (uint16_t *) malloc(fec_stream->params.L*sizeof (uint16_t));
+    fec_stream->reconstruction_fail = 0;
+    fec_stream->total_lost_packets = 0;
     return fec_stream;
 }
 
@@ -52,11 +54,11 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
     *(uint16_t *) &fec_stream->bitstring[2] ^= htons((uint16_t)(msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE));
 
     //Timestamp
-    *(uint32_t *) &fec_stream->bitstring[4] ^= htonl(rtp_get_timestamp(source_packet));
+    *(uint32_t *) &fec_stream->bitstring[4] ^= rtp_get_timestamp(source_packet);
 
     //All octets after the fixed 12-bytes RTPheader
     for(size_t i = 0 ; i < msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE ; i++){
-        fec_stream->bitstring[8 + i] ^= *(uint8_t *) source_packet->b_rptr+RTP_FIXED_HEADER_SIZE+i;
+        fec_stream->bitstring[8 + i] ^= *(uint8_t *) (source_packet->b_rptr+RTP_FIXED_HEADER_SIZE+i);
     }
 
     fec_stream->seqnumlist[fec_stream->cpt] = rtp_get_seqnumber(source_packet);
@@ -78,18 +80,18 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         rtp_add_csrc(repair_packet, fec_stream->SSRC);
         repair_packet->b_wptr += sizeof(uint32_t);
 
-        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[0], 8);
+        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[0], 8*sizeof(uint8_t));
         repair_packet->b_wptr += 8*sizeof(uint8_t);
 
         for (int i = 0 ; i < fec_stream->params.L ; i++){
-            p16 = (uint16_t *)repair_packet->b_wptr;
+            p16 = (uint16_t *) (repair_packet->b_wptr);
             *p16 = fec_stream->seqnumlist[i];
             repair_packet->b_wptr += sizeof(uint16_t);
             p8 = repair_packet->b_wptr;
             *p8 = fec_stream->params.L;
             repair_packet->b_wptr++;
             p8 = repair_packet->b_wptr;
-            *p8 = 0;
+            *p8 = fec_stream->params.D;
             repair_packet->b_wptr++;
         }
 
@@ -138,6 +140,10 @@ mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t se
     return packet;
 }
 
+size_t min(size_t a, size_t b){
+    return (a<b ? a : b);
+}
+
 mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_packets_set, mblk_t *repair_packet, uint16_t seqnum){
     uint8_t *bitstring = ortp_new0(uint8_t, 10);
     mblk_t *packet = NULL;
@@ -145,56 +151,52 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
     uint8_t *payload_bitstring = NULL;
     uint8_t *p = NULL;
 
-    //Max size of source packets
-    size_t maxsize = 0;
-    for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
-        if(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE > maxsize){
-            maxsize = msgdsize(tmp) - RTP_FIXED_HEADER_SIZE;
-        }
-    }
-
     /* RTP HEADER RECONSTRUCTION */
 
     //Creation of the bitstring
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
         for(size_t i = 0 ; i < 8 ; i++){
-            bitstring[i] ^= *(uint8_t *) tmp->b_rptr+i;
-            *(uint16_t *) &bitstring[8] ^= htons((uint16_t)(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE));
+            bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+i);
         }
+        *(uint16_t *) &(bitstring[8]) ^= htons((uint16_t)(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE));
     }
 
     //XOR with FEC header
-    for(size_t j = 0 ; j < 10 ; j++){
-        bitstring[j] ^= *(uint8_t *) repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+j;
+    for(size_t j = 0 ; j < 2 ; j++){
+        bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+12+sizeof(uint32_t)+j);
     }
+    *(uint32_t *) &bitstring[4] ^= *(uint32_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+4*sizeof(uint8_t));
+    *(uint16_t *) &bitstring[8] ^= *(uint16_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+2*sizeof(uint8_t));
 
     //Recreation of the lost packet
     packet = rtp_session_create_packet(fec_stream->source_session, RTP_FIXED_HEADER_SIZE, NULL, 0);
 
     rtp_set_version(packet, 2);
-    rtp_set_padbit(packet, (bitstring[0] >> 5) & 1);
-    rtp_set_extbit(packet, (bitstring[0] >> 4) & 1);
+    rtp_set_padbit(packet, (bitstring[0] >> 5) & 0x1);
+    rtp_set_extbit(packet, (bitstring[0] >> 4) & 0x1);
     rtp_set_cc(packet, bitstring[0] & 0xF);
-    rtp_set_markbit(packet, (bitstring[1] >> 7) & 1);
+    rtp_set_markbit(packet, (bitstring[1] >> 7) & 0x1);
     rtp_set_payload_type(packet, bitstring[1] & 0x7F);
     rtp_set_seqnumber(packet, seqnum);
-    packet_size = *(uint16_t *) &bitstring[2];
     rtp_set_timestamp(packet, *(uint32_t *) &bitstring[4]);
     rtp_set_ssrc(packet, rtp_get_ssrc(qbegin(source_packets_set)));
+    packet_size = ntohs(*(uint16_t *) &(bitstring[8]));
 
     /* PAYLOAD RECONSTRUCTION */
 
     payload_bitstring = ortp_new0(uint8_t, packet_size);
-    msgpullup(packet, msgdsize(packet) + packet_size);
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
-        for(size_t i = 0 ; i < (msgdsize(tmp) - RTP_FIXED_HEADER_SIZE) ; i++){
-            payload_bitstring[i] ^= *(uint8_t *) tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i;
-            payload_bitstring[i] ^= *(uint8_t *) repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 8 + 4*(fec_stream->params.L) + i;
+        for(size_t i = 0 ; i < min((msgdsize(tmp) - RTP_FIXED_HEADER_SIZE), (size_t) packet_size) ; i++){
+            payload_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i);
         }
     }
-
     for(size_t i = 0 ; i < packet_size ; i++){
-        p = packet->b_wptr+i;
+        payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i);
+    }
+
+    msgpullup(packet, msgdsize(packet) + packet_size);
+    for(size_t i = 0 ; i < packet_size ; i++){
+        p = (packet->b_wptr+i);
         *p = payload_bitstring[i];
     }
     packet->b_wptr += packet_size;
