@@ -4,6 +4,8 @@
 #include "ortp/fecstream.h"
 #include "ortp/port.h"
 
+#define min(a,b) (a < b ? a : b)
+
 FecParameters *fec_params_new(int L, int D){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
@@ -148,10 +150,6 @@ mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t se
         fec_stream->repair_packet_not_found++;
     }
     return packet;
-}
-
-size_t min(size_t a, size_t b){
-    return (a<b ? a : b);
 }
 
 mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_packets_set, mblk_t *repair_packet, uint16_t seqnum){
