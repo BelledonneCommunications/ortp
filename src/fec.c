@@ -47,7 +47,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         fec_stream->bitstring[0] = 1 << 6;
     }
 
-    if(fec_stream->max_size < msgdsize(source_packet)) fec_stream->max_size = msgdsize(source_packet);
+    if(fec_stream->max_size < (msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE)) fec_stream->max_size = msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE;
 
     fec_stream->bitstring[0] ^= rtp_get_padbit(source_packet) << 5;
     fec_stream->bitstring[0] ^= rtp_get_extbit(source_packet) << 4;
@@ -80,7 +80,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         rtp_set_extbit(repair_packet, 0);
         rtp_set_markbit(repair_packet, 0);
 
-        msgpullup(repair_packet, msgdsize(repair_packet) + 4 + 8 + fec_stream->params.L*4 + fec_stream->max_size - 8);
+        msgpullup(repair_packet, msgdsize(repair_packet) + 4 + 8 + fec_stream->params.L*4 + fec_stream->max_size);
 
         rtp_add_csrc(repair_packet, fec_stream->SSRC);
         repair_packet->b_wptr += sizeof(uint32_t);
@@ -100,8 +100,8 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
             repair_packet->b_wptr++;
         }
 
-        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], fec_stream->max_size - 8);
-        repair_packet->b_wptr += fec_stream->max_size - 8;
+        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], fec_stream->max_size);
+        repair_packet->b_wptr += fec_stream->max_size;
 
         fec_stream->cpt = 0;
         fec_stream->max_size = 0;
