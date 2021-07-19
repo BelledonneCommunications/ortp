@@ -7,7 +7,8 @@
 typedef struct _FecParameters{
     int L;
     int D;
-    int size_of_source_queue;
+    int source_queue_size;
+    int repair_queue_size;
 } FecParameters;
 
 typedef struct _FecStream{
@@ -27,7 +28,7 @@ typedef struct _FecStream{
     int source_packets_not_found;
 } FecStream;
 
-FecParameters *fec_params_new(int L, int D, int size_of_source_queue);
+FecParameters *fec_params_new(int L, int D);
 
 ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params);
 

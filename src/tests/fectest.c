@@ -6,7 +6,8 @@ FecParameters *fec_params_new_test(int L, int D, int size_of_source_queue){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
-    fec_params->size_of_source_queue = size_of_source_queue;
+    fec_params->source_queue_size = (10-L+5)*10;
+    fec_params->repair_queue_size = L+5;
     return fec_params;
 }
 

@@ -4,11 +4,12 @@
 #include "ortp/fecstream.h"
 #include "ortp/port.h"
 
-FecParameters *fec_params_new(int L, int D, int size_of_source_queue){
+FecParameters *fec_params_new(int L, int D){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
-    fec_params->size_of_source_queue = size_of_source_queue;
+    fec_params->source_queue_size = L*15;
+    fec_params->repair_queue_size = L+5;
     return fec_params;
 }
 
@@ -113,7 +114,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
 void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *source_packet){
     mblk_t *repair_packet = NULL;
     putq(&fec_stream->source_packets_recvd, dupmsg(source_packet));
-    if(fec_stream->source_packets_recvd.q_mcount > fec_stream->params.size_of_source_queue){
+    if(fec_stream->source_packets_recvd.q_mcount > fec_stream->params.source_queue_size){
         mblk_t *mp = qbegin(&fec_stream->source_packets_recvd);
         remq(&fec_stream->source_packets_recvd, mp);
         freemsg(mp);
@@ -121,7 +122,7 @@ void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *sou
     repair_packet = rtp_session_recvm_with_ts(fec_stream->fec_session, rtp_get_timestamp(source_packet));
     if(repair_packet != NULL){
         putq(&fec_stream->repair_packets_recvd, dupmsg(repair_packet));
-        if(fec_stream->repair_packets_recvd.q_mcount > fec_stream->params.L){
+        if(fec_stream->repair_packets_recvd.q_mcount > fec_stream->params.repair_queue_size){
             mblk_t *rp = qbegin(&fec_stream->repair_packets_recvd);
             remq(&fec_stream->repair_packets_recvd, rp);
             freemsg(rp);
