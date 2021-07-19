@@ -118,15 +118,19 @@ extern "C"{
 
 /* packet api */
 /* the first argument is a mblk_t. The header is supposed to be not splitted  */
-#define rtp_set_markbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->markbit=(value)
+#define rtp_set_version(mp,value)	((rtp_header_t*)((mp)->b_rptr))->version=(value)
+#define rtp_set_padbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->padbit=(value)
 #define rtp_set_extbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->extbit=(value)
+#define rtp_set_cc(mp,value)	((rtp_header_t*)((mp)->b_rptr))->cc=(value)
+#define rtp_set_markbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->markbit=(value)
+#define rtp_set_payload_type(mp,pt)	((rtp_header_t*)((mp)->b_rptr))->paytype=(pt)
 #define rtp_set_seqnumber(mp,seq)	((rtp_header_t*)((mp)->b_rptr))->seq_number=(seq)
 #define rtp_set_timestamp(mp,ts)	((rtp_header_t*)((mp)->b_rptr))->timestamp=(ts)
 #define rtp_set_ssrc(mp,_ssrc)		((rtp_header_t*)((mp)->b_rptr))->ssrc=(_ssrc)
 ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
-#define rtp_set_payload_type(mp,pt)	((rtp_header_t*)((mp)->b_rptr))->paytype=(pt)
 
 #define rtp_get_version(mp)	(((rtp_header_t*)((mp)->b_rptr))->version)
+#define rtp_get_padbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->padbit)
 #define rtp_get_markbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->markbit)
 #define rtp_get_extbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->extbit)
 #define rtp_get_timestamp(mp)	(((rtp_header_t*)((mp)->b_rptr))->timestamp)
