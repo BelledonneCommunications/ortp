@@ -1306,8 +1306,8 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
     end:
     if(session->fec_stream != NULL && mp != NULL){
         if(session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
-            session->fec_stream->total_lost_packets++;
             mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+            session->fec_stream->total_lost_packets++;
             if (fec_mp != NULL){
                 mp = fec_mp;
                 ortp_message("Source packet reconstructed : PT = %d ; SeqNum = %d ; TimeStamp = %u", (int)rtp_get_payload_type(mp), (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));

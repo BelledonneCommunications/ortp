@@ -14,6 +14,7 @@ typedef struct _FecStream{
     struct _RtpSession *source_session;
     struct _RtpSession *fec_session;
     int cpt;
+    size_t max_size;
     uint32_t SSRC;
     uint8_t *bitstring;
     uint16_t *seqnumlist;
@@ -22,6 +23,8 @@ typedef struct _FecStream{
     FecParameters params;
     int reconstruction_fail;
     int total_lost_packets;
+    int repair_packet_not_found;
+    int source_packets_not_found;
 } FecStream;
 
 FecParameters *fec_params_new(int L, int D, int size_of_source_queue);
