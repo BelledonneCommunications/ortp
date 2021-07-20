@@ -4,7 +4,9 @@
 #include "ortp/fecstream.h"
 #include "ortp/port.h"
 
-#define min(a,b) (a < b ? a : b)
+#ifndef MIN
+#define MIN(a,b) (a < b ? a : b)
+#endif
 
 FecParameters *fec_params_new(int L, int D){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
@@ -194,7 +196,7 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
 
     payload_bitstring = ortp_new0(uint8_t, packet_size);
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
-        for(size_t i = 0 ; i < min((msgdsize(tmp) - RTP_FIXED_HEADER_SIZE), (size_t) packet_size) ; i++){
+        for(size_t i = 0 ; i < MIN((msgdsize(tmp) - RTP_FIXED_HEADER_SIZE), (size_t) packet_size) ; i++){
             payload_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i);
         }
     }
