@@ -12,8 +12,8 @@ FecParameters *fec_params_new(int L, int D){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
-    fec_params->source_queue_size = L*15;
-    fec_params->repair_queue_size = L+5;
+    fec_params->source_queue_size = L*10;
+    fec_params->repair_queue_size = (10-L)*5;
     return fec_params;
 }
 

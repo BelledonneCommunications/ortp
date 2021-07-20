@@ -28,7 +28,7 @@ typedef struct _FecStream{
     int source_packets_not_found;
 } FecStream;
 
-FecParameters *fec_params_new(int L, int D);
+ORTP_PUBLIC FecParameters *fec_params_new(int L, int D);
 
 ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params);
 
