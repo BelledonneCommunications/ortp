@@ -8,11 +8,11 @@
 #define MIN(a,b) (a < b ? a : b)
 #endif
 
-FecParameters *fec_params_new(int L, int D){
+FecParameters *fec_params_new(int L, int D, int jitter){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
-    fec_params->source_queue_size = L*10;
+    fec_params->source_queue_size = L*jitter;
     fec_params->repair_queue_size = (10-L)*5;
     return fec_params;
 }
@@ -33,6 +33,8 @@ FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, c
     fec_stream->total_lost_packets = 0;
     fec_stream->source_packets_not_found = 0;
     fec_stream->repair_packet_not_found = 0;
+    fec_stream->erreur = 0;
+    fec_stream->prec = 0;
     return fec_stream;
 }
 
@@ -67,7 +69,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
     *(uint32_t *) &fec_stream->bitstring[4] ^= rtp_get_timestamp(source_packet);
 
     //All octets after the fixed 12-bytes RTPheader
-    for(size_t i = 0 ; i < msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE ; i++){
+    for(size_t i = 0 ; i < (msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE) ; i++){
         fec_stream->bitstring[8 + i] ^= *(uint8_t *) (source_packet->b_rptr+RTP_FIXED_HEADER_SIZE+i);
     }
 
@@ -173,7 +175,7 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
 
     //XOR with FEC header
     for(size_t j = 0 ; j < 2 ; j++){
-        bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+12+sizeof(uint32_t)+j);
+        bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+j);
     }
     *(uint32_t *) &bitstring[4] ^= *(uint32_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+4*sizeof(uint8_t));
     *(uint16_t *) &bitstring[8] ^= *(uint16_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+2*sizeof(uint8_t));
@@ -200,10 +202,8 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
             payload_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i);
         }
     }
-    printf("Taille payload de réparation : %d\n", (int)(msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))));
-    printf("Packet size : %d\n", (int) packet_size);
     for(size_t i = 0 ; i < packet_size ; i++){
-        payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i);
+        payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i); //Erreur potentielle : Buffer overflow - READ 1 byte
     }
 
     msgpullup(packet, msgdsize(packet) + packet_size);

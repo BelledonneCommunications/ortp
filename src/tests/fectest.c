@@ -6,30 +6,37 @@ FecParameters *fec_params_new_test(int L, int D, int size_of_source_queue){
     FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
-    fec_params->source_queue_size = (10-L+5)*10;
-    fec_params->repair_queue_size = L+5;
+    fec_params->source_queue_size = L*12;
+    fec_params->repair_queue_size = (10-L)*5;
     return fec_params;
 }
 
 FecStream *fec_stream_new_test(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params){
-    FecStream *fec_stream = (FecStream *) malloc(sizeof (FecStream));
+    FecStream *fec_stream = (FecStream *) ortp_malloc(sizeof(FecStream));
     fec_stream->source_session = source;
     fec_stream->fec_session = fec;
     rtp_session_enable_jitter_buffer(fec_stream->fec_session, FALSE);
     fec_stream->cpt = 0;
+    fec_stream->max_size = 0;
     qinit(&fec_stream->source_packets_recvd);
     qinit(&fec_stream->repair_packets_recvd);
     fec_stream->params = *params;
-    fec_stream->seqnumlist = (uint16_t *) malloc(fec_stream->params.L*sizeof (uint16_t));
+    fec_stream->seqnumlist = (uint16_t *) ortp_malloc(fec_stream->params.L * sizeof(uint16_t));
+    fec_stream->bitstring = (uint8_t *) ortp_malloc(UDP_MAX_SIZE * sizeof(uint8_t));
+    fec_stream->reconstruction_fail = 0;
+    fec_stream->total_lost_packets = 0;
+    fec_stream->source_packets_not_found = 0;
+    fec_stream->repair_packet_not_found = 0;
+    fec_stream->erreur = 0;
+    fec_stream->prec = 0;
     return fec_stream;
 }
 
 void fec_stream_destroy_test(FecStream *fec_stream){
     ortp_free(fec_stream->bitstring);
     ortp_free(fec_stream->seqnumlist);
-    ortp_free(&fec_stream->source_packets_recvd);
-    ortp_free(&fec_stream->repair_packets_recvd);
-    ortp_free(&fec_stream->params);
+    flushq(&fec_stream->source_packets_recvd, 0);
+    flushq(&fec_stream->repair_packets_recvd, 0);
 }
 
 mblk_t *fec_stream_on_new_source_packet_sent_test(FecStream *fec_stream, mblk_t *source_packet){
@@ -37,9 +44,11 @@ mblk_t *fec_stream_on_new_source_packet_sent_test(FecStream *fec_stream, mblk_t 
 
     if(fec_stream->cpt == 0){
         fec_stream->SSRC = rtp_get_ssrc(source_packet);
-        fec_stream->bitstring = ortp_new0(uint8_t, UDP_MAX_SIZE);
+        memset(fec_stream->bitstring, 0, UDP_MAX_SIZE * sizeof(uint8_t));
         fec_stream->bitstring[0] = 1 << 6;
     }
+
+    if(fec_stream->max_size < (msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE)) fec_stream->max_size = msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE;
 
     fec_stream->bitstring[0] ^= rtp_get_padbit(source_packet) << 5;
     fec_stream->bitstring[0] ^= rtp_get_extbit(source_packet) << 4;
@@ -54,7 +63,7 @@ mblk_t *fec_stream_on_new_source_packet_sent_test(FecStream *fec_stream, mblk_t 
     *(uint32_t *) &fec_stream->bitstring[4] ^= rtp_get_timestamp(source_packet);
 
     //All octets after the fixed 12-bytes RTPheader
-    for(size_t i = 0 ; i < msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE ; i++){
+    for(size_t i = 0 ; i < (msgdsize(source_packet) - RTP_FIXED_HEADER_SIZE) ; i++){
         fec_stream->bitstring[8 + i] ^= *(uint8_t *) (source_packet->b_rptr+RTP_FIXED_HEADER_SIZE+i);
     }
 
@@ -72,7 +81,7 @@ mblk_t *fec_stream_on_new_source_packet_sent_test(FecStream *fec_stream, mblk_t 
         rtp_set_extbit(repair_packet, 0);
         rtp_set_markbit(repair_packet, 0);
 
-        msgpullup(repair_packet, msgdsize(repair_packet) + 4 + 8 + fec_stream->params.L*4 + UDP_MAX_SIZE - 8);
+        msgpullup(repair_packet, msgdsize(repair_packet) + 4 + 8 + fec_stream->params.L*4 + fec_stream->max_size);
 
         rtp_add_csrc(repair_packet, fec_stream->SSRC);
         repair_packet->b_wptr += sizeof(uint32_t);
@@ -92,11 +101,11 @@ mblk_t *fec_stream_on_new_source_packet_sent_test(FecStream *fec_stream, mblk_t 
             repair_packet->b_wptr++;
         }
 
-        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], UDP_MAX_SIZE - 8);
-        repair_packet->b_wptr += UDP_MAX_SIZE - 8;
+        memcpy(repair_packet->b_wptr, &fec_stream->bitstring[8], fec_stream->max_size);
+        repair_packet->b_wptr += fec_stream->max_size;
 
-        ortp_free(fec_stream->bitstring);
         fec_stream->cpt = 0;
+        fec_stream->max_size = 0;
 
         return repair_packet;
     }
@@ -160,7 +169,7 @@ mblk_t *fec_stream_reconstruct_packet_test(FecStream *fec_stream, queue_t *sourc
 
     //XOR with FEC header
     for(size_t j = 0 ; j < 2 ; j++){
-        bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+12+sizeof(uint32_t)+j);
+        bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+j);
     }
     *(uint32_t *) &bitstring[4] ^= *(uint32_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+4*sizeof(uint8_t));
     *(uint16_t *) &bitstring[8] ^= *(uint16_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+2*sizeof(uint8_t));
@@ -183,12 +192,12 @@ mblk_t *fec_stream_reconstruct_packet_test(FecStream *fec_stream, queue_t *sourc
 
     payload_bitstring = ortp_new0(uint8_t, packet_size);
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
-        for(size_t i = 0 ; i < min_test((msgdsize(tmp) - RTP_FIXED_HEADER_SIZE), (size_t) packet_size) ; i++){
+        for(size_t i = 0 ; i < MIN((msgdsize(tmp) - RTP_FIXED_HEADER_SIZE), (size_t) packet_size) ; i++){
             payload_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i);
         }
     }
     for(size_t i = 0 ; i < packet_size ; i++){
-        payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i);
+        payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i); //Erreur potentielle : Buffer overflow - READ 1 byte
     }
 
     msgpullup(packet, msgdsize(packet) + packet_size);
@@ -219,76 +228,83 @@ mblk_t *fec_stream_reconstruct_missing_packet_test(FecStream *fec_stream, uint16
 }
 
 int main(int argc, char** argv){
-    int L = 4;
+    for(int stop = 0 ; stop < 10000 ; stop++){
 
-    uint8_t *buffer = NULL;
-    mblk_t *packet = NULL;
-    mblk_t *repair = NULL;
-    RtpSession *source_session = rtp_session_new(RTP_SESSION_SENDONLY);
-    RtpSession *repair_session = rtp_session_new(RTP_SESSION_SENDONLY);
-    const FecParameters *params = fec_params_new_test(L, 0, 10*L);
+        int L = 3;
 
-    FecStream *fec_stream = fec_stream_new_test(source_session, repair_session, params);
+        uint8_t *buffer = NULL;
+        mblk_t *packet = NULL;
+        mblk_t *repair = NULL;
+        RtpSession *source_session = rtp_session_new(RTP_SESSION_SENDONLY);
+        rtp_session_set_payload_type(source_session, 114);
+        RtpSession *repair_session = rtp_session_new(RTP_SESSION_SENDONLY);
+        const FecParameters *params = fec_params_new_test(L, 0, 10*L);
 
-    uint16_t num = 0;
+        FecStream *fec_stream = fec_stream_new_test(source_session, repair_session, params);
 
-    srand(time(NULL));
-    int size = 0;
+        uint16_t num = 0;
 
-    for(int i = 0 ; i < 100 ; i++){
-        size = rand()%1400;
-        buffer = (uint8_t *) malloc(size*sizeof(uint8_t));
-        for(int i = 0 ; i < size ; i++){
-            buffer[i] = rand()%256;
+        srand(time(NULL));
+        int size = 0;
+
+        for(int i = 0 ; i < 99 ; i++){
+            size = rand()%1400;
+            buffer = (uint8_t *) malloc(size*sizeof(uint8_t));
+            for(int i = 0 ; i < size ; i++){
+                buffer[i] = rand()%256;
+            }
+            packet = rtp_session_create_packet(source_session, RTP_FIXED_HEADER_SIZE, buffer, size);
+            rtp_set_seqnumber(packet, num);
+            rtp_set_timestamp(packet, rand()%429496729);
+            num++;
+            putq(&fec_stream->source_packets_recvd, packet);
+            repair = fec_stream_on_new_source_packet_sent_test(fec_stream, packet);
+            if(repair != NULL){
+                putq(&fec_stream->repair_packets_recvd, repair);
+            }
+            free(buffer);
         }
-        packet = rtp_session_create_packet(source_session, RTP_FIXED_HEADER_SIZE, buffer, size);
-        rtp_set_seqnumber(packet, num);
-        rtp_set_timestamp(packet, rand()%429496729);
-        num++;
-        putq(&fec_stream->source_packets_recvd, packet);
-        repair = fec_stream_on_new_source_packet_sent_test(fec_stream, packet);
-        if(repair != NULL){
-            putq(&fec_stream->repair_packets_recvd, repair);
+
+        mblk_t *lost_packet = NULL;
+        int position = 0;
+        int pos = rand()%99;
+        for(mblk_t *tmp = qbegin(&fec_stream->source_packets_recvd) ; !qend(&fec_stream->source_packets_recvd, tmp) ; tmp = qnext(&fec_stream->source_packets_recvd, tmp)){
+            if(position == pos){
+                lost_packet = tmp;
+                remq(&fec_stream->source_packets_recvd, lost_packet);
+                break;
+            } position++;
         }
-        free(buffer);
-    }
 
-    mblk_t *lost_packet = NULL;
-    int position = 0;
-    for(mblk_t *tmp = qbegin(&fec_stream->source_packets_recvd) ; !qend(&fec_stream->source_packets_recvd, tmp) ; tmp = qnext(&fec_stream->source_packets_recvd, tmp)){
-        if(position == 2){
-            lost_packet = tmp;
-            remq(&fec_stream->source_packets_recvd, lost_packet);
-            break;
-        } position++;
-    }
+        //mblk_t *lost_packet = getq(&fec_stream->source_packets_recvd);
+        //remq(&fec_stream->source_packets_recvd, lost_packet);
 
-    //mblk_t *lost_packet = getq(&fec_stream->source_packets_recvd);
-    //remq(&fec_stream->source_packets_recvd, lost_packet);
+        mblk_t *new_packet = fec_stream_reconstruct_missing_packet_test(fec_stream, rtp_get_seqnumber(lost_packet));
 
-    mblk_t *new_packet = fec_stream_reconstruct_missing_packet_test(fec_stream, rtp_get_seqnumber(lost_packet));
-
-    if(new_packet == NULL){
-        printf("Lost packet reconstruction : NULL\n");
-    } else if(msgdsize(lost_packet) == msgdsize(new_packet)){
-        if(memcmp(lost_packet->b_rptr, new_packet->b_rptr, msgdsize(lost_packet)) == 0){
-            printf("Lost packet reconstruction : OK\n");
-        } else {
-            printf("Lost packet reconstruction : FAIL\n");
-            for(int i = 0 ; i < min_test(msgdsize(lost_packet), (size_t) 100) ; i++){
-                if(*(uint8_t *)(lost_packet->b_rptr+i) != *(uint8_t *)(new_packet->b_rptr+i)){
-                    printf("Header lost packet [%d] = %d\n", i, *(uint8_t *)(lost_packet->b_rptr+i));
-                    printf("Header new  packet [%d] = %d\n", i, *(uint8_t *)(new_packet->b_rptr+i));
+        if(new_packet == NULL){
+            printf("Lost packet reconstruction : NULL\n");
+        } else if(msgdsize(lost_packet) == msgdsize(new_packet)){
+            if(memcmp(lost_packet->b_rptr, new_packet->b_rptr, msgdsize(lost_packet)) == 0){
+                printf("Lost packet reconstruction : OK\n");
+            } else {
+                printf("Lost packet reconstruction : FAIL\n");
+                for(int i = 0 ; i < min_test(msgdsize(lost_packet), (size_t) 100) ; i++){
+                    if(*(uint8_t *)(lost_packet->b_rptr+i) != *(uint8_t *)(new_packet->b_rptr+i)){
+                        printf("Header lost packet [%d] = %d\n", i, *(uint8_t *)(lost_packet->b_rptr+i));
+                        printf("Header new  packet [%d] = %d\n", i, *(uint8_t *)(new_packet->b_rptr+i));
+                    }
                 }
             }
+        } else {
+            printf("Tailles différentes\n");
+            printf("Taille packet d'origine : %d / Taille packet reconstruit : %d\n", (int)msgdsize(lost_packet), (int)msgdsize(new_packet));
+            for(int i = 0 ; i < 12 ; i++){
+                printf("Header lost packet [%d] = %d\n", i, *(uint8_t *)(lost_packet->b_rptr+i));
+                printf("Header new  packet [%d] = %d\n", i, *(uint8_t *)(new_packet->b_rptr+i));
+            }
         }
-    } else {
-        printf("Tailles différentes\n");
-        printf("Taille packet d'origine : %d / Taille packet reconstruit : %d\n", (int)msgdsize(lost_packet), (int)msgdsize(new_packet));
-        for(int i = 0 ; i < 12 ; i++){
-            printf("Header lost packet [%d] = %d\n", i, *(uint8_t *)(lost_packet->b_rptr+i));
-            printf("Header new  packet [%d] = %d\n", i, *(uint8_t *)(new_packet->b_rptr+i));
-        }
+
+        fec_stream_destroy_test(fec_stream);
     }
 
     return 0;

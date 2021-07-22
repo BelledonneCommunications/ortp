@@ -26,9 +26,11 @@ typedef struct _FecStream{
     int total_lost_packets;
     int repair_packet_not_found;
     int source_packets_not_found;
+    int erreur;
+    uint16_t prec;
 } FecStream;
 
-ORTP_PUBLIC FecParameters *fec_params_new(int L, int D);
+ORTP_PUBLIC FecParameters *fec_params_new(int L, int D, int jitter);
 
 ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params);
 
