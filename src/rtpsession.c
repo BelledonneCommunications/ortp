@@ -1313,13 +1313,10 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
                 ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
             } else {
                 ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
-                if((rtp_get_seqnumber(mp) - session->fec_stream->prec) <= (session->fec_stream->params.L - 1)){
-                    session->fec_stream->erreur+=2;
-                }
+                fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
                 session->fec_stream->reconstruction_fail++;
                 if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
             }
-            session->fec_stream->prec = rtp_get_seqnumber(mp);
         } else {
             if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
         }

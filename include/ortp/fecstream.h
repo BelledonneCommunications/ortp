@@ -19,6 +19,8 @@ typedef struct _FecStream{
     uint32_t SSRC;
     uint8_t *bitstring;
     uint16_t *seqnumlist;
+    uint8_t *header_bitstring;
+    uint8_t *payload_bitstring;
     queue_t source_packets_recvd;
     queue_t repair_packets_recvd;
     FecParameters params;
@@ -27,7 +29,8 @@ typedef struct _FecStream{
     int repair_packet_not_found;
     int source_packets_not_found;
     int erreur;
-    uint16_t prec;
+    uint16_t *prec;
+    int size_prec;
 } FecStream;
 
 ORTP_PUBLIC FecParameters *fec_params_new(int L, int D, int jitter);
@@ -49,5 +52,7 @@ uint16_t *fec_stream_create_sequence_numbers_set(FecStream *fec_stream, mblk_t *
 mblk_t *fec_stream_find_repair_packet(FecStream *fec_stream, uint16_t seqnum);
 
 bool_t fec_stream_find_source_packets(FecStream *fec_stream, mblk_t *repair_packet, queue_t *source_packets);
+
+void fec_stream_reconstruction_error(FecStream *fec_stream, uint16_t seqnum);
 
 #endif

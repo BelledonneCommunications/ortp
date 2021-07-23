@@ -3,6 +3,7 @@
 #include "ortp/rtpsession.h"
 #include "ortp/fecstream.h"
 #include "ortp/port.h"
+#include "ortp/logging.h"
 
 #ifndef MIN
 #define MIN(a,b) (a < b ? a : b)
@@ -29,18 +30,24 @@ FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, c
     fec_stream->params = *params;
     fec_stream->seqnumlist = (uint16_t *) ortp_malloc(fec_stream->params.L * sizeof(uint16_t));
     fec_stream->bitstring = (uint8_t *) ortp_malloc(UDP_MAX_SIZE * sizeof(uint8_t));
+    fec_stream->header_bitstring = (uint8_t *) ortp_malloc(10 * sizeof(uint8_t));
+    fec_stream->payload_bitstring = (uint8_t *) ortp_malloc(UDP_MAX_SIZE * sizeof(uint8_t));
     fec_stream->reconstruction_fail = 0;
     fec_stream->total_lost_packets = 0;
     fec_stream->source_packets_not_found = 0;
     fec_stream->repair_packet_not_found = 0;
     fec_stream->erreur = 0;
-    fec_stream->prec = 0;
+    fec_stream->prec = (uint16_t *) ortp_malloc(fec_stream->params.L * sizeof(uint16_t));
+    fec_stream->size_prec = 0;
     return fec_stream;
 }
 
 void fec_stream_destroy(FecStream *fec_stream){
     ortp_free(fec_stream->bitstring);
     ortp_free(fec_stream->seqnumlist);
+    ortp_free(fec_stream->header_bitstring);
+    ortp_free(fec_stream->payload_bitstring);
+    ortp_free(fec_stream->prec);
     flushq(&fec_stream->source_packets_recvd, 0);
     flushq(&fec_stream->repair_packets_recvd, 0);
 }
@@ -157,59 +164,63 @@ mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t se
 }
 
 mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_packets_set, mblk_t *repair_packet, uint16_t seqnum){
-    uint8_t *bitstring = ortp_new0(uint8_t, 10);
     mblk_t *packet = NULL;
     uint16_t packet_size;
-    uint8_t *payload_bitstring = NULL;
     uint8_t *p = NULL;
 
     /* RTP HEADER RECONSTRUCTION */
 
     //Creation of the bitstring
+    memset(fec_stream->header_bitstring, 0, 10);
+
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
         for(size_t i = 0 ; i < 8 ; i++){
-            bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+i);
+            fec_stream->header_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+i);
         }
-        *(uint16_t *) &(bitstring[8]) ^= htons((uint16_t)(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE));
+        *(uint16_t *) &(fec_stream->header_bitstring[8]) ^= htons((uint16_t)(msgdsize(tmp) - RTP_FIXED_HEADER_SIZE));
     }
 
     //XOR with FEC header
     for(size_t j = 0 ; j < 2 ; j++){
-        bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+j);
+        fec_stream->header_bitstring[j] ^= *(uint8_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+j);
     }
-    *(uint32_t *) &bitstring[4] ^= *(uint32_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+4*sizeof(uint8_t));
-    *(uint16_t *) &bitstring[8] ^= *(uint16_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+2*sizeof(uint8_t));
+    *(uint32_t *) &fec_stream->header_bitstring[4] ^= *(uint32_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+4*sizeof(uint8_t));
+    *(uint16_t *) &fec_stream->header_bitstring[8] ^= *(uint16_t *) (repair_packet->b_rptr+RTP_FIXED_HEADER_SIZE+sizeof(uint32_t)+2*sizeof(uint8_t));
 
     //Recreation of the lost packet
     packet = rtp_session_create_packet(fec_stream->source_session, RTP_FIXED_HEADER_SIZE, NULL, 0);
 
     rtp_set_version(packet, 2);
-    rtp_set_padbit(packet, (bitstring[0] >> 5) & 0x1);
-    rtp_set_extbit(packet, (bitstring[0] >> 4) & 0x1);
-    rtp_set_cc(packet, bitstring[0] & 0xF);
-    rtp_set_markbit(packet, (bitstring[1] >> 7) & 0x1);
-    rtp_set_payload_type(packet, bitstring[1] & 0x7F);
+    rtp_set_padbit(packet, (fec_stream->header_bitstring[0] >> 5) & 0x1);
+    rtp_set_extbit(packet, (fec_stream->header_bitstring[0] >> 4) & 0x1);
+    rtp_set_cc(packet, fec_stream->header_bitstring[0] & 0xF);
+    rtp_set_markbit(packet, (fec_stream->header_bitstring[1] >> 7) & 0x1);
+    rtp_set_payload_type(packet, fec_stream->header_bitstring[1] & 0x7F);
     rtp_set_seqnumber(packet, seqnum);
-    rtp_set_timestamp(packet, *(uint32_t *) &bitstring[4]);
+    rtp_set_timestamp(packet, *(uint32_t *) &fec_stream->header_bitstring[4]);
     rtp_set_ssrc(packet, rtp_get_ssrc(qbegin(source_packets_set)));
-    packet_size = ntohs(*(uint16_t *) &(bitstring[8]));
+    packet_size = ntohs(*(uint16_t *) &(fec_stream->header_bitstring[8]));
 
     /* PAYLOAD RECONSTRUCTION */
 
-    payload_bitstring = ortp_new0(uint8_t, packet_size);
+    memset(fec_stream->payload_bitstring, 0, packet_size);
     for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
         for(size_t i = 0 ; i < MIN((msgdsize(tmp) - RTP_FIXED_HEADER_SIZE), (size_t) packet_size) ; i++){
-            payload_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i);
+            fec_stream->payload_bitstring[i] ^= *(uint8_t *) (tmp->b_rptr+RTP_FIXED_HEADER_SIZE+i);
         }
     }
+    if((int)(msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))) < packet_size){
+        ortp_message("Size of repair payload : %d | Size of source payload : %d", (int)(msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))), packet_size);
+        abort();
+    }
     for(size_t i = 0 ; i < packet_size ; i++){
-        payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i); //Erreur potentielle : Buffer overflow - READ 1 byte
+        fec_stream->payload_bitstring[i] ^= *(uint8_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L) + i); //Erreur potentielle : Buffer overflow - READ 1 byte
     }
 
     msgpullup(packet, msgdsize(packet) + packet_size);
     for(size_t i = 0 ; i < packet_size ; i++){
         p = (packet->b_wptr+i);
-        *p = payload_bitstring[i];
+        *p = fec_stream->payload_bitstring[i];
     }
     packet->b_wptr += packet_size;
 
@@ -248,4 +259,20 @@ bool_t fec_stream_find_source_packets(FecStream *fec_stream, mblk_t *repair_pack
         }
     }
     return (source_packets->q_mcount != fec_stream->params.L-1) ? FALSE : TRUE;
+}
+
+void fec_stream_reconstruction_error(FecStream *fec_stream, uint16_t seqnum){
+    if(fec_stream->size_prec == 0){
+        fec_stream->prec[0] = seqnum;
+        fec_stream->size_prec++;
+    } else if(((seqnum - fec_stream->prec[0]) < fec_stream->params.L) && (((fec_stream->prec[0]+1)%fec_stream->params.L) <= ((seqnum+1)%fec_stream->params.L))){
+        fec_stream->prec[fec_stream->size_prec] = seqnum;
+        fec_stream->size_prec++;
+    } else if(fec_stream->size_prec == 1){
+        fec_stream->erreur++;
+        fec_stream->prec[0] = seqnum;
+    } else {
+        fec_stream->size_prec = 1;
+        fec_stream->prec[0] = seqnum;
+    }
 }

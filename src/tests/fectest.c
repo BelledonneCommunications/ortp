@@ -1,5 +1,6 @@
 #include "ortp/rtpsession.h"
 #include "ortp/port.h"
+#include "ortp/logging.h"
 #include <time.h>
 
 FecParameters *fec_params_new_test(int L, int D, int size_of_source_queue){
@@ -236,7 +237,6 @@ int main(int argc, char** argv){
         mblk_t *packet = NULL;
         mblk_t *repair = NULL;
         RtpSession *source_session = rtp_session_new(RTP_SESSION_SENDONLY);
-        rtp_session_set_payload_type(source_session, 114);
         RtpSession *repair_session = rtp_session_new(RTP_SESSION_SENDONLY);
         const FecParameters *params = fec_params_new_test(L, 0, 10*L);
 
@@ -244,8 +244,10 @@ int main(int argc, char** argv){
 
         uint16_t num = 0;
 
-        srand(time(NULL));
         int size = 0;
+
+        srand(time(NULL));
+        rtp_session_set_payload_type(source_session, 114);
 
         for(int i = 0 ; i < 99 ; i++){
             size = rand()%1400;
@@ -275,9 +277,6 @@ int main(int argc, char** argv){
                 break;
             } position++;
         }
-
-        //mblk_t *lost_packet = getq(&fec_stream->source_packets_recvd);
-        //remq(&fec_stream->source_packets_recvd, lost_packet);
 
         mblk_t *new_packet = fec_stream_reconstruct_missing_packet_test(fec_stream, rtp_get_seqnumber(lost_packet));
 
