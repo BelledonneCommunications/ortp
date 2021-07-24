@@ -393,5 +393,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	if ((discarded == 0) && (duplicate == 0)) {
 		session->rtcp_xr_stats.rcv_count++;
 	}
+    if(session->fec_stream != NULL)
+        fec_stream_on_new_source_packet_received(session->fec_stream, mp);
 }
 
