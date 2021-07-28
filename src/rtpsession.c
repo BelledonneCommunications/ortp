@@ -2042,6 +2042,12 @@ float rtp_session_get_round_trip_propagation(RtpSession *session){
 **/
 void rtp_session_destroy (RtpSession * session)
 {
+    if(session->fec_stream != NULL){
+        rtp_session_destroy(session->fec_stream->fec_session);
+        session->fec_stream->fec_session = NULL;
+        fec_stream_destroy(session->fec_stream);
+        session->fec_stream = NULL;
+    }
 	rtp_session_uninit (session);
 	ortp_free (session);
 }
