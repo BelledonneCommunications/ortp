@@ -55,6 +55,7 @@ struct _OrtpEventData{
 		bool_t congestion_detected;
 		float video_bandwidth_available;
 		int jitter_min_size_for_nack;
+        uint16_t reconstructed_packet_seq_number;
 	} info;
 };
 
@@ -88,6 +89,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE             19
 #define ORTP_EVENT_ICE_DEACTIVATION_NEEDED		20
 #define ORTP_EVENT_JITTER_UPDATE_FOR_NACK		21
+#define ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED  22
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);

@@ -43,11 +43,11 @@ FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, c
 }
 
 void fec_stream_destroy(FecStream *fec_stream){
-    ortp_free(fec_stream->bitstring);
-    ortp_free(fec_stream->seqnumlist);
-    ortp_free(fec_stream->header_bitstring);
-    ortp_free(fec_stream->payload_bitstring);
-    ortp_free(fec_stream->prec);
+    if(fec_stream->bitstring != NULL) ortp_free(fec_stream->bitstring);
+    if(fec_stream->seqnumlist != NULL) ortp_free(fec_stream->seqnumlist);
+    if(fec_stream->header_bitstring != NULL) ortp_free(fec_stream->header_bitstring);
+    if(fec_stream->payload_bitstring != NULL) ortp_free(fec_stream->payload_bitstring);
+    if(fec_stream->prec != NULL) ortp_free(fec_stream->prec);
     flushq(&fec_stream->source_packets_recvd, 0);
     flushq(&fec_stream->repair_packets_recvd, 0);
 }
