@@ -43,7 +43,7 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
 
 void fec_stream_on_new_source_packet_received(FecStream *fec_stream, mblk_t *source_packet);
 
-mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t seqnum);
+ORTP_PUBLIC mblk_t *fec_stream_reconstruct_missing_packet(FecStream *fec_stream, uint16_t seqnum);
 
 mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_packets_set, mblk_t *repair_packet, uint16_t seqnum);
 
