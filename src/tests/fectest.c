@@ -28,7 +28,7 @@ FecStream *fec_stream_new_test(struct _RtpSession *source, struct _RtpSession *f
     fec_stream->total_lost_packets = 0;
     fec_stream->source_packets_not_found = 0;
     fec_stream->repair_packet_not_found = 0;
-    fec_stream->erreur = 0;
+    fec_stream->error = 0;
     fec_stream->prec = 0;
     return fec_stream;
 }

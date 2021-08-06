@@ -28,7 +28,7 @@ typedef struct _FecStream{
     int total_lost_packets;
     int repair_packet_not_found;
     int source_packets_not_found;
-    int erreur;
+    int error;
     uint16_t *prec;
     int size_prec;
 } FecStream;
