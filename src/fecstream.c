@@ -36,7 +36,7 @@ FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, c
     fec_stream->total_lost_packets = 0;
     fec_stream->source_packets_not_found = 0;
     fec_stream->repair_packet_not_found = 0;
-    fec_stream->erreur = 0;
+    fec_stream->error = 0;
     fec_stream->prec = (uint16_t *) ortp_malloc(fec_stream->params.L * sizeof(uint16_t));
     fec_stream->size_prec = 0;
     return fec_stream;
@@ -54,6 +54,8 @@ void fec_stream_destroy(FecStream *fec_stream){
 
 void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_packet){
     msgpullup(source_packet, -1);
+
+    ortp_message("Source packet size %d : %d", (int) rtp_get_seqnumber(source_packet), (int) (msgdsize(source_packet)-RTP_FIXED_HEADER_SIZE));
 
     if(fec_stream->cpt == 0){
         fec_stream->SSRC = rtp_get_ssrc(source_packet);
@@ -120,6 +122,8 @@ void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_
         fec_stream->cpt = 0;
         fec_stream->max_size = 0;
 
+        ortp_message("Repair packet size before sending (SeqNum : %d) : %d", (int) rtp_get_seqnumber(repair_packet), (int) (msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))));
+
         rtp_session_sendm_with_ts(fec_stream->fec_session, repair_packet, rtp_get_timestamp(repair_packet));
     }
 }
@@ -168,6 +172,10 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
     uint16_t packet_size;
     uint8_t *p = NULL;
 
+    for(mblk_t *tmp = qbegin(source_packets_set) ; !qend(source_packets_set, tmp) ; tmp = qnext(source_packets_set, tmp)){
+        ortp_message("Source packet for reconstruction (Seq Num : %d) : %d", rtp_get_seqnumber(tmp), (int) (msgdsize(tmp) - RTP_FIXED_HEADER_SIZE));
+    }
+
     /* RTP HEADER RECONSTRUCTION */
 
     //Creation of the bitstring
@@ -210,7 +218,7 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
         }
     }
     if((int)(msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))) < packet_size){
-        ortp_message("Size of repair payload : %d | Size of source payload : %d", (int)(msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))), packet_size);
+        ortp_message("Size of repair payload (Seq Num : %d) : %d | Size of source payload (Seq Num : %d) : %d", rtp_get_seqnumber(repair_packet), (int)(msgdsize(repair_packet) - (RTP_FIXED_HEADER_SIZE + 12 + 4*(fec_stream->params.L))), seqnum, packet_size);
         abort();
     }
     for(size_t i = 0 ; i < packet_size ; i++){
@@ -229,8 +237,19 @@ mblk_t *fec_stream_reconstruct_packet(FecStream *fec_stream, queue_t *source_pac
 
 uint16_t *fec_stream_create_sequence_numbers_set(FecStream *fec_stream, mblk_t *repair_packet){
     uint16_t *seqnum = (uint16_t *) malloc(fec_stream->params.L * sizeof(uint16_t));
+    int list_size = 0;
+    bool_t seq_num_ok = TRUE;
     for(int i = 0 ; i < fec_stream->params.L  ; i++){
-        seqnum[i] = *(uint16_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 4 + 8 + 4*i);
+        for(int j = 0 ; j < list_size ; j++){
+            if(seqnum[j] == *(uint16_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 4 + 8 + 4*i)){
+                seq_num_ok = FALSE;
+            }
+        }
+        if(seq_num_ok){
+            seqnum[i] = *(uint16_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 4 + 8 + 4*i);
+            list_size++;
+        }
+        seq_num_ok = TRUE;
     }
     return seqnum;
 }
@@ -265,11 +284,11 @@ void fec_stream_reconstruction_error(FecStream *fec_stream, uint16_t seqnum){
     if(fec_stream->size_prec == 0){
         fec_stream->prec[0] = seqnum;
         fec_stream->size_prec++;
-    } else if(((seqnum - fec_stream->prec[0]) < fec_stream->params.L) && (((fec_stream->prec[0]+1)%fec_stream->params.L) <= ((seqnum+1)%fec_stream->params.L))){
+    } else if(((seqnum - fec_stream->prec[0]) < fec_stream->params.L) && (((fec_stream->prec[0]+1)%fec_stream->params.L) < ((seqnum+1)%fec_stream->params.L))){
         fec_stream->prec[fec_stream->size_prec] = seqnum;
         fec_stream->size_prec++;
     } else if(fec_stream->size_prec == 1){
-        fec_stream->erreur++;
+        fec_stream->error++;
         fec_stream->prec[0] = seqnum;
     } else {
         fec_stream->size_prec = 1;
