@@ -10,7 +10,7 @@
 #endif
 
 FecParameters *fec_params_new(int L, int D, int jitter){
-    FecParameters *fec_params = (FecParameters *) malloc(sizeof(FecParameters));
+    FecParameters *fec_params = (FecParameters *) ortp_malloc0(sizeof(FecParameters));
     fec_params->L = L;
     fec_params->D = D;
     fec_params->source_queue_size = L*jitter;
@@ -19,12 +19,10 @@ FecParameters *fec_params_new(int L, int D, int jitter){
 }
 
 FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, const FecParameters *params){
-    FecStream *fec_stream = (FecStream *) ortp_malloc(sizeof(FecStream));
+    FecStream *fec_stream = (FecStream *) ortp_malloc0(sizeof(FecStream));
     fec_stream->source_session = source;
     fec_stream->fec_session = fec;
     rtp_session_enable_jitter_buffer(fec_stream->fec_session, FALSE);
-    fec_stream->cpt = 0;
-    fec_stream->max_size = 0;
     qinit(&fec_stream->source_packets_recvd);
     qinit(&fec_stream->repair_packets_recvd);
     fec_stream->params = *params;
@@ -32,13 +30,7 @@ FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, c
     fec_stream->bitstring = (uint8_t *) ortp_malloc(UDP_MAX_SIZE * sizeof(uint8_t));
     fec_stream->header_bitstring = (uint8_t *) ortp_malloc(10 * sizeof(uint8_t));
     fec_stream->payload_bitstring = (uint8_t *) ortp_malloc(UDP_MAX_SIZE * sizeof(uint8_t));
-    fec_stream->reconstruction_fail = 0;
-    fec_stream->total_lost_packets = 0;
-    fec_stream->source_packets_not_found = 0;
-    fec_stream->repair_packet_not_found = 0;
-    fec_stream->error = 0;
     fec_stream->prec = (uint16_t *) ortp_malloc(fec_stream->params.L * sizeof(uint16_t));
-    fec_stream->size_prec = 0;
     return fec_stream;
 }
 
