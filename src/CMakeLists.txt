@@ -37,6 +37,7 @@ set(ORTP_SOURCE_FILES_C
 	congestiondetector.c
 	event.c
 	extremum.c
+        fecstream.c
 	jitterctl.c
 	kalmanrls.c
 	logging.c
