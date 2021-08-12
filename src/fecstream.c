@@ -55,7 +55,7 @@ void fec_stream_destroy(FecStream *fec_stream){
 void fec_stream_on_new_source_packet_sent(FecStream *fec_stream, mblk_t *source_packet){
     msgpullup(source_packet, -1);
 
-    ortp_message("Source packet size %d : %d", (int) rtp_get_seqnumber(source_packet), (int) (msgdsize(source_packet)-RTP_FIXED_HEADER_SIZE));
+    ortp_message("Source packet size (SeqNum : %d) : %d", (int) rtp_get_seqnumber(source_packet), (int) (msgdsize(source_packet)-RTP_FIXED_HEADER_SIZE));
 
     if(fec_stream->cpt == 0){
         fec_stream->SSRC = rtp_get_ssrc(source_packet);
@@ -239,7 +239,7 @@ uint16_t *fec_stream_create_sequence_numbers_set(FecStream *fec_stream, mblk_t *
     uint16_t *seqnum = (uint16_t *) malloc(fec_stream->params.L * sizeof(uint16_t));
     int list_size = 0;
     bool_t seq_num_ok = TRUE;
-    for(int i = 0 ; i < fec_stream->params.L  ; i++){
+    for(int i = 0 ; i < fec_stream->params.L ; i++){
         for(int j = 0 ; j < list_size ; j++){
             if(seqnum[j] == *(uint16_t *) (repair_packet->b_rptr + RTP_FIXED_HEADER_SIZE + 4 + 8 + 4*i)){
                 seq_num_ok = FALSE;
