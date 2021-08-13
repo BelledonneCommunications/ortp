@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+- New forward error correction (FEC) algorithm implemented according to https://datatracker.ietf.org/doc/html/rfc8627
+
 
 ## [4.5.0] - 2021-03-29
 
