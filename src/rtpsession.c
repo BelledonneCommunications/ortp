@@ -151,7 +151,7 @@ int rtp_putq(queue_t *q, mblk_t *mp)
 }
 
 
-mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
+mblk_t *rtp_peekq(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL,*old=NULL;
 	rtp_header_t *tmprtp;
@@ -182,7 +182,7 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 				(*rejected)++;
 				freemsg(old);
 			}
-			ret=getq(q); /* dequeue the packet, since it has an interesting timestamp*/
+            ret=peekq(q); /* dequeue the packet, since it has an interesting timestamp*/
 			ts_found=tmprtp->timestamp;
 			ortp_debug("rtp_getq: Found packet with ts=%u",tmprtp->timestamp);
 
@@ -196,7 +196,7 @@ mblk_t *rtp_getq(queue_t *q,uint32_t timestamp, int *rejected)
 	return ret;
 }
 
-mblk_t *rtp_getq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
+mblk_t *rtp_peekq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL;
 	rtp_header_t *tmprtp;
@@ -216,7 +216,7 @@ mblk_t *rtp_getq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
 	ortp_debug("rtp_getq_permissive: Seeing packet with ts=%i",tmprtp->timestamp);
 	if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmprtp->timestamp) )
 	{
-		ret=getq(q); /* dequeue the packet, since it has an interesting timestamp*/
+        ret=peekq(q); /* dequeue the packet, since it has an interesting timestamp*/
 		ortp_debug("rtp_getq_permissive: Found packet with ts=%i",tmprtp->timestamp);
 	}
 	return ret;
@@ -1113,6 +1113,10 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		error = rtp_session_rtp_send (session, copymsg(mp));
 		session->duplication_left -= 1.f;
 	}
+    if((session->fec_stream != NULL) && (mp != NULL)){
+        fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
+    }
+
 	error = rtp_session_rtp_send (session, mp);
 
 	/*send RTCP packet if needed */
@@ -1120,6 +1124,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 	/* receives rtcp packet if session is send-only*/
 	/*otherwise it is done in rtp_session_recvm_with_ts */
 	if (session->mode==RTP_SESSION_SENDONLY) rtp_session_rtcp_recv(session);
+
 	return error;
 }
 
@@ -1286,13 +1291,13 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		if (user_ts==session->rtp.rcv_last_app_ts)
 			read_socket=FALSE;
 	}
-	session->rtp.rcv_last_app_ts = user_ts;
+    session->rtp.rcv_last_app_ts = user_ts;
 	if (read_socket){
 		rtp_session_rtp_recv (session, user_ts);
 		rtp_session_rtcp_recv(session);
 	}
 	/* check for telephone event first */
-	mp=getq(&session->rtp.tev_rq);
+    mp=getq(&session->rtp.tev_rq);
 	if (mp!=NULL){
 		size_t msgsize=msgdsize(mp);
 		ortp_global_stats.recv += msgsize;
@@ -1321,23 +1326,50 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		session->rcv.ssrc = rtp->ssrc;
 		/* delete the recv synchronisation flag */
 		rtp_session_unset_flag (session, RTP_SESSION_RECV_SYNC);
-	}
+    }
 
 	/*calculate the stream timestamp from the user timestamp */
 	ts = jitter_control_get_compensated_timestamp(&session->rtp.jittctl,user_ts);
 	if (session->rtp.jittctl.params.enabled==TRUE){
 		if (session->permissive)
-			mp = rtp_getq_permissive(&session->rtp.rq, ts,&rejected);
+            mp = rtp_peekq_permissive(&session->rtp.rq, ts,&rejected);
 		else{
-			mp = rtp_getq(&session->rtp.rq, ts,&rejected);
+            mp = rtp_peekq(&session->rtp.rq, ts,&rejected);
 		}
-	}else mp=getq(&session->rtp.rq);/*no jitter buffer at all*/
+    }else mp=peekq(&session->rtp.rq);/*no jitter buffer at all*/
 
 	session->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
 	session->rtcp_xr_stats.discarded_count += rejected;
 
-	end:
+    end:
+    if(session->fec_stream != NULL && mp != NULL){
+        if(session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
+            mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+            session->fec_stream->total_lost_packets++;
+            if (fec_mp != NULL){
+                OrtpEvent *ev;
+                OrtpEventData *evdata;
+
+                mp = fec_mp;
+                ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
+                ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
+                evdata = ortp_event_get_data(ev);
+                evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
+                rtp_session_dispatch_event(session, ev);
+            } else {
+                ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
+                fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
+                session->fec_stream->reconstruction_fail++;
+                if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+            }
+        } else {
+            if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+        }
+    } else {
+        if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+    }
+
 	if (mp != NULL)
 	{
 		size_t msgsize = msgdsize(mp);	/* evaluate how much bytes (including header) is received by app */
@@ -1376,7 +1408,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is %u",packet_ts,rtp->timestamp);*/
 		}
 		session->rtp.rcv_last_ts = packet_ts;
-		session->rtp.rcv_last_seq = rtp->seq_number;
+        session->rtp.rcv_last_seq = rtp->seq_number;
 		if (!(session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)){
 			rtp_session_set_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 		}
@@ -1408,7 +1440,8 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		}
 		else session_set_set(&sched->r_sessions,session);	/*to unblock _select() immediately */
 		wait_point_unlock(&session->rcv.wp);
-	}
+    }
+
 	return mp;
 }
 
@@ -2055,6 +2088,14 @@ float rtp_session_get_round_trip_propagation(RtpSession *session){
 **/
 void rtp_session_destroy (RtpSession * session)
 {
+    if(session->fec_stream != NULL){
+        if(session->fec_stream->fec_session != NULL){
+            rtp_session_destroy(session->fec_stream->fec_session);
+            session->fec_stream->fec_session = NULL;
+        }
+        fec_stream_destroy(session->fec_stream);
+        session->fec_stream = NULL;
+    }
 	rtp_session_uninit (session);
 	ortp_free (session);
 }
