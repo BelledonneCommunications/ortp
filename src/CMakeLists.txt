@@ -100,7 +100,11 @@ if(ENABLE_STATIC)
 	set_target_properties(ortp-static PROPERTIES OUTPUT_NAME ortp)
 	set_target_properties(ortp-static PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
 	target_compile_definitions(ortp-static PRIVATE "ORTP_EXPORTS")
-	target_link_libraries(ortp-static INTERFACE ${LIBS})
+	target_include_directories(ortp-static
+		PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+		$<INSTALL_INTERFACE:include>
+	)
+	target_link_libraries(ortp-static PUBLIC bctoolbox INTERFACE ${LIBS})
 	install(TARGETS ortp-static EXPORT ${EXPORT_TARGET_NAME}Targets
 		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
