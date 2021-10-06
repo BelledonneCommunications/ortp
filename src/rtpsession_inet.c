@@ -390,7 +390,7 @@ rtp_session_set_local_addr (RtpSession * session, const char * addr, int rtp_por
 		rtp_session_set_multicast_ttl( session, -1 );
 		rtp_session_set_multicast_loopback( session, -1 );
 		if (session->use_pktinfo) rtp_session_set_pktinfo(session, TRUE);
-		ortp_message("RtpSession bound to [%s] ports [%i] [%i]", addr, rtp_port, rtcp_port);
+		ortp_message("RtpSession[%p] bound to [%s] ports [%i] [%i]", session, addr, rtp_port, rtcp_port);
 		return 0;
 	}
 	ortp_error("Could not bind RTP socket to %s on port %i for session [%p]",addr,rtp_port,session);
