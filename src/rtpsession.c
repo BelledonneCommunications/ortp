@@ -41,6 +41,8 @@
 #endif
 #endif
 
+static void ortp_stream_init(OrtpStream *os);
+
 /**
  * #_RtpTransport object which can handle multiples security protocols. You can for instance use this object
  * to use both sRTP and tunnel transporter. mblk_t messages received and sent from the endpoint
@@ -298,8 +300,8 @@ rtp_session_init (RtpSession * session, int mode)
 	session->symmetric_rtp = FALSE;
 	session->permissive=FALSE;
 	session->reuseaddr=TRUE;
-	msgb_allocator_init(&session->rtp.gs.allocator);
-	msgb_allocator_init(&session->rtcp.gs.allocator);
+	ortp_stream_init(&session->rtp.gs);
+	ortp_stream_init(&session->rtcp.gs);
 	/*set default rtptransport*/
 
 	{
@@ -1291,13 +1293,13 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		if (user_ts==session->rtp.rcv_last_app_ts)
 			read_socket=FALSE;
 	}
-    session->rtp.rcv_last_app_ts = user_ts;
+	session->rtp.rcv_last_app_ts = user_ts;
 	if (read_socket){
 		rtp_session_rtp_recv (session, user_ts);
 		rtp_session_rtcp_recv(session);
 	}
 	/* check for telephone event first */
-    mp=getq(&session->rtp.tev_rq);
+	mp=getq(&session->rtp.tev_rq);
 	if (mp!=NULL){
 		size_t msgsize=msgdsize(mp);
 		ortp_global_stats.recv += msgsize;
@@ -1326,49 +1328,49 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		session->rcv.ssrc = rtp->ssrc;
 		/* delete the recv synchronisation flag */
 		rtp_session_unset_flag (session, RTP_SESSION_RECV_SYNC);
-    }
+	}
 
 	/*calculate the stream timestamp from the user timestamp */
 	ts = jitter_control_get_compensated_timestamp(&session->rtp.jittctl,user_ts);
 	if (session->rtp.jittctl.params.enabled==TRUE){
-		if (session->permissive)
-            mp = rtp_peekq_permissive(&session->rtp.rq, ts,&rejected);
-		else{
-            mp = rtp_peekq(&session->rtp.rq, ts,&rejected);
+		if (session->permissive){
+			mp = rtp_peekq_permissive(&session->rtp.rq, ts,&rejected);
+		}else{
+			mp = rtp_peekq(&session->rtp.rq, ts,&rejected);
 		}
-    }else mp=peekq(&session->rtp.rq);/*no jitter buffer at all*/
+	}else mp=peekq(&session->rtp.rq);/*no jitter buffer at all*/
 
 	session->stats.outoftime+=rejected;
 	ortp_global_stats.outoftime+=rejected;
 	session->rtcp_xr_stats.discarded_count += rejected;
 
-    end:
-    if(session->fec_stream != NULL && mp != NULL){
-        if(session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
-            mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
-            session->fec_stream->total_lost_packets++;
-            if (fec_mp != NULL){
-                OrtpEvent *ev;
-                OrtpEventData *evdata;
+	end:
+	if (session->fec_stream != NULL && mp != NULL){
+		if (session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
+			mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+			session->fec_stream->total_lost_packets++;
+			if (fec_mp != NULL){
+			OrtpEvent *ev;
+			OrtpEventData *evdata;
 
-                mp = fec_mp;
-                ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
-                ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
-                evdata = ortp_event_get_data(ev);
-                evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
-                rtp_session_dispatch_event(session, ev);
-            } else {
-                ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
-                fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
-                session->fec_stream->reconstruction_fail++;
-                if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
-            }
-        } else {
-            if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
-        }
-    } else {
-        if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
-    }
+			mp = fec_mp;
+			ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
+			ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
+			evdata = ortp_event_get_data(ev);
+			evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
+			rtp_session_dispatch_event(session, ev);
+			} else {
+			ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
+			fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
+			session->fec_stream->reconstruction_fail++;
+			if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+			}
+		} else {
+			if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+		}
+	} else {
+		if (!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+	}
 
 	if (mp != NULL)
 	{
@@ -1408,7 +1410,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is %u",packet_ts,rtp->timestamp);*/
 		}
 		session->rtp.rcv_last_ts = packet_ts;
-        session->rtp.rcv_last_seq = rtp->seq_number;
+		session->rtp.rcv_last_seq = rtp->seq_number;
 		if (!(session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)){
 			rtp_session_set_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 		}
@@ -1440,7 +1442,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		}
 		else session_set_set(&sched->r_sessions,session);	/*to unblock _select() immediately */
 		wait_point_unlock(&session->rcv.wp);
-    }
+	}
 
 	return mp;
 }
@@ -1669,8 +1671,14 @@ void ortp_stream_clear_aux_addresses(OrtpStream *os){
 	os->aux_destinations=o_list_free(os->aux_destinations);
 }
 
+static void ortp_stream_init(OrtpStream *os){
+	qinit(&os->bundleq);
+	ortp_mutex_init(&os->bundleq_lock, NULL);
+}
+
 static void ortp_stream_uninit(OrtpStream *os){
-	msgb_allocator_uninit(&os->allocator);
+	flushq(&os->bundleq, FLUSHALL);
+	ortp_mutex_destroy(&os->bundleq_lock);
 	ortp_stream_clear_aux_addresses(os);
 }
 
@@ -1766,6 +1774,7 @@ void rtp_session_uninit (RtpSession * session)
 	if (session->rtcp.send_algo.fb_packets)
 		freemsg(session->rtcp.send_algo.fb_packets);
 	ortp_mutex_destroy(&session->main_mutex);
+	if (session->recv_block_cache) freemsg(session->recv_block_cache);
 }
 
 /**
@@ -2461,10 +2470,6 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg , int flags, const st
 		meta_rtp_set_session(t->session,m);
 	}
 
-	if (t->session && t->session->bundle && !t->session->is_primary) {
-		return rtp_bundle_send_through_primary(t->session->bundle, m->is_rtp, msg, flags, to, tolen);
-	}
-
 	prev_ret=msgdsize(msg);
 	for (elem=m->modifiers;elem!=NULL;elem=o_list_next(elem)){
 		RtpTransportModifier *rtm=(RtpTransportModifier*)elem->data;
@@ -2601,7 +2606,7 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	int ret;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	OList *elem;
-	bool_t packet_is_rtp = m->is_rtp; /* presume it is the same nature as the RtpTransport, but can be changed if rtcp-mux is used */
+	bool_t packet_is_rtcp = !m->is_rtp; /* presume it is the same nature as the RtpTransport, but can be changed if rtcp-mux is used */
 
 	if (!m->has_set_session){
 		meta_rtp_set_session(t->session,m);
@@ -2633,42 +2638,26 @@ int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct 
 	msg->b_wptr += ret;
 
 	/*in case of rtcp-mux, we are allowed to reconsider whether it is an RTP or RTCP packet*/
-	if (t->session->rtcp_mux && m->is_rtp){
+	if ((t->session->rtcp_mux || t->session->bundle) && m->is_rtp){
 		if (ret >= RTP_FIXED_HEADER_SIZE && rtp_get_version(msg) == 2){
 			int pt = rtp_get_payload_type(msg);
 			if (pt >= 64 && pt <= 95){
 				/*this is assumed to be an RTCP packet*/
-				packet_is_rtp = FALSE;
+				packet_is_rtcp = TRUE;
 			}
 		}
 	}
 
-	if (m->is_rtp && !packet_is_rtp) {
+	if (m->is_rtp && packet_is_rtcp) {
 		if (m->other_meta_rtp) {
-			_meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
+			ret = _meta_rtp_transport_recv_through_modifiers(m->other_meta_rtp, NULL, msg, flags);
 
-			if (t->session && t->session->bundle && t->session->is_primary) {
-				if (rtp_bundle_dispatch(t->session->bundle, packet_is_rtp, msg)) {
-					return 0;
-				}
-			}
-
-			rtp_session_process_incoming(t->session, dupmsg(msg),FALSE, msg->reserved1, TRUE);
-			ret = 0; /*since we directly inject in the RtpSession this RTCP packet, we shall return 0 and pass a duplicate of the message,
-			because rtp_session_rtp_recv() is going to free it.*/
 		} else {
 			ortp_error("RTCP packet received via rtcp-mux but RTCP transport is not set !");
 		}
 	} else {
 		ret = _meta_rtp_transport_recv_through_modifiers(t, NULL, msg, flags);
 
-		if (t->session && t->session->bundle && t->session->is_primary) {
-			if (rtp_bundle_dispatch(t->session->bundle, TRUE, msg)) {
-				return 0;
-			}
-
-			ret = (int)msgdsize(msg);
-		}
 	}
 
 	// subtract last written value since it will be rewritten by rtp_session_rtp_recv

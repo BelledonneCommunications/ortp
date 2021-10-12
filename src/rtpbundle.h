@@ -52,7 +52,8 @@ class RtpBundleCxx {
 
 	const std::string &getSessionMid(RtpSession *session) const;
 
-	int sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) const;
+	/* Dispatch an incoming packet to one of the bundled secondary session.
+	 * Returns true if dispatched, false is the packet belongs to the primary session where it was received.*/
 	bool dispatch(bool isRtp, mblk_t *m);
 
 	bool updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp);

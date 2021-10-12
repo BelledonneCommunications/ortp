@@ -75,11 +75,6 @@ extern "C" const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession 
 	}
 }
 
-extern "C" int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags,
-											   const struct sockaddr *destaddr, socklen_t destlen) {
-	return ((RtpBundleCxx *)bundle)->sendThroughPrimary(is_rtp, m, flags, destaddr, destlen);
-}
-
 extern "C" bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m) {
 	return ((RtpBundleCxx *)bundle)->dispatch(is_rtp, m);
 }
@@ -111,8 +106,6 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 	sessions.emplace(mid, session);
 
 	session->bundle = (RtpBundle *)this;
-	qinit(&session->bundleq);
-	ortp_mutex_init(&session->bundleq_lock, NULL);
 
 	if (!primary) {
 		primary = session;
@@ -138,11 +131,8 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 		}
 		ssrcToMidMutex.unlock();
 
-		sessions.erase(mid);
-
 		session->second->bundle = NULL;
-		flushq(&session->second->bundleq, FLUSHALL);
-		ortp_mutex_destroy(&session->second->bundleq_lock);
+		sessions.erase(mid);
 	}
 }
 
@@ -161,8 +151,6 @@ void RtpBundleCxx::clear() {
 		RtpSession *session = entry.second;
 
 		session->bundle = NULL;
-		flushq(&session->bundleq, FLUSHALL);
-		ortp_mutex_destroy(&session->bundleq_lock);
 	}
 
 	primary = NULL;
@@ -196,25 +184,6 @@ const std::string &RtpBundleCxx::getSessionMid(RtpSession *session) const {
 	}
 
 	throw std::string("the session must be in the bundle!");
-}
-
-int RtpBundleCxx::sendThroughPrimary(bool isRtp, mblk_t *m, int flags, const struct sockaddr *destaddr,
-									 socklen_t destlen) const {
-	if (!primary)
-		return -1;
-
-	RtpTransport *primaryTransport;
-	if (isRtp) {
-		rtp_session_get_transports(primary, &primaryTransport, NULL);
-	} else {
-		rtp_session_get_transports(primary, NULL, &primaryTransport);
-	}
-
-	destaddr = (struct sockaddr *)&primary->rtp.gs.rem_addr;
-	destlen = primary->rtp.gs.rem_addrlen;
-
-	// This will bypass the modifiers of the primary transport
-	return meta_rtp_transport_sendto(primaryTransport, m, flags, destaddr, destlen);
 }
 
 bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp) {
@@ -376,9 +345,18 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 
 	// Get the value again in case it has been updated
 	it = ssrcToMid.find(ssrc);
-
-	auto session = sessions.at(it->second.mid);
-	return session;
+	if (it == ssrcToMid.end()) {
+		ortp_warning("Rtp Bundle [%p]: SSRC %u not found in map to convert it to mid", this, ssrc);
+	} else {
+		try {
+			auto session = sessions.at(it->second.mid);
+			return session;
+		} catch (std::out_of_range&) {
+			ortp_warning("Rtp Bundle [%p]: Unable to find session with mid %s (SSRC %u)", this, it->second.mid.c_str(), ssrc);
+			return nullptr;
+		}
+	}
+	return nullptr;
 }
 
 bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
@@ -395,9 +373,9 @@ bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 		return true;
 
 	if (session != primary) {
-		ortp_mutex_lock(&session->bundleq_lock);
-		putq(&session->bundleq, dupmsg(m));
-		ortp_mutex_unlock(&session->bundleq_lock);
+		ortp_mutex_lock(&session->rtp.gs.bundleq_lock);
+		putq(&session->rtp.gs.bundleq, dupmsg(m));
+		ortp_mutex_unlock(&session->rtp.gs.bundleq_lock);
 
 		return true;
 	}
@@ -432,9 +410,9 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 				primarymsg = tmp;
 			}
 		} else if (session != NULL) {
-			ortp_mutex_lock(&session->bundleq_lock);
-			putq(&session->bundleq, tmp);
-			ortp_mutex_unlock(&session->bundleq_lock);
+			ortp_mutex_lock(&session->rtcp.gs.bundleq_lock);
+			putq(&session->rtcp.gs.bundleq, tmp);
+			ortp_mutex_unlock(&session->rtcp.gs.bundleq_lock);
 		} else {
 			const rtcp_common_header_t *ch = rtcp_get_common_header(tmp);
 			ortp_warning("Rtp Bundle [%p]: Rctp msg (%d) ssrc=%u does not correspond to any sessions", this,

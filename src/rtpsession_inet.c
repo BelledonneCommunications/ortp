@@ -1387,11 +1387,21 @@ static void log_send_error(RtpSession *session, const char *type, mblk_t *m, str
 
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error;
+	RtpSession *send_session = session;
 
-	if (rtp_session_using_transport(session, rtp)){
-		error = (session->rtp.gs.tr->t_sendto) (session->rtp.gs.tr,m,0,destaddr,destlen);
+	if (session->bundle && !session->is_primary) {
+		send_session = rtp_bundle_get_primary_session(session->bundle);
+		if (!send_session) {
+			ortp_error("RtpSession [%p] error get no primary session", session);
+			return -1;
+		}
+		destaddr = (struct sockaddr *)&send_session->rtp.gs.rem_addr;
+		destlen = send_session->rtp.gs.rem_addrlen;
+	}
+	if (rtp_session_using_transport(send_session, rtp)){
+		error = (send_session->rtp.gs.tr->t_sendto) (send_session->rtp.gs.tr,m,0,destaddr,destlen);
 	}else{
-		error=rtp_session_sendto(session, TRUE,m,0,destaddr,destlen);
+		error=rtp_session_sendto(send_session, TRUE,m,0,destaddr,destlen);
 	}
 	if (!is_aux){
 		/*errors to auxiliary destinations are not notified*/
@@ -1452,13 +1462,19 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 
 static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error=0;
+	RtpSession *send_session = session;
 
+	if (session->bundle && !session->is_primary) {
+		send_session = rtp_bundle_get_primary_session(session->bundle);
+		destaddr = (struct sockaddr *)&send_session->rtp.gs.rem_addr;
+		destlen = send_session->rtp.gs.rem_addrlen;
+	}
 	/* Even in RTCP mux, we send through the RTCP RtpTransport, which will itself take in charge to do the sending of the packet
 	 * through the RTP endpoint*/
-	if (rtp_session_using_transport(session, rtcp)){
-		error = (session->rtcp.gs.tr->t_sendto) (session->rtcp.gs.tr, m, 0, destaddr, destlen);
+	if (rtp_session_using_transport(send_session, rtcp)){
+		error = (send_session->rtcp.gs.tr->t_sendto) (send_session->rtcp.gs.tr, m, 0, destaddr, destlen);
 	}else{
-		error=_ortp_sendto(rtp_session_get_socket(session, session->rtcp_mux),m,0,destaddr,destlen);
+		error=_ortp_sendto(rtp_session_get_socket(send_session, send_session->rtcp_mux),m,0,destaddr,destlen);
 	}
 
 	if (!is_aux){
@@ -1873,6 +1889,38 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 	}
 }
 
+
+static mblk_t *rtp_session_alloc_recv_block(RtpSession *session){
+	mblk_t *m = NULL;
+	if ((m = session->recv_block_cache) != NULL){
+		session->recv_block_cache = NULL;
+	}
+	if (!m){
+		m = allocb(session->recv_buf_size, 0);
+	}
+	return m;
+}
+
+static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m){
+	if (m->b_datap->db_ref > 1){
+		/* The mblk_t may have been duplicated by the RtpTransport/RtpModifier. We shall consider the underlying buffer
+		 * cannot be used anymore */
+		ortp_warning("The RtpTransport has kept a ref on a mblk_t's underlying buffer. This prevents recycling.");
+		freemsg(m);
+		return;
+	}
+	/* Reset read, write pointers to their original place. Indeed the RtpTransport/RtpModifier may have play
+	 * with them before discarding the mblk_t. */ 
+	m->b_wptr = m->b_rptr = m->b_datap->db_base;
+	if (session->recv_block_cache == NULL){
+		session->recv_block_cache = m;
+	}else{
+		ortp_error("Should not happen");
+		freeb(m);
+	}
+}
+
+
 void* rtp_session_recvfrom_async(void* obj) {
 	RtpSession *session = (RtpSession*) obj;
 	int error;
@@ -1898,7 +1946,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 #endif
 			bool_t sock_connected=!!(session->flags & RTP_SOCKET_CONNECTED);
 
-			mp = msgb_allocator_alloc(&session->rtp.gs.allocator, session->recv_buf_size);
+			mp = rtp_session_alloc_recv_block(session);
 
 			if (sock_connected){
 				error = rtp_session_recvfrom(session, TRUE, mp, 0, NULL, NULL);
@@ -1946,7 +1994,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 					}
 	#endif
 				}
-				freemsg(mp);
+				rtp_session_recycle_recv_block(session, mp);
 			}
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 		}
@@ -1958,11 +2006,12 @@ void* rtp_session_recvfrom_async(void* obj) {
 
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	mblk_t *mp;
+	bool_t more_data = TRUE;
 	
 	if ((session->rtp.gs.socket==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
 
-	while (1)
-	{
+	
+	do {
 		bool_t packet_is_rtp = TRUE;
 		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
@@ -1981,9 +2030,6 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 #else
 			rtp_session_recvfrom_async((void*)session);
 #endif
-		}
-
-		if (!session->bundle || (session->bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 			ortp_mutex_lock(&session->rtp.winrq_lock);
 #endif
@@ -1991,31 +2037,34 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 			ortp_mutex_unlock(&session->rtp.winrq_lock);
 #endif
-		} else {
-			ortp_mutex_lock(&session->bundleq_lock);
-			mp = getq(&session->bundleq);
-			ortp_mutex_unlock(&session->bundleq_lock);
-			
-			if (mp && session->rtcp_mux){
-				/* The packet could be a RTCP one */
-				if (rtp_get_version(mp) == 2){
-					int pt = rtp_get_payload_type(mp);
-					if (pt >= 64 && pt <= 95){
-						/*this is assumed to be an RTCP packet*/
-						packet_is_rtp = FALSE;
+			if (mp){
+				/* we got a packet from a primary transport. If bundle mode is on, it may be dispatched to another session, or
+				 * may be re-qualified as RTCP (rtcp-mux) */
+				if (session->rtcp_mux || session->bundle){
+					if (rtp_get_version(mp) == 2){
+						int pt = rtp_get_payload_type(mp);
+						if (pt >= 64 && pt <= 95){
+							/*this is assumed to be an RTCP packet*/
+							packet_is_rtp = FALSE;
+						}
 					}
 				}
+				if (session->bundle && rtp_bundle_dispatch(session->bundle, packet_is_rtp, mp)){
+					/* the packet has been dispatched to another session. */
+					mp = NULL;
+				}
+			}else{
+				more_data = FALSE;
 			}
-		}
-
-		if (mp != NULL) {
-			mp->reserved1 = user_ts;
-			rtp_session_process_incoming(session, mp, packet_is_rtp, user_ts, !packet_is_rtp);
 		} else {
-			rtp_session_process_incoming(session, NULL, packet_is_rtp, user_ts, FALSE);
-			return -1;
+			/* case where we are part of a bundle as a secondary session */
+			ortp_mutex_lock(&session->rtp.gs.bundleq_lock);
+			mp = getq(&session->rtp.gs.bundleq);
+			ortp_mutex_unlock(&session->rtp.gs.bundleq_lock);
+			if (!mp) more_data = FALSE;
 		}
-	}
+		rtp_session_process_incoming(session, mp, packet_is_rtp, user_ts, !packet_is_rtp);
+	} while (more_data);
 	return -1;
 }
 
@@ -2033,65 +2082,64 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 	 * These RTCP packets queued on the bundleq will be processed by rtp_session_rtp_recv(), which has the ability to
 	 * manage rtcp-mux.
 	 */
-	if (session->bundle) return 0;
 	while (1)
 	{
 		bool_t sock_connected=!!(session->flags & RTCP_SOCKET_CONNECTED);
+		mp = NULL;
+		if (!session->bundle){
+			mp = rtp_session_alloc_recv_block(session);
 
-		mp = msgb_allocator_alloc(&session->rtcp.gs.allocator, session->recv_buf_size);
-		mp->reserved1 = session->rtp.rcv_last_app_ts;
-
-		if (sock_connected){
-			error=rtp_session_recvfrom(session, FALSE, mp, 0, NULL, NULL);
-		}else{
-			addrlen=sizeof (remaddr);
-
-			if (rtp_session_using_transport(session, rtcp)){
-				error=(session->rtcp.gs.tr->t_recvfrom)(session->rtcp.gs.tr, mp, 0,
-					(struct sockaddr *) &remaddr,
-					&addrlen);
+			if (sock_connected){
+				error=rtp_session_recvfrom(session, FALSE, mp, 0, NULL, NULL);
 			}else{
-				error=rtp_session_recvfrom(session, FALSE, mp, 0,
-					(struct sockaddr *) &remaddr,
-					&addrlen);
-			}
-		}
-		if (error > 0)
-		{
-			mp->b_wptr += error;
-			if (mp->timestamp.tv_sec == 0) ortp_gettimeofday(&mp->timestamp, NULL);
-			rtp_session_process_incoming(session, mp, FALSE, session->rtp.rcv_last_app_ts, FALSE);
-		}
-		else
-		{
-			int errnum;
-			if (error==-1 && !is_would_block_error((errnum=getSocketErrorCode())) )
-			{
-				if (session->on_network_error.count>0){
-					rtp_signal_table_emit3(&session->on_network_error,"Error receiving RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
-#ifdef _WIN32
-				}else if(errnum!=WSAECONNRESET) ortp_warning("Error receiving RTCP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);// Windows spam WSAECONNRESET and is not useful
-#else
-				}else ortp_warning("Error receiving RTCP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
-#endif
-#if TARGET_OS_IPHONE
-				/*hack for iOS and non-working socket because of background mode*/
-				if (errnum==ENOTCONN){
-					/*re-create new sockets */
-					rtp_session_set_local_addr(session,session->rtcp.gs.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtcp.gs.loc_port,session->rtcp.gs.loc_port);
+				addrlen=sizeof (remaddr);
+
+				if (rtp_session_using_transport(session, rtcp)){
+					error=(session->rtcp.gs.tr->t_recvfrom)(session->rtcp.gs.tr, mp, 0,
+						(struct sockaddr *) &remaddr,
+						&addrlen);
+				}else{
+					error=rtp_session_recvfrom(session, FALSE, mp, 0,
+						(struct sockaddr *) &remaddr,
+						&addrlen);
 				}
-#endif
-				session->rtp.recv_errno=errnum;
-			}else{
-				/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
-				rtp_session_process_incoming(session, NULL, FALSE, session->rtp.rcv_last_app_ts, FALSE);
 			}
+			if (error > 0){
+				mp->b_wptr += error;
+				if (mp->timestamp.tv_sec == 0) ortp_gettimeofday(&mp->timestamp, NULL);
+			}else{
+				int errnum;
+				if (error==-1 && !is_would_block_error((errnum=getSocketErrorCode())) ){
+					if (session->on_network_error.count>0){
+						rtp_signal_table_emit3(&session->on_network_error,"Error receiving RTCP packet",ORTP_INT_TO_POINTER(getSocketErrorCode()));
+					}else ortp_warning("Error receiving RTCP packet: %s, err num  [%i],error [%i]",getSocketError(),errnum,error);
+	#if TARGET_OS_IPHONE
+					/*hack for iOS and non-working socket because of background mode*/
+					if (errnum==ENOTCONN){
+						/*re-create new sockets */
+						rtp_session_set_local_addr(session,session->rtcp.gs.sockfamily==AF_INET ? "0.0.0.0" : "::0",session->rtcp.gs.loc_port,session->rtcp.gs.loc_port);
+					}
+	#endif
+					session->rtp.recv_errno=errnum;
+				}else{
+					/*EWOULDBLOCK errors or transports returning 0 are ignored.*/
+					rtp_session_process_incoming(session, NULL, FALSE, session->rtp.rcv_last_app_ts, FALSE);
+				}
 
-			freemsg(mp);
-			return -1; /* avoids an infinite loop ! */
+				rtp_session_recycle_recv_block(session, mp);
+				mp = NULL;
+			}
+		}else if (!session->is_primary){
+			/* case where we are part of a bundle as a secondary session */
+			ortp_mutex_lock(&session->rtcp.gs.bundleq_lock);
+			mp = getq(&session->rtcp.gs.bundleq);
+			ortp_mutex_unlock(&session->rtcp.gs.bundleq_lock);
 		}
+		if (mp){
+			rtp_session_process_incoming(session, mp, FALSE, session->rtp.rcv_last_app_ts, FALSE);
+		}else break;
 	}
-	return error;
+	return 0;
 }
 
 int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_t is_rtp,bool_t only_at_start) {

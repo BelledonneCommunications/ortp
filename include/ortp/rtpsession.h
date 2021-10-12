@@ -321,7 +321,8 @@ typedef struct _OrtpStream {
 	float average_upload_bw;
 	float average_download_bw;
 	bctbx_list_t *aux_destinations; /*list of OrtpAddress */
-	msgb_allocator_t allocator;
+	queue_t bundleq; /* For bundle mode */
+	ortp_mutex_t bundleq_lock;
 } OrtpStream;
 
 typedef struct _RtpStream
@@ -423,6 +424,7 @@ struct _RtpSession
 	OrtpRtcpXrStats rtcp_xr_stats;
 	RtpSessionMode mode;
 	struct _RtpScheduler *sched;
+	mblk_t *recv_block_cache;
 	uint32_t flags;
 	int dscp;
 	int multicast_ttl;
@@ -449,6 +451,10 @@ struct _RtpSession
 	rtp_stats_t stats;
 	bctbx_list_t *recv_addr_map;
 	uint32_t send_ts_offset; /*additional offset to add when sending packets */
+	/* bundle mode */
+	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
+	/* fec option */
+	FecStream *fec_stream;
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -465,14 +471,6 @@ struct _RtpSession
 	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
 	
 	bool_t warn_non_working_pkt_info;
-
-	/* bundle mode */
-	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
-	queue_t bundleq;
-	ortp_mutex_t bundleq_lock;
-
-    /* fec option */
-    FecStream *fec_stream;
 };
 
 /**
