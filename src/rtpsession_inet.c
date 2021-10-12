@@ -2129,8 +2129,8 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, *rem_addrlen, current_ip_address, sizeof(current_ip_address));
 		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)&mp->net_addr, mp->net_addrlen, new_ip_address, sizeof(new_ip_address));
 
-ortp_message("%s -- DEBUG DEBUG Do change %0d Socket rtp %0d rtcp %0d packets received: rtp %0ld rtcp %0ld only at start %0d Trying to switch %s destination from %s to %s for session [%p]"
-			,__func__, session->rtp.gs.socket, session->rtcp.gs.socket, do_address_change, rtp_session_get_stats(session)->packet_recv, rtp_session_get_stats(session)->recv_rtcp_packets, only_at_start
+ortp_message("%s -- DEBUG DEBUG Do change %0d is RTP %0d Socket rtp %0d rtcp %0d packets received: rtp %0ld rtcp %0ld only at start %0d Trying to switch %s destination from %s to %s for session [%p]"
+			,__func__, do_address_change, is_rtp, session->rtp.gs.socket, session->rtcp.gs.socket, rtp_session_get_stats(session)->packet_recv, rtp_session_get_stats(session)->recv_rtcp_packets, only_at_start
 			   , socket_type
 			   , current_ip_address
 			   , new_ip_address
