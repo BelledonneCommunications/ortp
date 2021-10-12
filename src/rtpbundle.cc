@@ -330,6 +330,8 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 			size_t midSize;
 			uint8_t *data;
 
+ortp_message("%s - RTP packet mblk %p ssrc %0d midId %0d", __func__, m, ssrc, midId);
+
 			midSize = rtp_get_extension_header(m, midId != -1 ? midId : RTP_EXTENSION_MID, &data);
 			if (midSize != (size_t)-1) {
 				std::string mid = std::string((char *)data, midSize);
@@ -384,6 +386,7 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 }
 
 bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
+ortp_message("%s - mblk %p isRtp %0d", __func__, m, isRtp);
 	if (isRtp) {
 		return dispatchRtpMessage(m);
 	} else {
@@ -393,6 +396,7 @@ bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
 
 bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 	RtpSession *session = checkForSession(m, true);
+ortp_message("%s - RTP packet mblk %p session %p", __func__, m, session);
 	if (session == NULL)
 		return true;
 

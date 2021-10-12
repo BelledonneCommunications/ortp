@@ -2101,6 +2101,10 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 	bool_t sock_connected;
 	bool_t do_address_change = /*(rtp_get_version(mp) == 2 && */ !only_at_start;
 
+		char current_ip_address[64]={0};
+		char new_ip_address[64]={0};
+
+
 	if (!rtp_session_get_symmetric_rtp(session))
 		return -1; /*nothing to try if not rtp symetric*/
 
@@ -2121,6 +2125,16 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 		socket_type = "rtcp";
 		do_address_change = session->rtcp.gs.socket != (ortp_socket_t)-1  && (do_address_change || rtp_session_get_stats(session)->recv_rtcp_packets == 0);
 	}
+
+		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)rem_addr, *rem_addrlen, current_ip_address, sizeof(current_ip_address));
+		bctbx_sockaddr_to_printable_ip_address((struct sockaddr *)&mp->net_addr, mp->net_addrlen, new_ip_address, sizeof(new_ip_address));
+
+ortp_message("%s -- DEBUG DEBUG Do change %0d Socket rtp %0d rtcp %0d packets received: rtp %0ld rtcp %0ld only at start %0d Trying to switch %s destination from %s to %s for session [%p]"
+			,__func__, session->rtp.gs.socket, session->rtcp.gs.socket, do_address_change, rtp_session_get_stats(session)->packet_recv, rtp_session_get_stats(session)->recv_rtcp_packets, only_at_start
+			   , socket_type
+			   , current_ip_address
+			   , new_ip_address
+			   , session);
 
 	if (do_address_change
 		&& rem_addr

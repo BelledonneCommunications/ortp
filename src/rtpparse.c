@@ -194,6 +194,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		stunlen = ntohs(stunlen);
 		if (stunlen+20==mp->b_wptr-mp->b_rptr){
 			/* this looks like a stun packet */
+ortp_message("%s -- DEBUG DEBUG STUN", __func__);
 			rtp_session_update_remote_sock_addr(session,mp,TRUE,TRUE);
 			if (session->eventqs!=NULL){
 				OrtpEvent *ev=ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
@@ -255,6 +256,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			}
 			if (session->inc_same_ssrc_count>=session->rtp.ssrc_changed_thres){
 				/* store the sender rtp address to do symmetric RTP */
+ortp_message("%s -- DEBUG DEBUG symmetric", __func__);
 				rtp_session_update_remote_sock_addr(session,mp,TRUE,FALSE);
 				session->rtp.rcv_last_ts = rtp->timestamp;
 				session->rcv.ssrc=rtp->ssrc;
@@ -275,6 +277,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	}else{
 		session->ssrc_set=TRUE;
 		session->rcv.ssrc=rtp->ssrc;
+ortp_message("%s -- DEBUG DEBUG ssrc not set", __func__);
 		rtp_session_update_remote_sock_addr(session,mp,TRUE,FALSE);
 	}
 
