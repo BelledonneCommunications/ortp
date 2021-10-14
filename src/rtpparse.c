@@ -195,8 +195,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		if (stunlen+20==mp->b_wptr-mp->b_rptr){
 			/* this looks like a stun packet */
 ortp_message("%s -- DEBUG DEBUG STUN", __func__);
-// FIXME: last arg was set to TRUE - workaround set to FALSE
-			rtp_session_update_remote_sock_addr(session,mp,TRUE,FALSE);
+			rtp_session_update_remote_sock_addr(session,mp,TRUE,TRUE);
 			if (session->eventqs!=NULL){
 				OrtpEvent *ev=ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed=ortp_event_get_data(ev);
