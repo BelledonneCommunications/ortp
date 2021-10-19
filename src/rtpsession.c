@@ -1113,9 +1113,9 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		error = rtp_session_rtp_send (session, copymsg(mp));
 		session->duplication_left -= 1.f;
 	}
-    if((session->fec_stream != NULL) && (mp != NULL)){
-        fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
-    }
+	if((session->fec_stream != NULL) && (mp != NULL)){
+		fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
+	}
 
 	error = rtp_session_rtp_send (session, mp);
 

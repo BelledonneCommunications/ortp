@@ -224,27 +224,25 @@ bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const 
 		if (entry == ssrcToMid.end()) {
 			Mid value = {mid, isRtp ? sequenceNumber : (uint16_t)0};
 			ssrcToMid[ssrc] = value;
-
+			ortp_message("Rtp Bundle [%p] SSRC [%u] paired with mid [%s]", this, ssrc, mid.c_str());
 			return true;
-		} else {
+		} else if ((*entry).second.mid != mid) {
 			if (isRtp) {
+				ortp_message("Rtp Bundle [%p]: received a mid update via RTP.", this);
 				if (entry->second.sequenceNumber < sequenceNumber) {
 					Mid value = {mid, sequenceNumber};
 					ssrcToMid[ssrc] = value;
-
-					return true;
 				}
 			} else {
 				// We should normally update the mid but we chose not to for simplicity
 				// since RTCP does not have a sequence number.
 				// https://tools.ietf.org/html/draft-ietf-mmusic-sdp-bundle-negotiation-54#page-24
 				ortp_warning("Rtp Bundle [%p]: received a mid update via RTCP, ignoring it.", this);
-
-				return true;
 			}
 		}
+		return true;
 	}
-
+	/* The mid is totally unknown, this is an error. */
 	return false;
 }
 
