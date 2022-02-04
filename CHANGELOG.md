@@ -5,8 +5,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+
+## [5.1.0] - 2022-02-14
+
 ### Added
 - New forward error correction (FEC) algorithm implemented according to https://datatracker.ietf.org/doc/html/rfc8627
+  Eperimental stage, work in progress.
+
+### Fixed
+- Standalone compilation (out of linphone-sdk).
+- Bundle mode warnings and few inconsistencies.
 
 
 ## [5.0.0] - 2021-07-08
