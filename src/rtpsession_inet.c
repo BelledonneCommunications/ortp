@@ -1251,8 +1251,15 @@ int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockad
 
 int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen){
 	int ret;
-
+	OrtpStream *ostr = is_rtp ? &session->rtp.gs : &session->rtcp.gs;
 	_rtp_session_check_socket_refresh(session);
+	
+	/* 
+	 * If the "recv_addr" (which is the source address to use for sending) is not specified for this packet,
+	 * default to the source address specified in the RtpSession for the rtp or rtcp stream.
+	 */
+	if( m->recv_addr.family == AF_UNSPEC && ostr->used_loc_addrlen != 0 )
+		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&ostr->used_loc_addr, &m->recv_addr);
 
 	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutbound
 			|| session->net_sim_ctx->params.mode==OrtpNetworkSimulatorOutboundControlled)){
@@ -1429,8 +1436,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-	if( m->recv_addr.family == AF_UNSPEC && session->rtp.gs.used_loc_addrlen>0 )
-		ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtp
+	
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1509,8 +1515,6 @@ rtp_session_rtcp_send (RtpSession * session, mblk_t * m){
 		destaddr=NULL;
 		destlen=0;
 	}
-	if( m->recv_addr.family == AF_UNSPEC && session->rtcp.gs.used_loc_addrlen>0 )
-	    ortp_sockaddr_to_recvaddr((const struct sockaddr*)&session->rtcp.gs.used_loc_addr, &m->recv_addr);	// update recv_addr with the source of rtcp
 	if (session->rtcp.enabled){
 		if ( (sockfd!=(ortp_socket_t)-1 && (destlen>0 || using_connected_socket))
 			|| rtp_session_using_transport(session, rtcp) ) {
