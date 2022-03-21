@@ -31,8 +31,7 @@
 #define RTP_DEFAULT_MULTICAST_TTL 5	/*hops*/
 #define RTP_DEFAULT_MULTICAST_LOOPBACK 0  /*false*/
 #define RTP_DEFAULT_DSCP 0x00  /*best effort*/
-#define RTP_MAX_MIXER_TO_CLIENT_AUDIO_LEVEL 14 /* 14 because we use 1-byte headers */
-#define RTP_MAX_CLIENT_TO_MIXER_AUDIO_LEVEL 14 /* 14 because we use 1-byte headers */
+#define RTP_MAX_MIXER_TO_CLIENT_AUDIO_LEVEL 15 /* 15 because we can only put 15 csrc in a rtp packet */
 
 
 typedef struct rtp_header

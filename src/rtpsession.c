@@ -914,9 +914,11 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
  *@param mtc_extension_id id of the mixer to client extension id.
  *@param audio_levels_size size of audio levels contained in audio_levels parameter.
  *@param audio_levels list of rtp_audio_level_t to add in this packet.
+ *@param payload data to be copied into the rtp packet.
+ *@param payload_size size of data carried by the rtp packet.
  *@return a rtp packet in a mblk_t (message block) structure.
 **/
-mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels)
+mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels, const uint8_t *payload, size_t payload_size)
 {
 	mblk_t *mp;
 	rtp_header_t *rtp;
@@ -937,6 +939,12 @@ mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *
 			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
+	}
+
+	/*copy the payload, if any */
+	if (payload_size){
+		memcpy(mp->b_wptr,payload,payload_size);
+		mp->b_wptr+=payload_size;
 	}
 
 	return mp;

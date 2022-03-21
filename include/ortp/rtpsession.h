@@ -628,7 +628,7 @@ ORTP_PUBLIC mblk_t * rtp_session_create_packet(RtpSession *session, size_t heade
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t packet_size);
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, size_t payload_size, void (*freefn)(void*));
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_in_place(RtpSession *session,uint8_t *buffer, size_t size, void (*freefn)(void*) );
-ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels);
+ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels, const uint8_t *payload, size_t payload_size);
 ORTP_PUBLIC int rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t userts);
 ORTP_PUBLIC int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 ORTP_PUBLIC int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen);
