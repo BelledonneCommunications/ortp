@@ -52,6 +52,7 @@ set(ORTP_SOURCE_FILES_C
 	rtcp_xr.c
 	rtcpparse.c
 	rtpaudiolevel.c
+	rtpframemarking.c
 	rtpparse.c
 	rtpprofile.c
 	rtpsession.c

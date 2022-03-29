@@ -90,6 +90,7 @@ typedef enum {
 	RTP_EXTENSION_MID = 1,
 	RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL = 2,
 	RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL = 3,
+	RTP_EXTENSION_FRAME_MARKING = 4,
 	RTP_EXTENSION_MAX = 15
 } rtp_extension_type_t;
 
@@ -97,6 +98,11 @@ typedef struct rtp_audio_level {
 	uint32_t csrc;
 	int dbov;
 } rtp_audio_level_t;
+
+#define RTP_FRAME_MARKER_START 			(1 << 7)
+#define RTP_FRAME_MARKER_END 			(1 << 6)
+#define RTP_FRAME_MARKER_INDEPENDENT 	(1 << 5)
+#define RTP_FRAME_MARKER_DISCARDABLE 	(1 << 4)
 
 #define RTP_TIMESTAMP_IS_NEWER_THAN(ts1, ts2) \
 	((uint32_t)((uint32_t)(ts1) - (uint32_t)(ts2)) < ((uint32_t)1 << 31))
@@ -153,6 +159,10 @@ ORTP_PUBLIC int rtp_get_client_to_mixer_audio_level(mblk_t *packet, int id, bool
 
 ORTP_PUBLIC void rtp_add_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels);
 ORTP_PUBLIC int rtp_get_mixer_to_client_audio_level(mblk_t *packet, int id, rtp_audio_level_t* audio_levels);
+
+/* Frame marking api */
+ORTP_PUBLIC void rtp_add_frame_marker(mblk_t *packet, int id, uint8_t marker);
+ORTP_PUBLIC int rtp_get_frame_marker(mblk_t *packet, int id, uint8_t *marker);
 
 #ifdef __cplusplus
 }
