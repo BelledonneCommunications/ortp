@@ -49,6 +49,11 @@ struct _OrtpEventData{
 			bool_t verified;
 			bool_t cache_mismatch;
 			bool_t pad[2];
+			uint8_t cipherAlgo;
+			uint8_t keyAgreementAlgo;
+			uint8_t hashAlgo;
+			uint8_t authTagAlgo;
+			uint8_t sasAlgo;
 		} zrtp_info;
 		OrtpSocketType socket_type;
 		uint32_t received_rtt_character;
