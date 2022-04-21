@@ -231,7 +231,7 @@ mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
 static void sender_info_init(sender_info_t *info, RtpSession *session){
 	struct timeval tv;
 	uint64_t ntp;
-	ortp_gettimeofday(&tv,NULL);
+	bctbx_gettimeofday(&tv,NULL);
 	ntp=ortp_timeval_to_ntp(&tv);
 	info->ntp_timestamp_msw=htonl(ntp >>32);
 	info->ntp_timestamp_lsw=htonl(ntp & 0xFFFFFFFF);
@@ -293,7 +293,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	if (stream->last_rcv_SR_time.tv_sec!=0){
 		struct timeval now;
 		double delay;
-		ortp_gettimeofday(&now,NULL);
+		bctbx_gettimeofday(&now,NULL);
 		delay= (now.tv_sec-stream->last_rcv_SR_time.tv_sec)+ ((now.tv_usec-stream->last_rcv_SR_time.tv_usec)*1e-6);
 		delay= (delay*65536);
 		delay_snc_last_sr=(uint32_t) delay;
@@ -346,7 +346,7 @@ static void extended_statistics( RtpSession *session, report_block_t * rb ) {
 
 		session->rtp.jitter_stats.max_jitter = jitter ;
 
-		ortp_gettimeofday( &now, NULL );
+		bctbx_gettimeofday( &now, NULL );
 		session->rtp.jitter_stats.max_jitter_ts = ( now.tv_sec * 1000LL ) + ( now.tv_usec / 1000LL );
 	}
 	/* compute mean jitter buffer size */
@@ -563,7 +563,7 @@ static void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
 	sa->avg_rtcp_size = (float)(overhead + report_size + sdes_size + xr_size);
 	sa->initialized = TRUE;
 
-	tc = ortp_get_cur_time_ms();
+	tc = bctbx_get_cur_time_ms();
 	compute_rtcp_interval(session);
 	if (sa->T_rr > 0) sa->tn = tc + sa->T_rr;
 	sa->tp = tc;
@@ -600,7 +600,7 @@ void rtp_session_send_fb_rtcp_packet_and_reschedule(RtpSession *session) {
 }
 
 void rtp_session_run_rtcp_send_scheduler(RtpSession *session) {
-	uint64_t tc = ortp_get_cur_time_ms();
+	uint64_t tc = bctbx_get_cur_time_ms();
 	OrtpRtcpSendAlgorithm *sa = &session->rtcp.send_algo;
 
 	if (tc >= sa->tn) {
@@ -712,11 +712,11 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 		/*first report cannot be considered, since we don't know the interval it covers*/
 		obj->last_ext_seq=extseq;
 		obj->last_cum_loss=cum_loss;
-		obj->last_estimate_time_ms=ortp_get_cur_time_ms();
+		obj->last_estimate_time_ms=bctbx_get_cur_time_ms();
 		return FALSE;
 	}
 	diff=extseq-obj->last_ext_seq;
-	curtime=ortp_get_cur_time_ms();
+	curtime=bctbx_get_cur_time_ms();
 	if (diff<0 || diff>obj->min_packet_count_interval * 100){
 		if (extseq==0){
 			/*when extseq reset to 0, it probably means that rtp_session_sync was called but
@@ -733,7 +733,7 @@ bool_t ortp_loss_rate_estimator_process_report_block(OrtpLossRateEstimator *obj,
 	}else if (diff>obj->min_packet_count_interval && curtime-obj->last_estimate_time_ms>=obj->min_time_ms_interval){
 		/*we have sufficient interval*/
 		int32_t new_losses=cum_loss-obj->last_cum_loss;
-		
+
 #if 0 /*SM: the following code try to takes into account sent duplicates - however by doing this it creates a bias in the loss rate computation
 		that can sometimes result in a negative loss rate, even if there is no duplicate.
 		Since the rate control doesn't use duplicates anymore, there is no good reason to take this into account.

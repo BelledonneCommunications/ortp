@@ -237,7 +237,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 
 #ifndef PERF
 	/* Write down the last RTP/RTCP packet reception time. */
-	ortp_gettimeofday(&session->last_recv_time, NULL);
+	bctbx_gettimeofday(&session->last_recv_time, NULL);
 #endif
 
 	for (i=0;i<rtp->cc;i++)
@@ -341,7 +341,7 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			rtp_session_dispatch_event(session,ev);
 		}
 	}
-	
+
 	update_rtcp_xr_stat_summary(session, mp, local_str_ts);
 
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) {
@@ -396,4 +396,3 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	if(session->fec_stream != NULL)
 		fec_stream_on_new_source_packet_received(session->fec_stream, mp);
 }
-

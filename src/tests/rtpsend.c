@@ -21,7 +21,7 @@
 #include <signal.h>
 #include <stdlib.h>
 
-#ifndef _WIN32 
+#ifndef _WIN32
 #include <sys/types.h>
 #include <sys/time.h>
 #include <stdio.h>
@@ -69,24 +69,24 @@ int main(int argc, char *argv[])
 			jitter=atoi(argv[i]);
 		}
 	}
-	
+
 	ortp_init();
 	ortp_scheduler_init();
 	ortp_set_log_level_mask(NULL, ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR);
-	session=rtp_session_new(RTP_SESSION_SENDONLY);	
-	
+	session=rtp_session_new(RTP_SESSION_SENDONLY);
+
 	rtp_session_set_scheduling_mode(session,1);
 	rtp_session_set_blocking_mode(session,1);
 	rtp_session_set_connected_mode(session,TRUE);
 	rtp_session_set_remote_addr(session,argv[2],atoi(argv[3]));
 	rtp_session_set_payload_type(session,0);
-	
+
 	ssrc=getenv("SSRC");
 	if (ssrc!=NULL) {
 		printf("using SSRC=%i.\n",atoi(ssrc));
 		rtp_session_set_ssrc(session,atoi(ssrc));
 	}
-		
+
 	#ifndef _WIN32
 	infile=fopen(argv[1],"r");
 	#else
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 		/*this will simulate a burst of late packets */
 		if (jitter && (user_ts%(8000)==0)) {
 			ortp_message("Simulating late packets now (%i milliseconds)",jitter);
-			ortp_sleep_ms(jitter);
+			bctbx_sleep_ms(jitter);
 		}
 	}
 

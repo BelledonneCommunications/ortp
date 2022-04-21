@@ -41,7 +41,7 @@ extern void av_profile_init(RtpProfile *profile);
 static void init_random_number_generator(void){
 #ifndef _WIN32
 	struct timeval t;
-	ortp_gettimeofday(&t,NULL);
+	bctbx_gettimeofday(&t,NULL);
 	srandom(t.tv_usec+t.tv_sec);
 #endif
 	/*on windows we're using rand_s, which doesn't require initialization*/

@@ -41,7 +41,7 @@ static uint32_t posix_timer_time=0;		/*in milisecond */
 void posix_timer_init(void)
 {
 	posix_timer.state=RTP_TIMER_RUNNING;
-	ortp_gettimeofday(&orig,NULL);
+	bctbx_gettimeofday(&orig,NULL);
 	posix_timer_time=0;
 }
 
@@ -52,7 +52,7 @@ void posix_timer_do(void)
 {
 	int diff,time;
 	struct timeval tv;
-	ortp_gettimeofday(&cur,NULL);
+	bctbx_gettimeofday(&cur,NULL);
 	time=((cur.tv_usec-orig.tv_usec)/1000 ) + ((cur.tv_sec-orig.tv_sec)*1000 );
 	if ( (diff=time-posix_timer_time)>50){
 		ortp_warning("Must catchup %i miliseconds.",diff);
@@ -67,11 +67,11 @@ void posix_timer_do(void)
 #else
 		select(0,NULL,NULL,NULL,&tv);
 #endif
-		ortp_gettimeofday(&cur,NULL);
+		bctbx_gettimeofday(&cur,NULL);
 		time=((cur.tv_usec-orig.tv_usec)/1000 ) + ((cur.tv_sec-orig.tv_sec)*1000 );
 	}
 	posix_timer_time+=POSIXTIMER_INTERVAL/1000;
-	
+
 }
 
 void posix_timer_uninit(void)
@@ -84,8 +84,8 @@ RtpTimer posix_timer={	0,
 						posix_timer_do,
 						posix_timer_uninit,
 						{0,POSIXTIMER_INTERVAL}};
-							
-							
+
+
 #else //_WIN32
 
 
@@ -294,7 +294,7 @@ void win_timer_do(void)
 
 void win_timer_close(void)
 {
-	timeKillEvent(timerId); 
+	timeKillEvent(timerId);
 }
 
 RtpTimer toto;

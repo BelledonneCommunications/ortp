@@ -145,7 +145,7 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 
 			// Start the timer that will decrase the min jitter if no NACK is sent
 			userData->decrease_jitter_timer_running = TRUE;
-			userData->decrease_jitter_timer_start = ortp_get_cur_time_ms();
+			userData->decrease_jitter_timer_start = bctbx_get_cur_time_ms();
 
 			break;
 		}
@@ -249,7 +249,7 @@ void ortp_nack_context_set_max_packet(OrtpNackContext *ctx, int max) {
 
 void ortp_nack_context_process_timer(OrtpNackContext *ctx) {
 	if (ctx->decrease_jitter_timer_running) {
-		uint64_t current_time = ortp_get_cur_time_ms();
+		uint64_t current_time = bctbx_get_cur_time_ms();
 		if (current_time - ctx->decrease_jitter_timer_start >= DECREASE_JITTER_DELAY) {
 			OrtpEvent *ev;
 			OrtpEventData *evd;

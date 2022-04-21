@@ -51,7 +51,7 @@ const char *ortp_congestion_detector_state_to_string(OrtpCongestionState state){
 static bool_t ortp_congestion_detector_set_state(OrtpCongestionDetector *cd, OrtpCongestionState state){
 	bool_t binary_state_changed = FALSE;
 	if (state == cd->state) return FALSE;
-	ortp_message("OrtpCongestionDetector: moving from state %s to state %s", 
+	ortp_message("OrtpCongestionDetector: moving from state %s to state %s",
 		     ortp_congestion_detector_state_to_string(cd->state),
 		     ortp_congestion_detector_state_to_string(state));
 	cd->state = state;
@@ -94,7 +94,7 @@ static float ortp_congestion_detector_get_loss_rate(OrtpCongestionDetector *cd){
 	uint32_t cur_loss = (uint32_t)cd->session->stats.cum_packet_loss;
 	uint32_t cur_seq = rtp_session_get_rcv_ext_seq_number(cd->session);
 	uint32_t expected = cur_seq - cd->seq_begin;
-	
+
 	if (expected == 0) return 0;
 	return 100.0f*(float)(cur_loss - cd->loss_begin) / (float)expected;
 }
@@ -106,10 +106,10 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 	//float deviation;
 
 	if (cd->skip) return FALSE;
-	
+
 	packet_ts -= jitterctl->remote_ts_start;
 	cur_str_ts -= jitterctl->local_ts_start;
-	
+
 	if (!cd->initialized) {
 		cd->initialized = TRUE;
 		ortp_kalman_rls_init(&cd->rls, 1, packet_ts - cur_str_ts);
@@ -129,7 +129,7 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 		 */
 		return binary_state_changed;
 	}
-	
+
 	clock_drift = cd->rls.m < absolute_congested_clock_ratio || jitterctl->capped_clock_ratio < absolute_congested_clock_ratio
 		|| cd->rls.m < relative_congested_clock_ratio * jitterctl->capped_clock_ratio ;
 	//deviation = ((int32_t)(packet_ts - local_ts_to_remote_ts_rls(cd->rls.m, cd->rls.b, cur_str_ts))) / (float)jitterctl->clock_rate;
@@ -153,7 +153,7 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 	switch (cd->state) {
 		case CongestionStateNormal:
 			if (clock_drift) {
-				cd->start_ms = ortp_get_cur_time_ms();
+				cd->start_ms = bctbx_get_cur_time_ms();
 				cd->loss_begin = (uint32_t)cd->session->stats.cum_packet_loss;
 				cd->seq_begin = rtp_session_get_rcv_ext_seq_number(cd->session);
 				cd->last_packet_recv = cd->start_ms;
@@ -162,7 +162,7 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 		break;
 		case CongestionStateSuspected:
 		{
-			uint64_t curtime = ortp_get_cur_time_ms();
+			uint64_t curtime = bctbx_get_cur_time_ms();
 			if (!clock_drift) {
 				float loss_rate = ortp_congestion_detector_get_loss_rate(cd);
 				if (loss_rate >= return_from_suspected_max_loss_rate){
@@ -171,14 +171,14 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 						cd->too_much_loss = TRUE;
 					}
 				}else{
-					// congestion has maybe stopped 
+					// congestion has maybe stopped
 					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
 				}
 			} else {
-				
+
 				if (curtime - cd->last_packet_recv >= 1000){
-					/*no packet received during last second ! 
-					 It means that the drift measure is not very significant, and futhermore the banwdith computation will be 
+					/*no packet received during last second !
+					 It means that the drift measure is not very significant, and futhermore the banwdith computation will be
 					 near to zero. It makes no sense to trigger a congestion detection in this case; the network is simply not working.
 					 */
 					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
@@ -196,14 +196,14 @@ bool_t ortp_congestion_detector_record(OrtpCongestionDetector *cd, uint32_t pack
 			if (!clock_drift) {
 				// congestion is maybe terminated, go resolving state
 				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateResolving);
-				cd->start_ms = ortp_get_cur_time_ms();
+				cd->start_ms = bctbx_get_cur_time_ms();
 			}
 		break;
 		case CongestionStateResolving:
 			if (clock_drift) {
 				binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateDetected);
 			} else {
-				if (ortp_get_cur_time_ms() - cd->start_ms > congestion_pending_duration_ms) {
+				if (bctbx_get_cur_time_ms() - cd->start_ms > congestion_pending_duration_ms) {
 					binary_state_changed = ortp_congestion_detector_set_state(cd, CongestionStateNormal);
 				}
 			}

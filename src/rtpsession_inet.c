@@ -1253,8 +1253,8 @@ int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags,
 	int ret;
 	OrtpStream *ostr = is_rtp ? &session->rtp.gs : &session->rtcp.gs;
 	_rtp_session_check_socket_refresh(session);
-	
-	/* 
+
+	/*
 	 * If the "recv_addr" (which is the source address to use for sending) is not specified for this packet,
 	 * default to the source address specified in the RtpSession for the rtp or rtcp stream.
 	 */
@@ -1287,7 +1287,7 @@ static const ortp_recv_addr_t * lookup_recv_addr(RtpSession *session, struct soc
 	bctbx_list_t *iterator = session->recv_addr_map;
 	while (iterator != NULL) {
 		ortp_recv_addr_map_t *item = (ortp_recv_addr_map_t *)bctbx_list_get_data(iterator);
-		uint64_t curtime = ortp_get_cur_time_ms();
+		uint64_t curtime = bctbx_get_cur_time_ms();
 		if ((curtime - item->ts) > 2000) {
 			bctbx_list_t *to_remove = iterator;
 			iterator = bctbx_list_next(iterator);
@@ -1331,7 +1331,7 @@ static const ortp_recv_addr_t * get_recv_addr(RtpSession *session, struct sockad
 			memcpy(&item->recv_addr.addr.ipi6_addr, &((struct sockaddr_in6 *)ai->ai_addr)->sin6_addr, sizeof(item->recv_addr.addr.ipi6_addr));
 		}
 		bctbx_freeaddrinfo(ai);
-		item->ts = ortp_get_cur_time_ms();
+		item->ts = bctbx_get_cur_time_ms();
 		session->recv_addr_map = bctbx_list_append(session->recv_addr_map, item);
 		return &item->recv_addr;
 	}
@@ -1342,7 +1342,7 @@ int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flag
 	if ((ret >= 0) && (session->use_pktinfo == TRUE)) {
 		if (m->recv_addr.family == AF_UNSPEC) {
 			const ortp_recv_addr_t *recv_addr;
-			
+
 			if (!session->warn_non_working_pkt_info){
 				ortp_error("IP_PKTINFO/IP6_PKTINFO not working as expected for recevied packets. An unreliable fallback method will be used.");
 				session->warn_non_working_pkt_info = TRUE;
@@ -1369,7 +1369,7 @@ void update_sent_bytes(OrtpStream *os, int nbytes) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if ((os->sent_bytes == 0) && (os->send_bw_start.tv_sec == 0) && (os->send_bw_start.tv_usec == 0)) {
 		/* Initialize bandwidth computing time when has not been started yet. */
-		ortp_gettimeofday(&os->send_bw_start, NULL);
+		bctbx_gettimeofday(&os->send_bw_start, NULL);
 	}
 	os->sent_bytes += nbytes + overhead;
 }
@@ -1377,7 +1377,7 @@ void update_sent_bytes(OrtpStream *os, int nbytes) {
 static void update_recv_bytes(OrtpStream *os, size_t nbytes, const struct timeval *recv_time) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	if ((os->recv_bytes == 0) && (os->recv_bw_start.tv_sec == 0) && (os->recv_bw_start.tv_usec == 0)) {
-		ortp_gettimeofday(&os->recv_bw_start, NULL);
+		bctbx_gettimeofday(&os->recv_bw_start, NULL);
 	}
 	os->recv_bytes += (unsigned int)(nbytes + overhead);
 	ortp_bw_estimator_packet_received(&os->recv_bw_estimator, nbytes + overhead, recv_time);
@@ -1436,7 +1436,7 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 		freemsg(m);
 		return 0;
 	}
-	
+
 	hdr = (rtp_header_t *) m->b_rptr;
 	if (hdr->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
@@ -1777,7 +1777,7 @@ static int process_rtcp_packet( RtpSession *session, mblk_t *block, struct socka
 		const report_block_t *rb;
 
 		/* Getting the reception date from the main clock */
-		ortp_gettimeofday( &reception_date, NULL );
+		bctbx_gettimeofday( &reception_date, NULL );
 
 		if (rtcp_is_SR(block) ) {
 			rtcp_sr_t *sr = (rtcp_sr_t *) rtcp;
@@ -1914,7 +1914,7 @@ static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m){
 		return;
 	}
 	/* Reset read, write pointers to their original place. Indeed the RtpTransport/RtpModifier may have play
-	 * with them before discarding the mblk_t. */ 
+	 * with them before discarding the mblk_t. */
 	m->b_wptr = m->b_rptr = m->b_datap->db_base;
 	if (session->recv_block_cache == NULL){
 		session->recv_block_cache = m;
@@ -1967,7 +1967,7 @@ void* rtp_session_recvfrom_async(void* obj) {
 						ortp_warning("The transport layer doesn't implement SO_TIMESTAMP, will use gettimeofday() instead.");
 						warn_once = 0;
 					}
-					ortp_gettimeofday(&mp->timestamp, NULL);
+					bctbx_gettimeofday(&mp->timestamp, NULL);
 				}
 
 				mp->b_wptr+=error;
@@ -2011,10 +2011,10 @@ void* rtp_session_recvfrom_async(void* obj) {
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	mblk_t *mp;
 	bool_t more_data = TRUE;
-	
+
 	if ((session->rtp.gs.socket==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
 
-	
+
 	do {
 		bool_t packet_is_rtp = TRUE;
 		if (!session->bundle || (session->bundle && session->is_primary)) {
@@ -2110,7 +2110,7 @@ int rtp_session_rtcp_recv (RtpSession * session) {
 			}
 			if (error > 0){
 				mp->b_wptr += error;
-				if (mp->timestamp.tv_sec == 0) ortp_gettimeofday(&mp->timestamp, NULL);
+				if (mp->timestamp.tv_sec == 0) bctbx_gettimeofday(&mp->timestamp, NULL);
 			}else{
 				int errnum;
 				if (error==-1 && !is_would_block_error((errnum=getSocketErrorCode())) ){
@@ -2177,7 +2177,7 @@ int rtp_session_update_remote_sock_addr(RtpSession * session, mblk_t * mp, bool_
 	if (do_address_change
 		&& rem_addr
 		&& !sock_connected
-		&& !ortp_is_multicast_addr((const struct sockaddr*)rem_addr)
+		&& !bctbx_is_multicast_addr((const struct sockaddr*)rem_addr)
 		&& memcmp(rem_addr,&mp->net_addr,mp->net_addrlen) !=0) {
 		char current_ip_address[64]={0};
 		char new_ip_address[64]={0};

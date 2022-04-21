@@ -49,7 +49,7 @@ static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, RtpSession *session) {
 	block->bh.bt = RTCP_XR_RCVR_RTT;
 	block->bh.flags = 0; // Reserved bits
 	block->bh.length = htons(2);
-	ortp_gettimeofday(&tv, NULL);
+	bctbx_gettimeofday(&tv, NULL);
 	ntp = ortp_timeval_to_ntp(&tv);
 	block->ntp_timestamp_msw = htonl(ntp >> 32);
 	block->ntp_timestamp_lsw = htonl(ntp & 0xFFFFFFFF);
@@ -68,7 +68,7 @@ static int rtcp_xr_dlrr_init(uint8_t *buf, RtpSession *session) {
 	if (session->rtcp_xr_stats.last_rcvr_rtt_time.tv_sec != 0) {
 		struct timeval now;
 		double delay;
-		ortp_gettimeofday(&now, NULL);
+		bctbx_gettimeofday(&now, NULL);
 		delay = ((now.tv_sec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_sec)
 			+ ((now.tv_usec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_usec) * 1e-6)) * 65536;
 		dlrr = (uint32_t) delay;

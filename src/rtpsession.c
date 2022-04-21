@@ -107,7 +107,7 @@ extern void rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts,
 
 
 static uint32_t uint32_t_random(void){
-	return ortp_random();
+	return bctbx_random();
 }
 
 
@@ -311,10 +311,10 @@ rtp_session_init (RtpSession * session, int mode)
 		rtp_session_set_transports(session, rtp_tr, rtcp_tr);
 	}
 	session->tev_send_pt = -1; /*check in rtp profile when needed*/
-	
+
 	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95f, 0.01f);
 	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95f, 0.01f);
-	
+
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
 	ortp_mutex_init(&session->rtp.winthread_lock, NULL);
@@ -334,7 +334,7 @@ void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled
 		if (!session->rtp.congdetect){
 			session->rtp.congdetect = ortp_congestion_detector_new(session);
 		}else{
-			if (!session->congestion_detector_enabled) ortp_congestion_detector_reset(session->rtp.congdetect); 
+			if (!session->congestion_detector_enabled) ortp_congestion_detector_reset(session->rtp.congdetect);
 		}
 	}
 	session->congestion_detector_enabled = enabled;
@@ -906,7 +906,7 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 }
 
 /**
- *	This will do the same as rtp_session_create_packet() without payload data but it will also add 
+ *	This will do the same as rtp_session_create_packet() without payload data but it will also add
  *	mixer to client audio level indication through header extensions.
  *
  *@param session a rtp session.
@@ -1054,7 +1054,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		/* Set initial last_rcv_time to first send time. */
 		if ((session->flags & RTP_SESSION_RECV_NOT_STARTED)
 		|| session->mode == RTP_SESSION_SENDONLY) {
-			ortp_gettimeofday(&session->last_recv_time, NULL);
+			bctbx_gettimeofday(&session->last_recv_time, NULL);
 		}
 		if (session->flags & RTP_SESSION_SCHEDULED) {
 			session->rtp.snd_time_offset = sched->time_;
@@ -1219,7 +1219,7 @@ rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number
 static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 	uint16_t pid;
 	uint16_t i;
-	
+
 	/*don't check anything before first packet delivered*/
 	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED && RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.rcv_last_seq + 1)) {
 		uint16_t first_missed_seq = session->rtp.rcv_last_seq + 1;
@@ -1288,7 +1288,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		/* Set initial last_rcv_time to first recv time. */
 		if ((session->flags & RTP_SESSION_SEND_NOT_STARTED)
 		|| session->mode == RTP_SESSION_RECVONLY) {
-			ortp_gettimeofday(&session->last_recv_time, NULL);
+			bctbx_gettimeofday(&session->last_recv_time, NULL);
 		}
 		if (session->flags & RTP_SESSION_SCHEDULED) {
 			session->rtp.rcv_time_offset = sched->time_;
@@ -1691,14 +1691,14 @@ static void ortp_stream_uninit(OrtpStream *os){
 }
 
 void rtp_session_uninit (RtpSession * session)
-{	
+{
 	RtpTransport *rtp_meta_transport = NULL;
 	RtpTransport *rtcp_meta_transport = NULL;
 
 	/* Stop and destroy network simulator first, as its thread must be stopped before we free anything else in the RtpSession. */
 	if (session->net_sim_ctx)
 		ortp_network_simulator_destroy(session->net_sim_ctx);
-	
+
 	/* If rtp async thread is running stop it and wait fot it to finish */
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	if (session->rtp.is_win_thread_running) {
@@ -1708,13 +1708,13 @@ void rtp_session_uninit (RtpSession * session)
 	ortp_mutex_destroy(&session->rtp.winthread_lock);
 	ortp_mutex_destroy(&session->rtp.winrq_lock);
 #endif
-	
+
 	/* first of all remove the session from the scheduler */
 	if (session->flags & RTP_SESSION_SCHEDULED)
 	{
 		rtp_scheduler_remove_session (session->sched,session);
 	}
-	
+
 	/*flush all queues */
 	flushq(&session->rtp.rq, FLUSHALL);
 	flushq(&session->rtp.tev_rq, FLUSHALL);
@@ -1737,7 +1737,7 @@ void rtp_session_uninit (RtpSession * session)
 
 	session->signal_tables = o_list_free(session->signal_tables);
 
-	
+
 	if (session->rtp.congdetect){
 		ortp_congestion_detector_destroy(session->rtp.congdetect);
 	}
@@ -2007,7 +2007,7 @@ static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current
 
 float rtp_session_compute_recv_bandwidth(RtpSession *session) {
 	struct timeval current;
-	ortp_gettimeofday(&current,NULL);
+	bctbx_gettimeofday(&current,NULL);
 
 	compute_recv_bandwidth(&session->rtp.gs, &current);
 	compute_recv_bandwidth(&session->rtcp.gs, &current);
@@ -2016,7 +2016,7 @@ float rtp_session_compute_recv_bandwidth(RtpSession *session) {
 
 float rtp_session_compute_send_bandwidth(RtpSession *session) {
 	struct timeval current;
-	ortp_gettimeofday(&current,NULL);
+	bctbx_gettimeofday(&current,NULL);
 
 	compute_send_bandwidth(&session->rtp.gs, &current);
 	compute_send_bandwidth(&session->rtcp.gs, &current);

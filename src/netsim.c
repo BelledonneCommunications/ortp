@@ -117,7 +117,7 @@ static void * outboud_simulator_thread(void *ctx){
 		sleep_until.tv_nsec=0;
 		rtp_session_schedule_outbound_network_simulator(session, &sleep_until);
 		if (sleep_until.tv_sec!=0) ortp_sleep_until(&sleep_until);
-		else ortp_sleep_ms(1);
+		else bctbx_sleep_ms(1);
 	}
 	return NULL;
 }
@@ -202,7 +202,7 @@ static mblk_t * simulate_latency(RtpSession *session, mblk_t *input){
 	struct timeval current;
 	mblk_t *output=NULL;
 	uint32_t current_ts;
-	ortp_gettimeofday(&current,NULL);
+	bctbx_gettimeofday(&current,NULL);
 	/*since we must store expiration date in reserved2(32bits) only(reserved1
 	already used), we need to reduce time stamp to milliseconds only*/
 	current_ts = 1000*current.tv_sec + current.tv_usec/1000;
@@ -226,13 +226,13 @@ static mblk_t * simulate_latency(RtpSession *session, mblk_t *input){
 }
 
 static int simulate_jitter_by_bit_budget_reduction(OrtpNetworkSimulatorCtx *sim, int budget_increase){
-	unsigned int r=ortp_random()%1000;
+	unsigned int r=bctbx_random()%1000;
 	float threshold,score;
 	int budget_adjust=0;
-	uint64_t now=ortp_get_cur_time_ms();
+	uint64_t now=bctbx_get_cur_time_ms();
 
 	if (sim->last_jitter_event==0){
-		sim->last_jitter_event=ortp_get_cur_time_ms();
+		sim->last_jitter_event=bctbx_get_cur_time_ms();
 	}
 
 	if (sim->in_jitter_event){
@@ -243,14 +243,14 @@ static int simulate_jitter_by_bit_budget_reduction(OrtpNetworkSimulatorCtx *sim,
 		threshold=500;
 	}
 	if (score>(int)threshold){
-		int64_t strength_rand=(int64_t)(sim->params.jitter_strength * (float)(ortp_random()%1000));
+		int64_t strength_rand=(int64_t)(sim->params.jitter_strength * (float)(bctbx_random()%1000));
 		sim->in_jitter_event=TRUE;
 		budget_adjust=(int)-((int64_t)budget_increase*strength_rand/1000LL);
 		/*ortp_message("jitter in progress... bit_budget_adjustement=%i, bit_budget=%i",budget_adjust,sim->bit_budget);*/
 	}else if (sim->in_jitter_event){
 		/*ortp_message("jitter ended.");*/
 		sim->in_jitter_event=FALSE;
-		sim->last_jitter_event=ortp_get_cur_time_ms();
+		sim->last_jitter_event=bctbx_get_cur_time_ms();
 	}
 	return budget_adjust;
 }
@@ -264,7 +264,7 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 	mblk_t *output=NULL;
 	int overhead=(session->rtp.gs.sockfamily==AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 
-	ortp_gettimeofday(&current,NULL);
+	bctbx_gettimeofday(&current,NULL);
 
 	if (sim->last_check.tv_sec==0){
 		sim->last_check=current;
@@ -321,7 +321,7 @@ static mblk_t *simulate_loss_rate(OrtpNetworkSimulatorCtx *net_sim_ctx, mblk_t *
 		loss_rate=net_sim_ctx->params.consecutive_loss_probability*1000.0f;
 	}
 
-	rrate = ortp_random() % 1000;
+	rrate = bctbx_random() % 1000;
 
 	if (rrate >= loss_rate) {
 		if (net_sim_ctx->consecutive_drops){
@@ -476,7 +476,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 				todrop = om; /*simulate a packet loss, only RTP packets can be dropped. Timestamp is not set for RTCP packets*/
 			}else if (ortp_timespec_compare(&packet_time, &current) <= 0){
 				/*it is time to send this packet*/
-				
+
 				_ortp_sendto(is_rtp_packet ? session->rtp.gs.socket : session->rtcp.gs.socket, om, 0, (struct sockaddr*)&om->net_addr, om->net_addrlen);
 				todrop = om;
 			}else {
@@ -498,4 +498,3 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 		}
 	}
 }
-

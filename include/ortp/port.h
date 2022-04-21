@@ -44,15 +44,12 @@
 #include <stdint.h>
 #endif
 
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #if defined(_XOPEN_SOURCE_EXTENDED) || !defined(__hpux)
 #include <arpa/inet.h>
 #endif
-
-
 
 #include <sys/time.h>
 
@@ -175,7 +172,7 @@ typedef __int16 int16_t;
 ORTP_PUBLIC char* strtok_r(char *str, const char *delim, char **nextp);
 #endif
 
-#define vsnprintf	_vsnprintf
+#define vsnprintf _vsnprintf
 
 typedef SOCKET ortp_socket_t;
 #ifdef ORTP_WINDOWS_DESKTOP
@@ -256,7 +253,7 @@ const char * ortp_strerror(DWORD value);
 #ifdef __cplusplus
 extern "C" {
 #endif
-	
+
 	ORTP_PUBLIC const char *getWinSocketError(int error);
 #ifndef getSocketErrorCode
 #define getSocketErrorCode() WSAGetLastError()
@@ -332,15 +329,15 @@ ORTP_PUBLIC char *ortp_strndup(const char *str,int n);
 
 ORTP_PUBLIC char *ortp_strcat_vprintf(char *dst, const char *fmt, va_list ap);
 
-ORTP_PUBLIC int ortp_file_exist(const char *pathname);
+#define ortp_file_exist(pathname) bctbx_file_exist(pathname)
 
 ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime);
-ORTP_PUBLIC uint64_t ortp_get_cur_time_ms(void);
-ORTP_PUBLIC void ortp_sleep_ms(int ms);
+#define ortp_get_cur_time_ms(void) bctbx_get_cur_time_ms(void)
+#define ortp_sleep_ms(ms) bctbx_sleep_ms(ms)
 ORTP_PUBLIC void ortp_sleep_until(const ortpTimeSpec *ts);
 ORTP_PUBLIC int ortp_timespec_compare(const ortpTimeSpec *s1, const ortpTimeSpec *s2);
-ORTP_PUBLIC unsigned int ortp_random(void);
+#define ortp_random(void) bctbx_random(void)
 
 /* portable named pipes  and shared memory*/
 #if !defined(_WIN32_WCE)
@@ -352,28 +349,28 @@ typedef int ortp_pipe_t;
 #define ORTP_PIPE_INVALID (-1)
 #endif
 
-ORTP_PUBLIC ortp_pipe_t ortp_server_pipe_create(const char *name);
+#define ortp_server_pipe_create(name) bctbx_server_pipe_create(name)
 /*
  * warning: on win32 ortp_server_pipe_accept_client() might return INVALID_HANDLE_VALUE without
  * any specific error, this happens when ortp_server_pipe_close() is called on another pipe.
  * This pipe api is not thread-safe.
 */
-ORTP_PUBLIC ortp_pipe_t ortp_server_pipe_accept_client(ortp_pipe_t server);
-ORTP_PUBLIC int ortp_server_pipe_close(ortp_pipe_t spipe);
-ORTP_PUBLIC int ortp_server_pipe_close_client(ortp_pipe_t client);
+#define ortp_server_pipe_accept_client(server) bctbx_server_pipe_accept_client(server)
 
-ORTP_PUBLIC ortp_pipe_t ortp_client_pipe_connect(const char *name);
-ORTP_PUBLIC int ortp_client_pipe_close(ortp_pipe_t sock);
+#define ortp_server_pipe_close(spipe) bctbx_server_pipe_close(spipe)
+#define ortp_server_pipe_close_client(client) bctbx_server_pipe_close_client(client)
 
-ORTP_PUBLIC int ortp_pipe_read(ortp_pipe_t p, uint8_t *buf, int len);
-ORTP_PUBLIC int ortp_pipe_write(ortp_pipe_t p, const uint8_t *buf, int len);
+#define ortp_client_pipe_connect(name) bctbx_client_pipe_connect(name)
+#define ortp_client_pipe_close(sock) bctbx_client_pipe_close(sock)
 
-ORTP_PUBLIC void *ortp_shm_open(unsigned int keyid, int size, int create);
-ORTP_PUBLIC void ortp_shm_close(void *memory);
+#define ortp_pipe_read(p, buf, len) bctbx_pipe_read(b, buf, len)
+#define ortp_pipe_write(p, buf, len) bctbx_pipe_write(p, buf, len)
 
-ORTP_PUBLIC	bool_t ortp_is_multicast_addr(const struct sockaddr *addr);
-	
-	
+#define ortp_shm_open(keyid, size, create) bctbx_shm_open(keyid, size, create)
+#define ortp_shm_close(keyid, size, create) bctbx_shm_close(keyid, size, create)
+
+#define ortp_is_multicast_addr(addr) bctbx_is_multicast_addr(addr)
+
 #endif
 
 #ifdef __cplusplus
@@ -404,5 +401,3 @@ ORTP_PUBLIC	bool_t ortp_is_multicast_addr(const struct sockaddr *addr);
 #endif
 
 #endif
-
-

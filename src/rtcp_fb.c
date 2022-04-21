@@ -31,7 +31,7 @@ static void rtp_session_add_fb_packet_to_send(RtpSession *session, mblk_t *m) {
 		/*
 		 * CAUTION: there is no limit in the number of fb fragments that can be enqueued here.
 		 * When this exceeds MAX_IOV (from rtpsession_inet.c), the end will be discarded.
-		 * This may happen if the target upload bandwidth (rtp_session_set_target_upload_bandwidth() ) is too low 
+		 * This may happen if the target upload bandwidth (rtp_session_set_target_upload_bandwidth() ) is too low
 		 * too allow feedback packets to be sent in real time.
 		 */
 		concatb(session->rtcp.send_algo.fb_packets, m);
@@ -43,7 +43,7 @@ static bool_t is_fb_packet_to_be_sent_immediately(RtpSession *session) {
 
 	if (rtp_session_has_fb_packets_to_send(session) == TRUE)
 		return FALSE;
-	t0 = ortp_get_cur_time_ms();
+	t0 = bctbx_get_cur_time_ms();
 	if (t0 > session->rtcp.send_algo.tn)
 		return FALSE;
 	if (session->rtcp.send_algo.allow_early == FALSE) {
