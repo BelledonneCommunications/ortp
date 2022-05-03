@@ -369,12 +369,14 @@ bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
 
 bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 	RtpSession *session = checkForSession(m, true);
-	if (session == NULL)
+	if (session == NULL) {
+		freemsg(m);
 		return true;
+	}
 
 	if (session != primary) {
 		ortp_mutex_lock(&session->rtp.gs.bundleq_lock);
-		putq(&session->rtp.gs.bundleq, dupmsg(m));
+		putq(&session->rtp.gs.bundleq, m);
 		ortp_mutex_unlock(&session->rtp.gs.bundleq_lock);
 
 		return true;
@@ -435,5 +437,6 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 		return false;
 	}
 
+	freemsg(m);
 	return true;
 }
