@@ -45,7 +45,23 @@
 #endif
 
 #if (defined(_WIN32) || defined(_WIN32_WCE)) && defined(ORTP_WINDOWS_DESKTOP)
+#include <mstcpip.h>
 #include <mswsock.h>
+// On Windows, SO_TIMESTAMP is only defined if NTDDI_VERSION >= NTDDI_WIN10_FE. ie: it is only available for Windows10 20h2 (10/08/2020).
+// => CMakeLists.txt may add add_definitions(-DNTDDI_VERSION=NTDDI_WIN10_FE -D_WIN32_WINNT=0x0A00) to limit minimum version.
+// From this version, we can read the timestamp through the SIO_TIMESTAMPING IOCTL. https://docs.microsoft.com/en-us/windows/win32/winsock/winsock-timestamping
+// This is not currently implemented because of unworking WSAIoctl and undocumented failures (usually WSAEOPNOTSUPP=10045).
+// Check of "WSAIoctl configured successfully timestamping" in logs to look forward on success cases.
+#include <iphlpapi.h>
+#endif
+
+// Define available TIMESTAMPING values and use it for receive message controls.
+#ifdef SCM_TIMESTAMP
+#define _RECV_SO_TIMESTAMP_TYPE SCM_TIMESTAMP
+#elif defined(SO_TIMESTAMP)
+#define _RECV_SO_TIMESTAMP_TYPE SO_TIMESTAMP
+#else
+#undef _RECV_SO_TIMESTAMP_TYPE	// Just in case
 #endif
 
 #ifdef HAVE_SYS_UIO_H
@@ -226,6 +242,17 @@ static ortp_socket_t create_and_bind(const char *addr, int *port, int *sock_fami
 		{
 			ortp_warning ("Fail to set rtp timestamp: %s.",getSocketError());
 		}
+#ifdef _WIN32
+		DWORD bytes_returned;
+		// Configure tx timestamp reception.
+		TIMESTAMPING_CONFIG config = { 0 };
+		config.Flags |= TIMESTAMPING_FLAG_RX;
+		if( WSAIoctl( sock, SIO_TIMESTAMPING, &config, sizeof(config), NULL, 0, &bytes_returned, NULL, NULL) == SOCKET_ERROR) {
+			ortp_warning("WSAIoctl cannot configure timestamping %d\n", WSAGetLastError());
+		}else {
+			ortp_message("WSAIoctl configured successfully timestamping with SIO_TIMESTAMPING\n");
+		}
+#endif
 #endif
 		err = 0;
 		optval=1;
@@ -1592,8 +1619,8 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		struct cmsghdr *cmsghdr;
 #endif
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
-#ifdef SO_TIMESTAMP
-			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == SCM_TIMESTAMP) {
+#ifdef _RECV_SO_TIMESTAMP_TYPE
+			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == _RECV_SO_TIMESTAMP_TYPE) {
 				memcpy(&msg->timestamp, (struct timeval *)CMSG_DATA(cmsghdr), sizeof(struct timeval));
 			}
 #endif
