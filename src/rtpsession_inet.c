@@ -1453,8 +1453,6 @@ static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct socka
 
 int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 	int error=0;
-	int i;
-	rtp_header_t *hdr;
 	struct sockaddr *destaddr=(struct sockaddr*)&session->rtp.gs.rem_addr;
 	socklen_t destlen=session->rtp.gs.rem_addrlen;
 	OList *elem=NULL;
@@ -1462,18 +1460,6 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 	if (session->is_spliced) {
 		freemsg(m);
 		return 0;
-	}
-
-	hdr = (rtp_header_t *) m->b_rptr;
-	if (hdr->version == 0) {
-		/* We are probably trying to send a STUN packet so don't change its content. */
-	} else {
-		/* perform host to network conversions */
-		hdr->ssrc = htonl (hdr->ssrc);
-		hdr->timestamp = htonl (hdr->timestamp);
-		hdr->seq_number = htons (hdr->seq_number);
-		for (i = 0; i < hdr->cc; i++)
-			hdr->csrc[i] = htonl (hdr->csrc[i]);
 	}
 
 	if (session->flags & RTP_SOCKET_CONNECTED) {

@@ -105,7 +105,7 @@ int rtp_get_mixer_to_client_audio_level(mblk_t *packet, int id, rtp_audio_level_
 		}
 
 		for (i = 0; i < ret; i++) {
-			audio_levels[i].csrc = header->csrc[i];
+			audio_levels[i].csrc = rtp_header_get_csrc(header, i);
 			audio_levels[i].dbov = (int)(data[i] & 0x7F) * -1;
 		}
 	}

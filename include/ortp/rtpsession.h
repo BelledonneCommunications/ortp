@@ -471,6 +471,7 @@ struct _RtpSession
 	bool_t is_primary;  /* tells if this session is the primary of the rtp bundle */
 	
 	bool_t warn_non_working_pkt_info;
+	bool_t transfer_mode;
 };
 
 /**
@@ -752,6 +753,7 @@ ORTP_PUBLIC void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc);
 
+ORTP_PUBLIC void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable);
 
 /*private */
 ORTP_PUBLIC void rtp_session_init(RtpSession *session, int mode);

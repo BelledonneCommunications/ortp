@@ -116,10 +116,11 @@ static uint32_t uint32_t_random(void){
 int rtp_putq(queue_t *q, mblk_t *mp)
 {
 	mblk_t *tmp;
-	rtp_header_t *rtp=(rtp_header_t*)mp->b_rptr,*tmprtp;
+	uint16_t seq_number = rtp_get_seqnumber(mp);
+
 	/* insert message block by increasing time stamp order : the last (at the bottom)
 		message of the queue is the newest*/
-	ortp_debug("rtp_putq(): Enqueuing packet with ts=%i and seq=%i",rtp->timestamp,rtp->seq_number);
+	ortp_debug("rtp_putq(): Enqueuing packet with ts=%u and seq=%i",rtp_get_timestamp(mp),seq_number);
 
 	if (qempty(q)) {
 		putq(q,mp);
@@ -130,17 +131,17 @@ int rtp_putq(queue_t *q, mblk_t *mp)
 	to be enqueued at the bottom, since there are surely newer */
 	while (!qend(q,tmp))
 	{
-		tmprtp=(rtp_header_t*)tmp->b_rptr;
-		ortp_debug("rtp_putq(): Seeing packet with seq=%i",tmprtp->seq_number);
+		uint16_t tmp_seq_number = rtp_get_seqnumber(tmp);
+		ortp_debug("rtp_putq(): Seeing packet with seq=%i",tmp_seq_number);
 
-		if (rtp->seq_number == tmprtp->seq_number)
+		if (seq_number == tmp_seq_number)
 		{
 			/* this is a duplicated packet. Don't queue it */
 			ortp_debug("rtp_putq: duplicated message.");
 			freemsg(mp);
 			return -1;
-		}else if (RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number,tmprtp->seq_number)){
-
+		}else if (RTP_SEQ_IS_STRICTLY_GREATER_THAN(seq_number,tmp_seq_number)){
+			ortp_debug("rtp_putq: seq is strictly greater %u, %u", seq_number, tmp_seq_number);
 			insq(q,tmp->b_next,mp);
 			return 0;
 		}
@@ -156,11 +157,10 @@ int rtp_putq(queue_t *q, mblk_t *mp)
 mblk_t *rtp_peekq(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL,*old=NULL;
-	rtp_header_t *tmprtp;
 	uint32_t ts_found=0;
 
 	*rejected=0;
-	ortp_debug("rtp_getq(): Timestamp %i wanted.",timestamp);
+	ortp_debug("rtp_getq(): Timestamp %u wanted.",timestamp);
 	if (qempty(q))
 	{
 		/*ortp_debug("rtp_getq: q is empty.");*/
@@ -170,12 +170,12 @@ mblk_t *rtp_peekq(queue_t *q,uint32_t timestamp, int *rejected)
 	/* packets with older timestamps are discarded */
 	while ((tmp=qfirst(q))!=NULL)
 	{
-		tmprtp=(rtp_header_t*)tmp->b_rptr;
-		ortp_debug("rtp_getq: Seeing packet with ts=%i",tmprtp->timestamp);
+		uint32_t tmp_timestamp = rtp_get_timestamp(tmp);
+		ortp_debug("rtp_getq: Seeing packet with ts=%u",tmp_timestamp);
 
-		if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmprtp->timestamp) )
+		if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmp_timestamp) )
 		{
-			if (ret!=NULL && tmprtp->timestamp==ts_found) {
+			if (ret!=NULL && tmp_timestamp==ts_found) {
 				/* we've found two packets with same timestamp. return the first one */
 				break;
 			}
@@ -185,8 +185,8 @@ mblk_t *rtp_peekq(queue_t *q,uint32_t timestamp, int *rejected)
 				freemsg(old);
 			}
             ret=peekq(q); /* dequeue the packet, since it has an interesting timestamp*/
-			ts_found=tmprtp->timestamp;
-			ortp_debug("rtp_getq: Found packet with ts=%u",tmprtp->timestamp);
+			ts_found=tmp_timestamp;
+			ortp_debug("rtp_getq: Found packet with ts=%u",tmp_timestamp);
 
 			old=ret;
 		}
@@ -201,10 +201,10 @@ mblk_t *rtp_peekq(queue_t *q,uint32_t timestamp, int *rejected)
 mblk_t *rtp_peekq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
 {
 	mblk_t *tmp,*ret=NULL;
-	rtp_header_t *tmprtp;
+	uint32_t tmp_timestamp;
 
 	*rejected=0;
-	ortp_debug("rtp_getq_permissive(): Timestamp %i wanted.",timestamp);
+	ortp_debug("rtp_getq_permissive(): Timestamp %u wanted.",timestamp);
 
 	if (qempty(q))
 	{
@@ -214,12 +214,12 @@ mblk_t *rtp_peekq_permissive(queue_t *q,uint32_t timestamp, int *rejected)
 	/* return the packet with the older timestamp (provided that it is older than
 	the asked timestamp) */
 	tmp=qfirst(q);
-	tmprtp=(rtp_header_t*)tmp->b_rptr;
-	ortp_debug("rtp_getq_permissive: Seeing packet with ts=%i",tmprtp->timestamp);
-	if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmprtp->timestamp) )
+	tmp_timestamp = rtp_get_timestamp(tmp);
+	ortp_debug("rtp_getq_permissive: Seeing packet with ts=%u, seq=%u",tmp_timestamp, rtp_get_seqnumber(tmp));
+	if ( RTP_TIMESTAMP_IS_NEWER_THAN(timestamp,tmp_timestamp) )
 	{
         ret=peekq(q); /* dequeue the packet, since it has an interesting timestamp*/
-		ortp_debug("rtp_getq_permissive: Found packet with ts=%i",tmprtp->timestamp);
+		ortp_debug("rtp_getq_permissive: Found packet with ts=%u",tmp_timestamp);
 	}
 	return ret;
 }
@@ -323,6 +323,7 @@ rtp_session_init (RtpSession * session, int mode)
 
 	session->bundle = NULL;
 	session->is_primary = FALSE;
+	session->transfer_mode = FALSE;
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled){
@@ -858,10 +859,10 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
 	rtp->markbit= 0;
 	rtp->cc = 0;
 	rtp->paytype = session->snd.pt;
-	rtp->ssrc = session->snd.ssrc;
+	rtp_header_set_ssrc(rtp, session->snd.ssrc);
 	rtp->timestamp = 0;	/* set later, when packet is sended */
 	/* set a seq number */
-	rtp->seq_number=session->rtp.snd_seq;
+	rtp_header_set_seqnumber(rtp, session->rtp.snd_seq);
 }
 
 /**
@@ -1096,14 +1097,12 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 	if (rtp->version == 0) {
 		/* We are probably trying to send a STUN packet so don't change its content. */
 	} else {
-		rtp->timestamp=packet_ts;
-		if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)){
-			rtp->seq_number = session->rtp.snd_seq;
+		if (!session->transfer_mode) rtp_header_set_timestamp(rtp, packet_ts);
+		if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype) && !session->transfer_mode) {
+			rtp_header_set_seqnumber(rtp, session->rtp.snd_seq);
 			session->rtp.snd_seq++;
-		}
-		else
-		{
-			session->rtp.snd_seq=rtp->seq_number+1;
+		} else {
+			session->rtp.snd_seq = rtp_header_get_seqnumber(rtp) + 1;
 		}
 		session->rtp.snd_last_ts = packet_ts;
 
@@ -1116,13 +1115,14 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		session->stats.packet_sent++;
 
 		session->stats.packet_dup_sent+=(int)session->duplication_left;
-		ortp_global_stats.packet_sent+=(int)session->duplication_left;;
+		ortp_global_stats.packet_sent+=(int)session->duplication_left;
 	}
 
 	while (session->duplication_left>=1.f) {
 		error = rtp_session_rtp_send (session, copymsg(mp));
 		session->duplication_left -= 1.f;
 	}
+
 	if((session->fec_stream != NULL) && (mp != NULL)){
 		fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
 	}
@@ -1219,16 +1219,17 @@ rtp_session_pick_with_cseq (RtpSession * session, const uint16_t sequence_number
 static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 	uint16_t pid;
 	uint16_t i;
+	uint16_t seq_number = rtp_header_get_seqnumber(rtp);
 
 	/*don't check anything before first packet delivered*/
-	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED && RTP_SEQ_IS_STRICTLY_GREATER_THAN(rtp->seq_number, session->rtp.rcv_last_seq + 1)) {
+	if (session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED && RTP_SEQ_IS_STRICTLY_GREATER_THAN(seq_number, session->rtp.rcv_last_seq + 1)) {
 		uint16_t first_missed_seq = session->rtp.rcv_last_seq + 1;
-		uint16_t diff = rtp->seq_number - first_missed_seq;
+		uint16_t diff = seq_number - first_missed_seq;
 		pid = first_missed_seq;
 		for (i = 0; i <= (diff / 16); i++) {
 			uint16_t seq;
 			uint16_t blp = 0;
-			for (seq = pid + 1; (seq < rtp->seq_number) && ((seq - pid) < 16); seq++) {
+			for (seq = pid + 1; (seq < seq_number) && ((seq - pid) < 16); seq++) {
 				blp |= (1 << (seq - pid - 1));
 			}
 			rtp_session_send_rtcp_fb_generic_nack(session, pid, blp);
@@ -1306,16 +1307,19 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		rtp_session_rtp_recv (session, user_ts);
 		rtp_session_rtcp_recv(session);
 	}
-	/* check for telephone event first */
-	mp=getq(&session->rtp.tev_rq);
-	if (mp!=NULL){
-		size_t msgsize=msgdsize(mp);
-		ortp_global_stats.recv += msgsize;
-		session->stats.recv += msgsize;
-		rtp_signal_table_emit2(&session->on_telephone_event_packet,mp);
-		rtp_session_check_telephone_events(session,mp);
-		freemsg(mp);
-		mp=NULL;
+
+	if (!session->transfer_mode) {
+		/* check for telephone event first */
+		mp=getq(&session->rtp.tev_rq);
+		if (mp!=NULL){
+			size_t msgsize=msgdsize(mp);
+			ortp_global_stats.recv += msgsize;
+			session->stats.recv += msgsize;
+			rtp_signal_table_emit2(&session->on_telephone_event_packet,mp);
+			rtp_session_check_telephone_events(session,mp);
+			freemsg(mp);
+			mp=NULL;
+		}
 	}
 
 	/* then now try to return a media packet, if possible */
@@ -1331,9 +1335,9 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 			goto end;
 		}
 		rtp = (rtp_header_t *) qfirst(q)->b_rptr;
-		session->rtp.rcv_ts_offset = rtp->timestamp;
+		session->rtp.rcv_ts_offset = rtp_header_get_timestamp(rtp);
 		session->rtp.rcv_last_ret_ts = user_ts;	/* just to have an init value */
-		session->rcv.ssrc = rtp->ssrc;
+		session->rcv.ssrc = rtp_header_get_ssrc(rtp);
 		/* delete the recv synchronisation flag */
 		rtp_session_unset_flag (session, RTP_SESSION_RECV_SYNC);
 	}
@@ -1358,20 +1362,20 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 			mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
 			session->fec_stream->total_lost_packets++;
 			if (fec_mp != NULL){
-			OrtpEvent *ev;
-			OrtpEventData *evdata;
+				OrtpEvent *ev;
+				OrtpEventData *evdata;
 
-			mp = fec_mp;
-			ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
-			ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
-			evdata = ortp_event_get_data(ev);
-			evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
-			rtp_session_dispatch_event(session, ev);
+				mp = fec_mp;
+				ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
+				ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
+				evdata = ortp_event_get_data(ev);
+				evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
+				rtp_session_dispatch_event(session, ev);
 			} else {
-			ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
-			fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
-			session->fec_stream->reconstruction_fail++;
-			if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
+				ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
+				fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
+				session->fec_stream->reconstruction_fail++;
+				if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
 			}
 		} else {
 			if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
@@ -1387,7 +1391,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 		ortp_global_stats.recv += msgsize;
 		session->stats.recv += msgsize;
 		rtp = (rtp_header_t *) mp->b_rptr;
-		packet_ts=rtp->timestamp;
+		packet_ts = rtp_header_get_timestamp(rtp);
 		ortp_debug("Returning mp with ts=%i", packet_ts);
 		/* check for payload type changes */
 		if (session->rcv.pt != rtp->paytype)
@@ -1407,18 +1411,18 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 
 		/* update the packet's timestamp so that it corrected by the
 		adaptive jitter buffer mechanism */
-		if (session->rtp.jittctl.params.adaptive){
+		if (session->rtp.jittctl.params.enabled && session->rtp.jittctl.params.adaptive){
 			uint32_t changed_ts;
 			/* only update correction offset between packets of different
 			timestamps*/
 			if (packet_ts!=session->rtp.rcv_last_ts)
 				jitter_control_update_corrective_slide(&session->rtp.jittctl);
 			changed_ts=packet_ts+session->rtp.jittctl.corrective_slide;
-			rtp->timestamp=changed_ts;
-			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is %u",packet_ts,rtp->timestamp);*/
+			rtp_header_set_timestamp(rtp, changed_ts);
+			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is %u",packet_ts,rtp_header_get_timestamp(rtp));*/
 		}
 		session->rtp.rcv_last_ts = packet_ts;
-		session->rtp.rcv_last_seq = rtp->seq_number;
+		session->rtp.rcv_last_seq = rtp_header_get_seqnumber(rtp);
 		if (!(session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)){
 			rtp_session_set_flag(session,RTP_SESSION_FIRST_PACKET_DELIVERED);
 		}
@@ -1427,6 +1431,7 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	{
 		ortp_debug ("No mp for timestamp queried");
 	}
+
 	rtp_session_rtcp_process_recv(session);
 
 	if (session->flags & RTP_SESSION_SCHEDULED)
@@ -2124,12 +2129,13 @@ void rtp_session_make_time_distorsion(RtpSession *session, int milisec)
 
 
 /* packet api */
-
-void rtp_add_csrc(mblk_t *mp, uint32_t csrc)
-{
-	rtp_header_t *hdr=(rtp_header_t*)mp->b_rptr;
-	hdr->csrc[hdr->cc]=csrc;
+void rtp_header_add_csrc(rtp_header_t *hdr, uint32_t csrc) {
+	hdr->csrc[hdr->cc] = htonl(csrc);
 	hdr->cc++;
+}
+
+void rtp_add_csrc(mblk_t *mp, uint32_t csrc) {
+	rtp_header_add_csrc((rtp_header_t*)mp->b_rptr, csrc);
 }
 
 /**
@@ -2836,4 +2842,21 @@ void rtp_session_reset_recvfrom(RtpSession *session) {
 	ortp_mutex_unlock(&session->rtp.winthread_lock);
 #endif
 	flushq(&session->rtp.winrq, FLUSHALL);
+}
+
+void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable) {
+	session->transfer_mode = enable;
+
+	// Disable other features when this one is enabled
+	if (enable) {
+		rtp_session_enable_jitter_buffer(session, FALSE);
+		if (session->fec_stream != NULL) {
+			if (session->fec_stream->fec_session != NULL) {
+				rtp_session_destroy(session->fec_stream->fec_session);
+				session->fec_stream->fec_session = NULL;
+			}
+			fec_stream_destroy(session->fec_stream);
+			session->fec_stream = NULL;
+		}
+	}
 }

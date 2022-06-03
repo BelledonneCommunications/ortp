@@ -123,7 +123,7 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
 	rtp->padbit = 0;
 	rtp->extbit = 0;
 	rtp->cc = 0;
-	rtp->ssrc = session->snd.ssrc;
+	rtp_header_set_ssrc(rtp, session->snd.ssrc);
 	/* timestamp set later, when packet is sended */
 	/*seq number set later, when packet is sended */
 
@@ -394,9 +394,7 @@ void rtp_session_check_telephone_events(RtpSession *session, mblk_t *m0)
 	if (cur_tev!=NULL)
 	{
 		/* first compare timestamp, they must be identical */
-		if (((rtp_header_t*)cur_tev->b_rptr)->timestamp==
-			((rtp_header_t*)m0->b_rptr)->timestamp)
-		{
+		if (rtp_get_timestamp(cur_tev) == rtp_get_timestamp(m0)) {
 			datasize=rtp_get_payload(cur_tev,&payload);
 			num2=datasize/sizeof(telephone_event_t);
 			evbuf=(telephone_event_t*)payload;

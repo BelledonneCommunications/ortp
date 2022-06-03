@@ -226,7 +226,7 @@ static void getSsrcFromSdes(void *userData, uint32_t ssrc, rtcp_sdes_type_t t, c
 
 static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
 	if (isRtp) {
-		return ntohl(rtp_get_ssrc(m));
+		return rtp_get_ssrc(m);
 	}
 
 	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
@@ -302,25 +302,25 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 				std::string mid = std::string((char *)data, midSize);
 
 				// Update the mid map with the corresponding session
-				if (!updateMid(mid, ssrc, ntohs(rtp_get_seqnumber(m)), true)) {
+				if (!updateMid(mid, ssrc, rtp_get_seqnumber(m), true)) {
 					if (it == ssrcToMid.end()) {
 						ortp_warning("Rtp Bundle [%p]: SSRC %u not found and mid \"%s\" from msg (%d) does not "
 									 "correspond to any sessions",
-									 this, ssrc, mid.c_str(), (int)ntohs(rtp_get_seqnumber(m)));
+									 this, ssrc, mid.c_str(), (int)rtp_get_seqnumber(m));
 						return NULL;
 					}
 				}
 			} else {
 				if (it == ssrcToMid.end()) {
 					ortp_warning("Rtp Bundle [%p]: SSRC %u not found and msg (%d) does not have a mid extension header",
-								 this, ssrc, (int)ntohs(rtp_get_seqnumber(m)));
+								 this, ssrc, (int)rtp_get_seqnumber(m));
 					return NULL;
 				}
 			}
 		} else {
 			if (it == ssrcToMid.end()) {
 				ortp_warning("Rtp Bundle [%p]: SSRC %u not found and msg (%d) does not have an extension header", this,
-							 ssrc, (int)ntohs(rtp_get_seqnumber(m)));
+							 ssrc, (int)rtp_get_seqnumber(m));
 				return NULL;
 			}
 		}

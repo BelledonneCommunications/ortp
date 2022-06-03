@@ -123,6 +123,17 @@ extern "C"{
 #endif
 
 /* packet api */
+/* the first argument is a rtp_header_t  */
+#define rtp_header_set_seqnumber(hdr,seq)	(hdr)->seq_number=(htons(seq))
+#define rtp_header_set_timestamp(hdr,ts)	(hdr)->timestamp=(htonl(ts))
+#define rtp_header_set_ssrc(hdr,_ssrc)		(hdr)->ssrc=(htonl(_ssrc))
+ORTP_PUBLIC void rtp_header_add_csrc(rtp_header_t *hdr, uint32_t csrc);
+
+#define rtp_header_get_seqnumber(hdr)	(ntohs((hdr)->seq_number))
+#define rtp_header_get_timestamp(hdr)	(ntohl((hdr)->timestamp))
+#define rtp_header_get_ssrc(hdr)		(ntohl((hdr)->ssrc))
+#define rtp_header_get_csrc(hdr, idx)	(ntohl((hdr)->csrc[idx]))
+
 /* the first argument is a mblk_t. The header is supposed to be not splitted  */
 #define rtp_set_version(mp,value)	((rtp_header_t*)((mp)->b_rptr))->version=(value)
 #define rtp_set_padbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->padbit=(value)
@@ -130,21 +141,21 @@ extern "C"{
 #define rtp_set_cc(mp,value)	((rtp_header_t*)((mp)->b_rptr))->cc=(value)
 #define rtp_set_markbit(mp,value)	((rtp_header_t*)((mp)->b_rptr))->markbit=(value)
 #define rtp_set_payload_type(mp,pt)	((rtp_header_t*)((mp)->b_rptr))->paytype=(pt)
-#define rtp_set_seqnumber(mp,seq)	((rtp_header_t*)((mp)->b_rptr))->seq_number=(seq)
-#define rtp_set_timestamp(mp,ts)	((rtp_header_t*)((mp)->b_rptr))->timestamp=(ts)
-#define rtp_set_ssrc(mp,_ssrc)		((rtp_header_t*)((mp)->b_rptr))->ssrc=(_ssrc)
-ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp ,uint32_t csrc);
+#define rtp_set_seqnumber(mp,seq)	rtp_header_set_seqnumber((rtp_header_t*)((mp)->b_rptr),(seq))
+#define rtp_set_timestamp(mp,ts)	rtp_header_set_timestamp((rtp_header_t*)((mp)->b_rptr),(ts))
+#define rtp_set_ssrc(mp,_ssrc)		rtp_header_set_ssrc((rtp_header_t*)((mp)->b_rptr),(_ssrc))
+ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp, uint32_t csrc);
 
 #define rtp_get_version(mp)	(((rtp_header_t*)((mp)->b_rptr))->version)
 #define rtp_get_padbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->padbit)
 #define rtp_get_markbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->markbit)
 #define rtp_get_extbit(mp)	(((rtp_header_t*)((mp)->b_rptr))->extbit)
-#define rtp_get_timestamp(mp)	(((rtp_header_t*)((mp)->b_rptr))->timestamp)
-#define rtp_get_seqnumber(mp)	(((rtp_header_t*)((mp)->b_rptr))->seq_number)
+#define rtp_get_timestamp(mp)	rtp_header_get_timestamp((rtp_header_t*)((mp)->b_rptr))
+#define rtp_get_seqnumber(mp)	rtp_header_get_seqnumber((rtp_header_t*)((mp)->b_rptr))
 #define rtp_get_payload_type(mp)	(((rtp_header_t*)((mp)->b_rptr))->paytype)
-#define rtp_get_ssrc(mp)		(((rtp_header_t*)((mp)->b_rptr))->ssrc)
+#define rtp_get_ssrc(mp)		rtp_header_get_ssrc((rtp_header_t*)((mp)->b_rptr))
 #define rtp_get_cc(mp)		(((rtp_header_t*)((mp)->b_rptr))->cc)
-#define rtp_get_csrc(mp, idx)		(((rtp_header_t*)((mp)->b_rptr))->csrc[idx])
+#define rtp_get_csrc(mp, idx)	rtp_header_get_csrc((rtp_header_t*)((mp)->b_rptr),(idx))
 
 ORTP_PUBLIC int rtp_get_payload(mblk_t *packet, unsigned char **start);
 ORTP_PUBLIC int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext);

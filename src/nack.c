@@ -26,7 +26,7 @@ static mblk_t *find_packet_with_sequence_number(const queue_t *q, const uint16_t
 	mblk_t *tmp;
 
 	for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, tmp)) {
-		if (ntohs(rtp_get_seqnumber(tmp)) == seq_number) {
+		if (rtp_get_seqnumber(tmp) == seq_number) {
 			return tmp;
 		}
 	}
@@ -92,7 +92,7 @@ static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
 		// Stock the packet before sending it
 		putq(&userData->sent_packets, dupmsg(msg));
 
-		//ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", userData, ntohs(rtp_get_seqnumber(msg)), userData->session->rtp.snd_seq);
+		//ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", userData, rtp_get_seqnumber(msg), userData->session->rtp.snd_seq);
 
 		bctbx_mutex_unlock(&userData->sent_packets_mutex);
 	}
