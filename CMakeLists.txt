@@ -111,9 +111,6 @@ check_symbol_exists(sendmsg "sys/socket.h" HAVE_SENDMSG)
 
 include(TestBigEndian)
 test_big_endian(WORDS_BIGENDIAN)
-if(WORDS_BIGENDIAN)
-	set(ORTP_BIGENDIAN 1)
-endif()
 
 
 include_directories(
@@ -127,6 +124,9 @@ endif()
 
 
 set(ORTP_CPPFLAGS ${BCTOOLBOX_CPPFLAGS})
+if(WORDS_BIGENDIAN)
+	list(APPEND ORTP_CPPFLAGS "-DORTP_BIGENDIAN")
+endif()
 if(ENABLE_STATIC)
 	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
 endif()
