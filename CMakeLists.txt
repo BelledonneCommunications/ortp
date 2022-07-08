@@ -47,6 +47,7 @@ option(ENABLE_NTP_TIMESTAMP "Turn on NTP timestamping on packet reception." NO)
 option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increase performance." NO)
 option(ENABLE_STRICT "Build with strict compile options." YES)
 option(ENABLE_TESTS "Enable compilation of test programs." NO)
+option(ENABLE_UNIT_TESTS "Enable compilation of unit tests." YES)
 option(ENABLE_DEBUG_LOGS "Turn on or off debug level logs." NO)
 option(ENABLE_PACKAGE_SOURCE "Create 'package_source' target for source archive making (CMake >= 3.11)" OFF)
 set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
@@ -178,7 +179,9 @@ set(EXPORT_TARGET_NAME ortp)
 
 add_subdirectory(include)
 add_subdirectory(src)
-
+if(ENABLE_UNIT_TESTS)
+	add_subdirectory(tester)
+endif()
 
 if(ENABLE_DOC)
 	find_package(Doxygen)
