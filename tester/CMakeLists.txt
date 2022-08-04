@@ -31,9 +31,15 @@ if(WIN32)
 	list(APPEND ORTP_LIBS_FOR_TESTER Ws2_32)
 endif()
 
+set(RAW_FILES
+	raw/h265-iframe
+)
+
 set(SOURCE_FILES_C
 	ortp_tester.c
+	extension_header_tester.c
 	fec_tester.c
+	rtp_tester.c
 )
 
 set(IOS_RESOURCE_FILE)
@@ -88,5 +94,6 @@ else()
 			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 			PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 		)
+		install(FILES ${RAW_FILES} DESTINATION "${CMAKE_INSTALL_DATADIR}/ortp_tester/raw")
 	endif()
 endif()

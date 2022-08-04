@@ -17,54 +17,40 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ortp_tester.h"
 #include <ortp/ortp.h>
-#include <signal.h>
-#include <stdlib.h>
 
-#ifndef _WIN32
-#include <sys/types.h>
-#include <sys/time.h>
-#include <stdio.h>
-#endif
+static int tester_before_all(void) {
+	ortp_init();
+	ortp_scheduler_init();
 
-int runcond=1;
-
-void stophandler(int signum)
-{
-	runcond=0;
+	return 0;
 }
 
-static const char *help = "Usage: rtptransfer <filename>\n";
+static int tester_after_all(void) {
+	ortp_exit();
 
-int main(int argc, char *argv[]) {
+	return 0;
+}
+
+static void send_packets_through_tranfer_session(void) {
 	RtpSession *session;
 	RtpSession *transfer_session;
 	int rtp_port, rtcp_port;
 	FILE *infile;
 	unsigned char buffer[160];
 	uint32_t user_ts = 0;
-	int len = 0;
+	size_t len = 0;
 	bool_t error = FALSE;
 
-	if (argc < 2) {
-		printf("%s", help);
-		return -1;
+	char *filepath = bc_tester_res("raw/h265-iframe");
+
+	infile = fopen(filepath, "rb");
+
+	if (!BC_ASSERT_PTR_NOT_NULL(infile)) {
+		if (filepath) bctbx_free(filepath);
+		return;
 	}
-
-#ifndef _WIN32
-	infile = fopen(argv[1], "r");
-#else
-	infile = fopen(argv[1], "rb");
-#endif
-
-	if (infile == NULL) {
-		perror("Cannot open file");
-		return -1;
-	}
-
-	ortp_init();
-	ortp_scheduler_init();
-	ortp_set_log_level_mask(NULL, ORTP_MESSAGE|ORTP_WARNING|ORTP_ERROR);
 
 	// Create the default session
 	session = rtp_session_new(RTP_SESSION_SENDRECV);
@@ -94,62 +80,44 @@ int main(int argc, char *argv[]) {
 	rtcp_port = rtp_session_get_local_rtcp_port(session);
 	rtp_session_set_remote_addr_full(transfer_session, "127.0.0.1", rtp_port, "127.0.0.1", rtcp_port);
 
-	signal(SIGINT, stophandler);
-	while(((len = fread(buffer, 1, 160, infile)) > 0) && (!error) && (runcond)) {
+	while(((len = fread(buffer, 1, 160, infile)) > 0) && !error) {
+		mblk_t *transfered_packet;
+		mblk_t *received_packet;
+
 		// Send a packet through the "normal" session and retrieve it with the transfer session
 		mblk_t *sent_packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, (uint8_t *)buffer, len);
 
 		int size = rtp_session_sendm_with_ts(session, copymsg(sent_packet), user_ts);
-		if (size < 0) {
-			ortp_error("Session [%p] could not send the packet (%d)", session, size);
-			error = TRUE;
-		}
+		BC_ASSERT_GREATER(size, 0, int, "%d");
 
-		mblk_t *transfered_packet = rtp_session_recvm_with_ts(transfer_session, user_ts);
-		if (transfered_packet == NULL) {
-			ortp_error("Transfer session [%p] did not received any packets!", transfer_session);
+		transfered_packet = rtp_session_recvm_with_ts(transfer_session, user_ts);
+		if (!BC_ASSERT_PTR_NOT_NULL(transfered_packet)) {
 			error = TRUE;
 		} else {
-			bool_t same = FALSE;
-
 			// We cannot compare bytes by bytes here as sent_packet has been modified by rtp_session_sendm_with_ts before sending
 			// So we check the parts that this function didn't change which is everything but timestamp
-			if (rtp_get_version(transfered_packet) == rtp_get_version(sent_packet)
-				&& rtp_get_padbit(transfered_packet) == rtp_get_padbit(sent_packet)
-				&& rtp_get_markbit(transfered_packet) == rtp_get_markbit(sent_packet)
-				&& rtp_get_extbit(transfered_packet) == rtp_get_extbit(sent_packet)
-				&& rtp_get_seqnumber(transfered_packet) == rtp_get_seqnumber(sent_packet)
-				&& rtp_get_payload_type(transfered_packet) == rtp_get_payload_type(sent_packet)
-				&& rtp_get_ssrc(transfered_packet) == rtp_get_ssrc(sent_packet)
-				&& rtp_get_cc(transfered_packet) == rtp_get_cc(sent_packet)
-				&& memcmp(transfered_packet->b_rptr + RTP_FIXED_HEADER_SIZE, sent_packet->b_rptr + RTP_FIXED_HEADER_SIZE, msgdsize(transfered_packet) - RTP_FIXED_HEADER_SIZE) == 0
-			) {
-				same = TRUE;
-			}
+			BC_ASSERT_EQUAL(rtp_get_version(transfered_packet), rtp_get_version(sent_packet), uint16_t, "%hu");
+			BC_ASSERT_EQUAL(rtp_get_padbit(transfered_packet), rtp_get_padbit(sent_packet), uint16_t, "%hu");
+			BC_ASSERT_EQUAL(rtp_get_markbit(transfered_packet), rtp_get_markbit(sent_packet), uint16_t, "%hu");
+			BC_ASSERT_EQUAL(rtp_get_extbit(transfered_packet), rtp_get_extbit(sent_packet), uint16_t, "%hu");
+			BC_ASSERT_TRUE(rtp_get_seqnumber(transfered_packet) == rtp_get_seqnumber(sent_packet)); // BC_ASSERT_EQUAL here doesn't want to compile on some platforms
+			BC_ASSERT_EQUAL(rtp_get_payload_type(transfered_packet), rtp_get_payload_type(sent_packet), uint16_t, "%hu");
+			BC_ASSERT_EQUAL(rtp_get_ssrc(transfered_packet), rtp_get_ssrc(sent_packet), uint32_t, "%u");
+			BC_ASSERT_EQUAL(rtp_get_cc(transfered_packet), rtp_get_cc(sent_packet), uint16_t, "%hu");
+			BC_ASSERT_EQUAL(memcmp(transfered_packet->b_rptr + RTP_FIXED_HEADER_SIZE, sent_packet->b_rptr + RTP_FIXED_HEADER_SIZE, msgdsize(transfered_packet) - RTP_FIXED_HEADER_SIZE), 0, int, "%d");
 
-			if (!same) {
-				ortp_error("Packet received by the transfer session is not the same!");
-				freemsg(transfered_packet);
+			// Send it again via the transfer session and retrieve it with the "normal" session
+			size = rtp_session_sendm_with_ts(transfer_session, copymsg(transfered_packet), user_ts);
+			BC_ASSERT_GREATER(size, 0, int, "%d");
+
+			received_packet = rtp_session_recvm_with_ts(session, user_ts);
+			if (!BC_ASSERT_PTR_NOT_NULL(received_packet)) {
 				error = TRUE;
 			} else {
-				// Send it again via the transfer session and retrieve it with the "normal" session
-				rtp_session_sendm_with_ts(transfer_session, copymsg(transfered_packet), user_ts);
+				// Check that the packet received is the same as the transfered one as the "transfer" session shouldn't modify it's content
+				BC_ASSERT_EQUAL(memcmp(received_packet->b_rptr, transfered_packet->b_rptr, msgdsize(received_packet)), 0, int, "%d");
 
-				mblk_t *received_packet = rtp_session_recvm_with_ts(session, user_ts);
-				if (received_packet == NULL) {
-					ortp_error("Session [%p] did not receive the transfered packet!", session);
-					error = TRUE;
-				} else {
-					// Check that the packet received is the same as the transfered one as the "transfer" session shouldn't modify it's content
-					int ret = memcmp(received_packet->b_rptr, transfered_packet->b_rptr, msgdsize(received_packet));
-
-					if (ret != 0) {
-						ortp_error("Packet received by the session is not the same!");
-						error = TRUE;
-					}
-
-					freemsg(received_packet);
-				}
+				freemsg(received_packet);
 			}
 
 			freemsg(transfered_packet);
@@ -160,14 +128,23 @@ int main(int argc, char *argv[]) {
 		user_ts += 160;
 	}
 
-	if (!error) {
-		ortp_message("Test completed successfully.");
-	}
-
 	fclose(infile);
+
+	if (filepath) bctbx_free(filepath);
 	rtp_session_destroy(session);
 	rtp_session_destroy(transfer_session);
-	ortp_exit();
-
-	return 0;
 }
+
+static test_t tests[] = {
+	TEST_NO_TAG("Send packets through a transfer session", send_packets_through_tranfer_session)
+};
+
+test_suite_t rtp_test_suite = {
+	"Rtp",							  // Name of test suite
+	tester_before_all,				  // Before all callback
+	tester_after_all,				  // After all callback
+	NULL,							  // Before each callback
+	NULL,							  // After each callback
+	sizeof(tests) / sizeof(tests[0]), // Size of test table
+	tests							  // Table of test suite
+};

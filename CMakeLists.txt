@@ -179,7 +179,7 @@ set(EXPORT_TARGET_NAME ortp)
 
 add_subdirectory(include)
 add_subdirectory(src)
-if(ENABLE_UNIT_TESTS)
+if(ENABLE_UNIT_TESTS AND NOT WIN32)
 	add_subdirectory(tester)
 endif()
 
