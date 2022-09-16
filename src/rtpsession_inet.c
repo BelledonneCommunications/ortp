@@ -1422,9 +1422,10 @@ static void log_send_error(RtpSession *session, const char *type, mblk_t *m, str
 static int rtp_session_rtp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error;
 	RtpSession *send_session = session;
+	RtpBundle *bundle = session->bundle;
 
-	if (session->bundle && !session->is_primary) {
-		send_session = rtp_bundle_get_primary_session(session->bundle);
+	if (bundle && !session->is_primary) {
+		send_session = rtp_bundle_get_primary_session(bundle);
 		if (!send_session) {
 			ortp_error("RtpSession [%p] error get no primary session", session);
 			return -1;
@@ -1482,11 +1483,14 @@ int rtp_session_rtp_send (RtpSession * session, mblk_t * m){
 static int rtp_session_rtcp_sendto(RtpSession * session, mblk_t * m, struct sockaddr *destaddr, socklen_t destlen, bool_t is_aux){
 	int error=0;
 	RtpSession *send_session = session;
+	RtpBundle *bundle = session->bundle;
 
-	if (session->bundle && !session->is_primary) {
-		send_session = rtp_bundle_get_primary_session(session->bundle);
-		destaddr = (struct sockaddr *)&send_session->rtp.gs.rem_addr;
-		destlen = send_session->rtp.gs.rem_addrlen;
+	if (bundle && !session->is_primary) {
+		send_session = rtp_bundle_get_primary_session(bundle);
+		if (send_session){
+			destaddr = (struct sockaddr *)&send_session->rtp.gs.rem_addr;
+			destlen = send_session->rtp.gs.rem_addrlen;
+		}else send_session = session;
 	}
 	/* Even in RTCP mux, we send through the RTCP RtpTransport, which will itself take in charge to do the sending of the packet
 	 * through the RTP endpoint*/
@@ -2024,13 +2028,14 @@ void* rtp_session_recvfrom_async(void* obj) {
 int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 	mblk_t *mp;
 	bool_t more_data = TRUE;
+	RtpBundle *bundle = session->bundle;
 
 	if ((session->rtp.gs.socket==(ortp_socket_t)-1) && !rtp_session_using_transport(session, rtp)) return -1;  /*session has no sockets for the moment*/
 
 
 	do {
 		bool_t packet_is_rtp = TRUE;
-		if (!session->bundle || (session->bundle && session->is_primary)) {
+		if (!bundle || (bundle && session->is_primary)) {
 #if	defined(_WIN32) || defined(_WIN32_WCE)
 			ortp_mutex_lock(&session->rtp.winthread_lock);
 			if (!session->rtp.is_win_thread_running) {
@@ -2057,7 +2062,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 			if (mp){
 				/* we got a packet from a primary transport. If bundle mode is on, it may be dispatched to another session, or
 				 * may be re-qualified as RTCP (rtcp-mux) */
-				if (session->rtcp_mux || session->bundle){
+				if (session->rtcp_mux || bundle){
 					if (rtp_get_version(mp) == 2){
 						int pt = rtp_get_payload_type(mp);
 						if (pt >= 64 && pt <= 95){
@@ -2066,7 +2071,7 @@ int rtp_session_rtp_recv (RtpSession * session, uint32_t user_ts) {
 						}
 					}
 				}
-				if (session->bundle && rtp_bundle_dispatch(session->bundle, packet_is_rtp, mp)){
+				if (bundle && rtp_bundle_dispatch(bundle, packet_is_rtp, mp)){
 					/* the packet has been dispatched to another session. */
 					mp = NULL;
 				}
