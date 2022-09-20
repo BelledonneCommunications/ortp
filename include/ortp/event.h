@@ -55,6 +55,11 @@ struct _OrtpEventData{
 			int authTagAlgo;
 			int sasAlgo;
 		} zrtp_info;
+		struct _SrtpInfo{
+			bool_t is_send; /**< stream direction this is applied too */
+			int source; /**< the source of the key material as defined in MSSrtpKeySource enum in ms_strp.h */
+			int suite; /**< the srtp crypto suite used as defined in MSCryptoSuite enum in ms_srtp.h */
+		} srtp_info;
 		OrtpSocketType socket_type;
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
@@ -100,6 +105,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_JITTER_UPDATE_FOR_NACK			23
 #define ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED			24
 #define ORTP_EVENT_DO_NOT_USE_RESERVED				25  /* taken by ORTP_EVENT_ICE_CHECK_LIST_DEFAULT_CANDIDATE_VERIFIED */
+#define ORTP_EVENT_SRTP_ENCRYPTION_CHANGED			26  /* srtp status changed - set key material source and crypto suite usesd in stream stats */
 
 
 ORTP_PUBLIC OrtpEventData * ortp_event_get_data(OrtpEvent *ev);
