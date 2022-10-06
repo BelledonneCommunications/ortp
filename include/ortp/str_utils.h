@@ -71,8 +71,13 @@ typedef struct msgb
 } mblk_t;
 
 
-
-typedef struct datab dblk_t;
+// Data Block
+typedef struct datab {
+	unsigned char *db_base;
+	unsigned char *db_lim;
+	void (*db_freefn)(void*);
+	void * db_ref;	// Atomic variable
+} dblk_t;
 
 typedef struct _queue
 {
@@ -84,11 +89,14 @@ typedef struct _queue
 extern "C" {
 #endif
 
+ORTP_PUBLIC dblk_t *dblk_alloc(size_t size);
+ORTP_PUBLIC dblk_t *dblk_alloc2(uint8_t *buf, size_t size, void (*freefn)(void*));
 ORTP_PUBLIC void dblk_ref(dblk_t *d);
 ORTP_PUBLIC void dblk_unref(dblk_t *d);
+ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
 ORTP_PUBLIC unsigned char * dblk_base(dblk_t *db);
 ORTP_PUBLIC unsigned char * dblk_lim(dblk_t *db);
-ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
+
 
 ORTP_PUBLIC void qinit(queue_t *q);
 

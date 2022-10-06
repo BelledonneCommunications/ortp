@@ -24,7 +24,9 @@
  *  Copyright  2004  Simon Morlat
  *  Email simon dot morlat at linphone dot org
  ****************************************************************************/
-
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
 #include "ortp/ortp.h"
 #include "ortp/rtpsession.h"
 #include "ortp/rtcp.h"

@@ -61,6 +61,7 @@ include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
 include(CheckCSourceCompiles)
+include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
 
 if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
@@ -85,14 +86,19 @@ check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
 if(NOT ANDROID)
 	check_include_file(sys/shm.h HAVE_SYS_SHM_H)
 endif()
-check_c_source_compiles("#include <stdatomic.h>
+
+check_cxx_source_compiles("#include <atomic>
+using namespace std;
 int main(int argc, char *argv[]) {
-atomic_int currrent_ref;
-atomic_init(&currrent_ref, 1);
-atomic_int previous_ref = atomic_fetch_sub_explicit(&currrent_ref, 1, memory_order_release);
+atomic_int current_ref;
+atomic_init(&current_ref, 1);
+atomic_int previous_ref(atomic_fetch_sub_explicit(&current_ref, 1, memory_order_release));
 return 0;
 }"
-        HAVE_STDATOMIC_H)
+	HAVE_ATOMIC)
+if(NOT HAVE_ATOMIC)
+	message(FATAL_ERROR "Atomic(C++) libraries have not been found for ORTP.")
+endif()
 
 check_function_exists(arc4random HAVE_ARC4RANDOM)
 check_symbol_exists(recvmsg "sys/socket.h" HAVE_RECVMSG)

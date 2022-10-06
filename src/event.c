@@ -17,9 +17,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
 #include "ortp/event.h"
 #include "ortp/ortp.h"
-#include "ortp/rtpsession.h"
+#include "ortp/str_utils.h"
 #include "utils.h"
 
 OrtpEvent * ortp_event_new(unsigned long type){
@@ -52,7 +55,7 @@ OrtpEventData * ortp_event_get_data(OrtpEvent *ev){
 
 void ortp_event_destroy(OrtpEvent *ev){
 	OrtpEventData *d=ortp_event_get_data(ev);
-	if (ev->b_datap->db_ref==1){
+	if(dblk_ref_value(ev->b_datap) == 1){
 		if (d->packet) 	freemsg(d->packet);
 	}
 	freemsg(ev);

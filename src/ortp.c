@@ -80,8 +80,12 @@ void ortp_init()
 	av_profile_init(&av_profile);
 	ortp_global_stats_reset();
 	init_random_number_generator();
-
+// HAVE_ATOMIC is mandatory but we let it there just in case we want to support other atomic algorithms.
+#ifdef HAVE_ATOMIC
+	ortp_message("oRTP-" ORTP_VERSION " initialized with Atomic protection.");
+#else
 	ortp_message("oRTP-" ORTP_VERSION " initialized.");
+#endif
 }
 
 

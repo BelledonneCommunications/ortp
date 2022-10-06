@@ -37,7 +37,7 @@ set(ORTP_SOURCE_FILES_C
 	congestiondetector.c
 	event.c
 	extremum.c
-        fecstream.c
+	fecstream.c
 	jitterctl.c
 	kalmanrls.c
 	logging.c
@@ -67,6 +67,7 @@ set(ORTP_SOURCE_FILES_C
 	utils.c
 )
 set(ORTP_SOURCE_FILES_CXX
+	dblk.cc	#HAVE_ATOMIC is mandatory
 	rtpbundle.cc
 )
 
@@ -95,6 +96,8 @@ endif()
 
 bc_apply_compile_flags(ORTP_SOURCE_FILES_C STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
 bc_apply_compile_flags(ORTP_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_CXX)
+
+
 
 if(ENABLE_STATIC)
 	add_library(ortp-static STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})

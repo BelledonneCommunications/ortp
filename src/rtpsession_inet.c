@@ -31,8 +31,8 @@
 #endif
 #include <bctoolbox/port.h>
 #include "ortp/ortp.h"
+#include "ortp/str_utils.h"
 #include "utils.h"
-#include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
 
 #if (_WIN32_WINNT >= 0x0600)
@@ -1929,7 +1929,7 @@ static mblk_t *rtp_session_alloc_recv_block(RtpSession *session){
 }
 
 static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m){
-	if (m->b_datap->db_ref > 1){
+	if (dblk_ref_value(m->b_datap) > 1){
 		/* The mblk_t may have been duplicated by the RtpTransport/RtpModifier. We shall consider the underlying buffer
 		 * cannot be used anymore */
 		ortp_warning("The RtpTransport has kept a ref on a mblk_t's underlying buffer. This prevents recycling.");

@@ -23,7 +23,9 @@
  *  Copyright  2004  Simon MORLAT
  *  Email simon.morlat@linphone.org
  ****************************************************************************/
-
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
 #include "ortp/rtpsession.h"
 #include "ortp/payloadtype.h"
 #include "ortp/ortp.h"
