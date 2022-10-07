@@ -1913,9 +1913,15 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 
 static mblk_t *rtp_session_alloc_recv_block(RtpSession *session){
 	mblk_t *m = NULL;
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_lock(&session->rtp.winrq_lock);
+#endif
 	if ((m = session->recv_block_cache) != NULL){
 		session->recv_block_cache = NULL;
 	}
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_unlock(&session->rtp.winrq_lock);
+#endif
 	if (!m){
 		m = allocb(session->recv_buf_size, 0);
 	}
@@ -1933,9 +1939,18 @@ static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m){
 	/* Reset read, write pointers to their original place. Indeed the RtpTransport/RtpModifier may have play
 	 * with them before discarding the mblk_t. */
 	m->b_wptr = m->b_rptr = m->b_datap->db_base;
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_lock(&session->rtp.winrq_lock);
+#endif
 	if (session->recv_block_cache == NULL){
 		session->recv_block_cache = m;
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+		ortp_mutex_unlock(&session->rtp.winrq_lock);
 	}else{
+		ortp_mutex_unlock(&session->rtp.winrq_lock);
+#else
+	}else{
+#endif
 		ortp_error("Should not happen");
 		freeb(m);
 	}
