@@ -252,14 +252,21 @@ size_t msgdsize(const mblk_t *mp)
 	return msgsize;
 }
 
-void msgpullup(mblk_t *mp,size_t len)
-{
+void msgpullup(mblk_t *mp, size_t len){
 	mblk_t *firstm=mp;
 	dblk_t *db;
 	size_t wlen=0;
 
-	if (mp->b_cont==NULL && len==(size_t)-1) return;	/*nothing to do, message is not fragmented */
+	if (mp->b_cont == NULL){
+		/* Special case optimisations */
+		if (len == (size_t)-1) return;	/*nothing to do, message is not fragmented. */
+		if (mp->b_datap->db_base + len <= mp->b_datap->db_lim){
+			/* The underlying data block is larger than the requested size, nothing to do. */
+			return;
+		}
+	}
 
+	
 	if (len==(size_t)-1) len=msgdsize(mp);
 	db=datab_alloc(len);
 	while(wlen<len && mp!=NULL){

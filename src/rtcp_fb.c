@@ -79,13 +79,12 @@ static mblk_t * make_rtcp_fb_pli(RtpSession *session) {
 }
 
 static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
-	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + 2 * sizeof(rtcp_fb_fir_fci_t);
+	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_fir_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
 	rtcp_fb_header_t *fbh;
 	rtcp_fb_fir_fci_t *fci1;
-	rtcp_fb_fir_fci_t *fci2;
-
+	
 	/* Fill FIR */
 	ch = (rtcp_common_header_t *)h->b_wptr;
 	h->b_wptr += sizeof(rtcp_common_header_t);
@@ -93,22 +92,31 @@ static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
 	h->b_wptr += sizeof(rtcp_fb_header_t);
 	fci1 = (rtcp_fb_fir_fci_t *)h->b_wptr;
 	h->b_wptr += sizeof(rtcp_fb_fir_fci_t);
-	fci2 = (rtcp_fb_fir_fci_t *)h->b_wptr;
-	h->b_wptr += sizeof(rtcp_fb_fir_fci_t);
+	
+	/*
+	 * See https://datatracker.ietf.org/doc/rfc4585/ section 6.1
+	 * SSRC of packet sender: 32 bits
+	 * 	The synchronization source identifier for the originator of this packet.
+	 *
+	 * SSRC of media source: 32 bits
+	 * 	The synchronization source identifier of the media source that
+	 * 	this piece of feedback information is related to.
+	 */
+	
 	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
-	fbh->media_source_ssrc = htonl(0);
-	fci1->ssrc = htonl(rtp_session_get_send_ssrc(session));
+	fbh->media_source_ssrc = htonl(rtp_session_get_recv_ssrc(session));
+	
+	/*
+	 * https://www.rfc-editor.org/rfc/rfc5104.html#section-4.3.1.1
+	 * SSRC (32 bits): The SSRC value of the media sender that is
+	 * 	requested to send a decoder refresh point.
+	 */
+	
+	fci1->ssrc = htonl(rtp_session_get_recv_ssrc(session));
 	fci1->seq_nr = session->rtcp.rtcp_fb_fir_seq_nr;
 	fci1->pad1 = 0;
 	fci1->pad2 = 0;
-	/* TODO: This second FCI is only put for compatibility with older oRTP versions where the recv ssrc
-	 * was used whereas its the send ssrc that needs to be used. Remove this someday! */
-	fci2->ssrc = htonl(rtp_session_get_recv_ssrc(session));
-	fci2->seq_nr = session->rtcp.rtcp_fb_fir_seq_nr;
-	fci2->pad1 = 0;
-	fci2->pad2 = 0;
-	session->rtcp.rtcp_fb_fir_seq_nr++;
-
+	
 	/* Fill common header */
 	rtcp_common_header_init(ch, session, RTCP_PSFB, RTCP_PSFB_FIR, msgdsize(h));
 
