@@ -709,6 +709,7 @@ ORTP_PUBLIC void rtp_session_add_contributing_source(RtpSession *session, uint32
 /* DEPRECATED: Use rtp_session_remove_contributing_source instead of rtp_session_remove_contributing_sources */
 #define rtp_session_remove_contributing_sources rtp_session_remove_contributing_source
 ORTP_PUBLIC void rtp_session_remove_contributing_source(RtpSession *session, uint32_t csrc);
+ORTP_PUBLIC void rtp_session_clear_contributing_sources(RtpSession *session);
 ORTP_PUBLIC mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full);
 
 ORTP_PUBLIC void rtp_session_get_last_recv_time(RtpSession *session, struct timeval *tv);

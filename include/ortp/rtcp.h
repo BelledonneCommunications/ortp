@@ -172,7 +172,8 @@ typedef struct sdes_chunk
 } sdes_chunk_t;
 
 
-#define sdes_chunk_get_csrc(c)	ntohl((c)->csrc)
+#define sdes_chunk_get_ssrc(m) ntohl(((sdes_chunk_t*)((m)->b_rptr))->csrc)
+#define sdes_chunk_get_csrc(c) ntohl((c)->csrc)
 
 typedef struct sdes_item
 {

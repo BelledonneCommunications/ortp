@@ -97,8 +97,6 @@ static void sdes_chunk_set_ssrc(mblk_t *m, uint32_t ssrc){
 	sc->csrc=htonl(ssrc);
 }
 
-#define sdes_chunk_get_ssrc(m) ntohl(((sdes_chunk_t*)((m)->b_rptr))->csrc)
-
 static mblk_t * sdes_chunk_pad(mblk_t *m){
 	return appendb(m,"",1,TRUE);
 }
@@ -193,6 +191,11 @@ void rtp_session_remove_contributing_source(RtpSession *session, uint32_t ssrc) 
 	rtp_session_rtcp_send(session,tmp);
 }
 
+void rtp_session_clear_contributing_sources(RtpSession *session) {
+	queue_t *q=&session->contributing_sources;
+	flushq(q, 0);
+}
+
 void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s,int type, int rc, size_t bytes_len){
 	rtcp_common_header_set_version(ch,2);
 	rtcp_common_header_set_padbit(ch,0);
@@ -221,7 +224,7 @@ mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
 
 	if (full == TRUE) {
 		q = &session->contributing_sources;
-		for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, mp)) {
+		for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, tmp)) {
 			m = concatb(m, dupmsg(tmp));
 			rc++;
 		}
