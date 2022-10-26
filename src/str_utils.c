@@ -248,6 +248,45 @@ void msgpullup(mblk_t *mp, size_t len){
 	firstm->b_wptr=firstm->b_rptr+wlen;
 }
 
+/* pullup message but insert an insert_size zeroised buffer at offset */
+/* final size will be current size + insert size
+ * b->w_bptr is set at the end of the message even if the insertion if performed at the end of the message */
+void msgpullup_with_insert(mblk_t *mp, size_t offset, size_t insert_size) {
+	mblk_t *firstm=mp;
+	dblk_t *db;
+	size_t wlen=0;
+	size_t len = msgdsize(mp);
+	if (offset>=len) {
+		msgpullup(mp, len+insert_size); /* we want to insert it at the end, that's what regular pullup does */
+		mp->b_wptr+=offset-len+insert_size;
+		return;
+	}
+
+	len += insert_size;
+	db = dblk_alloc(len);
+
+	while(mp!=NULL){ /* copy the whole original content, we do not crop as in regular pullup */
+		int mlen=(int)(mp->b_wptr-mp->b_rptr);
+		if (wlen+mlen<=offset || wlen>offset){ /* this whole chunk fit before the blank insert or we already made the insert */
+			memcpy(&db->db_base[wlen],mp->b_rptr,mlen);
+			wlen+=mlen;
+		}else{
+			/* split this chunk */
+			memcpy(&db->db_base[wlen], mp->b_rptr, offset-wlen); /* write up to offset */
+			memset(&db->db_base[offset], 0, insert_size); /* zeroise the inserted part */
+			memcpy(&db->db_base[offset+insert_size], mp->b_rptr + offset-wlen, wlen+mlen-offset); /* copy the rest of this chunk */
+			wlen+=mlen+insert_size;
+		}
+		mp=mp->b_cont;
+	}
+
+	freemsg(firstm->b_cont);
+	firstm->b_cont=NULL;
+	dblk_unref(firstm->b_datap);
+	firstm->b_datap=db;
+	firstm->b_rptr=db->db_base;
+	firstm->b_wptr=firstm->b_rptr+wlen;
+}
 
 mblk_t *copyb(const mblk_t *mp)
 {

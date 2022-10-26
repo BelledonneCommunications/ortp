@@ -58,6 +58,7 @@ struct _OrtpEventData{
 		} zrtp_info;
 		struct _SrtpInfo{
 			bool_t is_send; /**< stream direction this is applied too */
+			bool_t is_inner; /**< this info applies to inner encryption (in case of SRTP double encryption) */
 			int source; /**< the source of the key material as defined in MSSrtpKeySource enum in ms_strp.h */
 			int suite; /**< the srtp crypto suite used as defined in MSCryptoSuite enum in ms_srtp.h */
 		} srtp_info;

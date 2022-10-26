@@ -142,8 +142,11 @@ ORTP_PUBLIC mblk_t	*dupmsg(mblk_t* m);
 /* returns the size of data of a message */
 ORTP_PUBLIC size_t msgdsize(const mblk_t *mp);
 
-/* concatenates all fragment of a complex message*/
+/* concatenates all fragment of a complex message and crop or extend the buffer to the given length */
 ORTP_PUBLIC void msgpullup(mblk_t *mp,size_t len);
+
+/* concatenates all fragment of a complex message and insert an empty buffer of the given length at the given offset */
+ORTP_PUBLIC void msgpullup_with_insert(mblk_t *mp,size_t offset, size_t len);
 
 /* duplicates a single message, but with buffer included */
 ORTP_PUBLIC mblk_t *copyb(const mblk_t *mp);
