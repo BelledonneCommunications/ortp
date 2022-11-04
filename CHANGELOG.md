@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [5.2.0] - 2022-11-14
+
+## Added
+- Possibility to add a CSRC to outgoing packets.
+- Transfer mode: in order to let RtpSession receive and send packet as-is.
+- Frame marking extension headers (https://datatracker.ietf.org/doc/draft-ietf-avtext-framemarking/13/ )
+
+## Changed
+- Optimizations of RTP packet creation when adding extension headers.
+- Licence becomes AGPL-3.
+- Optimizations to bundle mode.
+
+## Fixed
+- Atomic dblk_t refcounting on Windows (lack of atomicity was causing random crashes)
+- Random crash on Windows.
+- Memory leaks with bundle mode.
+
 ## [5.1.0] - 2022-02-14
 
 ### Added
