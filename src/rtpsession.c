@@ -867,6 +867,34 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
 }
 
 /**
+ *	Returns the size of the header a new rtp packet should have using the provided session.
+ *
+ *@param session a rtp session.
+ *@return the header size.
+**/
+size_t rtp_session_calculate_packet_header_size(RtpSession *session) {
+	size_t header_size = RTP_FIXED_HEADER_SIZE;
+
+	// Add CSRC size for active speaker if contributing sources' queue is not empty
+	if (session->contributing_sources.q_mcount > 0) {
+		header_size += sizeof(uint32_t);
+	}
+
+	// Calculate size for mid
+	if (session->bundle) {
+		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+		if (mid != NULL) {
+			size_t mid_size = strlen(mid);
+			size_t padding = (mid_size + 1) % 4 != 0 ? (4 - (mid_size + 1) % 4) : 0;
+			header_size += strlen(mid) + 5 + padding;
+		}
+	}
+
+	return header_size;
+}
+
+/**
  *	Allocates a new rtp packet. In the header, ssrc and payload_type according to the session's
  *	context. Timestamp is not set, it will be set when the packet is going to be
  *	sent with rtp_session_sendm_with_ts(). Sequence number is initalized to previous sequence number sent + 1
@@ -883,26 +911,9 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 	mblk_t *mp;
 	size_t msglen = payload_size;
 	rtp_header_t *rtp;
-	const char *mid = NULL;
 
 	if (header_size == 0) {
-		header_size = RTP_FIXED_HEADER_SIZE;
-
-		// Add CSRC for active speaker if queue is not empty
-		if (session->contributing_sources.q_mcount > 0) {
-			header_size += sizeof(uint32_t);
-		}
-
-		// Calculate size for mid
-		if (session->bundle) {
-			mid = rtp_bundle_get_session_mid(session->bundle, session);
-
-			if (mid != NULL) {
-				size_t mid_size = strlen(mid);
-				size_t padding = (mid_size + 1) % 4 != 0 ? (4 - (mid_size + 1) % 4) : 0;
-				header_size += strlen(mid) + 5 + padding;
-			}
-		}
+		header_size = rtp_session_calculate_packet_header_size(session);
 	}
 
 	msglen += header_size;
@@ -919,9 +930,13 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 	mp->b_wptr += RTP_FIXED_HEADER_SIZE + rtp_get_cc(mp) * sizeof(uint32_t);
 
 	/*add the mid from the bundle if any*/
-	if (session->bundle && mid != NULL) {
-		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-		rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+	if (session->bundle) {
+		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+		if (mid != NULL) {
+			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		}
 	}
 
 	/*copy the payload, if any */
