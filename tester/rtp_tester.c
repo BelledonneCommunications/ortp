@@ -102,7 +102,7 @@ static void send_packets_through_tranfer_session(void) {
 			BC_ASSERT_EQUAL(rtp_get_extbit(transfered_packet), rtp_get_extbit(sent_packet), uint16_t, "%hu");
 			BC_ASSERT_TRUE(rtp_get_seqnumber(transfered_packet) == rtp_get_seqnumber(sent_packet)); // BC_ASSERT_EQUAL here doesn't want to compile on some platforms
 			BC_ASSERT_EQUAL(rtp_get_payload_type(transfered_packet), rtp_get_payload_type(sent_packet), uint16_t, "%hu");
-			BC_ASSERT_EQUAL(rtp_get_ssrc(transfered_packet), rtp_get_ssrc(sent_packet), uint32_t, "%u");
+			BC_ASSERT_TRUE(rtp_get_ssrc(transfered_packet) == rtp_get_ssrc(sent_packet)); // Same here
 			BC_ASSERT_EQUAL(rtp_get_cc(transfered_packet), rtp_get_cc(sent_packet), uint16_t, "%hu");
 			BC_ASSERT_EQUAL(memcmp(transfered_packet->b_rptr + RTP_FIXED_HEADER_SIZE, sent_packet->b_rptr + RTP_FIXED_HEADER_SIZE, msgdsize(transfered_packet) - RTP_FIXED_HEADER_SIZE), 0, int, "%d");
 
