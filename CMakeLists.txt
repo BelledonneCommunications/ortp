@@ -1,23 +1,23 @@
 ############################################################################
-# CMakeLists.txt
-# Copyright (C) 2010-2021 Belledonne Communications, Grenoble France
+# Copyright (c) 2010-2022 Belledonne Communications SARL.
+#
+# This file is part of oRTP 
+# (see https://gitlab.linphone.org/BC/public/ortp).
 #
 ############################################################################
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# GNU Affero General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 ############################################################################
 
 cmake_minimum_required(VERSION 3.1)
@@ -61,6 +61,7 @@ include(CheckIncludeFile)
 include(CheckFunctionExists)
 include(GNUInstallDirs)
 include(CheckCSourceCompiles)
+include(CheckCXXSourceCompiles)
 include(CheckSymbolExists)
 
 if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
@@ -85,14 +86,20 @@ check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
 if(NOT ANDROID)
 	check_include_file(sys/shm.h HAVE_SYS_SHM_H)
 endif()
-check_c_source_compiles("#include <stdatomic.h>
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")# need this for check_cxx_source_compiles because CMAKE_CXX_STANDARD doesn't work.
+check_cxx_source_compiles("#include <atomic>
+using namespace std;
 int main(int argc, char *argv[]) {
-atomic_int currrent_ref;
-atomic_init(&currrent_ref, 1);
-atomic_int previous_ref = atomic_fetch_sub_explicit(&currrent_ref, 1, memory_order_release);
+atomic_int current_ref;
+atomic_init(&current_ref, 1);
+atomic_int previous_ref(atomic_fetch_sub_explicit(&current_ref, 1, memory_order_release));
 return 0;
 }"
-        HAVE_STDATOMIC_H)
+	HAVE_ATOMIC)
+if(NOT HAVE_ATOMIC)
+	message(FATAL_ERROR "Atomic(C++) libraries have not been found for ORTP.")
+endif()
 
 check_function_exists(arc4random HAVE_ARC4RANDOM)
 check_symbol_exists(recvmsg "sys/socket.h" HAVE_RECVMSG)

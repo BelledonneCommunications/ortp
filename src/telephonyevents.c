@@ -1,25 +1,29 @@
 /*
- * Copyright (c) 2010-2019 Belledonne Communications SARL.
+ * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP.
+ * This file is part of oRTP 
+ * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
 #include <ortp/telephonyevents.h>
 #include "utils.h"
 #include "rtpsession_priv.h"
+#include "ortp/str_utils.h"
 #include <ortp/ortp.h>
 #include <bctoolbox/port.h>
 
@@ -159,7 +163,7 @@ int rtp_session_add_telephone_event(RtpSession *session,
 	/* find the place where to add the new telephony event to the packet */
 	while(mp->b_cont!=NULL) mp=mp->b_cont;
 	/* see if we need to allocate a new mblk_t */
-	if ( ( mp->b_wptr) >= (mp->b_datap->db_lim)){
+	if ( ( mp->b_wptr) >= mp->b_datap->db_lim){
 		mblk_t *newm=allocb(TELEPHONY_EVENTS_ALLOCATED_SIZE,BPRI_MED);
 		mp->b_cont=newm;
 		mp=mp->b_cont;

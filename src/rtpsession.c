@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2010-2019 Belledonne Communications SARL.
+ * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP.
+ * This file is part of oRTP 
+ * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -866,13 +867,41 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
 }
 
 /**
+ *	Returns the size of the header a new rtp packet should have using the provided session.
+ *
+ *@param session a rtp session.
+ *@return the header size.
+**/
+size_t rtp_session_calculate_packet_header_size(RtpSession *session) {
+	size_t header_size = RTP_FIXED_HEADER_SIZE;
+
+	// Add CSRC size for active speaker if contributing sources' queue is not empty
+	if (session->contributing_sources.q_mcount > 0) {
+		header_size += sizeof(uint32_t);
+	}
+
+	// Calculate size for mid
+	if (session->bundle) {
+		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+		if (mid != NULL) {
+			size_t mid_size = strlen(mid);
+			size_t padding = (mid_size + 1) % 4 != 0 ? (4 - (mid_size + 1) % 4) : 0;
+			header_size += strlen(mid) + 5 + padding;
+		}
+	}
+
+	return header_size;
+}
+
+/**
  *	Allocates a new rtp packet. In the header, ssrc and payload_type according to the session's
  *	context. Timestamp is not set, it will be set when the packet is going to be
  *	sent with rtp_session_sendm_with_ts(). Sequence number is initalized to previous sequence number sent + 1
  *	If payload_size is zero, thus an empty packet (just a RTP header) is returned.
  *
  *@param session a rtp session.
- *@param header_size the rtp header size. For standart size (without extensions), it is RTP_FIXED_HEADER_SIZE
+ *@param header_size the rtp header size. For standart size (without extensions), it is RTP_FIXED_HEADER_SIZE. If set to 0, it will be calculated automatically.
  *@param payload data to be copied into the rtp packet.
  *@param payload_size size of data carried by the rtp packet.
  *@return a rtp packet in a mblk_t (message block) structure.
@@ -880,13 +909,25 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
 mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const uint8_t *payload, size_t payload_size)
 {
 	mblk_t *mp;
-	size_t msglen=header_size+payload_size;
+	size_t msglen = payload_size;
 	rtp_header_t *rtp;
 
-	mp=allocb(msglen,BPRI_MED);
-	rtp=(rtp_header_t*)mp->b_rptr;
-	rtp_header_init_from_session(rtp,session);
-	mp->b_wptr+=header_size;
+	if (header_size == 0) {
+		header_size = rtp_session_calculate_packet_header_size(session);
+	}
+
+	msglen += header_size;
+
+	mp = allocb(msglen, BPRI_MED);
+	rtp = (rtp_header_t *) mp->b_rptr;
+	rtp_header_init_from_session(rtp, session);
+
+	if (session->contributing_sources.q_mcount > 0) {
+		mblk_t *sdes = peekq(&session->contributing_sources);
+		rtp_header_add_csrc(rtp, sdes_chunk_get_ssrc(sdes));
+	}
+
+	mp->b_wptr += RTP_FIXED_HEADER_SIZE + rtp_get_cc(mp) * sizeof(uint32_t);
 
 	/*add the mid from the bundle if any*/
 	if (session->bundle) {
@@ -922,24 +963,47 @@ mblk_t * rtp_session_create_packet(RtpSession *session,size_t header_size, const
 mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels, const uint8_t *payload, size_t payload_size)
 {
 	mblk_t *mp;
+	size_t msglen = payload_size;
 	rtp_header_t *rtp;
+	const char *mid = NULL;
 
-	mp=allocb(header_size,BPRI_MED);
-	rtp=(rtp_header_t*)mp->b_rptr;
-	rtp_header_init_from_session(rtp,session);
-	mp->b_wptr+=header_size;
+	if (header_size == 0) {
+		header_size = RTP_FIXED_HEADER_SIZE;
+
+		// Calculate size for mixer to client volume (csrc + extension header)
+		if (audio_levels_size > 0) {
+			size_t padding = (audio_levels_size + 1) % 4 != 0 ? (4 - (audio_levels_size + 1) % 4) : 0;
+			header_size += audio_levels_size + 5 + padding;			// Extension
+			header_size += audio_levels_size * sizeof(uint32_t);	// CSRCs
+		}
+
+		// Calculate size for mid
+		if (session->bundle) {
+			mid = rtp_bundle_get_session_mid(session->bundle, session);
+
+			if (mid != NULL) {
+				size_t mid_size = strlen(mid);
+				size_t padding = (mid_size + 1) % 4 != 0 ? (4 - (mid_size + 1) % 4) : 0;
+				header_size += audio_levels_size > 0 ? 0 : 4; // Don't add extension header's header if there is already audio levels
+				header_size += strlen(mid) + 1 + padding;
+			}
+		}
+	}
+
+	msglen += header_size;
+
+	mp = allocb(msglen, BPRI_MED);
+	rtp = (rtp_header_t *) mp->b_rptr;
+	rtp_header_init_from_session(rtp, session);
+	mp->b_wptr += RTP_FIXED_HEADER_SIZE;
 
 	/*this has to be called before adding any other extensions since it changes the header size to add the csrcs*/
 	rtp_add_mixer_to_client_audio_level(mp, mtc_extension_id, audio_levels_size, audio_levels);
 
 	/*add the mid from the bundle if any*/
-	if (session->bundle) {
-		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
-
-		if (mid != NULL) {
-			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-		}
+	if (session->bundle && mid != NULL) {
+		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+		rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
 
 	/*copy the payload, if any */
@@ -1177,7 +1241,7 @@ rtp_session_send_with_ts (RtpSession * session, const uint8_t * buffer, int len,
 #ifdef USE_SENDMSG
 	m=rtp_session_create_packet_with_data(session,(uint8_t*)buffer,len,NULL);
 #else
-	m = rtp_session_create_packet(session,RTP_FIXED_HEADER_SIZE,(uint8_t*)buffer,len);
+	m = rtp_session_create_packet(session,0,(uint8_t*)buffer,len);
 #endif
 	err=rtp_session_sendm_with_ts(session,m,userts);
 	return err;
@@ -1788,6 +1852,8 @@ void rtp_session_uninit (RtpSession * session)
 		freemsg(session->rtcp.send_algo.fb_packets);
 	ortp_mutex_destroy(&session->main_mutex);
 	if (session->recv_block_cache) freemsg(session->recv_block_cache);
+
+	flushq(&session->contributing_sources, 0);
 }
 
 /**

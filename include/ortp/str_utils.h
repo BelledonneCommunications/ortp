@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2010-2019 Belledonne Communications SARL.
+ * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP.
+ * This file is part of oRTP 
+ * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -71,8 +72,13 @@ typedef struct msgb
 } mblk_t;
 
 
-
-typedef struct datab dblk_t;
+// Data Block
+typedef struct datab {
+	unsigned char *db_base;
+	unsigned char *db_lim;
+	void (*db_freefn)(void*);
+	void * db_ref;	// Atomic variable
+} dblk_t;
 
 typedef struct _queue
 {
@@ -84,11 +90,14 @@ typedef struct _queue
 extern "C" {
 #endif
 
+ORTP_PUBLIC dblk_t *dblk_alloc(size_t size);
+ORTP_PUBLIC dblk_t *dblk_alloc2(uint8_t *buf, size_t size, void (*freefn)(void*));
 ORTP_PUBLIC void dblk_ref(dblk_t *d);
 ORTP_PUBLIC void dblk_unref(dblk_t *d);
+ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
 ORTP_PUBLIC unsigned char * dblk_base(dblk_t *db);
 ORTP_PUBLIC unsigned char * dblk_lim(dblk_t *db);
-ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
+
 
 ORTP_PUBLIC void qinit(queue_t *q);
 

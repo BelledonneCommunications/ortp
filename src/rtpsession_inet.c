@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2010-2019 Belledonne Communications SARL.
+ * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP.
+ * This file is part of oRTP 
+ * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -31,8 +32,8 @@
 #endif
 #include <bctoolbox/port.h>
 #include "ortp/ortp.h"
+#include "ortp/str_utils.h"
 #include "utils.h"
-#include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
 
 #if (_WIN32_WINNT >= 0x0600)
@@ -1913,9 +1914,15 @@ void rtp_session_process_incoming(RtpSession * session, mblk_t *mp, bool_t is_rt
 
 static mblk_t *rtp_session_alloc_recv_block(RtpSession *session){
 	mblk_t *m = NULL;
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_lock(&session->rtp.winrq_lock);
+#endif
 	if ((m = session->recv_block_cache) != NULL){
 		session->recv_block_cache = NULL;
 	}
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_unlock(&session->rtp.winrq_lock);
+#endif
 	if (!m){
 		m = allocb(session->recv_buf_size, 0);
 	}
@@ -1923,7 +1930,7 @@ static mblk_t *rtp_session_alloc_recv_block(RtpSession *session){
 }
 
 static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m){
-	if (m->b_datap->db_ref > 1){
+	if (dblk_ref_value(m->b_datap) > 1){
 		/* The mblk_t may have been duplicated by the RtpTransport/RtpModifier. We shall consider the underlying buffer
 		 * cannot be used anymore */
 		ortp_warning("The RtpTransport has kept a ref on a mblk_t's underlying buffer. This prevents recycling.");
@@ -1933,9 +1940,18 @@ static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m){
 	/* Reset read, write pointers to their original place. Indeed the RtpTransport/RtpModifier may have play
 	 * with them before discarding the mblk_t. */
 	m->b_wptr = m->b_rptr = m->b_datap->db_base;
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+	ortp_mutex_lock(&session->rtp.winrq_lock);
+#endif
 	if (session->recv_block_cache == NULL){
 		session->recv_block_cache = m;
+#if	defined(_WIN32) || defined(_WIN32_WCE)
+		ortp_mutex_unlock(&session->rtp.winrq_lock);
 	}else{
+		ortp_mutex_unlock(&session->rtp.winrq_lock);
+#else
+	}else{
+#endif
 		ortp_error("Should not happen");
 		freeb(m);
 	}

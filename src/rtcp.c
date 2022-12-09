@@ -1,19 +1,20 @@
 /*
- * Copyright (c) 2010-2019 Belledonne Communications SARL.
+ * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP.
+ * This file is part of oRTP 
+ * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU Affero General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
+ * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
@@ -24,7 +25,9 @@
  *  Copyright  2004  Simon Morlat
  *  Email simon dot morlat at linphone dot org
  ****************************************************************************/
-
+#ifdef HAVE_CONFIG_H
+#include "ortp-config.h"
+#endif
 #include "ortp/ortp.h"
 #include "ortp/rtpsession.h"
 #include "ortp/rtcp.h"
@@ -93,8 +96,6 @@ static void sdes_chunk_set_ssrc(mblk_t *m, uint32_t ssrc){
 	sdes_chunk_t *sc=(sdes_chunk_t*)m->b_rptr;
 	sc->csrc=htonl(ssrc);
 }
-
-#define sdes_chunk_get_ssrc(m) ntohl(((sdes_chunk_t*)((m)->b_rptr))->csrc)
 
 static mblk_t * sdes_chunk_pad(mblk_t *m){
 	return appendb(m,"",1,TRUE);
@@ -190,6 +191,11 @@ void rtp_session_remove_contributing_source(RtpSession *session, uint32_t ssrc) 
 	rtp_session_rtcp_send(session,tmp);
 }
 
+void rtp_session_clear_contributing_sources(RtpSession *session) {
+	queue_t *q=&session->contributing_sources;
+	flushq(q, 0);
+}
+
 void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s,int type, int rc, size_t bytes_len){
 	rtcp_common_header_set_version(ch,2);
 	rtcp_common_header_set_padbit(ch,0);
@@ -218,7 +224,7 @@ mblk_t* rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
 
 	if (full == TRUE) {
 		q = &session->contributing_sources;
-		for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, mp)) {
+		for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, tmp)) {
 			m = concatb(m, dupmsg(tmp));
 			rc++;
 		}
