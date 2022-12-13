@@ -28,7 +28,7 @@ if(NOT CMAKE_VERSION VERSION_LESS 3.13)
     cmake_policy(SET CMP0077 NEW)
 endif()
 
-project(oRTP VERSION 5.2.0)
+project(oRTP VERSION 5.3.0)
 
 
 
