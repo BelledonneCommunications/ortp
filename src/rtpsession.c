@@ -2150,7 +2150,7 @@ int rtp_session_get_last_recv_error_code(RtpSession *session){
 }
 
 void rtp_session_clear_recv_error_code(RtpSession *session){
-	session->rtp.send_errno=0;
+	session->rtp.recv_errno=0;
 }
 
 /**
