@@ -354,9 +354,9 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 			|| RTP_SEQ_IS_STRICTLY_GREATER_THAN(session->rtp.rcv_last_seq, seq_number)) {
 			/* don't queue packets older than the last returned packet to the application, or whose sequence number
 			 is behind the last packet returned to the application*/
-			/* Call timstamp jumb in case of
+			/* Call timestamp jump in case of
 			 * large negative Ts jump or if ts is set to 0
-			*/
+			 */
 
 			if ( RTP_TIMESTAMP_IS_STRICTLY_NEWER_THAN(session->rtp.rcv_last_ts, timestamp + session->rtp.ts_jump) ){
 				ortp_warning("rtp_parse: negative timestamp jump detected");
