@@ -37,7 +37,6 @@ set(ORTP_SOURCE_FILES_C
 	congestiondetector.c
 	event.c
 	extremum.c
-	fecstream.c
 	jitterctl.c
 	kalmanrls.c
 	logging.c
@@ -69,6 +68,7 @@ set(ORTP_SOURCE_FILES_C
 set(ORTP_SOURCE_FILES_CXX
 	dblk.cc	#HAVE_ATOMIC is mandatory
 	rtpbundle.cc
+	fecstream.cc
 )
 
 add_definitions(

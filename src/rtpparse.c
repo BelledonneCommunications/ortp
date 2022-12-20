@@ -381,7 +381,12 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		 */
 		check_for_seq_number_gap_immediate(session, rtp);
 	}
-
+	if(session->fec_stream != NULL)
+	{
+		fec_stream_on_new_packet_recieved(session->fec_stream, mp);
+	}
+		
+	
 	if (queue_packet(&session->rtp.rq,session->rtp.jittctl.params.max_packets,mp,rtp,&discarded,&duplicate))
 		jitter_control_update_size(&session->rtp.jittctl,&session->rtp.rq);
 	stats->discarded+=discarded;
@@ -393,6 +398,5 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 	if ((discarded == 0) && (duplicate == 0)) {
 		session->rtcp_xr_stats.rcv_count++;
 	}
-	if(session->fec_stream != NULL)
-		fec_stream_on_new_source_packet_received(session->fec_stream, mp);
+
 }

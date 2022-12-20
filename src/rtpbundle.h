@@ -39,10 +39,10 @@ class RtpBundleCxx {
 
 	RtpBundleCxx(const RtpBundleCxx &) = delete;
 	RtpBundleCxx(RtpBundleCxx &&) = delete;
-
+	
 	int getMidId() const;
 	void setMidId(int id);
-
+	void addFecSession(const RtpSession *sourceSession, RtpSession *fecSession);
 	void addSession(const std::string &mid, RtpSession *session);
 	void removeSession(const std::string &mid);
 	void removeSession(RtpSession *session);
@@ -73,10 +73,11 @@ class RtpBundleCxx {
 	RtpSession *primary = NULL;
 	std::map<uint32_t, Mid> ssrcToMid;
 	std::map<std::string, RtpSession *> sessions;
+	std::map<std::string, RtpSession *> fec_sessions;
 	std::mutex ssrcToMidMutex;
 
 	std::string sdesParseMid = "";
 	int midId = -1;
-};
+};	
 
 #endif /* RTPBUNDLE_H */

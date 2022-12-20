@@ -1013,3 +1013,18 @@ PayloadType payload_type_codec2={
 	NO_AVPF,
 	FLAGS(0)
 };
+
+PayloadType payload_type_flexfec={
+	TYPE(PAYLOAD_VIDEO),
+	CLOCK_RATE(90000),
+	BITS_PER_SAMPLE(0),
+	ZERO_PATTERN(NULL),
+	PATTERN_LENGTH(0),
+	NORMAL_BITRATE(3200),
+	MIME_TYPE("flexfec"),
+	CHANNELS(0),
+	RECV_FMTP("repair-window=200000"),
+	SEND_FMTP("repair-window=200000"),
+	NO_AVPF,
+	FLAGS(0)
+};

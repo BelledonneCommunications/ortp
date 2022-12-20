@@ -1187,8 +1187,10 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 		session->duplication_left -= 1.f;
 	}
 
+	
 	if((session->fec_stream != NULL) && (mp != NULL)){
-		fec_stream_on_new_source_packet_sent(session->fec_stream, mp);
+		
+		fec_stream_on_new_packet_sent(session->fec_stream, mp);
 	}
 
 	error = rtp_session_rtp_send (session, mp);
@@ -1217,9 +1219,6 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 int rtp_session_sendm_with_ts(RtpSession *session, mblk_t *packet, uint32_t timestamp){
 	return __rtp_session_sendm_with_ts(session,packet,timestamp+session->send_ts_offset,timestamp+session->send_ts_offset);
 }
-
-
-
 
 /**
  *	Send a rtp datagram to the destination set by rtp_session_set_remote_addr() containing
@@ -1423,22 +1422,20 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	end:
 	if (session->fec_stream != NULL && mp != NULL){
 		if (session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
-			mblk_t *fec_mp = fec_stream_reconstruct_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
-			session->fec_stream->total_lost_packets++;
+			mblk_t *fec_mp = fec_stream_find_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
+			//mblk_t *fec_mp = NULL;
 			if (fec_mp != NULL){
 				OrtpEvent *ev;
 				OrtpEventData *evdata;
 
 				mp = fec_mp;
-				ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u", (int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
+				ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u" ,(int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
 				ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
 				evdata = ortp_event_get_data(ev);
 				evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
 				rtp_session_dispatch_event(session, ev);
 			} else {
-				ortp_message("Unable to reconstuct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
-				fec_stream_reconstruction_error(session->fec_stream, rtp_get_seqnumber(mp));
-				session->fec_stream->reconstruction_fail++;
+				ortp_message("Unable to reconstruct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
 				if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
 			}
 		} else {
@@ -2176,10 +2173,11 @@ float rtp_session_get_round_trip_propagation(RtpSession *session){
 **/
 void rtp_session_destroy (RtpSession * session)
 {
-    if(session->fec_stream != NULL){
-        if(session->fec_stream->fec_session != NULL){
-            rtp_session_destroy(session->fec_stream->fec_session);
-            session->fec_stream->fec_session = NULL;
+   if(session->fec_stream != NULL){
+		RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
+        if(fec_session){
+            rtp_session_destroy(fec_session);
+            fec_session = NULL;
         }
         fec_stream_destroy(session->fec_stream);
         session->fec_stream = NULL;
@@ -2917,9 +2915,10 @@ void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable) {
 	if (enable) {
 		rtp_session_enable_jitter_buffer(session, FALSE);
 		if (session->fec_stream != NULL) {
-			if (session->fec_stream->fec_session != NULL) {
-				rtp_session_destroy(session->fec_stream->fec_session);
-				session->fec_stream->fec_session = NULL;
+			RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
+			if(fec_session){
+				rtp_session_destroy(fec_session);
+				fec_session = NULL;
 			}
 			fec_stream_destroy(session->fec_stream);
 			session->fec_stream = NULL;

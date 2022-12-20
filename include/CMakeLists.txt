@@ -22,8 +22,7 @@
 
 set(HEADER_FILES
 	b64.h
-        event.h
-        fecstream.h
+    event.h
 	logging.h
 	nack.h
 	ortp.h

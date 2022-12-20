@@ -44,7 +44,6 @@
 #include <ortp/utils.h>
 #include <ortp/rtpsignaltable.h>
 #include <ortp/event.h>
-#include <ortp/fecstream.h>
 
 #define ORTP_AVPF_FEATURE_NONE 0
 #define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
@@ -455,7 +454,7 @@ struct _RtpSession
 	/* bundle mode */
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
 	/* fec option */
-	FecStream *fec_stream;
+	struct _FecStream *fec_stream;
 	bool_t symmetric_rtp;
 	bool_t permissive; /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -808,6 +807,8 @@ ORTP_PUBLIC int rtp_bundle_get_mid_extension_id(RtpBundle *bundle);
 ORTP_PUBLIC void rtp_bundle_set_mid_extension_id(RtpBundle *bundle, int id);
 
 ORTP_PUBLIC void rtp_bundle_add_session(RtpBundle *bundle, const char *mid, RtpSession *session);
+ORTP_PUBLIC void rtp_bundle_add_fec_session(RtpBundle *bundle,  const RtpSession *source_session, RtpSession *fec_session);
+
 ORTP_PUBLIC void rtp_bundle_remove_session_by_id(RtpBundle *bundle, const char *mid);
 ORTP_PUBLIC void rtp_bundle_remove_session(RtpBundle *bundle, RtpSession *session);
 ORTP_PUBLIC void rtp_bundle_clear(RtpBundle *bundle);
@@ -822,6 +823,36 @@ ORTP_PUBLIC int rtp_bundle_send_through_primary(RtpBundle *bundle, bool_t is_rtp
 ORTP_PUBLIC bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m);
 ORTP_PUBLIC void rtp_session_use_local_addr(RtpSession * session, const char * rtp_local_addr, const char * rtcp_local_addr);
 
+
+typedef struct _FecStream FecStream;
+typedef struct FecParameters_t {
+	uint8_t L;
+	uint8_t D;
+	uint32_t repairWindow;
+
+} FecParameters;
+
+typedef struct fec_stats_t {
+
+	int col_repair_sended;
+	int col_repair_recieved;
+	int row_repair_sended;
+	int row_repair_recieved;
+	int packets_lost;
+	int packets_recovered;
+	
+} fec_stats;
+
+ORTP_PUBLIC FecStream * fec_stream_new(struct _RtpSession * source, struct _RtpSession * fec, FecParameters * fecParams);
+ORTP_PUBLIC void fec_stream_destroy(FecStream * fec_stream);
+ORTP_PUBLIC void fec_stream_on_new_packet_sent(FecStream * fec_stream, mblk_t * packet);
+ORTP_PUBLIC void fec_stream_on_new_packet_recieved(FecStream * fec_stream, mblk_t * packet);
+ORTP_PUBLIC mblk_t * fec_stream_find_missing_packet(FecStream * fec_stream, uint16_t seqnum);
+ORTP_PUBLIC RtpSession * fec_stream_get_fec_session(FecStream * fec_stream);
+ORTP_PUBLIC FecParameters *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow);
+ORTP_PUBLIC void fec_stream_print_stats(FecStream *fec_stream);
+ORTP_PUBLIC void fec_stream_init(FecStream *fec_stream);
+ORTP_PUBLIC fec_stats * fec_stream_get_stats(FecStream *fec_stream);
 #ifdef __cplusplus
 }
 #endif

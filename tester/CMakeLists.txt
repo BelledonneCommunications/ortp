@@ -38,12 +38,15 @@ set(RAW_FILES
 set(SOURCE_FILES_C
 	ortp_tester.c
 	extension_header_tester.c
-	fec_tester.c
 	rtp_tester.c
 )
 
+set (CMAKE_CXX_STANDARD 11)
+
 set(IOS_RESOURCE_FILE)
-set(SOURCE_FILES_CXX)
+set(SOURCE_FILES_CXX
+	fec_tester.cc
+)
 set(SOURCE_FILES_OBJC)
 
 bc_apply_compile_flags(SOURCE_FILES_C STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
