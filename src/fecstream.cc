@@ -513,7 +513,8 @@ bool RecieveCluster::repairPacketsTooOld(FecParameters const &parameters) {
 
 	auto sizeRow = rowRepair.size();
 	auto sizeCol = colRepair.size();
-	return (sizeRow + sizeCol > 3*(parameters.L + parameters.D));
+	auto tooOldCondition = 3U*(parameters.L + parameters.D);
+	return (sizeRow + sizeCol > tooOldCondition);
 }
 void RecieveCluster::clearRepairPackets() {
 	rowRepair.clear();
