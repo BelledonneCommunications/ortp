@@ -118,9 +118,17 @@ typedef struct _WaitPoint
 	bool_t wakeup;
 } WaitPoint;
 
+typedef enum {
+	RtpTransportModifierLevelEncryption,
+	RtpTransportModifierLevelForwardErrorCorrection
+} RtpTransportModifierLevel;
+
+#define ORTP_RTP_TRANSPORT_MODIFIER_DEFAULT_LEVEL RtpTransportModifierLevelEncryption
+
 typedef struct _RtpTransportModifier
 {
 	void *data;
+	RtpTransportModifierLevel level;
 	struct _RtpSession *session;//<back pointer to the owning session, set by oRTP
 	struct _RtpTransport *transport;//<back point to the owning transport, set by oRTP
 	int  (*t_process_on_send)(struct _RtpTransportModifier *t, mblk_t *msg);
@@ -625,6 +633,7 @@ ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int
 
 /*low level recv and send functions */
 ORTP_PUBLIC mblk_t * rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts);
+ORTP_PUBLIC mblk_t * rtp_session_create_repair_packet(RtpSession *fecSession, RtpSession *sourceSession);
 ORTP_PUBLIC mblk_t * rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t *payload, size_t payload_size);
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t packet_size);
 ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, size_t payload_size, void (*freefn)(void*));
@@ -772,6 +781,7 @@ ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen);
 ORTP_PUBLIC int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
 
+ORTP_PUBLIC int meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTransportModifier *modifier, mblk_t * msg);
 /**
  * get endpoint if any
  * @param[in] transport RtpTransport object.
@@ -847,6 +857,7 @@ ORTP_PUBLIC FecStream * fec_stream_new(struct _RtpSession * source, struct _RtpS
 ORTP_PUBLIC void fec_stream_destroy(FecStream * fec_stream);
 ORTP_PUBLIC void fec_stream_on_new_packet_sent(FecStream * fec_stream, mblk_t * packet);
 ORTP_PUBLIC void fec_stream_on_new_packet_recieved(FecStream * fec_stream, mblk_t * packet);
+ORTP_PUBLIC void fec_stream_recieve_repair_packet(FecStream *fec_stream, uint32_t timestamp);
 ORTP_PUBLIC mblk_t * fec_stream_find_missing_packet(FecStream * fec_stream, uint16_t seqnum);
 ORTP_PUBLIC RtpSession * fec_stream_get_fec_session(FecStream * fec_stream);
 ORTP_PUBLIC FecParameters *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow);

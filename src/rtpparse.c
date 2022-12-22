@@ -381,10 +381,11 @@ void rtp_session_rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_t
 		 */
 		check_for_seq_number_gap_immediate(session, rtp);
 	}
-	if(session->fec_stream != NULL)
-	{
-		fec_stream_on_new_packet_recieved(session->fec_stream, mp);
-	}
+
+	// if(session->fec_stream != NULL)
+	// {
+	// 	fec_stream_on_new_packet_recieved(session->fec_stream, mp);
+	// }
 		
 	
 	if (queue_packet(&session->rtp.rq,session->rtp.jittctl.params.max_packets,mp,rtp,&discarded,&duplicate))

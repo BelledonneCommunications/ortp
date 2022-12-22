@@ -71,8 +71,8 @@ class ORTP_PUBLIC Bitstring {
 class ORTP_PUBLIC FecSourcePacket {
 
   private:
-	mblk_t *packet;
-	Bitstring bitstring;
+	mblk_t *mPacket;
+	Bitstring mBitstring;
 
   public:
 	FecSourcePacket(struct _RtpSession *session, const Bitstring &bs);
@@ -85,35 +85,39 @@ class ORTP_PUBLIC FecSourcePacket {
 	void add(FecSourcePacket const &other);
 
 	void writeBitstring();
-	void writeBitstring(uint16_t seqnum);
 	size_t getPayloadBuffer(uint8_t **start) const;
 	void addPayload(FecSourcePacket const &other);
 	void addPayload(const uint8_t *toAdd, size_t size);
 	void initPayload(uint16_t length);
 	mblk_t *getPacket() const {
-		return packet;
+		return mPacket;
 	}
 	mblk_t *getPacketCopy() const {
-		return copymsg(packet);
+		return copymsg(mPacket);
 	}
 	const Bitstring &getBitstring() const {
-		return bitstring;
+		return mBitstring;
 	}
 	mblk_t *transfer();
-
+	void setSsrc(uint32_t ssrc){
+		rtp_set_ssrc(mPacket,ssrc);
+	};
+	void setSequenceNumber(uint16_t seqnum){
+		rtp_set_seqnumber(mPacket, seqnum);
+	};
 	~FecSourcePacket() {
-		if (packet) {
-			freemsg(packet);
+		if (mPacket) {
+			freemsg(mPacket);
 		}
 	}
 };
 
 class ORTP_PUBLIC FecRepairPacket {
   private:
-	mblk_t *packet;
-	uint8_t L;
-	uint8_t D;
-	uint16_t seqnumBase;
+	mblk_t *mPacket;
+	uint8_t mL;
+	uint8_t mD;
+	uint16_t mSeqnumBase;
 
   public:
 	FecRepairPacket();
@@ -121,14 +125,16 @@ class ORTP_PUBLIC FecRepairPacket {
 	FecRepairPacket(const FecRepairPacket &other) = delete;
 	FecRepairPacket &operator=(const FecRepairPacket &other) = delete;
 
-	FecRepairPacket(struct _RtpSession *session, uint16_t seqnumBase, uint8_t L, uint8_t D);
+	FecRepairPacket(struct _RtpSession *fecSession, struct _RtpSession *sourceSession, uint16_t seqnumBase, uint8_t L, uint8_t D);
 	void addBitstring(Bitstring const &bitstring);
 	size_t bitstringStart(uint8_t **start) const;
 	Bitstring extractBitstring() const;
 	size_t parametersStart(uint8_t **start) const;
 
 	size_t repairPayloadStart(uint8_t **start) const;
-
+	uint32_t getProtectedSsrc() const {
+		return rtp_get_csrc(mPacket, 0);
+	}
 	void addPayload(FecSourcePacket const &sourcePacket);
 	void add(FecSourcePacket const &sourcePacket);
 
@@ -136,33 +142,33 @@ class ORTP_PUBLIC FecRepairPacket {
 	std::vector<uint16_t> createSequenceNumberList() const;
 
 	uint8_t getL() const {
-		return L;
+		return mL;
 	};
 	uint8_t getD() const {
-		return D;
+		return mD;
 	};
 	uint16_t getSeqnumBase() const {
-		return seqnumBase;
+		return mSeqnumBase;
 	};
 	mblk_t *transfer() {
-		if (packet) {
-			mblk_t *ret = packet;
-			packet = nullptr;
+		if (mPacket) {
+			mblk_t *ret = mPacket;
+			mPacket = nullptr;
 			return ret;
 		}
 		return nullptr;
 	}
 	mblk_t *getRepairPacket() const {
-		return packet;
+		return mPacket;
 	};
 	mblk_t *getCopy() {
-		if (packet)
-			return copymsg(packet);
+		if (mPacket)
+			return copymsg(mPacket);
 		return nullptr;
 	}
 	~FecRepairPacket() {
-		if (packet) {
-			freemsg(packet);
+		if (mPacket) {
+			freemsg(mPacket);
 		}
 	};
 };
@@ -170,14 +176,15 @@ class ORTP_PUBLIC FecRepairPacket {
 class ORTP_PUBLIC FecEncoder {
 
   private:
-	std::vector<std::shared_ptr<FecRepairPacket>> rowRepair;
-	std::vector<std::shared_ptr<FecRepairPacket>> colRepair;
-	RtpSession *session;
-	int loading;
-	int columns;
-	int rows;
-	int size;
-	bool is2D;
+	std::vector<std::shared_ptr<FecRepairPacket>> mRowRepair;
+	std::vector<std::shared_ptr<FecRepairPacket>> mColRepair;
+	RtpSession *mFecSession;
+	RtpSession *mSourceSession;
+	int mLoading;
+	int mColumns;
+	int mRows;
+	int mSize;
+	bool mIs2D;
 	void initRowRepairPackets(uint16_t seqnumBase);
 	void resetRowRepairPackets(uint16_t seqnumBase);
 	void initColRepairPackets(uint16_t seqnumBase);
@@ -188,46 +195,46 @@ class ORTP_PUBLIC FecEncoder {
 
 	FecEncoder(){};
 	FecEncoder(FecParameters *parameters);
-	void init(struct _RtpSession *session);
+	void init(struct _RtpSession *fecSession, struct _RtpSession *sourceSession);
 	void add(FecSourcePacket const &packet);
 	bool isFull() const {
-		return loading == size;
+		return mLoading == mSize;
 	};
 	void reset(uint16_t nextSequenceNumber);
 	int getCurrentColumn() const {
-		return ((loading - 1) % columns);
+		return ((mLoading - 1) % mColumns);
 	};
 	bool isColFull() const {
-		return (getCurrentRow() == (rows - 1));
+		return (getCurrentRow() == (mRows - 1));
 	};
 	int getCurrentRow() const {
-		return (is2D) ? ((loading - 1) / columns) : 0;
+		return (mIs2D) ? ((mLoading - 1) / mColumns) : 0;
 	};
 	bool isRowFull() const {
-		return (getCurrentColumn() == (columns - 1));
+		return (getCurrentColumn() == (mColumns - 1));
 	};
 	int getRows() const {
-		return rows;
+		return mRows;
 	};
 	int getColumns() const {
-		return columns;
+		return mColumns;
 	};
 	int getSize() const {
-		return size;
+		return mSize;
 	};
 
 	const std::vector<std::shared_ptr<FecRepairPacket>> &getRowRepair() {
-		return rowRepair;
+		return mRowRepair;
 	};
 	mblk_t *getRowRepairMblk(int i);
 	std::shared_ptr<FecRepairPacket> getRowRepair(int i) {
-		return rowRepair[i];
+		return mRowRepair[i];
 	};
 	std::shared_ptr<FecRepairPacket> getColRepair(int i) {
-		return colRepair[i];
+		return mColRepair[i];
 	};
 	const std::vector<std::shared_ptr<FecRepairPacket>> &getColRepair() {
-		return colRepair;
+		return mColRepair;
 	};
 	mblk_t *getColRepairMblk(int i);
 };
@@ -236,22 +243,23 @@ class ORTP_PUBLIC RecieveCluster {
 
   private:
 
-	uint32_t repairWindow = 200000;
-	RtpSession *session;
-	std::map<uint16_t, std::shared_ptr<FecSourcePacket>> source;
-	std::vector<std::shared_ptr<FecRepairPacket>> rowRepair;
-	std::vector<std::shared_ptr<FecRepairPacket>> colRepair;
+	uint32_t mRepairWindow = 200000;
+	RtpSession *mSession;
+	RtpTransportModifier * mModifier;
+	std::map<uint16_t, std::shared_ptr<FecSourcePacket>> mSource;
+	std::vector<std::shared_ptr<FecRepairPacket>> mRowRepair;
+	std::vector<std::shared_ptr<FecRepairPacket>> mColRepair;
 	void addRepair(FecSourcePacket &source, FecRepairPacket const &repair);
-
+	
   public:
 
 
 	RecieveCluster(struct _RtpSession *session) {
-		this->session = session;
+		this->mSession = session;
 	};
 	RecieveCluster(struct _RtpSession *session, int repair) {
-		repairWindow = repair;
-		this->session = session;
+		mRepairWindow = repair;
+		this->mSession = session;
 	};
 	std::shared_ptr<FecSourcePacket> getSourcePacket(uint16_t seqnum);
 	void add(uint16_t seqnum, const std::shared_ptr<FecSourcePacket> &packet);
@@ -263,8 +271,11 @@ class ORTP_PUBLIC RecieveCluster {
 	int repairOne(FecRepairPacket const &repairPacket);
 	int repair1D(bool interleaved);
 	int repair2D();
+	void setModifier(struct _RtpTransportModifier * modifier){
+		this->mModifier = modifier;
+	};
 	uint32_t getRepairWindow() {
-		return repairWindow;
+		return mRepairWindow;
 	};
 	void print();
 	~RecieveCluster(){};
@@ -274,26 +285,36 @@ class ORTP_PUBLIC FecStreamCxx {
 
   private:
 	FecParameters *parameters;
-	RtpSession *sourceSession;
-	RtpSession *fecSession;
-	FecEncoder encoder;
-	RecieveCluster cluster;
-	fec_stats stats;
+	RtpSession *mSourceSession;
+	RtpSession *mFecSession;
+	FecEncoder mEncoder;
+	RecieveCluster mCluster;
+	fec_stats mStats;
+	RtpTransportModifier *mModifier;
 
   public:
 	FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParameters *fecParams);
 	void init();
+	static int processOnSend(struct _RtpTransportModifier *m,mblk_t *packet);
+	static int processOnRecieve(struct _RtpTransportModifier *m,mblk_t *packet);
 	void onNewSourcePacketSent(mblk_t *packet);
 	void onNewSourcePacketRecieved(mblk_t *packet);
+	void recieveRepairPacket(uint32_t timestamp);
 	mblk_t *findMissingPacket(uint16_t seqnum);
-	RtpSession *getFecSession() {
-		return fecSession;
+	RtpSession *getFecSession() const{
+		return mFecSession;
+	};
+	RtpSession *getSourceSession() const{
+		return mSourceSession;
 	};
 	fec_stats *getStats() {
-		return &stats;
+		return &mStats;
 	};
 	void printStats();
 	~FecStreamCxx(){};
 };
+
+
+void modifierFree(struct _RtpTransportModifier *m);
 } // namespace ortp
 #endif

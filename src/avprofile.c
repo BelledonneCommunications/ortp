@@ -1023,8 +1023,8 @@ PayloadType payload_type_flexfec={
 	NORMAL_BITRATE(3200),
 	MIME_TYPE("flexfec"),
 	CHANNELS(0),
-	RECV_FMTP("repair-window=200000"),
-	SEND_FMTP("repair-window=200000"),
+	RECV_FMTP("repair-window=200000;L=5;D=5"),
+	SEND_FMTP("repair-window=200000;L=5;D=5"),
 	NO_AVPF,
 	FLAGS(0)
 };

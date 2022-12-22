@@ -893,7 +893,31 @@ size_t rtp_session_calculate_packet_header_size(RtpSession *session) {
 
 	return header_size;
 }
+mblk_t * rtp_session_create_repair_packet(RtpSession *fecSession, RtpSession *sourceSession){
+	mblk_t *mp;
+	size_t msglen = 0;
+	size_t header_size = RTP_FIXED_HEADER_SIZE;
+	rtp_header_t *rtp;
+	uint32_t protected_stream_ssrc = rtp_session_get_send_ssrc(sourceSession);
 
+	msglen += header_size;
+
+	mp = allocb(msglen, BPRI_MED);
+	rtp = (rtp_header_t *) mp->b_rptr;
+	rtp_header_init_from_session(rtp, fecSession);
+	rtp_add_csrc(mp, protected_stream_ssrc);
+	mp->b_wptr += RTP_FIXED_HEADER_SIZE + rtp_get_cc(mp) * sizeof(uint32_t);
+
+	if (fecSession->bundle) {
+		const char *mid = rtp_bundle_get_session_mid(fecSession->bundle, fecSession);
+
+		if (mid != NULL) {
+			int midId = rtp_bundle_get_mid_extension_id(fecSession->bundle);
+			rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		}
+	}
+	return mp;
+}
 /**
  *	Allocates a new rtp packet. In the header, ssrc and payload_type according to the session's
  *	context. Timestamp is not set, it will be set when the packet is going to be
@@ -1188,10 +1212,10 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, u
 	}
 
 	
-	if((session->fec_stream != NULL) && (mp != NULL)){
+	// if((session->fec_stream != NULL) && (mp != NULL)){
 		
-		fec_stream_on_new_packet_sent(session->fec_stream, mp);
-	}
+	// 	fec_stream_on_new_packet_sent(session->fec_stream, mp);
+	// }
 
 	error = rtp_session_rtp_send (session, mp);
 
@@ -1423,19 +1447,17 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	if (session->fec_stream != NULL && mp != NULL){
 		if (session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)){
 			mblk_t *fec_mp = fec_stream_find_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
-			//mblk_t *fec_mp = NULL;
 			if (fec_mp != NULL){
 				OrtpEvent *ev;
 				OrtpEventData *evdata;
 
 				mp = fec_mp;
-				ortp_message("Source packet reconstructed : SeqNum = %d ; TimeStamp = %u" ,(int)rtp_get_seqnumber(mp), (unsigned int)rtp_get_timestamp(mp));
+			
 				ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
 				evdata = ortp_event_get_data(ev);
 				evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
 				rtp_session_dispatch_event(session, ev);
 			} else {
-				ortp_message("Unable to reconstruct source packet : SeqNum = %d", (int)(session->rtp.rcv_last_seq + 1));
 				if(!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
 			}
 		} else {
@@ -1492,7 +1514,9 @@ rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts)
 	{
 		ortp_debug ("No mp for timestamp queried");
 	}
-
+	if(session->fec_stream != NULL){
+		fec_stream_recieve_repair_packet(session->fec_stream, user_ts);
+	}
 	rtp_session_rtcp_process_recv(session);
 
 	if (session->flags & RTP_SESSION_SCHEDULED)
@@ -2645,12 +2669,12 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransp
 	for (;elem != NULL; elem = o_list_next(elem)) {
 		last_elem = elem;
 	}
-
 	prev_ret = msgdsize(msg);
 	ret = (int)prev_ret;
 	for (;last_elem != NULL; last_elem = o_list_prev(last_elem)) {
 		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
 		RtpTransportModifier *rtm = (RtpTransportModifier*)last_elem->data;
+	
 		if (foundMyself == TRUE) {
 			ret = rtm->t_process_on_receive(rtm, msg);
 			if (ret < 0) {
@@ -2660,7 +2684,6 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransp
 			msg->b_wptr += ((size_t)ret - prev_ret);
 			prev_ret = (size_t)ret;
 		}
-
 		/* check if we must inject the packet */
 		if (rtm == tpm) {
 			foundMyself = TRUE;
@@ -2675,10 +2698,40 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransp
 int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
 	int ret = _meta_rtp_transport_recv_through_modifiers(t, tpm, msg, flags);
+	//passing last_app_ts causes an approximation error in the jitter buffer.
 	rtp_session_process_incoming(t->session, msg, m->is_rtp, msg->reserved1, FALSE);
 	return ret;
 }
 
+int meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTransportModifier *modifier, mblk_t * msg){
+	int ret = 0;
+	size_t prev_ret;
+
+	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)t->data;
+	OList *elem = m->modifiers;
+	OList *last_elem = NULL;
+
+	for (;elem != NULL; elem = o_list_next(elem)) {
+		last_elem = elem;
+	}
+
+	prev_ret = msgdsize(msg);
+	ret = (int)prev_ret;
+	for (;last_elem != NULL; last_elem = o_list_prev(last_elem)) {
+
+		RtpTransportModifier *current_modifier = (RtpTransportModifier*)last_elem->data;
+		if(current_modifier == modifier) continue;
+
+		ret = current_modifier->t_process_on_receive(current_modifier, msg);
+		if (ret < 0) {
+			// something went wrong in the modifier (failed to decrypt for instance)
+			break;
+		}
+		msg->b_wptr += ((size_t)ret - prev_ret);
+		prev_ret = (size_t)ret;
+	}
+	return ret;
+}
 
 int meta_rtp_transport_recvfrom(RtpTransport *t, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen) {
 	int ret;
@@ -2828,6 +2881,10 @@ void meta_rtp_transport_destroy(RtpTransport *tp) {
 	ortp_free(tp);
 }
 
+int rtp_transport_modifier_level_compare(const RtpTransportModifier *modifier_a, const RtpTransportModifier *modifier_b){
+	return modifier_a->level - modifier_b->level;
+}
+
 void meta_rtp_transport_remove_modifier(RtpTransport *tp, RtpTransportModifier *tpm) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
 	m->modifiers = o_list_remove(m->modifiers, tpm);
@@ -2836,7 +2893,7 @@ void meta_rtp_transport_remove_modifier(RtpTransport *tp, RtpTransportModifier *
 void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
 	tpm->transport = tp;
-	m->modifiers=o_list_append(m->modifiers, tpm);
+	m->modifiers=o_list_insert_sorted(m->modifiers, tpm, (bctbx_compare_func)rtp_transport_modifier_level_compare);
 	if(m->has_set_session) {
 		tpm->session = tp->session;
 	}
@@ -2845,7 +2902,7 @@ void meta_rtp_transport_append_modifier(RtpTransport *tp,RtpTransportModifier *t
 void meta_rtp_transport_prepend_modifier(RtpTransport *tp,RtpTransportModifier *tpm) {
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl*)tp->data;
 	tpm->transport = tp;
-	m->modifiers=o_list_prepend(m->modifiers, tpm);
+	m->modifiers=o_list_insert_sorted(m->modifiers, tpm, (bctbx_compare_func)rtp_transport_modifier_level_compare);
 	if(m->has_set_session) {
 		tpm->session = tp->session;
 	}

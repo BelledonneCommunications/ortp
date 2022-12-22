@@ -39,7 +39,7 @@ void ortp_uninit_logger(void);
 #define o_list_free bctbx_list_free
 #define o_list_remove_link bctbx_list_erase_link
 #define o_list_free_with_data bctbx_list_free_with_data
-
+#define o_list_insert_sorted bctbx_list_insert_sorted 
 
 #define ORTP_POINTER_TO_INT(p) ((int)(intptr_t)(p))
 #define ORTP_INT_TO_POINTER(i) ((void *)(intptr_t)(i))
