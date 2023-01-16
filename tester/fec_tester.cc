@@ -30,12 +30,11 @@ static FecParameters *newFecParams(int L, int D, int repairWindow) {
 static mblk_t *newPacketWithLetter(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t car,
 								   size_t packet_size) {
 	mblk_t *packet = NULL;
-	uint8_t *payload = new uint8_t[packet_size];
-	memset(payload, car, packet_size);
-	packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, payload, packet_size);
+	packet = rtp_session_create_packet_header(session, packet_size); // reserve packet_size after the header
+	memset(packet->b_wptr, car, packet_size);
+	packet->b_wptr += packet_size;
 	rtp_set_seqnumber(packet, seqnum);
 	rtp_set_timestamp(packet, timestamp);
-	delete[] payload;
 	return packet;
 }
 

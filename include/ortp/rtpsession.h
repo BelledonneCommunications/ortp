@@ -631,13 +631,77 @@ ORTP_PUBLIC void rtp_session_set_rtcp_xr_media_callbacks(RtpSession *session, co
 
 ORTP_PUBLIC void rtp_session_set_ssrc_changed_threshold(RtpSession *session, int numpackets);
 
+/* low level packet creation function */
+/* deprecated set : use create_packet_header and then chain a payload mblk_t to it */
+ORTP_PUBLIC ORTP_DEPRECATED mblk_t * rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t *payload, size_t payload_size);
+ORTP_PUBLIC ORTP_DEPRECATED mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, size_t payload_size, void (*freefn)(void*));
+ORTP_PUBLIC ORTP_DEPRECATED mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels, const uint8_t *payload, size_t payload_size);
+ORTP_PUBLIC ORTP_DEPRECATED mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t packet_size);
+/* end of deprecated functions set */
+
+/**
+ * Allocates a new rtp packet. In the header, ssrc and payload_type according to the session's
+ * context. Timestamp is not set, it will be set when the packet is going to be
+ * sent with rtp_session_sendm_with_ts(). Sequence number is initalized to previous sequence number sent + 1
+ *
+ * @param[in] 	session 		a rtp session.
+ * @param[in] 	extra_header_size 	header size is computed according to needs(CSRC, extension header).
+ *					Allocate extra size (when caller knows it will add other extensions or payload) to avoid reallocating buffers
+ *
+ * @return a rtp packet in a mblk_t (message block) structure holding a packet header.
+**/
+ORTP_PUBLIC mblk_t * rtp_session_create_packet_header(RtpSession *session, size_t extra_header_size);
+
+/**
+ * Allocates a new rtp packet. In the header, ssrc and payload_type according to the session's
+ * context. Add a CSRC fetched from source session SSRC.
+ * Timestamp is not set, it will be set when the packet is going to be
+ * sent with rtp_session_sendm_with_ts(). Sequence number is initalized to previous sequence number sent + 1
+ *
+ * @param[in] 	fecSession 		The RTP session used to build the header (bundle and SSRC fetched from this one)
+ * @param[in] 	sourceSession 		The SSRC from this RTP session is set as CSRC in the header
+ * @param[in] 	extra_header_size 	header size is computed according to needs(CSRC, extension header).
+ *					Allocate extra size (when caller knows it will add other extensions or payload) to avoid reallocating buffers
+ *
+ * @return a rtp packet in a mblk_t (message block) structure holding a packet header.
+**/
+ORTP_PUBLIC mblk_t * rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sourceSession, size_t extra_header_size);
+
+/**
+ *	This will do the same as rtp_session_create_packet_header() but it will also add
+ *	mixer to client audio level indication through header extensions.
+ *
+ * @param[in]	session			a rtp session.
+ * @param[in]	extra header_size 	extra size allocated to the underlying mblk_t, use it to avoid reallocation cause by future extension or payload added
+ * @param[in]	mtc_extension_id 	id of the mixer to client extension id.
+ * @param[in]	audio_levels_size	size of audio levels contained in audio_levels parameter.
+ * @param[in]	audio_levels		list of rtp_audio_level_t to add in this packet.
+ *
+ * @return a rtp packet in a mblk_t (message block) structure.
+**/
+ORTP_PUBLIC mblk_t * rtp_session_create_packet_header_with_mixer_to_client_audio_level(RtpSession *session, size_t extra_header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels);
+
+/** create a packet from the given buffer. No header is added, the buffer is copied in a mblk_t allocated for this purpose
+ * use to create non RTP packets (ZRTP, DTLS, STUN) or set a payload in a message (for CNG for example)
+ * @param[in] packet		pointer to the data to be copied in the created packet
+ * @param[in] packet_size	size of data buffer
+ *
+ * @return a packet in a message block structure holding the given buffer
+ */
+ORTP_PUBLIC mblk_t * rtp_create_packet(const uint8_t *packet, size_t packet_size);
+
+/** create a packet from the given buffer. No header is added, the buffer is not copied but integrated to the packet
+ * @param[in] packet		pointer to the data to be copied in the created packet
+ * @param[in] packet_size	size of data buffer
+ * @param[in] freefn		a function that will be called when the payload buffer is no more needed.
+ *
+ * @return a packet in a message block structure holding the given buffer
+ */
+ORTP_PUBLIC mblk_t * rtp_package_packet(uint8_t *packet, size_t packet_size, void (*freefn)(void*));
+
 /*low level recv and send functions */
+
 ORTP_PUBLIC mblk_t * rtp_session_recvm_with_ts (RtpSession * session, uint32_t user_ts);
-ORTP_PUBLIC mblk_t * rtp_session_create_repair_packet(RtpSession *fecSession, RtpSession *sourceSession);
-ORTP_PUBLIC mblk_t * rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t *payload, size_t payload_size);
-ORTP_PUBLIC mblk_t * rtp_session_create_packet_raw(const uint8_t *packet, size_t packet_size);
-ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_data(RtpSession *session, uint8_t *payload, size_t payload_size, void (*freefn)(void*));
-ORTP_PUBLIC mblk_t * rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *session, size_t header_size, int mtc_extension_id, size_t audio_levels_size, rtp_audio_level_t *audio_levels, const uint8_t *payload, size_t payload_size);
 ORTP_PUBLIC int rtp_session_sendm_with_ts (RtpSession * session, mblk_t *mp, uint32_t userts);
 ORTP_PUBLIC int rtp_session_sendto(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 ORTP_PUBLIC int rtp_session_recvfrom(RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, struct sockaddr *from, socklen_t *fromlen);

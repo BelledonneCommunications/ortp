@@ -22,6 +22,14 @@
 #ifndef ORTP_PORT_H
 #define ORTP_PORT_H
 
+#ifndef ORTP_DEPRECATED
+#if defined(_MSC_VER)
+#define ORTP_DEPRECATED __declspec(deprecated)
+#else
+#define ORTP_DEPRECATED __attribute__ ((deprecated))
+#endif
+#endif
+
 #if __APPLE__
 #include "TargetConditionals.h"
 #endif

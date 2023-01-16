@@ -84,11 +84,16 @@ static void send_packets_through_tranfer_session(void) {
 	while(((len = fread(buffer, 1, 160, infile)) > 0) && !error) {
 		mblk_t *transfered_packet;
 		mblk_t *received_packet;
+		int size = 0;
 
 		// Send a packet through the "normal" session and retrieve it with the transfer session
-		mblk_t *sent_packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, (uint8_t *)buffer, len);
+		mblk_t *sent_packet = rtp_session_create_packet_header(session, len); // make a non fragmented packet, so ask for len bytes allocated after the header.
+										      // This is needed to be able to compare directly the received packet with the sent one
+		memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+		sent_packet->b_wptr += len;
 
-		int size = rtp_session_sendm_with_ts(session, copymsg(sent_packet), user_ts);
+
+		size = rtp_session_sendm_with_ts(session, copymsg(sent_packet), user_ts);
 		BC_ASSERT_GREATER(size, 0, int, "%d");
 
 		transfered_packet = rtp_session_recvm_with_ts(transfer_session, user_ts);

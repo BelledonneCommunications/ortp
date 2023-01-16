@@ -243,7 +243,7 @@ void Bitstring::write(mblk_t *packet) {
 
 FecSourcePacket::FecSourcePacket(struct _RtpSession *session) {
 
-	mPacket = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, NULL, 0);
+	mPacket = rtp_session_create_packet_header(session, 0);
 	Bitstring bitstring(mPacket);
 }
 FecSourcePacket::FecSourcePacket(struct _RtpSession *session, const Bitstring &bs) {
@@ -310,10 +310,7 @@ FecRepairPacket::FecRepairPacket(struct _RtpSession *fecSession, struct _RtpSess
 	this->mSeqnumBase = seqnumBase;
 	this->mL = L;
 	this->mD = D;
-	mPacket =  rtp_session_create_repair_packet(fecSession,sourceSession);
-	// compute size
-	size_t newSize = msgdsize(mPacket) + 8*sizeof(uint8_t) + sizeof(uint32_t);
-	msgpullup(mPacket, newSize);
+	mPacket =  rtp_session_create_repair_packet_header(fecSession,sourceSession, 8*sizeof(uint8_t) + sizeof(uint32_t)); // allocate extra size for initBitString, SeqNumBase, L and D
 
 	// initBitstring
 	memset(mPacket->b_wptr, 0, 8 * sizeof(uint8_t));

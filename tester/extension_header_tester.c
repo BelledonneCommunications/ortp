@@ -91,14 +91,19 @@ static void insert_extension_header_into_packet_base(uint8_t with_payload, RtpSe
 	mblk_t *packet;
 	switch (with_payload) {
 		case PAYLOAD :
-			packet = rtp_session_create_packet(test_session, 0, payload, PAYLOAD_SIZE);
+			/* payload and header in one continuous message block */
+			packet = rtp_session_create_packet_header(test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
+			memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
+			packet->b_wptr += PAYLOAD_SIZE;
 			break;
 		case DETACHED_PAYLOAD :
-			packet = rtp_session_create_packet_with_data(test_session, payload, PAYLOAD_SIZE, NULL);
+			/* fragmented message block */
+			packet = rtp_session_create_packet_header(test_session, 0);
+			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 			break;
 		case NO_PAYLOAD :
 		default: // NO PAYLAOD
-			packet = rtp_session_create_packet(test_session, 0, NULL, 0);
+			packet = rtp_session_create_packet_header(test_session, 0);
 	}
 
 	rtp_add_extension_header(packet, 10, strlen(test), (uint8_t *) test);
@@ -202,14 +207,19 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 	// Test multiple extension into the same packet
 	switch (with_payload) {
 		case PAYLOAD :
-			packet = rtp_session_create_packet(test_session, 0, payload, PAYLOAD_SIZE);
+			/* payload and header in one continuous message block */
+			packet = rtp_session_create_packet_header(test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
+			memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
+			packet->b_wptr += PAYLOAD_SIZE;
 			break;
 		case DETACHED_PAYLOAD :
-			packet = rtp_session_create_packet_with_data(test_session, payload, PAYLOAD_SIZE, NULL);
+			/* fragmented message block */
+			packet = rtp_session_create_packet_header(test_session, 0);
+			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 			break;
 		case NO_PAYLOAD :
 		default: // NO PAYLAOD
-			packet = rtp_session_create_packet(test_session, 0, NULL, 0);
+			packet = rtp_session_create_packet_header(test_session, 0);
 	}
 
 	if (test_session == bundled_session || test_session == csrc_bundled_session) {
@@ -328,14 +338,19 @@ static void insert_client_to_mixer_into_packet_base(uint8_t with_payload, RtpSes
 
 	switch (with_payload) {
 		case PAYLOAD :
-			packet = rtp_session_create_packet(test_session, 0, payload, PAYLOAD_SIZE);
+			/* payload and header in one continuous message block */
+			packet = rtp_session_create_packet_header(test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
+			memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
+			packet->b_wptr += PAYLOAD_SIZE;
 			break;
 		case DETACHED_PAYLOAD :
-			packet = rtp_session_create_packet_with_data(test_session, payload, PAYLOAD_SIZE, NULL);
+			/* fragmented message block */
+			packet = rtp_session_create_packet_header(test_session, 0);
+			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 			break;
 		case NO_PAYLOAD :
 		default: // NO PAYLAOD
-			packet = rtp_session_create_packet(test_session, 0, NULL, 0);
+			packet = rtp_session_create_packet_header(test_session, 0);
 	}
 
 	rtp_add_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL, TRUE, -64);
@@ -427,16 +442,14 @@ static void insert_mixer_to_client_into_packet_base(bool_t with_payload, bool_t 
 	mblk_t *packet = NULL;
 
 	if (use_create_with_mixer) {
+		packet = rtp_session_create_packet_header_with_mixer_to_client_audio_level(test_session, 0, RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL, 5, values);
 		if (with_payload == TRUE) {
-			packet = rtp_session_create_packet_with_mixer_to_client_audio_level(test_session, 0, RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL, 5, values, payload, PAYLOAD_SIZE);
-		} else {
-			packet = rtp_session_create_packet_with_mixer_to_client_audio_level(test_session, 0, RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL, 5, values, NULL, 0);
+			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 		}
 	} else {
+		packet = rtp_session_create_packet_header(test_session, 0);
 		if (with_payload == TRUE) {
-			packet = rtp_session_create_packet(test_session, 0, payload, PAYLOAD_SIZE);
-		} else {
-			packet = rtp_session_create_packet(test_session, 0, NULL, 0);
+			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 		}
 		rtp_add_mixer_to_client_audio_level(packet, RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL, 5, values);
 	}
@@ -513,7 +526,7 @@ static void insert_frame_marking_into_packet_base(bool_t with_payload, RtpSessio
 	int ret;
 	uint8_t result;
 
-	mblk_t *packet = rtp_session_create_packet(session, 0, NULL, 0);
+	mblk_t *packet = rtp_session_create_packet_header(session, 0);
 	uint8_t marker = RTP_FRAME_MARKER_START | RTP_FRAME_MARKER_INDEPENDENT;
 
 	rtp_add_frame_marker(packet, RTP_EXTENSION_FRAME_MARKING, marker);
@@ -557,7 +570,7 @@ static void padding_test(void) {
 
 	for (i=0; i<3; i++) {
 		ortp_message("run on pattern %d",i);
-		packet = rtp_session_create_packet_raw(raw_packets[i], 28);
+		packet = rtp_create_packet(raw_packets[i], 28);
 		/* check ext bit and size - expected to be 12 */
 		BC_ASSERT_EQUAL(rtp_get_extbit(packet), 1, uint16_t, "%d");
 		size = rtp_get_extheader(packet, NULL, NULL);
@@ -624,7 +637,7 @@ static void create_packet_with_payload_in_bundled_session(void) {
 	mblk_t *packet = NULL;
 
 	/* create a packet in the bundled session, without payload */
-	packet = rtp_session_create_packet(bundled_session, 0, NULL, 0);
+	packet = rtp_session_create_packet_header(bundled_session, 0);
 	/* check the session id is in the header */
 	size = rtp_get_extension_header(packet, RTP_EXTENSION_MID, &data);
 	BC_ASSERT_EQUAL(size, (int)(strlen(mid)), int, "%d");
@@ -633,8 +646,25 @@ static void create_packet_with_payload_in_bundled_session(void) {
 	}
 	freemsg(packet);
 
-	/* same but with a payload */
-	packet = rtp_session_create_packet(bundled_session, 0, payload, PAYLOAD_SIZE);
+	/* same but with a payload in a non fragmented message block */
+	packet = rtp_session_create_packet_header(bundled_session, PAYLOAD_SIZE);
+	memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
+	packet->b_wptr += PAYLOAD_SIZE;
+	/* check the session id is in the header */
+	size = rtp_get_extension_header(packet, RTP_EXTENSION_MID, &data);
+	BC_ASSERT_EQUAL(size, (int)(strlen(mid)), int, "%d");
+	if (size == (int)(strlen(mid))) {
+		BC_ASSERT_TRUE(memcmp(data, mid, size) == 0);
+	}
+	size = rtp_get_payload(packet, &data);
+	if (BC_ASSERT_TRUE(size == PAYLOAD_SIZE)) {
+		BC_ASSERT_TRUE(memcmp(data, payload, PAYLOAD_SIZE)== 0);
+	}
+	freemsg(packet);
+
+	/* same but with a payload in a fragmented message block */
+	packet = rtp_session_create_packet_header(bundled_session, 0);
+	packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 	/* check the session id is in the header */
 	size = rtp_get_extension_header(packet, RTP_EXTENSION_MID, &data);
 	BC_ASSERT_EQUAL(size, (int)(strlen(mid)), int, "%d");
