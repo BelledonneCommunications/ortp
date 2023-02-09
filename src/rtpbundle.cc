@@ -20,6 +20,8 @@
 
 #include <algorithm>
 
+#include <bctoolbox/defs.h>
+
 #include "ortp/logging.h"
 #include "ortp/rtpsession.h"
 #include "rtpbundle.h"
@@ -216,8 +218,8 @@ bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const 
 	return false;
 }
 
-static void getSsrcFromSdes(void *userData, uint32_t ssrc, rtcp_sdes_type_t t, const char *content,
-							uint8_t contentLen) {
+static void getSsrcFromSdes(void *userData, uint32_t ssrc, rtcp_sdes_type_t t, UNUSED(const char *content),
+							UNUSED(uint8_t contentLen)) {
 	uint32_t *value = (uint32_t *)userData;
 
 	if (*value == 0 || t == RTCP_SDES_MID) {

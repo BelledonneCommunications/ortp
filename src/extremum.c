@@ -18,6 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
+
 #include "ortp/utils.h"
 #include "ortp/logging.h"
 
@@ -32,8 +34,7 @@ void ortp_extremum_init(OrtpExtremum *obj, int period){
 	obj->period=period;
 }
 
-
-static bool_t extremum_check_init(OrtpExtremum *obj, uint64_t curtime, float value, const char *kind){
+static bool_t extremum_check_init(OrtpExtremum *obj, uint64_t curtime, float value, UNUSED(const char *kind)){
 	if (obj->extremum_time!=(uint64_t)-1){
 		if (((int)(curtime-obj->extremum_time))>obj->period){
 			obj->last_stable=obj->current_extremum;

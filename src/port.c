@@ -415,6 +415,10 @@ char * WSAAPI gai_strerror(int errnum){
 #include <sys/timeb.h>
 #endif
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif // _MSC_VER
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 #if defined(_WIN32_WCE) || defined(_WIN32)
 #if defined( ORTP_WINDOWS_DESKTOP ) && !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
@@ -451,6 +455,9 @@ void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime){
 	ret->tv_nsec=ts.tv_nsec;
 #endif
 }
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif // _MSC_VER
 
 void ortp_get_cur_time(ortpTimeSpec *ret){
 	_ortp_get_cur_time(ret, FALSE);

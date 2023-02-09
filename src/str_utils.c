@@ -18,6 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
+
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
@@ -56,7 +58,7 @@ unsigned char * dblk_lim(dblk_t *db) {
 	return db->db_lim;
 }
 
-mblk_t *allocb(size_t size, int pri)
+mblk_t *allocb(size_t size, UNUSED(int pri))
 {
 	mblk_t *mp;
 	dblk_t *datab;
@@ -70,7 +72,7 @@ mblk_t *allocb(size_t size, int pri)
 	return mp;
 }
 
-mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void*) )
+mblk_t *esballoc(uint8_t *buf, size_t size, UNUSED(int pri), void (*freefn)(void*) )
 {
 	mblk_t *mp;
 	dblk_t *datab;
@@ -188,7 +190,7 @@ void remq(queue_t *q, mblk_t *mp){
 }
 
 /* remove and free all messages in the q */
-void flushq(queue_t *q, int how)
+void flushq(queue_t *q, UNUSED(int how))
 {
 	mblk_t *mp;
 
@@ -317,7 +319,7 @@ void msgb_allocator_set_max_blocks(msgb_allocator_t *pa, int max_blocks){
 	pa->max_blocks = max_blocks;
 }
 
-static void msgb_allocator_free_db(void *unused){
+static void msgb_allocator_free_db(UNUSED(void *unused)){
 }
 
 mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){

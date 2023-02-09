@@ -17,6 +17,9 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <bctoolbox/defs.h>
+
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
@@ -153,7 +156,7 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
  *
  *@return 0 on success.
 **/
-int rtp_session_add_telephone_event(RtpSession *session,
+int rtp_session_add_telephone_event(UNUSED(RtpSession *session),
 			mblk_t *packet, uint8_t event, int end, uint8_t volume, uint16_t duration)
 {
 	mblk_t *mp=packet;

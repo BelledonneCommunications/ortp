@@ -30,6 +30,7 @@
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h" /*needed for HAVE_SYS_UIO_H and HAVE_ARC4RANDOM */
 #endif
+#include <bctoolbox/defs.h>
 #include <bctoolbox/port.h>
 #include "ortp/ortp.h"
 #include "ortp/str_utils.h"
@@ -1265,7 +1266,7 @@ ortp_socket_t rtp_session_get_socket(RtpSession *session, bool_t is_rtp){
 	return is_rtp ? session->rtp.gs.socket : session->rtcp.gs.socket;
 }
 
-int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
+int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, UNUSED(int flags), const struct sockaddr *destaddr, socklen_t destlen) {
 	int sent_bytes;
 #if defined(_WIN32) || defined(_WIN32_WCE) || defined(USE_SENDMSG)
 	sent_bytes = rtp_sendmsg(sockfd, m, destaddr, destlen);

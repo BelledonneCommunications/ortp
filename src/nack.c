@@ -18,6 +18,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
+
 #include "ortp/logging.h"
 #include "ortp/nack.h"
 
@@ -101,7 +103,7 @@ static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
 	return (int) msgdsize(msg);
 }
 
-static int ortp_nack_rtp_process_on_receive(RtpTransportModifier *t, mblk_t *msg) {
+static int ortp_nack_rtp_process_on_receive(UNUSED(RtpTransportModifier *t), mblk_t *msg) {
 	return (int) msgdsize(msg);
 }
 
@@ -156,7 +158,7 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 	return (int) msgdsize(msg);
 }
 
-static int ortp_nack_rtcp_process_on_receive(RtpTransportModifier *t, mblk_t *msg) {
+static int ortp_nack_rtcp_process_on_receive(UNUSED(RtpTransportModifier *t), mblk_t *msg) {
 	return (int) msgdsize(msg);
 }
 

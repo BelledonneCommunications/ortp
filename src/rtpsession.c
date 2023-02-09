@@ -18,6 +18,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
 
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
@@ -2636,7 +2637,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(RtpTransport *t, RtpTra
 	return ret;
 }
 
-static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags){
+static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, UNUSED(int flags)){
 	int ret = 0;
 	size_t prev_ret;
 	bool_t foundMyself = tpm ? FALSE : TRUE; /*if no modifier, start from the beginning*/
