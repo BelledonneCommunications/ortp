@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,66 +30,63 @@
 #endif
 #include <stdio.h>
 
-int runcond=1;
+int runcond = 1;
 
-void stophandler(int signum)
-{
-	runcond=0;
+void stophandler(int signum) {
+	runcond = 0;
 }
 
-static char *help="usage: test_tevsend	filename dest_ip4addr dest_port\n";
+static char *help = "usage: test_tevsend	filename dest_ip4addr dest_port\n";
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	RtpSession *session;
 	unsigned char buffer[160];
 	int i;
 	FILE *infile;
 	char *ssrc;
-	uint32_t user_ts=0;
-	int tel=0;
-	
-	if (argc<4){
-            	printf("%s",help);
+	uint32_t user_ts = 0;
+	int tel = 0;
+
+	if (argc < 4) {
+		printf("%s", help);
 		return -1;
 	}
-	
+
 	ortp_init();
 	ortp_scheduler_init();
-	
+
 	/* set the telephony event payload type to 96 in the av profile.*/
-	rtp_profile_set_payload(&av_profile,96,&payload_type_telephone_event);
-	
-	session=rtp_session_new(RTP_SESSION_SENDONLY);
-	
-	rtp_session_set_scheduling_mode(session,1);
-	rtp_session_set_blocking_mode(session,1);
-	rtp_session_set_remote_addr(session,argv[2],atoi(argv[3]));
-	rtp_session_set_send_payload_type(session,0);
-	
-	ssrc=getenv("SSRC");
-	if (ssrc!=NULL) {
-		printf("using SSRC=%i.\n",atoi(ssrc));
-		rtp_session_set_ssrc(session,atoi(ssrc));
+	rtp_profile_set_payload(&av_profile, 96, &payload_type_telephone_event);
+
+	session = rtp_session_new(RTP_SESSION_SENDONLY);
+
+	rtp_session_set_scheduling_mode(session, 1);
+	rtp_session_set_blocking_mode(session, 1);
+	rtp_session_set_remote_addr(session, argv[2], atoi(argv[3]));
+	rtp_session_set_send_payload_type(session, 0);
+
+	ssrc = getenv("SSRC");
+	if (ssrc != NULL) {
+		printf("using SSRC=%i.\n", atoi(ssrc));
+		rtp_session_set_ssrc(session, atoi(ssrc));
 	}
-		
-	infile=fopen(argv[1],"rb");
-	if (infile==NULL) {
+
+	infile = fopen(argv[1], "rb");
+	if (infile == NULL) {
 		perror("Cannot open file");
 		return -1;
 	}
-	signal(SIGINT,stophandler);
-	while( ((i=fread(buffer,1,160,infile))>0) && (runcond) )
-	{
-		//ortp_message("Sending packet.");
-		rtp_session_send_with_ts(session,buffer,i,user_ts);
-		user_ts+=160;
+	signal(SIGINT, stophandler);
+	while (((i = fread(buffer, 1, 160, infile)) > 0) && (runcond)) {
+		// ortp_message("Sending packet.");
+		rtp_session_send_with_ts(session, buffer, i, user_ts);
+		user_ts += 160;
 		tel++;
-		if (tel==50){
-			tel=0;
+		if (tel == 50) {
+			tel = 0;
 			ortp_message("Sending telephony event packet.");
-			rtp_session_send_dtmf(session,'*',user_ts);
-			user_ts+=160+160+160; /* the duration of the dtmf */
+			rtp_session_send_dtmf(session, '*', user_ts);
+			user_ts += 160 + 160 + 160; /* the duration of the dtmf */
 		}
 	}
 	fclose(infile);

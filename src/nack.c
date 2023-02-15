@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,8 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <bctoolbox/defs.h>
 
 #include "ortp/logging.h"
 #include "ortp/nack.h"
@@ -77,7 +79,7 @@ static void generic_nack_received(const OrtpEventData *evd, OrtpNackContext *ctx
 }
 
 static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
-	OrtpNackContext *userData = (OrtpNackContext *) t->data;
+	OrtpNackContext *userData = (OrtpNackContext *)t->data;
 
 	if (rtp_get_version(msg) == 2) {
 		bctbx_mutex_lock(&userData->sent_packets_mutex);
@@ -93,16 +95,17 @@ static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
 		// Stock the packet before sending it
 		putq(&userData->sent_packets, dupmsg(msg));
 
-		//ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", userData, rtp_get_seqnumber(msg), userData->session->rtp.snd_seq);
+		// ortp_message("OrtpNackContext [%p]: Stocking packet with pid=%hu (seq=%hu)", userData,
+		// rtp_get_seqnumber(msg), userData->session->rtp.snd_seq);
 
 		bctbx_mutex_unlock(&userData->sent_packets_mutex);
 	}
 
-	return (int) msgdsize(msg);
+	return (int)msgdsize(msg);
 }
 
-static int ortp_nack_rtp_process_on_receive(RtpTransportModifier *t, mblk_t *msg) {
-	return (int) msgdsize(msg);
+static int ortp_nack_rtp_process_on_receive(BCTBX_UNUSED(RtpTransportModifier *t), mblk_t *msg) {
+	return (int)msgdsize(msg);
 }
 
 static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
@@ -111,11 +114,11 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 
 	do {
 		if (rtcp_is_RTPFB(pullmsg) && rtcp_RTPFB_get_type(pullmsg) == RTCP_RTPFB_NACK) {
-			OrtpNackContext *userData = (OrtpNackContext *) t->data;
+			OrtpNackContext *userData = (OrtpNackContext *)t->data;
 			OrtpEvent *ev;
 			OrtpEventData *evd;
 			JBParameters jitter_params;
-			int rtt = (int) userData->session->rtt;
+			int rtt = (int)userData->session->rtt;
 
 			if (rtt == 0) rtt = 200;
 
@@ -135,7 +138,8 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 
 				rtp_session_set_jitter_buffer_params(userData->session, &jitter_params);
 
-				ortp_message("OrtpNackContext [%p]: Sending NACK... increasing jitter min size to %dms", userData, jitter_params.min_size);
+				ortp_message("OrtpNackContext [%p]: Sending NACK... increasing jitter min size to %dms", userData,
+				             jitter_params.min_size);
 
 				// Send an event that the video jitter has been updated so that we can update the audio too
 				ev = ortp_event_new(ORTP_EVENT_JITTER_UPDATE_FOR_NACK);
@@ -153,22 +157,24 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 	} while (rtcp_next_packet(pullmsg));
 
 	freemsg(pullmsg);
-	return (int) msgdsize(msg);
+	return (int)msgdsize(msg);
 }
 
-static int ortp_nack_rtcp_process_on_receive(RtpTransportModifier *t, mblk_t *msg) {
-	return (int) msgdsize(msg);
+static int ortp_nack_rtcp_process_on_receive(BCTBX_UNUSED(RtpTransportModifier *t), mblk_t *msg) {
+	return (int)msgdsize(msg);
 }
 
-static void ortp_nack_transport_modifier_destroy(RtpTransportModifier *tp)  {
+static void ortp_nack_transport_modifier_destroy(RtpTransportModifier *tp) {
 	ortp_free(tp);
 }
 
-static void ortp_nack_transport_modifier_new(OrtpNackContext* ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt ) {
+static void
+ortp_nack_transport_modifier_new(OrtpNackContext *ctx, RtpTransportModifier **rtpt, RtpTransportModifier **rtcpt) {
 	if (rtpt) {
 		*rtpt = ortp_new0(RtpTransportModifier, 1);
 		(*rtpt)->level = ORTP_RTP_TRANSPORT_MODIFIER_DEFAULT_LEVEL;
-		(*rtpt)->data = ctx; /* back link to get access to the other fields of the OrtpNackContext from the RtpTransportModifier structure */
+		(*rtpt)->data = ctx; /* back link to get access to the other fields of the OrtpNackContext from the
+		                        RtpTransportModifier structure */
 		(*rtpt)->t_process_on_send = ortp_nack_rtp_process_on_send;
 		(*rtpt)->t_process_on_receive = ortp_nack_rtp_process_on_receive;
 		(*rtpt)->t_destroy = ortp_nack_transport_modifier_destroy;
@@ -177,7 +183,8 @@ static void ortp_nack_transport_modifier_new(OrtpNackContext* ctx, RtpTransportM
 	if (rtcpt) {
 		*rtcpt = ortp_new0(RtpTransportModifier, 1);
 		(*rtpt)->level = ORTP_RTP_TRANSPORT_MODIFIER_DEFAULT_LEVEL;
-		(*rtcpt)->data = ctx; /* back link to get access to the other fields of the OrtpNackContext from the RtpTransportModifier structure */
+		(*rtcpt)->data = ctx; /* back link to get access to the other fields of the OrtpNackContext from the
+		                         RtpTransportModifier structure */
 		(*rtcpt)->t_process_on_send = ortp_nack_rtcp_process_on_send;
 		(*rtcpt)->t_process_on_receive = ortp_nack_rtcp_process_on_receive;
 		(*rtcpt)->t_destroy = ortp_nack_transport_modifier_destroy;
@@ -213,11 +220,8 @@ OrtpNackContext *ortp_nack_context_new(OrtpEvDispatcher *evt) {
 
 	rtp_session_enable_avpf_feature(userData->session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK, TRUE);
 
-	ortp_ev_dispatcher_connect(userData->ev_dispatcher
-								, ORTP_EVENT_RTCP_PACKET_RECEIVED
-								, RTCP_RTPFB
-								, (OrtpEvDispatcherCb)generic_nack_received
-								, userData);
+	ortp_ev_dispatcher_connect(userData->ev_dispatcher, ORTP_EVENT_RTCP_PACKET_RECEIVED, RTCP_RTPFB,
+	                           (OrtpEvDispatcherCb)generic_nack_received, userData);
 
 	return ortp_nack_configure_context(userData);
 }
@@ -225,10 +229,8 @@ OrtpNackContext *ortp_nack_context_new(OrtpEvDispatcher *evt) {
 void ortp_nack_context_destroy(OrtpNackContext *ctx) {
 	RtpTransport *rtpt = NULL, *rtcpt = NULL;
 
-	ortp_ev_dispatcher_disconnect(ctx->ev_dispatcher
-									, ORTP_EVENT_RTCP_PACKET_RECEIVED
-									, RTCP_RTPFB
-									, (OrtpEvDispatcherCb)generic_nack_received);
+	ortp_ev_dispatcher_disconnect(ctx->ev_dispatcher, ORTP_EVENT_RTCP_PACKET_RECEIVED, RTCP_RTPFB,
+	                              (OrtpEvDispatcherCb)generic_nack_received);
 
 	rtp_session_enable_avpf_feature(ctx->session, ORTP_AVPF_FEATURE_IMMEDIATE_NACK, FALSE);
 
@@ -258,7 +260,9 @@ void ortp_nack_context_process_timer(OrtpNackContext *ctx) {
 			OrtpEventData *evd;
 			JBParameters jitter_params;
 
-			ortp_message("OrtpNackContext [%p]: No NACK sent in the last %d seconds, decreasing jitter min size to %dms...", ctx, DECREASE_JITTER_DELAY / 1000, ctx->min_jitter_before_nack);
+			ortp_message(
+			    "OrtpNackContext [%p]: No NACK sent in the last %d seconds, decreasing jitter min size to %dms...", ctx,
+			    DECREASE_JITTER_DELAY / 1000, ctx->min_jitter_before_nack);
 
 			rtp_session_get_jitter_buffer_params(ctx->session, &jitter_params);
 			jitter_params.min_size = ctx->min_jitter_before_nack;

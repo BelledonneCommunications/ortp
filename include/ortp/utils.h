@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,12 +31,12 @@ extern "C" {
  * Utility object to determine a maximum or minimum (but not both at the same
  * time), of a signal during a sliding period of time.
  */
-typedef struct _OrtpExtremum{
+typedef struct _OrtpExtremum {
 	float current_extremum;
 	float last_stable;
 	uint64_t extremum_time;
 	int period;
-}OrtpExtremum;
+} OrtpExtremum;
 ORTP_PUBLIC void ortp_extremum_reset(OrtpExtremum *obj);
 ORTP_PUBLIC void ortp_extremum_init(OrtpExtremum *obj, int period);
 /**
@@ -47,8 +47,9 @@ ORTP_PUBLIC bool_t ortp_extremum_record_min(OrtpExtremum *obj, uint64_t curtime,
 ORTP_PUBLIC bool_t ortp_extremum_record_max(OrtpExtremum *obj, uint64_t curtime, float value);
 ORTP_PUBLIC float ortp_extremum_get_current(OrtpExtremum *obj);
 /**
- * Unlike ortp_extremum_get_current() which can be very fluctuating, ortp_extremum_get_previous() returns the extremum found for the previous period.
-**/
+ * Unlike ortp_extremum_get_current() which can be very fluctuating, ortp_extremum_get_previous() returns the extremum
+ *found for the previous period.
+ **/
 ORTP_PUBLIC float ortp_extremum_get_previous(OrtpExtremum *obj);
 
 /**
@@ -59,36 +60,35 @@ ORTP_PUBLIC float ortp_extremum_get_previous(OrtpExtremum *obj);
  * Note: If noise is NOT white, the residue will be absorbed by one of the estimators.
  * It is an implementation of recursive least square algorithm, based on Kalman filter.
  */
-typedef struct _OrtpKalmanRLS{
+typedef struct _OrtpKalmanRLS {
 	/* Unknown parameters to estimate */
 	double m, b;
 	/* Gain matrix, must not be modified */
 	double P[2][2];
 	/** Forgetting factor in [94, .999]. Used when unknown parameters vary in time. **/
 	double lambda;
-}OrtpKalmanRLS;
+} OrtpKalmanRLS;
 
 ORTP_PUBLIC void ortp_kalman_rls_init(OrtpKalmanRLS *obj, double m0, double b0);
 ORTP_PUBLIC void ortp_kalman_rls_record(OrtpKalmanRLS *obj, double xmes, double ymes);
 
-
-typedef struct _OrtpBwEstimator{
+typedef struct _OrtpBwEstimator {
 	float one_minus_alpha;
 	float inv_step;
 	float exp_constant;
 	struct timeval last_packet_recv;
 	float value;
-}OrtpBwEstimator;
+} OrtpBwEstimator;
 
 /**
  * Utility object to compute a sliding exponential mean bitrate.
  * @param obj the estimator structure to initialize
  * @param alpha the weight of previous estimation (between 0 and 1)
  * @param step a time constant in seconds representing the sampling period
-**/ 
+ **/
 ORTP_PUBLIC void ortp_bw_estimator_init(OrtpBwEstimator *obj, float alpha, float step);
 
-ORTP_PUBLIC void ortp_bw_estimator_packet_received (OrtpBwEstimator *obj, size_t bytes, const struct timeval *recv_time);
+ORTP_PUBLIC void ortp_bw_estimator_packet_received(OrtpBwEstimator *obj, size_t bytes, const struct timeval *recv_time);
 
 ORTP_PUBLIC float ortp_bw_estimator_get_value(OrtpBwEstimator *obj);
 

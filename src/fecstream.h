@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,38 +29,38 @@
 namespace ortp {
 
 #ifdef _WIN32
-	// Disable C4251 triggered by need to export all stl template classes
-	#pragma warning(disable: 4251)
+// Disable C4251 triggered by need to export all stl template classes
+#pragma warning(disable : 4251)
 #endif // ifdef _WIN32
 
 class ORTP_PUBLIC Bitstring {
 
-  private:
+private:
 	uint8_t mBuffer[8];
 
-  public:
+public:
 	Bitstring();
 	Bitstring(const mblk_t *packet);
 	void add(Bitstring const &other);
 	void reset();
 	void write(mblk_t *packet);
 	uint16_t getHeader() const {
-		return *(uint16_t *) &mBuffer[0];
+		return *(uint16_t *)&mBuffer[0];
 	};
 	uint32_t getTimestamp() const {
-		return *(uint32_t *) &mBuffer[2];
+		return *(uint32_t *)&mBuffer[2];
 	};
 	uint16_t getLength() const {
-		return	*(uint16_t *)&mBuffer[6];
-	};	
+		return *(uint16_t *)&mBuffer[6];
+	};
 	void setHeader(uint16_t *h) {
 		*(uint16_t *)&mBuffer[0] = *(uint16_t *)h;
 	};
 	void setLength(uint16_t l) {
-		*(uint16_t *) &mBuffer[6] = (uint16_t) l;
+		*(uint16_t *)&mBuffer[6] = (uint16_t)l;
 	};
 	void setTimestamp(uint32_t t) {
-		*(uint32_t *) &mBuffer[2] = t;
+		*(uint32_t *)&mBuffer[2] = t;
 	};
 	bool equals(Bitstring const &other) {
 		return (memcmp(&mBuffer[0], &other.mBuffer[0], 8) == 0);
@@ -70,11 +70,11 @@ class ORTP_PUBLIC Bitstring {
 
 class ORTP_PUBLIC FecSourcePacket {
 
-  private:
+private:
 	mblk_t *mPacket;
 	Bitstring mBitstring;
 
-  public:
+public:
 	FecSourcePacket(struct _RtpSession *session, const Bitstring &bs);
 	FecSourcePacket(struct _RtpSession *session);
 	FecSourcePacket(const mblk_t *incoming);
@@ -99,10 +99,10 @@ class ORTP_PUBLIC FecSourcePacket {
 		return mBitstring;
 	}
 	mblk_t *transfer();
-	void setSsrc(uint32_t ssrc){
-		rtp_set_ssrc(mPacket,ssrc);
+	void setSsrc(uint32_t ssrc) {
+		rtp_set_ssrc(mPacket, ssrc);
 	};
-	void setSequenceNumber(uint16_t seqnum){
+	void setSequenceNumber(uint16_t seqnum) {
 		rtp_set_seqnumber(mPacket, seqnum);
 	};
 	~FecSourcePacket() {
@@ -113,19 +113,20 @@ class ORTP_PUBLIC FecSourcePacket {
 };
 
 class ORTP_PUBLIC FecRepairPacket {
-  private:
+private:
 	mblk_t *mPacket;
 	uint8_t mL;
 	uint8_t mD;
 	uint16_t mSeqnumBase;
 
-  public:
+public:
 	FecRepairPacket();
 	FecRepairPacket(const mblk_t *repairPacket);
 	FecRepairPacket(const FecRepairPacket &other) = delete;
 	FecRepairPacket &operator=(const FecRepairPacket &other) = delete;
 
-	FecRepairPacket(struct _RtpSession *fecSession, struct _RtpSession *sourceSession, uint16_t seqnumBase, uint8_t L, uint8_t D);
+	FecRepairPacket(
+	    struct _RtpSession *fecSession, struct _RtpSession *sourceSession, uint16_t seqnumBase, uint8_t L, uint8_t D);
 	void addBitstring(Bitstring const &bitstring);
 	size_t bitstringStart(uint8_t **start) const;
 	Bitstring extractBitstring() const;
@@ -162,8 +163,7 @@ class ORTP_PUBLIC FecRepairPacket {
 		return mPacket;
 	};
 	mblk_t *getCopy() {
-		if (mPacket)
-			return copymsg(mPacket);
+		if (mPacket) return copymsg(mPacket);
 		return nullptr;
 	}
 	~FecRepairPacket() {
@@ -175,7 +175,7 @@ class ORTP_PUBLIC FecRepairPacket {
 
 class ORTP_PUBLIC FecEncoder {
 
-  private:
+private:
 	std::vector<std::shared_ptr<FecRepairPacket>> mRowRepair;
 	std::vector<std::shared_ptr<FecRepairPacket>> mColRepair;
 	RtpSession *mFecSession;
@@ -190,9 +190,7 @@ class ORTP_PUBLIC FecEncoder {
 	void initColRepairPackets(uint16_t seqnumBase);
 	void resetColRepairPackets(uint16_t seqnumBase);
 
-  public:
-
-
+public:
 	FecEncoder(){};
 	FecEncoder(FecParameters *parameters);
 	void init(struct _RtpSession *fecSession, struct _RtpSession *sourceSession);
@@ -241,19 +239,16 @@ class ORTP_PUBLIC FecEncoder {
 
 class ORTP_PUBLIC RecieveCluster {
 
-  private:
-
+private:
 	uint32_t mRepairWindow = 200000;
 	RtpSession *mSession;
-	RtpTransportModifier * mModifier;
+	RtpTransportModifier *mModifier;
 	std::map<uint16_t, std::shared_ptr<FecSourcePacket>> mSource;
 	std::vector<std::shared_ptr<FecRepairPacket>> mRowRepair;
 	std::vector<std::shared_ptr<FecRepairPacket>> mColRepair;
 	void addRepair(FecSourcePacket &source, FecRepairPacket const &repair);
-	
-  public:
 
-
+public:
 	RecieveCluster(struct _RtpSession *session) {
 		this->mSession = session;
 	};
@@ -271,7 +266,7 @@ class ORTP_PUBLIC RecieveCluster {
 	int repairOne(FecRepairPacket const &repairPacket);
 	int repair1D(bool interleaved);
 	int repair2D();
-	void setModifier(struct _RtpTransportModifier * modifier){
+	void setModifier(struct _RtpTransportModifier *modifier) {
 		this->mModifier = modifier;
 	};
 	uint32_t getRepairWindow() {
@@ -283,7 +278,7 @@ class ORTP_PUBLIC RecieveCluster {
 
 class ORTP_PUBLIC FecStreamCxx {
 
-  private:
+private:
 	FecParameters *parameters;
 	RtpSession *mSourceSession;
 	RtpSession *mFecSession;
@@ -292,19 +287,19 @@ class ORTP_PUBLIC FecStreamCxx {
 	fec_stats mStats;
 	RtpTransportModifier *mModifier;
 
-  public:
+public:
 	FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParameters *fecParams);
 	void init();
-	static int processOnSend(struct _RtpTransportModifier *m,mblk_t *packet);
-	static int processOnRecieve(struct _RtpTransportModifier *m,mblk_t *packet);
+	static int processOnSend(struct _RtpTransportModifier *m, mblk_t *packet);
+	static int processOnRecieve(struct _RtpTransportModifier *m, mblk_t *packet);
 	void onNewSourcePacketSent(mblk_t *packet);
 	void onNewSourcePacketRecieved(mblk_t *packet);
 	void recieveRepairPacket(uint32_t timestamp);
 	mblk_t *findMissingPacket(uint16_t seqnum);
-	RtpSession *getFecSession() const{
+	RtpSession *getFecSession() const {
 		return mFecSession;
 	};
-	RtpSession *getSourceSession() const{
+	RtpSession *getSourceSession() const {
 		return mSourceSession;
 	};
 	fec_stats *getStats() {
@@ -313,7 +308,6 @@ class ORTP_PUBLIC FecStreamCxx {
 	void printStats();
 	~FecStreamCxx(){};
 };
-
 
 void modifierFree(struct _RtpTransportModifier *m);
 } // namespace ortp

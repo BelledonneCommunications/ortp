@@ -17,6 +17,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
+
 #include "ortp_tester.h"
 #include <ortp/ortp.h>
 
@@ -532,7 +534,8 @@ static void insert_mixer_to_client_into_packet_with_payload_in_bundled_session_u
 	insert_mixer_to_client_into_packet_base(TRUE, TRUE, bundled_session);
 }
 
-static void insert_frame_marking_into_packet_base(bool_t with_payload, RtpSession *test_session) {
+static void insert_frame_marking_into_packet_base(BCTBX_UNUSED(bool_t with_payload),
+                                                  BCTBX_UNUSED(RtpSession *test_session)) {
 	size_t size;
 	int ret;
 	uint8_t result;

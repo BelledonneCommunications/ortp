@@ -44,7 +44,7 @@ extern "C" fec_stats *fec_stream_get_stats(FecStream *fec_stream) {
 	return ((FecStreamCxx *)fec_stream)->getStats();
 }
 FecStreamCxx::FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParameters *fecParams)
-	: mEncoder(fecParams), mCluster(source) {
+    : mEncoder(fecParams), mCluster(source) {
 
 	parameters = fecParams;
 	mSourceSession = source;
@@ -55,14 +55,14 @@ FecStreamCxx::FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, 
 	memset(&mStats, 0, sizeof(fec_stats));
 }
 void FecStreamCxx::init() {
-	RtpTransport * transport = NULL;
-	RtpBundle * bundle = (RtpBundle *) mSourceSession->bundle;
-	RtpSession * session = rtp_bundle_get_primary_session(bundle);
+	RtpTransport *transport = NULL;
+	RtpBundle *bundle = (RtpBundle *)mSourceSession->bundle;
+	RtpSession *session = rtp_bundle_get_primary_session(bundle);
 	rtp_session_get_transports(session, &transport, NULL);
-	
+
 	mModifier = ortp_new0(RtpTransportModifier, 1);
 	mModifier->level = RtpTransportModifierLevelForwardErrorCorrection;
-	mModifier->data = this; 
+	mModifier->data = this;
 	mModifier->t_process_on_send = FecStreamCxx::processOnSend;
 	mModifier->t_process_on_receive = FecStreamCxx::processOnRecieve;
 	mModifier->t_process_on_schedule = NULL;
@@ -71,27 +71,27 @@ void FecStreamCxx::init() {
 	mCluster.setModifier(mModifier);
 	mEncoder.init(mFecSession, mSourceSession);
 }
-int FecStreamCxx::processOnSend(struct _RtpTransportModifier *m, mblk_t *packet){
+int FecStreamCxx::processOnSend(struct _RtpTransportModifier *m, mblk_t *packet) {
 
-	FecStreamCxx * fecStream = (FecStreamCxx *) m->data;
-	RtpSession * sourceSession = fecStream->getSourceSession();
+	FecStreamCxx *fecStream = (FecStreamCxx *)m->data;
+	RtpSession *sourceSession = fecStream->getSourceSession();
 	uint32_t ssrc = rtp_get_ssrc(packet);
-	if(ssrc == rtp_session_get_send_ssrc(sourceSession)){
+	if (ssrc == rtp_session_get_send_ssrc(sourceSession)) {
 		fecStream->onNewSourcePacketSent(packet);
 	}
 	return (int)msgdsize(packet);
 }
-int FecStreamCxx::processOnRecieve(struct _RtpTransportModifier *m,mblk_t *packet){
+int FecStreamCxx::processOnRecieve(struct _RtpTransportModifier *m, mblk_t *packet) {
 
-	FecStreamCxx * fecStream = (FecStreamCxx *) m->data;
-	RtpSession * sourceSession = fecStream->getSourceSession();
+	FecStreamCxx *fecStream = (FecStreamCxx *)m->data;
+	RtpSession *sourceSession = fecStream->getSourceSession();
 	uint32_t ssrc = rtp_get_ssrc(packet);
-	if(ssrc == rtp_session_get_recv_ssrc(sourceSession)){
+	if (ssrc == rtp_session_get_recv_ssrc(sourceSession)) {
 		fecStream->onNewSourcePacketRecieved(packet);
 	}
 	return (int)msgdsize(packet);
 }
-void ortp::modifierFree(struct _RtpTransportModifier *m){
+void ortp::modifierFree(struct _RtpTransportModifier *m) {
 	ortp_free(m);
 }
 void FecStreamCxx::onNewSourcePacketSent(mblk_t *packet) {
@@ -101,14 +101,12 @@ void FecStreamCxx::onNewSourcePacketSent(mblk_t *packet) {
 
 	msgpullup(packet, -1);
 	// To fix : mediastream tool sends two packets with seqnum = 0. The first one is degenerated so we dont take it.
-	if (rtp_get_version(packet) != 2)
-		return;
+	if (rtp_get_version(packet) != 2) return;
 
 	std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
 
 	if (mEncoder.isFull()) {
 		mEncoder.reset(seqnum);
-
 	}
 
 	mEncoder.add(*source);
@@ -119,7 +117,7 @@ void FecStreamCxx::onNewSourcePacketSent(mblk_t *packet) {
 		rtp_set_seqnumber(rowRepair, rtp_session_get_seq_number(mFecSession));
 		// ortp_message("row repair sended [%u] | %u", timestamp, rtp_get_seqnumber(rowRepair));
 		rtp_session_sendm_with_ts(mFecSession, rowRepair, timestamp);
-		
+
 		mStats.row_repair_sended++;
 	}
 	if (parameters->D > 1 && mEncoder.isColFull()) {
@@ -138,22 +136,19 @@ void FecStreamCxx::onNewSourcePacketRecieved(mblk_t *packet) {
 	uint16_t seqnum;
 
 	msgpullup(packet, -1);
-	if (rtp_get_version(packet) != 2)
-		return;
+	if (rtp_get_version(packet) != 2) return;
 
 	seqnum = rtp_get_seqnumber(packet);
 	std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
 	mCluster.add(seqnum, source);
 }
 
-void FecStreamCxx::recieveRepairPacket(uint32_t timestamp){
+void FecStreamCxx::recieveRepairPacket(uint32_t timestamp) {
 
-	mblk_t * repair_packet = rtp_session_recvm_with_ts(mFecSession, timestamp);
-	
-	if (repair_packet == NULL)
-		return;
-	if (mCluster.repairPacketsTooOld(*parameters))
-		mCluster.clearRepairPackets();
+	mblk_t *repair_packet = rtp_session_recvm_with_ts(mFecSession, timestamp);
+
+	if (repair_packet == NULL) return;
+	if (mCluster.repairPacketsTooOld(*parameters)) mCluster.clearRepairPackets();
 
 	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(repair_packet));
 	mCluster.add(repair);
@@ -162,7 +157,7 @@ void FecStreamCxx::printStats() {
 
 	double initialLossRate = (double)mStats.packets_lost / (double)mSourceSession->stats.packet_recv;
 	double residualLossRate =
-		((double)(mStats.packets_lost - mStats.packets_recovered) / (double)mSourceSession->stats.packet_recv);
+	    ((double)(mStats.packets_lost - mStats.packets_recovered) / (double)mSourceSession->stats.packet_recv);
 	double recoveringRate = (double)mStats.packets_recovered / (double)mStats.packets_lost;
 
 	ortp_log(ORTP_MESSAGE, "===========================================================");
@@ -185,22 +180,21 @@ mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 	mCluster.repair2D();
 	auto packet = mCluster.getSourcePacket(seqnum);
 	mStats.packets_lost++;
-	if (packet != nullptr) 
-	{
-		mblk_t * mp = packet->getPacketCopy(); 
-		RtpTransport * transport = NULL;
-		RtpBundle * bundle = (RtpBundle *) mSourceSession->bundle;
+	if (packet != nullptr) {
+		mblk_t *mp = packet->getPacketCopy();
+		RtpTransport *transport = NULL;
+		RtpBundle *bundle = (RtpBundle *)mSourceSession->bundle;
 		RtpSession *session = rtp_bundle_get_primary_session(bundle);
 		rtp_session_get_transports(session, &transport, NULL);
-		if(meta_rtp_transport_apply_all_except_one_on_recieve(transport, mModifier, mp) >= 0){
-			ortp_message("Source packet reconstructed : SeqNum = %d;" ,(int)rtp_get_seqnumber(mp));
+		if (meta_rtp_transport_apply_all_except_one_on_recieve(transport, mModifier, mp) >= 0) {
+			ortp_message("Source packet reconstructed : SeqNum = %d;", (int)rtp_get_seqnumber(mp));
 			mStats.packets_recovered++;
 		}
 		return mp;
 
 	} else {
 		return nullptr;
-	}	
+	}
 }
 FecParameters *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow) {
 	FecParameters *fecParams = (FecParameters *)ortp_malloc0(sizeof(FecParameters));
@@ -217,7 +211,7 @@ Bitstring::Bitstring(const mblk_t *packet) {
 
 	size_t payload_size = msgdsize(packet) - RTP_FIXED_HEADER_SIZE;
 	mBuffer[0] =
-		rtp_get_version(packet) << 6 | rtp_get_padbit(packet) << 5 | rtp_get_extbit(packet) << 4 | rtp_get_cc(packet);
+	    rtp_get_version(packet) << 6 | rtp_get_padbit(packet) << 5 | rtp_get_extbit(packet) << 4 | rtp_get_cc(packet);
 	mBuffer[1] = rtp_get_markbit(packet) << 7 | rtp_get_payload_type(packet);
 	setTimestamp((uint32_t)rtp_get_timestamp(packet));
 	setLength((uint16_t)payload_size);
@@ -305,12 +299,15 @@ mblk_t *FecSourcePacket::transfer() {
 	}
 	return nullptr;
 }
-FecRepairPacket::FecRepairPacket(struct _RtpSession *fecSession, struct _RtpSession *sourceSession, uint16_t seqnumBase, uint8_t L, uint8_t D) {
+FecRepairPacket::FecRepairPacket(
+    struct _RtpSession *fecSession, struct _RtpSession *sourceSession, uint16_t seqnumBase, uint8_t L, uint8_t D) {
 	mPacket = NULL;
 	this->mSeqnumBase = seqnumBase;
 	this->mL = L;
 	this->mD = D;
-	mPacket =  rtp_session_create_repair_packet_header(fecSession,sourceSession, 8*sizeof(uint8_t) + sizeof(uint32_t)); // allocate extra size for initBitString, SeqNumBase, L and D
+	mPacket = rtp_session_create_repair_packet_header(
+	    fecSession, sourceSession,
+	    8 * sizeof(uint8_t) + sizeof(uint32_t)); // allocate extra size for initBitString, SeqNumBase, L and D
 
 	// initBitstring
 	memset(mPacket->b_wptr, 0, 8 * sizeof(uint8_t));
@@ -347,7 +344,6 @@ size_t FecRepairPacket::parametersStart(uint8_t **start) const {
 	size_t bitstringSize = bitstringStart(start);
 	*start += bitstringSize;
 	return rtp_get_cc(mPacket) * sizeof(uint32_t);
-	
 }
 size_t FecRepairPacket::repairPayloadStart(uint8_t **start) const {
 	size_t parametersSize = parametersStart(start);
@@ -456,8 +452,7 @@ void FecEncoder::initRowRepairPackets(uint16_t seqnumBase) {
 	}
 }
 void FecEncoder::initColRepairPackets(uint16_t seqnumBase) {
-	if (mRows <= 1)
-		return;
+	if (mRows <= 1) return;
 	uint16_t seqnum = seqnumBase;
 	int L = mColumns;
 	int D = mRows;
@@ -476,8 +471,7 @@ void FecEncoder::resetRowRepairPackets(uint16_t seqnumBase) {
 	}
 }
 void FecEncoder::resetColRepairPackets(uint16_t seqnumBase) {
-	if (mRows <= 1)
-		return;
+	if (mRows <= 1) return;
 	uint16_t seqnum = seqnumBase;
 	for (size_t i = 0; i < mColRepair.size(); i++) {
 		mColRepair[i]->reset(seqnum);
@@ -537,10 +531,8 @@ std::map<uint16_t, std::shared_ptr<FecSourcePacket>> const &RecieveCluster::getS
 std::shared_ptr<FecSourcePacket> RecieveCluster::getSourcePacket(uint16_t seqnum) {
 
 	auto it = mSource.find(seqnum);
-	if (it != mSource.end())
-		return it->second;
-	else
-		return nullptr;
+	if (it != mSource.end()) return it->second;
+	else return nullptr;
 }
 
 bool RecieveCluster::repairPacketsTooOld(FecParameters const &parameters) {
@@ -602,8 +594,7 @@ int RecieveCluster::repairOne(FecRepairPacket const &repairPacket) {
 
 		recovery->setSsrc(repairPacket.getProtectedSsrc());
 		for (int i = 0; (unsigned long)i < seqnumList.size(); i++) {
-			if (seqnumList[i] == seqnumToRepair)
-				continue;
+			if (seqnumList[i] == seqnumToRepair) continue;
 			std::shared_ptr<FecSourcePacket> sourceP = getSourcePacket(seqnumList[i]);
 			recovery->addPayload(*sourceP);
 		}
@@ -634,8 +625,7 @@ int RecieveCluster::repair2D() {
 
 		if (num_recovered_so_far > num_recovered_until_this_iteration) {
 			num_recovered_until_this_iteration = num_recovered_so_far;
-		} else
-			break;
+		} else break;
 
 	} while (1);
 	return num_recovered_until_this_iteration;

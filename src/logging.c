@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,24 +18,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ortp/utils.h"
 #include "ortp/logging.h"
+#include "ortp/utils.h"
 
-
-
-void ortp_set_log_handler(OrtpLogFunc func){
+void ortp_set_log_handler(OrtpLogFunc func) {
 	bctbx_set_log_handler(func);
 }
 
-OrtpLogFunc ortp_get_log_handler(void){
+OrtpLogFunc ortp_get_log_handler(void) {
 	return NULL;
 }
 /**
  *@param file a FILE pointer where to output the ortp logs.
  *
  **/
-void ortp_set_log_file(FILE *file){
+void ortp_set_log_file(FILE *file) {
 	bctbx_set_log_file(file);
 }
-
-

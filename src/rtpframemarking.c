@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,7 +27,7 @@
  * @param packet the RTP packet.
  * @param id the identifier of the frame marking extension.
  * @param marker the frame marker to add.
-**/
+ **/
 void rtp_add_frame_marker(mblk_t *packet, int id, uint8_t marker) {
 	rtp_add_extension_header(packet, id, 1, &marker);
 }
@@ -39,7 +39,7 @@ void rtp_add_frame_marker(mblk_t *packet, int id, uint8_t marker) {
  * @param id the identifier of the frame marking extension.
  * @param marker the frame marker to set.
  * @return 1 if the frame marker if present, 0 otherwise.
-**/
+ **/
 int rtp_get_frame_marker(mblk_t *packet, int id, uint8_t *marker) {
 	uint8_t *data;
 

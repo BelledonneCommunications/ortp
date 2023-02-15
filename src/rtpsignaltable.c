@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,26 +22,23 @@
 #include "ortp-config.h"
 #endif
 
-#include <ortp/rtpsession.h>
 #include "utils.h"
+#include <ortp/rtpsession.h>
 
-
-void rtp_signal_table_init(RtpSignalTable *table,RtpSession *session, const char *signal_name)
-{
-	memset(table,0,sizeof(RtpSignalTable));
-	table->session=session;
-	table->signal_name=signal_name;
-	session->signal_tables=o_list_append(session->signal_tables,(void*)table);
+void rtp_signal_table_init(RtpSignalTable *table, RtpSession *session, const char *signal_name) {
+	memset(table, 0, sizeof(RtpSignalTable));
+	table->session = session;
+	table->signal_name = signal_name;
+	session->signal_tables = o_list_append(session->signal_tables, (void *)table);
 }
 
-int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data)
-{
+int rtp_signal_table_add(RtpSignalTable *table, RtpCallback cb, void *user_data) {
 	int i;
 
-	for (i=0;i<RTP_CALLBACK_TABLE_MAX_ENTRIES;i++){
-		if (table->callback[i]==NULL){
-			table->callback[i]=cb;
-			table->user_data[i]=user_data;
+	for (i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
+		if (table->callback[i] == NULL) {
+			table->callback[i] = cb;
+			table->user_data[i] = user_data;
 			table->count++;
 			return 0;
 		}
@@ -49,51 +46,46 @@ int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data)
 	return -1;
 }
 
+void rtp_signal_table_emit(RtpSignalTable *table) {
+	int i, c;
 
-void rtp_signal_table_emit(RtpSignalTable *table)
-{
-	int i,c;
-
-	for (i=0,c=0;c<table->count;i++){
-		if (table->callback[i]!=NULL){
-			c++;	/*I like it*/
-			table->callback[i](table->session,table->user_data[i],0,0);
+	for (i = 0, c = 0; c < table->count; i++) {
+		if (table->callback[i] != NULL) {
+			c++; /*I like it*/
+			table->callback[i](table->session, table->user_data[i], 0, 0);
 		}
 	}
 }
 
-void rtp_signal_table_emit2(RtpSignalTable *table, void *arg)
-{
-	int i,c;
+void rtp_signal_table_emit2(RtpSignalTable *table, void *arg) {
+	int i, c;
 
-	for (i=0,c=0;c<table->count;i++){
-		if (table->callback[i]!=NULL){
-			c++;	/*I like it*/
-			table->callback[i](table->session,arg,table->user_data[i],0);
+	for (i = 0, c = 0; c < table->count; i++) {
+		if (table->callback[i] != NULL) {
+			c++; /*I like it*/
+			table->callback[i](table->session, arg, table->user_data[i], 0);
 		}
 	}
 }
 
-void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2)
-{
-	int i,c;
+void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2) {
+	int i, c;
 
-	for (i=0,c=0;c<table->count;i++){
-		if (table->callback[i]!=NULL){
-			c++;	/*I like it*/
-			table->callback[i](table->session,arg1,arg2,table->user_data[i]);
+	for (i = 0, c = 0; c < table->count; i++) {
+		if (table->callback[i] != NULL) {
+			c++; /*I like it*/
+			table->callback[i](table->session, arg1, arg2, table->user_data[i]);
 		}
 	}
 }
 
-int rtp_signal_table_remove_by_callback(RtpSignalTable *table,RtpCallback cb)
-{
+int rtp_signal_table_remove_by_callback(RtpSignalTable *table, RtpCallback cb) {
 	int i;
 
-	for (i=0;i<RTP_CALLBACK_TABLE_MAX_ENTRIES;i++){
-		if (table->callback[i]==cb){
-			table->callback[i]=NULL;
-			table->user_data[i]=0;
+	for (i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
+		if (table->callback[i] == cb) {
+			table->callback[i] = NULL;
+			table->user_data[i] = 0;
 			table->count--;
 			return 0;
 		}

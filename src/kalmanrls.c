@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,6 @@
  */
 
 #include "ortp/utils.h"
-
 
 void ortp_kalman_rls_init(OrtpKalmanRLS *rls, double m0, double b0) {
 	memset(rls, 0, sizeof(OrtpKalmanRLS));
@@ -48,13 +47,11 @@ void ortp_kalman_rls_record(OrtpKalmanRLS *rls, double xmes, double ymes) {
 	**/
 	double diff = ymes - estim;
 
-	rls->m = rls->m + diff * (a*e+b*f);
-	rls->b = rls->b + diff * (c*e+d*f);
+	rls->m = rls->m + diff * (a * e + b * f);
+	rls->b = rls->b + diff * (c * e + d * f);
 
-	rls->P[0][0] = (a - (e*a+f*b)*(e*a+f*c) / deno) * 1.f / rls->lambda;
-	rls->P[1][0] = (b - (e*a+f*b)*(e*b+f*d) / deno) * 1.f / rls->lambda;
-	rls->P[0][1] = (c - (e*c+f*d)*(e*a+f*c) / deno) * 1.f / rls->lambda;
-	rls->P[1][1] = (d - (e*c+f*d)*(e*b+f*d) / deno) * 1.f / rls->lambda;
+	rls->P[0][0] = (a - (e * a + f * b) * (e * a + f * c) / deno) * 1.f / rls->lambda;
+	rls->P[1][0] = (b - (e * a + f * b) * (e * b + f * d) / deno) * 1.f / rls->lambda;
+	rls->P[0][1] = (c - (e * c + f * d) * (e * a + f * c) / deno) * 1.f / rls->lambda;
+	rls->P[1][1] = (d - (e * c + f * d) * (e * b + f * d) / deno) * 1.f / rls->lambda;
 }
-
-

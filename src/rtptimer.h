@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,20 +21,18 @@
 #ifndef RTPTIMER_H
 #define RTPTIMER_H
 
-#if	!defined(_WIN32) && !defined(_WIN32_WCE)
+#if !defined(_WIN32) && !defined(_WIN32_WCE)
 #include <sys/time.h>
 #else
-#include <time.h>
 #include "winsock2.h"
+#include <time.h>
 #endif
 
 #include <ortp/port.h>
 
-
 typedef void (*RtpTimerFunc)(void);
-	
-struct _RtpTimer
-{
+
+struct _RtpTimer {
 	int state;
 #define RTP_TIMER_RUNNING 1
 #define RTP_TIMER_STOPPED 0

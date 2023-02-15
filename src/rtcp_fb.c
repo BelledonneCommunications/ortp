@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "ortp/ortp.h"
-#include "ortp/rtpsession.h"
 #include "ortp/rtcp.h"
+#include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
-
 
 static void rtp_session_add_fb_packet_to_send(RtpSession *session, mblk_t *m) {
 	if (session->rtcp.send_algo.fb_packets == NULL) {
@@ -42,11 +40,9 @@ static void rtp_session_add_fb_packet_to_send(RtpSession *session, mblk_t *m) {
 static bool_t is_fb_packet_to_be_sent_immediately(RtpSession *session) {
 	uint64_t t0;
 
-	if (rtp_session_has_fb_packets_to_send(session) == TRUE)
-		return FALSE;
+	if (rtp_session_has_fb_packets_to_send(session) == TRUE) return FALSE;
 	t0 = bctbx_get_cur_time_ms();
-	if (t0 > session->rtcp.send_algo.tn)
-		return FALSE;
+	if (t0 > session->rtcp.send_algo.tn) return FALSE;
 	if (session->rtcp.send_algo.allow_early == FALSE) {
 		if ((session->rtcp.send_algo.tn - t0) >= session->rtcp.send_algo.T_max_fb_delay) {
 			/* Discard message as it is considered that it will not be useful to the sender
@@ -59,9 +55,9 @@ static bool_t is_fb_packet_to_be_sent_immediately(RtpSession *session) {
 	return TRUE;
 }
 
-static mblk_t * make_rtcp_fb_pli(RtpSession *session) {
+static mblk_t *make_rtcp_fb_pli(RtpSession *session) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t);
-	mblk_t *h= allocb(size, 0);
+	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
 	rtcp_fb_header_t *fbh;
 
@@ -79,13 +75,13 @@ static mblk_t * make_rtcp_fb_pli(RtpSession *session) {
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
+static mblk_t *make_rtcp_fb_fir(RtpSession *session) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_fir_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
 	rtcp_fb_header_t *fbh;
 	rtcp_fb_fir_fci_t *fci1;
-	
+
 	/* Fill FIR */
 	ch = (rtcp_common_header_t *)h->b_wptr;
 	h->b_wptr += sizeof(rtcp_common_header_t);
@@ -93,7 +89,7 @@ static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
 	h->b_wptr += sizeof(rtcp_fb_header_t);
 	fci1 = (rtcp_fb_fir_fci_t *)h->b_wptr;
 	h->b_wptr += sizeof(rtcp_fb_fir_fci_t);
-	
+
 	/*
 	 * See https://datatracker.ietf.org/doc/rfc4585/ section 6.1
 	 * SSRC of packet sender: 32 bits
@@ -103,28 +99,28 @@ static mblk_t * make_rtcp_fb_fir(RtpSession *session) {
 	 * 	The synchronization source identifier of the media source that
 	 * 	this piece of feedback information is related to.
 	 */
-	
+
 	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
 	fbh->media_source_ssrc = htonl(rtp_session_get_recv_ssrc(session));
-	
+
 	/*
 	 * https://www.rfc-editor.org/rfc/rfc5104.html#section-4.3.1.1
 	 * SSRC (32 bits): The SSRC value of the media sender that is
 	 * 	requested to send a decoder refresh point.
 	 */
-	
+
 	fci1->ssrc = htonl(rtp_session_get_recv_ssrc(session));
 	fci1->seq_nr = session->rtcp.rtcp_fb_fir_seq_nr;
 	fci1->pad1 = 0;
 	fci1->pad2 = 0;
-	
+
 	/* Fill common header */
 	rtcp_common_header_init(ch, session, RTCP_PSFB, RTCP_PSFB_FIR, msgdsize(h));
 
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
+static mblk_t *make_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t number, uint8_t picture_id) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_sli_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -150,7 +146,7 @@ static mblk_t * make_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t n
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
+static mblk_t *make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	uint16_t bit_string_len_in_bytes;
 	int additional_bytes;
 	int size;
@@ -195,7 +191,7 @@ static mblk_t * make_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uint16_t blp) {
+static mblk_t *make_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uint16_t blp) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_generic_nack_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -219,7 +215,7 @@ static mblk_t * make_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uin
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr, uint16_t measured_overhead) {
+static mblk_t *make_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr, uint16_t measured_overhead) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -259,7 +255,7 @@ static mblk_t * make_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr, uint16_t
 	return h;
 }
 
-static mblk_t * make_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
+static mblk_t *make_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_tmmbr_fci_t);
 	mblk_t *h = allocb(size, 0);
 	rtcp_common_header_t *ch;
@@ -310,7 +306,8 @@ bool_t rtp_session_rtcp_rtpfb_scheduled(RtpSession *session, rtcp_rtpfb_type_t t
 
 void rtp_session_send_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, uint16_t blp) {
 	mblk_t *m;
-	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GENERIC_NACK) == TRUE)) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GENERIC_NACK) == TRUE)) {
 		m = make_rtcp_fb_generic_nack(session, pid, blp);
 		rtp_session_add_fb_packet_to_send(session, m);
 		rtp_session_send_fb_rtcp_packet_and_reschedule(session);
@@ -319,7 +316,8 @@ void rtp_session_send_rtcp_fb_generic_nack(RtpSession *session, uint16_t pid, ui
 
 void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 	mblk_t *m;
-	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_PLI) == TRUE)) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_PLI) == TRUE)) {
 		bool_t can_send_immediately = FALSE;
 		if (rtp_session_rtcp_psfb_scheduled(session, RTCP_PSFB_PLI) != TRUE) {
 			m = make_rtcp_fb_pli(session);
@@ -334,7 +332,8 @@ void rtp_session_send_rtcp_fb_pli(RtpSession *session) {
 
 void rtp_session_send_rtcp_fb_fir(RtpSession *session) {
 	mblk_t *m;
-	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_FIR) == TRUE)) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_FIR) == TRUE)) {
 		bool_t can_send_immediately = FALSE;
 		if (rtp_session_rtcp_psfb_scheduled(session, RTCP_PSFB_FIR) != TRUE) {
 			m = make_rtcp_fb_fir(session);
@@ -351,10 +350,11 @@ void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t 
 	mblk_t *m;
 	if (rtp_session_avpf_enabled(session) == TRUE) {
 		/* Only send SLI if SLI and RPSI features have been enabled. SLI without RPSI is not really useful. */
-		if ((rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_SLI) == TRUE)
-			&& (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
-			/* we check first if the packet can be sent immediately. is_fb_packet_to_be_sent_immediately() will return FALSE
-			 * if there are queued feedback packets, which we are going to do in rtp_session_add_fb_packet_to_send() just after.
+		if ((rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_SLI) == TRUE) &&
+		    (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
+			/* we check first if the packet can be sent immediately. is_fb_packet_to_be_sent_immediately() will return
+			 * FALSE if there are queued feedback packets, which we are going to do in
+			 * rtp_session_add_fb_packet_to_send() just after.
 			 */
 			bool_t can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
 			m = make_rtcp_fb_sli(session, first, number, picture_id);
@@ -371,7 +371,8 @@ void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t first, uint16_t 
 
 void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len) {
 	mblk_t *m;
-	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_payload_type_feature_enabled(session, PAYLOAD_TYPE_AVPF_RPSI) == TRUE)) {
 		bool_t can_send_immediately;
 		m = make_rtcp_fb_rpsi(session, bit_string, bit_string_len);
 		can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
@@ -384,8 +385,10 @@ void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uin
 
 void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr) {
 	mblk_t *m;
-	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_TMMBR) == TRUE)) {
-		if ((rtp_session_rtcp_rtpfb_scheduled(session, RTCP_RTPFB_TMMBR) != TRUE) && (rtp_session_get_recv_ssrc(session) != 0)) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_TMMBR) == TRUE)) {
+		if ((rtp_session_rtcp_rtpfb_scheduled(session, RTCP_RTPFB_TMMBR) != TRUE) &&
+		    (rtp_session_get_recv_ssrc(session) != 0)) {
 			uint16_t overhead = (session->rtp.gs.sockfamily == AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 			m = make_rtcp_fb_tmmbr(session, mxtbr, overhead);
 			rtp_session_add_fb_packet_to_send(session, m);
@@ -397,7 +400,8 @@ void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr) {
 
 void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 	mblk_t *m;
-	if ((rtp_session_avpf_enabled(session) == TRUE) && (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_TMMBR) == TRUE)) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_TMMBR) == TRUE)) {
 		m = make_rtcp_fb_tmmbn(session, ssrc);
 		if (m) {
 			rtp_session_add_fb_packet_to_send(session, m);
@@ -409,7 +413,7 @@ void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 
 bool_t rtp_session_avpf_enabled(RtpSession *session) {
 	PayloadType *pt = rtp_profile_get_payload(session->snd.profile, session->snd.pt);
-	if (!pt){
+	if (!pt) {
 		ortp_warning("rtp_session_avpf_enabled(): payload type not set, unreliable result returned.");
 	}
 	return pt && (payload_type_get_flags(pt) & PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED);
@@ -441,7 +445,7 @@ uint16_t rtp_session_get_avpf_rr_interval(RtpSession *session) {
 	PayloadType *pt = rtp_profile_get_payload(session->rcv.profile, session->rcv.pt);
 	PayloadTypeAvpfParams params;
 	if (!pt) return RTCP_DEFAULT_REPORT_INTERVAL;
-	params=payload_type_get_avpf_params(pt);
+	params = payload_type_get_avpf_params(pt);
 	return (uint16_t)params.trr_interval;
 }
 

@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,9 @@
 
 void jitter_control_init(JitterControl *ctl, PayloadType *pt);
 void jitter_control_enable_adaptive(JitterControl *ctl, bool_t val);
-static ORTP_INLINE bool_t jitter_control_adaptive_enabled(JitterControl *ctl) { return ctl->params.adaptive; }
+static ORTP_INLINE bool_t jitter_control_adaptive_enabled(JitterControl *ctl) {
+	return ctl->params.adaptive;
+}
 void jitter_control_set_payload(JitterControl *ctl, PayloadType *pt);
 void jitter_control_update_corrective_slide(JitterControl *ctl);
 void jitter_control_update_size(JitterControl *ctl, queue_t *q);
@@ -42,6 +44,6 @@ void jitter_control_new_packet(JitterControl *ctl, uint32_t packet_ts, uint32_t 
 void jitter_control_new_packet_basic(JitterControl *ctl, uint32_t packet_ts, uint32_t cur_str_ts);
 void jitter_control_new_packet_rls(JitterControl *ctl, uint32_t packet_ts, uint32_t cur_str_ts);
 
-uint32_t jitter_control_get_compensated_timestamp(JitterControl *obj , uint32_t user_ts);
+uint32_t jitter_control_get_compensated_timestamp(JitterControl *obj, uint32_t user_ts);
 
 #endif

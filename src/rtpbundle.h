@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,13 +33,13 @@ static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, cons
 class RtpBundleCxx {
 	friend void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
 
-  public:
+public:
 	RtpBundleCxx() = default;
 	~RtpBundleCxx();
 
 	RtpBundleCxx(const RtpBundleCxx &) = delete;
 	RtpBundleCxx(RtpBundleCxx &&) = delete;
-	
+
 	int getMidId() const;
 	void setMidId(int id);
 	void addFecSession(const RtpSession *sourceSession, RtpSession *fecSession);
@@ -59,7 +59,7 @@ class RtpBundleCxx {
 
 	bool updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp);
 
-  private:
+private:
 	struct Mid {
 		std::string mid;
 		uint16_t sequenceNumber;
@@ -78,6 +78,6 @@ class RtpBundleCxx {
 
 	std::string sdesParseMid = "";
 	int midId = -1;
-};	
+};
 
 #endif /* RTPBUNDLE_H */

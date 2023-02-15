@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,26 +17,29 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#include <bctoolbox/defs.h>
+
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
-#include <ortp/telephonyevents.h>
-#include "utils.h"
-#include "rtpsession_priv.h"
 #include "ortp/str_utils.h"
-#include <ortp/ortp.h>
+#include "rtpsession_priv.h"
+#include "utils.h"
 #include <bctoolbox/port.h>
+#include <ortp/ortp.h>
+#include <ortp/telephonyevents.h>
 
-PayloadType	payload_type_telephone_event={
-	PAYLOAD_AUDIO_PACKETIZED, /*type */
-	8000,	/*clock rate */
-	0,		/* bytes per sample N/A */
-	NULL,	/* zero pattern N/A*/
-	0,		/*pattern_length N/A */
-	0,		/*	normal_bitrate */
-	"telephone-event",	/* MIME subtype */
-	1,		/* Audio Channels */
-	0		/*flags */
+PayloadType payload_type_telephone_event = {
+    PAYLOAD_AUDIO_PACKETIZED, /*type */
+    8000,                     /*clock rate */
+    0,                        /* bytes per sample N/A */
+    NULL,                     /* zero pattern N/A*/
+    0,                        /*pattern_length N/A */
+    0,                        /*	normal_bitrate */
+    "telephone-event",        /* MIME subtype */
+    1,                        /* Audio Channels */
+    0                         /*flags */
 };
 
 /**
@@ -45,18 +48,16 @@ PayloadType	payload_type_telephone_event={
  * @param session a rtp session
  *
  * @return the payload type number used for telephony events if found, -1 if not found.
-**/
-int rtp_session_telephone_events_supported(RtpSession *session)
-{
+ **/
+int rtp_session_telephone_events_supported(RtpSession *session) {
 	/* search for a telephony event payload in the current profile */
-	return rtp_profile_get_payload_number_from_mime(session->snd.profile,"telephone-event");
+	return rtp_profile_get_payload_number_from_mime(session->snd.profile, "telephone-event");
 }
 
-bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt_num){
-	PayloadType *pt=rtp_profile_get_payload(prof, pt_num);
-	return pt && strcasecmp(pt->mime_type,"telephone-event")==0;
+bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt_num) {
+	PayloadType *pt = rtp_profile_get_payload(prof, pt_num);
+	return pt && strcasecmp(pt->mime_type, "telephone-event") == 0;
 }
-
 
 /**
  * Tells whether telephone event payload type is supported for send within the
@@ -64,11 +65,10 @@ bool_t rtp_profile_is_telephone_event(const RtpProfile *prof, int pt_num){
  * @param session a rtp session
  *
  * @return the payload type number used for telephony events if found, -1 if not found.
-**/
-int rtp_session_send_telephone_events_supported(RtpSession *session)
-{
+ **/
+int rtp_session_send_telephone_events_supported(RtpSession *session) {
 	/* search for a telephony event payload in the current profile */
-	return rtp_profile_get_payload_number_from_mime(session->snd.profile,"telephone-event");
+	return rtp_profile_get_payload_number_from_mime(session->snd.profile, "telephone-event");
 }
 
 /**
@@ -77,12 +77,11 @@ int rtp_session_send_telephone_events_supported(RtpSession *session)
  * @param session a rtp session
  *
  * @return the payload type number used for telephony events if found, -1 if not found.
-**/int rtp_session_recv_telephone_events_supported(RtpSession *session)
-{
+ **/
+int rtp_session_recv_telephone_events_supported(RtpSession *session) {
 	/* search for a telephony event payload in the current profile */
-	return rtp_profile_get_payload_number_from_mime(session->rcv.profile,"telephone-event");
+	return rtp_profile_get_payload_number_from_mime(session->rcv.profile, "telephone-event");
 }
-
 
 /**
  *	Allocates a new rtp packet to be used to add named telephony events. The application can use
@@ -95,35 +94,36 @@ int rtp_session_send_telephone_events_supported(RtpSession *session)
  * @return a message block containing the rtp packet if successfull, NULL if the rtp session
  * cannot support telephony event (because the rtp profile it is bound to does not include
  * a telephony event payload type).
-**/
-mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start)
-{
+ **/
+mblk_t *rtp_session_create_telephone_event_packet(RtpSession *session, int start) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
-	PayloadType *cur_pt=rtp_profile_get_payload(session->snd.profile, rtp_session_get_send_payload_type(session));
+	PayloadType *cur_pt = rtp_profile_get_payload(session->snd.profile, rtp_session_get_send_payload_type(session));
 	int tev_pt = session->tev_send_pt;
 
-	if (tev_pt != -1){
-		PayloadType *cur_tev_pt=rtp_profile_get_payload(session->snd.profile, tev_pt);
-		if (!cur_tev_pt){
+	if (tev_pt != -1) {
+		PayloadType *cur_tev_pt = rtp_profile_get_payload(session->snd.profile, tev_pt);
+		if (!cur_tev_pt) {
 			ortp_error("Undefined telephone-event payload type %i choosen for sending telephone event", tev_pt);
 			tev_pt = -1;
-		}else if (cur_pt && cur_tev_pt->clock_rate != cur_pt->clock_rate){
-			ortp_warning("Telephone-event payload type %i has clockrate %i while main audio codec has clockrate %i: this is not permitted.",
-				tev_pt, cur_tev_pt->clock_rate, cur_pt->clock_rate);
+		} else if (cur_pt && cur_tev_pt->clock_rate != cur_pt->clock_rate) {
+			ortp_warning("Telephone-event payload type %i has clockrate %i while main audio codec has clockrate %i: "
+			             "this is not permitted.",
+			             tev_pt, cur_tev_pt->clock_rate, cur_pt->clock_rate);
 		}
 	}
 
-	if (tev_pt == -1){
-		tev_pt = rtp_profile_find_payload_number(session->snd.profile, "telephone-event", cur_pt ? cur_pt->clock_rate : 8000, 1);
+	if (tev_pt == -1) {
+		tev_pt = rtp_profile_find_payload_number(session->snd.profile, "telephone-event",
+		                                         cur_pt ? cur_pt->clock_rate : 8000, 1);
 	}
-	return_val_if_fail(tev_pt!=-1,NULL);
+	return_val_if_fail(tev_pt != -1, NULL);
 
-	mp=allocb(RTP_FIXED_HEADER_SIZE+TELEPHONY_EVENTS_ALLOCATED_SIZE,BPRI_MED);
-	if (mp==NULL) return NULL;
-	rtp=(rtp_header_t*)mp->b_rptr;
+	mp = allocb(RTP_FIXED_HEADER_SIZE + TELEPHONY_EVENTS_ALLOCATED_SIZE, BPRI_MED);
+	if (mp == NULL) return NULL;
+	rtp = (rtp_header_t *)mp->b_rptr;
 	rtp->version = 2;
-	rtp->markbit=start;
+	rtp->markbit = start;
 	rtp->padbit = 0;
 	rtp->extbit = 0;
 	rtp->cc = 0;
@@ -132,13 +132,12 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
 	/*seq number set later, when packet is sended */
 
 	/*set the payload type */
-	rtp->paytype=tev_pt;
+	rtp->paytype = tev_pt;
 
 	/*copy the payload */
-	mp->b_wptr+=RTP_FIXED_HEADER_SIZE;
+	mp->b_wptr += RTP_FIXED_HEADER_SIZE;
 	return mp;
 }
-
 
 /**
  *@param session a rtp session.
@@ -152,30 +151,29 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
  * rtp_session_create_telephone_event_packet().
  *
  *@return 0 on success.
-**/
-int rtp_session_add_telephone_event(RtpSession *session,
-			mblk_t *packet, uint8_t event, int end, uint8_t volume, uint16_t duration)
-{
-	mblk_t *mp=packet;
+ **/
+int rtp_session_add_telephone_event(
+    BCTBX_UNUSED(RtpSession *session), mblk_t *packet, uint8_t event, int end, uint8_t volume, uint16_t duration) {
+	mblk_t *mp = packet;
 	telephone_event_t *event_hdr;
 
-
 	/* find the place where to add the new telephony event to the packet */
-	while(mp->b_cont!=NULL) mp=mp->b_cont;
+	while (mp->b_cont != NULL)
+		mp = mp->b_cont;
 	/* see if we need to allocate a new mblk_t */
-	if ( ( mp->b_wptr) >= mp->b_datap->db_lim){
-		mblk_t *newm=allocb(TELEPHONY_EVENTS_ALLOCATED_SIZE,BPRI_MED);
-		mp->b_cont=newm;
-		mp=mp->b_cont;
+	if ((mp->b_wptr) >= mp->b_datap->db_lim) {
+		mblk_t *newm = allocb(TELEPHONY_EVENTS_ALLOCATED_SIZE, BPRI_MED);
+		mp->b_cont = newm;
+		mp = mp->b_cont;
 	}
-	if (mp==NULL) return -1;
-	event_hdr=(telephone_event_t*)mp->b_wptr;
-	event_hdr->event=event;
-	event_hdr->R=0;
-	event_hdr->E=end;
-	event_hdr->volume=volume;
-	event_hdr->duration=htons(duration);
-	mp->b_wptr+=sizeof(telephone_event_t);
+	if (mp == NULL) return -1;
+	event_hdr = (telephone_event_t *)mp->b_wptr;
+	event_hdr->event = event;
+	event_hdr->R = 0;
+	event_hdr->E = end;
+	event_hdr->volume = volume;
+	event_hdr->duration = htons(duration);
+	mp->b_wptr += sizeof(telephone_event_t);
 	return 0;
 }
 /**
@@ -187,11 +185,11 @@ int rtp_session_add_telephone_event(RtpSession *session,
  * @param session a rtp session
  * @param dtmf a character meaning the dtmf (ex: '1', '#' , '9' ...)
  * @param userts the timestamp
- * @return 0 if successfull, -1 if the session cannot support telephony events or if the dtmf given as argument is not valid.
-**/
-int rtp_session_send_dtmf(RtpSession *session, char dtmf, uint32_t userts)
-{
-  return rtp_session_send_dtmf2(session, dtmf, userts, 480);
+ * @return 0 if successfull, -1 if the session cannot support telephony events or if the dtmf given as argument is not
+ *valid.
+ **/
+int rtp_session_send_dtmf(RtpSession *session, char dtmf, uint32_t userts) {
+	return rtp_session_send_dtmf2(session, dtmf, userts, 480);
 }
 
 /**
@@ -201,116 +199,113 @@ int rtp_session_send_dtmf(RtpSession *session, char dtmf, uint32_t userts)
  * @param dtmf a character meaning the dtmf (ex: '1', '#' , '9' ...)
  * @param userts the timestamp
  * @param duration duration of the dtmf in timestamp units
- * @return 0 if successfull, -1 if the session cannot support telephony events or if the dtmf given as argument is not valid.
-**/
-int rtp_session_send_dtmf2(RtpSession *session, char dtmf, uint32_t userts, int duration)
-{
-	mblk_t *m1,*m2,*m3;
+ * @return 0 if successfull, -1 if the session cannot support telephony events or if the dtmf given as argument is not
+ *valid.
+ **/
+int rtp_session_send_dtmf2(RtpSession *session, char dtmf, uint32_t userts, int duration) {
+	mblk_t *m1, *m2, *m3;
 	int tev_type;
-	int durationtier = duration/3;
+	int durationtier = duration / 3;
 
 	/* create the first telephony event packet */
-	switch (dtmf){
+	switch (dtmf) {
 		case '1':
-			tev_type=TEV_DTMF_1;
-		break;
+			tev_type = TEV_DTMF_1;
+			break;
 		case '2':
-			tev_type=TEV_DTMF_2;
-		break;
+			tev_type = TEV_DTMF_2;
+			break;
 		case '3':
-			tev_type=TEV_DTMF_3;
-		break;
+			tev_type = TEV_DTMF_3;
+			break;
 		case '4':
-			tev_type=TEV_DTMF_4;
-		break;
+			tev_type = TEV_DTMF_4;
+			break;
 		case '5':
-			tev_type=TEV_DTMF_5;
-		break;
+			tev_type = TEV_DTMF_5;
+			break;
 		case '6':
-			tev_type=TEV_DTMF_6;
-		break;
+			tev_type = TEV_DTMF_6;
+			break;
 		case '7':
-			tev_type=TEV_DTMF_7;
-		break;
+			tev_type = TEV_DTMF_7;
+			break;
 		case '8':
-			tev_type=TEV_DTMF_8;
-		break;
+			tev_type = TEV_DTMF_8;
+			break;
 		case '9':
-			tev_type=TEV_DTMF_9;
-		break;
+			tev_type = TEV_DTMF_9;
+			break;
 		case '*':
-			tev_type=TEV_DTMF_STAR;
-		break;
+			tev_type = TEV_DTMF_STAR;
+			break;
 		case '0':
-			tev_type=TEV_DTMF_0;
-		break;
+			tev_type = TEV_DTMF_0;
+			break;
 		case '#':
-			tev_type=TEV_DTMF_POUND;
-		break;
+			tev_type = TEV_DTMF_POUND;
+			break;
 
 		case 'A':
 		case 'a':
-		  tev_type=TEV_DTMF_A;
-		  break;
-
+			tev_type = TEV_DTMF_A;
+			break;
 
 		case 'B':
 		case 'b':
-		  tev_type=TEV_DTMF_B;
-		  break;
+			tev_type = TEV_DTMF_B;
+			break;
 
 		case 'C':
 		case 'c':
-		  tev_type=TEV_DTMF_C;
-		  break;
+			tev_type = TEV_DTMF_C;
+			break;
 
 		case 'D':
 		case 'd':
-		  tev_type=TEV_DTMF_D;
-		  break;
+			tev_type = TEV_DTMF_D;
+			break;
 
 		case '!':
-		  tev_type=TEV_FLASH;
-		  break;
-
+			tev_type = TEV_FLASH;
+			break;
 
 		default:
-		ortp_warning("Bad dtmf: %c.",dtmf);
-		return -1;
+			ortp_warning("Bad dtmf: %c.", dtmf);
+			return -1;
 	}
 
-	m1=rtp_session_create_telephone_event_packet(session,1);
-	if (m1==NULL) return -1;
-	rtp_session_add_telephone_event(session,m1,tev_type,0,10,durationtier);
+	m1 = rtp_session_create_telephone_event_packet(session, 1);
+	if (m1 == NULL) return -1;
+	rtp_session_add_telephone_event(session, m1, tev_type, 0, 10, durationtier);
 	/* create a second packet */
-	m2=rtp_session_create_telephone_event_packet(session,0);
-	if (m2==NULL) return -1;
-	rtp_session_add_telephone_event(session,m2,tev_type,0,10, durationtier+durationtier);
+	m2 = rtp_session_create_telephone_event_packet(session, 0);
+	if (m2 == NULL) return -1;
+	rtp_session_add_telephone_event(session, m2, tev_type, 0, 10, durationtier + durationtier);
 
 	/* create a third and final packet */
-	m3=rtp_session_create_telephone_event_packet(session,0);
-	if (m3==NULL) return -1;
-	rtp_session_add_telephone_event(session,m3,tev_type,1,10,duration);
+	m3 = rtp_session_create_telephone_event_packet(session, 0);
+	if (m3 == NULL) return -1;
+	rtp_session_add_telephone_event(session, m3, tev_type, 1, 10, duration);
 
 	/* and now sends them */
-	rtp_session_sendm_with_ts(session,m1,userts);
-	rtp_session_sendm_with_ts(session,m2,userts);
+	rtp_session_sendm_with_ts(session, m1, userts);
+	rtp_session_sendm_with_ts(session, m2, userts);
 	/* the last packet is sent three times in order to improve reliability*/
-	m1=copymsg(m3);
-	m2=copymsg(m3);
+	m1 = copymsg(m3);
+	m2 = copymsg(m3);
 	/*			NOTE:			*/
 	/* we need to copymsg() instead of dupmsg() because the buffers are modified when
 	the packet is sended because of the host-to-network conversion of timestamp,ssrc, csrc, and
 	seq number.
 	*/
-	rtp_session_sendm_with_ts(session,m3,userts);
+	rtp_session_sendm_with_ts(session, m3, userts);
 	session->rtp.snd_seq--;
-	rtp_session_sendm_with_ts(session,m1,userts);
+	rtp_session_sendm_with_ts(session, m1, userts);
 	session->rtp.snd_seq--;
-	rtp_session_sendm_with_ts(session,m2,userts);
+	rtp_session_sendm_with_ts(session, m2, userts);
 	return 0;
 }
-
 
 /**
  *	Reads telephony events from a rtp packet. \a *tab points to the beginning of the event buffer.
@@ -319,120 +314,107 @@ int rtp_session_send_dtmf2(RtpSession *session, char dtmf, uint32_t userts, int 
  * @param packet a rtp packet as a mblk_t.
  * @param tab the address of a pointer.
  * @return the number of events in the packet if successfull, 0 if the packet did not contain telephony events.
-**/
-int rtp_session_read_telephone_event(RtpSession *session,
-		mblk_t *packet,telephone_event_t **tab)
-{
+ **/
+int rtp_session_read_telephone_event(RtpSession *session, mblk_t *packet, telephone_event_t **tab) {
 	int datasize;
 	int num;
 	int i;
 	telephone_event_t *tev;
-	rtp_header_t *hdr=(rtp_header_t*)packet->b_rptr;
+	rtp_header_t *hdr = (rtp_header_t *)packet->b_rptr;
 	unsigned char *payload;
-	if (!rtp_profile_is_telephone_event(session->rcv.profile, hdr->paytype)) return 0;  /* this is not tel ev.*/
-	datasize=rtp_get_payload(packet,&payload);
-	tev=*tab=(telephone_event_t*)payload;
+	if (!rtp_profile_is_telephone_event(session->rcv.profile, hdr->paytype)) return 0; /* this is not tel ev.*/
+	datasize = rtp_get_payload(packet, &payload);
+	tev = *tab = (telephone_event_t *)payload;
 	/* convert from network to host order what should be */
-	num=datasize/sizeof(telephone_event_t);
-	for (i=0;i<num;i++)
-	{
-		tev[i].duration=ntohs(tev[i].duration);
+	num = datasize / sizeof(telephone_event_t);
+	for (i = 0; i < num; i++) {
+		tev[i].duration = ntohs(tev[i].duration);
 	}
 	return num;
 }
 
-static void notify_tev(RtpSession *session, telephone_event_t *event){
+static void notify_tev(RtpSession *session, telephone_event_t *event) {
 	OrtpEvent *ev;
 	OrtpEventData *evd;
-	rtp_signal_table_emit2(&session->on_telephone_event,ORTP_INT_TO_POINTER(event[0].event));
-	if (session->eventqs!=NULL){
-		ev=ortp_event_new(ORTP_EVENT_TELEPHONE_EVENT);
-		evd=ortp_event_get_data(ev);
-		evd->packet=dupmsg(session->current_tev);
-		evd->info.telephone_event=event[0].event;
-		rtp_session_dispatch_event(session,ev);
+	rtp_signal_table_emit2(&session->on_telephone_event, ORTP_INT_TO_POINTER(event[0].event));
+	if (session->eventqs != NULL) {
+		ev = ortp_event_new(ORTP_EVENT_TELEPHONE_EVENT);
+		evd = ortp_event_get_data(ev);
+		evd->packet = dupmsg(session->current_tev);
+		evd->info.telephone_event = event[0].event;
+		rtp_session_dispatch_event(session, ev);
 	}
 }
 
-static void notify_events_ended(RtpSession *session, telephone_event_t *events, int num){
+static void notify_events_ended(RtpSession *session, telephone_event_t *events, int num) {
 	int i;
-	for (i=0;i<num;i++){
-		if (events[i].E==1){
+	for (i = 0; i < num; i++) {
+		if (events[i].E == 1) {
 			notify_tev(session, &events[i]);
 		}
 	}
 }
 
 /* for high level telephony event callback */
-void rtp_session_check_telephone_events(RtpSession *session, mblk_t *m0)
-{
-	telephone_event_t *events,*evbuf;
-	int num,num2;
+void rtp_session_check_telephone_events(RtpSession *session, mblk_t *m0) {
+	telephone_event_t *events, *evbuf;
+	int num, num2;
 	int i;
 	rtp_header_t *hdr;
 	mblk_t *cur_tev;
 	unsigned char *payload;
 	int datasize;
 
-	hdr=(rtp_header_t*)m0->b_rptr;
+	hdr = (rtp_header_t *)m0->b_rptr;
 
-	datasize=rtp_get_payload(m0,&payload);
+	datasize = rtp_get_payload(m0, &payload);
 
-	num=datasize/sizeof(telephone_event_t);
-	events=(telephone_event_t*)payload;
+	num = datasize / sizeof(telephone_event_t);
+	events = (telephone_event_t *)payload;
 
-
-	if (hdr->markbit==1)
-	{
+	if (hdr->markbit == 1) {
 		/* this is a start of new events. Store the event buffer for later use*/
-		if (session->current_tev!=NULL) {
+		if (session->current_tev != NULL) {
 			freemsg(session->current_tev);
-			session->current_tev=NULL;
+			session->current_tev = NULL;
 		}
-		session->current_tev=copymsg(m0);
+		session->current_tev = copymsg(m0);
 		/* handle the case where the events are short enough to end within the packet that has the marker bit*/
-		notify_events_ended(session,events,num);
+		notify_events_ended(session, events, num);
 	}
 	/* whatever there is a markbit set or not, we parse the packet and compare it to previously received one */
-	cur_tev=session->current_tev;
-	if (cur_tev!=NULL)
-	{
+	cur_tev = session->current_tev;
+	if (cur_tev != NULL) {
 		/* first compare timestamp, they must be identical */
 		if (rtp_get_timestamp(cur_tev) == rtp_get_timestamp(m0)) {
-			datasize=rtp_get_payload(cur_tev,&payload);
-			num2=datasize/sizeof(telephone_event_t);
-			evbuf=(telephone_event_t*)payload;
-			for (i=0;i<MIN(num,num2);i++)
-			{
-				if (events[i].E==1)
-				{
+			datasize = rtp_get_payload(cur_tev, &payload);
+			num2 = datasize / sizeof(telephone_event_t);
+			evbuf = (telephone_event_t *)payload;
+			for (i = 0; i < MIN(num, num2); i++) {
+				if (events[i].E == 1) {
 					/* update events that have ended */
-					if (evbuf[i].E==0){
-						evbuf[i].E=1;
+					if (evbuf[i].E == 0) {
+						evbuf[i].E = 1;
 						/* this is a end of event, report it */
-						notify_tev(session,&events[i]);
+						notify_tev(session, &events[i]);
 					}
 				}
 			}
-		}
-		else
-		{
+		} else {
 			/* timestamp are not identical: this is not the same events*/
-			if (session->current_tev!=NULL) {
+			if (session->current_tev != NULL) {
 				freemsg(session->current_tev);
-				session->current_tev=NULL;
+				session->current_tev = NULL;
 			}
-			session->current_tev=copymsg(m0);
-			notify_events_ended(session,events,num);
+			session->current_tev = copymsg(m0);
+			notify_events_ended(session, events, num);
 		}
-	}
-	else
-	{
+	} else {
 		/* there is no pending events, but we did not received marked bit packet
 		either the sending implementation is not compliant, either it has been lost,
 		we must deal with it anyway.*/
-		session->current_tev=copymsg(m0);
+		session->current_tev = copymsg(m0);
 		/* inform the application if there are tone ends */
-		notify_events_ended(session,events,num);
+		notify_events_ended(session, events, num);
 	}
 }

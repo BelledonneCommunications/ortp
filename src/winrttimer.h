@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -23,13 +23,13 @@
 extern "C" {
 #endif
 
-	void winrt_timer_init(void);
-	void winrt_timer_do(void);
-	void winrt_timer_close(void);
+void winrt_timer_init(void);
+void winrt_timer_do(void);
+void winrt_timer_close(void);
 
 #ifdef __cplusplus
 };
 #endif
 
-#define TIME_INTERVAL		50
-#define TIME_TIMEOUT		100
+#define TIME_INTERVAL 50
+#define TIME_TIMEOUT 100

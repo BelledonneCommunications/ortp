@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,24 +18,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include "../rtptimer.h"
 #include <stdio.h>
 
-int main(int argc, char *argv[])
-{
-	RtpTimer *timer=&posix_timer;
+int main(int argc, char *argv[]) {
+	RtpTimer *timer = &posix_timer;
 	int i;
 	struct timeval interval;
-	
-	interval.tv_sec=0;
-	interval.tv_usec=500000;
-	
-	rtp_timer_set_interval(timer,&interval);
-	
+
+	interval.tv_sec = 0;
+	interval.tv_usec = 500000;
+
+	rtp_timer_set_interval(timer, &interval);
+
 	timer->timer_init();
-	for (i=0;i<10;i++)
-	{
+	for (i = 0; i < 10; i++) {
 		printf("doing something...\n");
 		timer->timer_do();
 	}

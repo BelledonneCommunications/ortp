@@ -40,7 +40,6 @@
  *
  * ////////////////////////////////////////////////////////////////////////// */
 
-
 /** \file ortp/b64.h
  *
  * \brief [C/C++] Header file for the b64 library.
@@ -54,10 +53,10 @@
  */
 
 #ifndef B64_DOCUMENTATION_SKIP_SECTION
-# define B64_VER_B64_H_B64_MAJOR    1
-# define B64_VER_B64_H_B64_MINOR    5
-# define B64_VER_B64_H_B64_REVISION 4
-# define B64_VER_B64_H_B64_EDIT     28
+#define B64_VER_B64_H_B64_MAJOR 1
+#define B64_VER_B64_H_B64_MINOR 5
+#define B64_VER_B64_H_B64_REVISION 4
+#define B64_VER_B64_H_B64_EDIT 28
 #endif /* !B64_DOCUMENTATION_SKIP_SECTION */
 
 /** \def B64_VER_MAJOR
@@ -77,73 +76,69 @@
  */
 
 #ifndef B64_DOCUMENTATION_SKIP_SECTION
-# define B64_VER_1_0_1      0x01000100
-# define B64_VER_1_0_2      0x01000200
-# define B64_VER_1_0_3      0x01000300
-# define B64_VER_1_1_1      0x01010100
-# define B64_VER_1_1_2      0x01010200
-# define B64_VER_1_1_3      0x01010300
-# define B64_VER_1_2_1      0x01020100
-# define B64_VER_1_2_2      0x01020200
-# define B64_VER_1_2_3      0x01020300
-# define B64_VER_1_2_4      0x01020400
-# define B64_VER_1_2_5      0x01020500
-# define B64_VER_1_2_6      0x01020600
-# define B64_VER_1_2_7      0x01020700
-# define B64_VER_1_3_1      0x010301ff
-# define B64_VER_1_3_2      0x010302ff
-# define B64_VER_1_3_3      0x010303ff
-# define B64_VER_1_3_4      0x010304ff
+#define B64_VER_1_0_1 0x01000100
+#define B64_VER_1_0_2 0x01000200
+#define B64_VER_1_0_3 0x01000300
+#define B64_VER_1_1_1 0x01010100
+#define B64_VER_1_1_2 0x01010200
+#define B64_VER_1_1_3 0x01010300
+#define B64_VER_1_2_1 0x01020100
+#define B64_VER_1_2_2 0x01020200
+#define B64_VER_1_2_3 0x01020300
+#define B64_VER_1_2_4 0x01020400
+#define B64_VER_1_2_5 0x01020500
+#define B64_VER_1_2_6 0x01020600
+#define B64_VER_1_2_7 0x01020700
+#define B64_VER_1_3_1 0x010301ff
+#define B64_VER_1_3_2 0x010302ff
+#define B64_VER_1_3_3 0x010303ff
+#define B64_VER_1_3_4 0x010304ff
 
-# define B64_VER            B64_VER_1_3_4
+#define B64_VER B64_VER_1_3_4
 #else /* ? B64_DOCUMENTATION_SKIP_SECTION */
-# define B64_VER            0x010304ff
+#define B64_VER 0x010304ff
 #endif /* !B64_DOCUMENTATION_SKIP_SECTION */
 
-#define B64_VER_MAJOR       1
-#define B64_VER_MINOR       3
-#define B64_VER_REVISION    4
+#define B64_VER_MAJOR 1
+#define B64_VER_MINOR 3
+#define B64_VER_REVISION 4
 
 /* /////////////////////////////////////////////////////////////////////////////
  * Includes
  */
 
-#include <stddef.h>
 #include "ortp/port.h"
+#include <stddef.h>
 
 /* /////////////////////////////////////////////////////////////////////////////
  * Namespace
  */
 
-#if !defined(B64_NO_NAMESPACE) && \
-    !defined(__cplusplus)
-# define B64_NO_NAMESPACE
+#if !defined(B64_NO_NAMESPACE) && !defined(__cplusplus)
+#define B64_NO_NAMESPACE
 #endif /* !B64_NO_NAMESPACE && !__cplusplus */
 
 #ifdef B64_NAMESPACE
-# undef B64_NAMESPACE
+#undef B64_NAMESPACE
 #endif /* B64_NAMESPACE */
 
 #ifdef B64_NAMESPACE_QUALIFIER
-# undef B64_NAMESPACE_QUALIFIER
+#undef B64_NAMESPACE_QUALIFIER
 #endif /* B64_NAMESPACE_QUALIFIER */
-
 
 #ifndef B64_NO_NAMESPACE
 
-# ifdef B64_CUSTOM_NAMESPACE
-#  define B64_NAMESPACE     B64_CUSTOM_NAMESPACE
-# else /* ? B64_CUSTOM_NAMESPACE */
-#  define B64_NAMESPACE     b64
-# endif /* B64_CUSTOM_NAMESPACE */
+#ifdef B64_CUSTOM_NAMESPACE
+#define B64_NAMESPACE B64_CUSTOM_NAMESPACE
+#else /* ? B64_CUSTOM_NAMESPACE */
+#define B64_NAMESPACE b64
+#endif /* B64_CUSTOM_NAMESPACE */
 
-# if defined(B64_CUSTOM_NAMESPACE) && \
-     defined(B64_CUSTOM_NAMESPACE_QUALIFIER)
-#  define B64_NAMESPACE_QUALIFIER       B64_CUSTOM_NAMESPACE_QUALIFIER
-# else /* B64_CUSTOM_NAMESPACE && B64_CUSTOM_NAMESPACE_QUALIFIER */
-#  define B64_NAMESPACE_QUALIFIER       ::B64_NAMESPACE
-# endif /* B64_CUSTOM_NAMESPACE && B64_CUSTOM_NAMESPACE_QUALIFIER */
-
+#if defined(B64_CUSTOM_NAMESPACE) && defined(B64_CUSTOM_NAMESPACE_QUALIFIER)
+#define B64_NAMESPACE_QUALIFIER B64_CUSTOM_NAMESPACE_QUALIFIER
+#else /* B64_CUSTOM_NAMESPACE && B64_CUSTOM_NAMESPACE_QUALIFIER */
+#define B64_NAMESPACE_QUALIFIER ::B64_NAMESPACE
+#endif /* B64_CUSTOM_NAMESPACE && B64_CUSTOM_NAMESPACE_QUALIFIER */
 
 /** \brief [C/C++] The b64 namespace, within which the core library types and functions
  * reside in C++ compilation. In C compilation, they all reside in the global
@@ -153,8 +148,7 @@
  * <hr>
  * \endhtmlonly
  */
-namespace B64_NAMESPACE
-{
+namespace B64_NAMESPACE {
 #endif /* !B64_NO_NAMESPACE */
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -163,14 +157,17 @@ namespace B64_NAMESPACE
 
 /** \brief Return codes (from b64_encode2() / b64_decode2())
  */
-enum B64_RC
-{
-        B64_RC_OK                   =   0   /*!< Operation was successful. */
-    ,   B64_RC_INSUFFICIENT_BUFFER  =   1   /*!< The given translation buffer was not of sufficient size. */
-    ,   B64_RC_TRUNCATED_INPUT      =   2   /*!< The input did not represent a fully formed stream of octet couplings. */
-    ,   B64_RC_DATA_ERROR           =   3   /*!< Invalid data. */
+enum B64_RC {
+	B64_RC_OK = 0 /*!< Operation was successful. */
+	,
+	B64_RC_INSUFFICIENT_BUFFER = 1 /*!< The given translation buffer was not of sufficient size. */
+	,
+	B64_RC_TRUNCATED_INPUT = 2 /*!< The input did not represent a fully formed stream of octet couplings. */
+	,
+	B64_RC_DATA_ERROR = 3 /*!< Invalid data. */
 #ifndef B64_DOCUMENTATION_SKIP_SECTION
-    ,   B64_max_RC_value
+	,
+	B64_max_RC_value
 #endif /* !B64_DOCUMENTATION_SKIP_SECTION */
 };
 
@@ -180,21 +177,35 @@ typedef enum B64_RC B64_RC;
 
 /** \brief Coding behaviour modification flags (for b64_encode2() / b64_decode2())
  */
-enum B64_FLAGS
-{
-        B64_F_LINE_LEN_USE_PARAM    =   0x0000  /*!< Uses the lineLen parameter to b64_encode2(). Ignored by b64_decode2(). */
-    ,   B64_F_LINE_LEN_INFINITE     =   0x0001  /*!< Ignores the lineLen parameter to b64_encode2(). Line length is infinite. Ignored by b64_decode2(). */
-    ,   B64_F_LINE_LEN_64           =   0x0002  /*!< Ignores the lineLen parameter to b64_encode2(). Line length is 64. Ignored by b64_decode2(). */
-    ,   B64_F_LINE_LEN_76           =   0x0003  /*!< Ignores the lineLen parameter to b64_encode2(). Line length is 76. Ignored by b64_decode2(). */
-    ,   B64_F_LINE_LEN_MASK         =   0x000f  /*!< Mask for testing line length flags to b64_encode2(). Ignored by b64_encode2(). */
-    ,   B64_F_STOP_ON_NOTHING       =   0x0000  /*!< Decoding ignores all invalid characters in the input data. Ignored by b64_encode2(). */
-    ,   B64_F_STOP_ON_UNKNOWN_CHAR  =   0x0100  /*!< Causes decoding to break if any non-Base-64 [a-zA-Z0-9=+/], non-whitespace character is encountered. Ignored by b64_encode2(). */
-    ,   B64_F_STOP_ON_UNEXPECTED_WS =   0x0200  /*!< Causes decoding to break if any unexpected whitespace is encountered. Ignored by b64_encode2(). */
-    ,   B64_F_STOP_ON_BAD_CHAR      =   0x0300  /*!< Causes decoding to break if any non-Base-64 [a-zA-Z0-9=+/] character is encountered. Ignored by b64_encode2(). */
+enum B64_FLAGS {
+	B64_F_LINE_LEN_USE_PARAM = 0x0000 /*!< Uses the lineLen parameter to b64_encode2(). Ignored by b64_decode2(). */
+	,
+	B64_F_LINE_LEN_INFINITE = 0x0001 /*!< Ignores the lineLen parameter to b64_encode2(). Line length is infinite.
+	                                    Ignored by b64_decode2(). */
+	,
+	B64_F_LINE_LEN_64 =
+	    0x0002 /*!< Ignores the lineLen parameter to b64_encode2(). Line length is 64. Ignored by b64_decode2(). */
+	,
+	B64_F_LINE_LEN_76 =
+	    0x0003 /*!< Ignores the lineLen parameter to b64_encode2(). Line length is 76. Ignored by b64_decode2(). */
+	,
+	B64_F_LINE_LEN_MASK = 0x000f /*!< Mask for testing line length flags to b64_encode2(). Ignored by b64_encode2(). */
+	,
+	B64_F_STOP_ON_NOTHING =
+	    0x0000 /*!< Decoding ignores all invalid characters in the input data. Ignored by b64_encode2(). */
+	,
+	B64_F_STOP_ON_UNKNOWN_CHAR = 0x0100 /*!< Causes decoding to break if any non-Base-64 [a-zA-Z0-9=+/], non-whitespace
+	                                       character is encountered. Ignored by b64_encode2(). */
+	,
+	B64_F_STOP_ON_UNEXPECTED_WS =
+	    0x0200 /*!< Causes decoding to break if any unexpected whitespace is encountered. Ignored by b64_encode2(). */
+	,
+	B64_F_STOP_ON_BAD_CHAR = 0x0300 /*!< Causes decoding to break if any non-Base-64 [a-zA-Z0-9=+/] character is
+	                                   encountered. Ignored by b64_encode2(). */
 };
 
 #ifndef __cplusplus
-typedef enum B64_FLAGS  B64_FLAGS;
+typedef enum B64_FLAGS B64_FLAGS;
 #endif /* !__cplusplus */
 
 /* /////////////////////////////////////////////////////////////////////////////
@@ -258,13 +269,14 @@ ORTP_PUBLIC size_t b64_encode(void const *src, size_t srcSize, char *dest, size_
  *
  * \see b64::encode()
  */
-size_t b64_encode2( void const  *src
-                ,   size_t      srcSize
-                ,   char        *dest
-                ,   size_t      destLen
-                ,   unsigned    flags
-                ,   int         lineLen /* = 0 */
-                ,   B64_RC      *rc     /* = NULL */);
+size_t b64_encode2(void const *src,
+                   size_t srcSize,
+                   char *dest,
+                   size_t destLen,
+                   unsigned flags,
+                   int lineLen /* = 0 */
+                   ,
+                   B64_RC *rc /* = NULL */);
 
 /** \brief Decodes a sequence of Base-64 into a block of binary data
  *
@@ -341,14 +353,14 @@ ORTP_PUBLIC size_t b64_decode(char const *src, size_t srcLen, void *dest, size_t
  *
  * \see b64::decode()
  */
-size_t b64_decode2( char const  *src
-                ,   size_t      srcLen
-                ,   void        *dest
-                ,   size_t      destSize
-                ,   unsigned    flags
-                ,   char const  **badChar   /* = NULL */
-                ,   B64_RC      *rc         /* = NULL */);
-
+size_t b64_decode2(char const *src,
+                   size_t srcLen,
+                   void *dest,
+                   size_t destSize,
+                   unsigned flags,
+                   char const **badChar /* = NULL */
+                   ,
+                   B64_RC *rc /* = NULL */);
 
 /** \brief Returns the textual description of the error
  *
@@ -364,7 +376,6 @@ char const *b64_getErrorString(B64_RC code);
  */
 size_t b64_getErrorStringLength(B64_RC code);
 
-
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
@@ -376,41 +387,34 @@ size_t b64_getErrorStringLength(B64_RC code);
 #ifndef B64_NO_NAMESPACE
 } /* namespace B64_NAMESPACE */
 
-# ifndef B64_DOCUMENTATION_SKIP_SECTION
+#ifndef B64_DOCUMENTATION_SKIP_SECTION
 
-namespace stlsoft
-{
+namespace stlsoft {
 
-    inline char const *c_str_data_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
-    {
-        return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
-    }
-    inline char const *c_str_data( B64_NAMESPACE_QUALIFIER::B64_RC code)
-    {
-        return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
-    }
+inline char const *c_str_data_a(B64_NAMESPACE_QUALIFIER::B64_RC code) {
+	return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
+}
+inline char const *c_str_data(B64_NAMESPACE_QUALIFIER::B64_RC code) {
+	return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
+}
 
-    inline size_t c_str_len_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
-    {
-        return B64_NAMESPACE_QUALIFIER::b64_getErrorStringLength(code);
-    }
-    inline size_t c_str_len( B64_NAMESPACE_QUALIFIER::B64_RC code)
-    {
-        return B64_NAMESPACE_QUALIFIER::b64_getErrorStringLength(code);
-    }
+inline size_t c_str_len_a(B64_NAMESPACE_QUALIFIER::B64_RC code) {
+	return B64_NAMESPACE_QUALIFIER::b64_getErrorStringLength(code);
+}
+inline size_t c_str_len(B64_NAMESPACE_QUALIFIER::B64_RC code) {
+	return B64_NAMESPACE_QUALIFIER::b64_getErrorStringLength(code);
+}
 
-    inline char const *c_str_ptr_a( B64_NAMESPACE_QUALIFIER::B64_RC code)
-    {
-        return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
-    }
-    inline char const *c_str_ptr( B64_NAMESPACE_QUALIFIER::B64_RC code)
-    {
-        return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
-    }
+inline char const *c_str_ptr_a(B64_NAMESPACE_QUALIFIER::B64_RC code) {
+	return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
+}
+inline char const *c_str_ptr(B64_NAMESPACE_QUALIFIER::B64_RC code) {
+	return B64_NAMESPACE_QUALIFIER::b64_getErrorString(code);
+}
 
 } /* namespace stlsoft */
 
-# endif /* !B64_DOCUMENTATION_SKIP_SECTION */
+#endif /* !B64_DOCUMENTATION_SKIP_SECTION */
 
 #endif /* !B64_NO_NAMESPACE */
 

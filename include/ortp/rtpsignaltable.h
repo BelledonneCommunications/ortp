@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,14 +21,13 @@
 #ifndef rtpsignaltable_h
 #define rtpsignaltable_h
 
-#define RTP_CALLBACK_TABLE_MAX_ENTRIES	5
+#define RTP_CALLBACK_TABLE_MAX_ENTRIES 5
 
 typedef void (*RtpCallback)(struct _RtpSession *, void *arg1, void *arg2, void *arg3);
 
-struct _RtpSignalTable
-{
+struct _RtpSignalTable {
 	RtpCallback callback[RTP_CALLBACK_TABLE_MAX_ENTRIES];
-	void * user_data[RTP_CALLBACK_TABLE_MAX_ENTRIES];
+	void *user_data[RTP_CALLBACK_TABLE_MAX_ENTRIES];
 	struct _RtpSession *session;
 	const char *signal_name;
 	int count;
@@ -36,9 +35,9 @@ struct _RtpSignalTable
 
 typedef struct _RtpSignalTable RtpSignalTable;
 
-void rtp_signal_table_init(RtpSignalTable *table,struct _RtpSession *session, const char *signal_name);
+void rtp_signal_table_init(RtpSignalTable *table, struct _RtpSession *session, const char *signal_name);
 
-int rtp_signal_table_add(RtpSignalTable *table,RtpCallback cb, void *user_data);
+int rtp_signal_table_add(RtpSignalTable *table, RtpCallback cb, void *user_data);
 
 void rtp_signal_table_emit(RtpSignalTable *table);
 
@@ -48,7 +47,6 @@ void rtp_signal_table_emit2(RtpSignalTable *table, void *arg);
 /* emit but with a third arg */
 void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2);
 
-int rtp_signal_table_remove_by_callback(RtpSignalTable *table,RtpCallback cb);
+int rtp_signal_table_remove_by_callback(RtpSignalTable *table, RtpCallback cb);
 
 #endif
-

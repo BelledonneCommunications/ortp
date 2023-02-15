@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,13 +18,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifndef CONGESTIONDETECTOR_H
 #define CONGESTIONDETECTOR_H
 
+#include <bctoolbox/list.h>
 #include <ortp/port.h>
 #include <ortp/utils.h>
-#include <bctoolbox/list.h>
 struct _JitterControl;
 
 typedef enum _OrtpCongestionState {
@@ -34,7 +33,7 @@ typedef enum _OrtpCongestionState {
 	CongestionStateResolving
 } OrtpCongestionState;
 
-typedef struct _OrtpCongestionDetector{
+typedef struct _OrtpCongestionDetector {
 	OrtpKalmanRLS rls;
 	uint64_t start_ms;
 	uint64_t last_packet_recv;
@@ -45,13 +44,13 @@ typedef struct _OrtpCongestionDetector{
 	bool_t too_much_loss;
 	OrtpCongestionState state;
 	struct _RtpSession *session;
-}OrtpCongestionDetector;
+} OrtpCongestionDetector;
 
-OrtpCongestionDetector * ortp_congestion_detector_new(struct _RtpSession *session);
+OrtpCongestionDetector *ortp_congestion_detector_new(struct _RtpSession *session);
 
 /*
  * Returns TRUE if the congestion state is changed.
-**/
+ **/
 bool_t ortp_congestion_detector_record(OrtpCongestionDetector *obj, uint32_t packet_ts, uint32_t cur_str_ts);
 
 void ortp_congestion_detector_destroy(OrtpCongestionDetector *obj);

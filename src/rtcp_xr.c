@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,17 +18,18 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
+
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
 #include <math.h>
 
 #include "ortp/ortp.h"
-#include "ortp/rtpsession.h"
 #include "ortp/rtcp.h"
+#include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
 #include "utils.h"
-
 
 static uint8_t calc_rate(double d1, double d2) {
 	double rate = (d1 / d2) * 256;
@@ -44,7 +45,7 @@ static int rtcp_xr_header_init(uint8_t *buf, RtpSession *session, int bytes_len)
 	return sizeof(rtcp_xr_header_t);
 }
 
-static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, RtpSession *session) {
+static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, BCTBX_UNUSED(RtpSession *session)) {
 	struct timeval tv;
 	uint64_t ntp;
 	rtcp_xr_rcvr_rtt_report_block_t *block = (rtcp_xr_rcvr_rtt_report_block_t *)buf;
@@ -72,9 +73,10 @@ static int rtcp_xr_dlrr_init(uint8_t *buf, RtpSession *session) {
 		struct timeval now;
 		double delay;
 		bctbx_gettimeofday(&now, NULL);
-		delay = ((now.tv_sec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_sec)
-			+ ((now.tv_usec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_usec) * 1e-6)) * 65536;
-		dlrr = (uint32_t) delay;
+		delay = ((now.tv_sec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_sec) +
+		         ((now.tv_usec - session->rtcp_xr_stats.last_rcvr_rtt_time.tv_usec) * 1e-6)) *
+		        65536;
+		dlrr = (uint32_t)delay;
 	}
 	block->content[0].dlrr = htonl(dlrr);
 	return sizeof(rtcp_xr_dlrr_report_block_t);
@@ -93,7 +95,8 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 		uint32_t no_duplicate_received = session->rtcp_xr_stats.rcv_since_last_stat_summary - dup_packets;
 		expected_packets = last_rcv_seq - session->rtcp_xr_stats.rcv_seq_at_last_stat_summary;
 		lost_packets = (expected_packets > session->rtcp_xr_stats.rcv_since_last_stat_summary)
-			? (expected_packets - no_duplicate_received) : 0;
+		                   ? (expected_packets - no_duplicate_received)
+		                   : 0;
 	}
 
 	block->bh.bt = RTCP_XR_STAT_SUMMARY;
@@ -104,28 +107,33 @@ static int rtcp_xr_stat_summary_init(uint8_t *buf, RtpSession *session) {
 	block->end_seq = htons(last_rcv_seq + 1);
 	block->lost_packets = htonl(lost_packets);
 	block->dup_packets = htonl(dup_packets);
-	if ((flags & OrtpRtcpXrStatSummaryJitt)
-		&& (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)) {
+	if ((flags & OrtpRtcpXrStatSummaryJitt) && (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)) {
 		block->min_jitter = htonl(session->rtcp_xr_stats.min_jitter_since_last_stat_summary);
 		block->max_jitter = htonl(session->rtcp_xr_stats.max_jitter_since_last_stat_summary);
 		block->mean_jitter = htonl((session->rtcp_xr_stats.rcv_since_last_stat_summary > 1)
-			? (uint32_t)session->rtcp_xr_stats.newm_jitter_since_last_stat_summary : 0);
+		                               ? (uint32_t)session->rtcp_xr_stats.newm_jitter_since_last_stat_summary
+		                               : 0);
 		block->dev_jitter = htonl((session->rtcp_xr_stats.rcv_since_last_stat_summary > 2)
-			? (uint32_t)sqrt(session->rtcp_xr_stats.news_jitter_since_last_stat_summary / (session->rtcp_xr_stats.rcv_since_last_stat_summary - 2)) : 0);
+		                              ? (uint32_t)sqrt(session->rtcp_xr_stats.news_jitter_since_last_stat_summary /
+		                                               (session->rtcp_xr_stats.rcv_since_last_stat_summary - 2))
+		                              : 0);
 	} else {
 		block->min_jitter = htonl(0);
 		block->max_jitter = htonl(0);
 		block->mean_jitter = htonl(0);
 		block->dev_jitter = htonl(0);
 	}
-	if ((flags & (OrtpRtcpXrStatSummaryTTL | OrtpRtcpXrStatSummaryHL))
-		&& (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)) {
+	if ((flags & (OrtpRtcpXrStatSummaryTTL | OrtpRtcpXrStatSummaryHL)) &&
+	    (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)) {
 		block->min_ttl_or_hl = session->rtcp_xr_stats.min_ttl_or_hl_since_last_stat_summary;
 		block->max_ttl_or_hl = session->rtcp_xr_stats.max_ttl_or_hl_since_last_stat_summary;
 		block->mean_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 0)
-			? (uint8_t)session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary : 0;
+		                            ? (uint8_t)session->rtcp_xr_stats.newm_ttl_or_hl_since_last_stat_summary
+		                            : 0;
 		block->dev_ttl_or_hl = (session->rtcp_xr_stats.rcv_since_last_stat_summary > 1)
-			? (uint8_t)sqrt(session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary / (session->rtcp_xr_stats.rcv_since_last_stat_summary - 1)) : 0;
+		                           ? (uint8_t)sqrt(session->rtcp_xr_stats.news_ttl_or_hl_since_last_stat_summary /
+		                                           (session->rtcp_xr_stats.rcv_since_last_stat_summary - 1))
+		                           : 0;
 	} else {
 		block->min_ttl_or_hl = 0;
 		block->max_ttl_or_hl = 0;
@@ -212,12 +220,14 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 		// TODO: fill end_system_delay
 		block->end_system_delay = htons(0);
 		if (session->rtcp.xr_media_callbacks.signal_level != NULL) {
-			block->signal_level = session->rtcp.xr_media_callbacks.signal_level(session->rtcp.xr_media_callbacks.userdata);
+			block->signal_level =
+			    session->rtcp.xr_media_callbacks.signal_level(session->rtcp.xr_media_callbacks.userdata);
 		} else {
 			block->signal_level = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
 		}
 		if (session->rtcp.xr_media_callbacks.noise_level != NULL) {
-			block->noise_level = session->rtcp.xr_media_callbacks.noise_level(session->rtcp.xr_media_callbacks.userdata);
+			block->noise_level =
+			    session->rtcp.xr_media_callbacks.noise_level(session->rtcp.xr_media_callbacks.userdata);
 		} else {
 			block->noise_level = ORTP_RTCP_XR_UNAVAILABLE_PARAMETER;
 		}
@@ -260,8 +270,7 @@ static int rtcp_xr_voip_metrics_init(uint8_t *buf, RtpSession *session) {
 	return sizeof(rtcp_xr_voip_metrics_report_block_t);
 }
 
-
-mblk_t * make_xr_rcvr_rtt(RtpSession *session) {
+mblk_t *make_xr_rcvr_rtt(RtpSession *session) {
 	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_rcvr_rtt_report_block_t);
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
@@ -269,7 +278,7 @@ mblk_t * make_xr_rcvr_rtt(RtpSession *session) {
 	return h;
 }
 
-mblk_t * make_xr_dlrr(RtpSession *session) {
+mblk_t *make_xr_dlrr(RtpSession *session) {
 	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_dlrr_report_block_t);
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
@@ -277,7 +286,7 @@ mblk_t * make_xr_dlrr(RtpSession *session) {
 	return h;
 }
 
-mblk_t * make_xr_stat_summary(RtpSession *session) {
+mblk_t *make_xr_stat_summary(RtpSession *session) {
 	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_stat_summary_report_block_t);
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);
@@ -285,7 +294,7 @@ mblk_t * make_xr_stat_summary(RtpSession *session) {
 	return h;
 }
 
-mblk_t * make_xr_voip_metrics(RtpSession *session) {
+mblk_t *make_xr_voip_metrics(RtpSession *session) {
 	int size = sizeof(rtcp_xr_header_t) + sizeof(rtcp_xr_voip_metrics_report_block_t);
 	mblk_t *h = allocb(size, 0);
 	h->b_wptr += rtcp_xr_header_init(h->b_wptr, session, size);

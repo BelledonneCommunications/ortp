@@ -82,7 +82,7 @@ case "$target_os" in
 esac
 
 if test "$strictness" = "yes" ; then
-	STRICT_OPTIONS="$STRICT_OPTIONS -Werror -Wextra -Wno-unused-parameter -Wno-missing-field-initializers"
+	STRICT_OPTIONS="$STRICT_OPTIONS -Werror -Wextra -Wunused-parameter -Wno-missing-field-initializers"
 	CFLAGS="$CFLAGS -fno-strict-aliasing"
 fi
 

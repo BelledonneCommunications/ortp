@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,6 @@ void ortp_uninit_logger(void);
 
 #define OList bctbx_list_t
 
-
 #define o_list_next(elem) ((elem)->next)
 #define o_list_prev(elem) ((elem)->prev)
 
@@ -39,13 +38,12 @@ void ortp_uninit_logger(void);
 #define o_list_free bctbx_list_free
 #define o_list_remove_link bctbx_list_erase_link
 #define o_list_free_with_data bctbx_list_free_with_data
-#define o_list_insert_sorted bctbx_list_insert_sorted 
+#define o_list_insert_sorted bctbx_list_insert_sorted
 
 #define ORTP_POINTER_TO_INT(p) ((int)(intptr_t)(p))
 #define ORTP_INT_TO_POINTER(i) ((void *)(intptr_t)(i))
 
-
-typedef struct _dwsplit_t{
+typedef struct _dwsplit_t {
 #ifdef ORTP_BIGENDIAN
 	uint16_t hi;
 	uint16_t lo;
@@ -55,7 +53,7 @@ typedef struct _dwsplit_t{
 #endif
 } dwsplit_t;
 
-typedef union{
+typedef union {
 	dwsplit_t split;
 	uint32_t one;
 } poly32_t;
@@ -63,14 +61,14 @@ typedef union{
 #ifdef ORTP_BIGENDIAN
 #define hton24(x) (x)
 #else
-#define hton24(x) ((( (x) & 0x00ff0000) >>16) | (( (x) & 0x000000ff) <<16) | ( (x) & 0x0000ff00) )
+#define hton24(x) ((((x)&0x00ff0000) >> 16) | (((x)&0x000000ff) << 16) | ((x)&0x0000ff00))
 #endif
 #define ntoh24(x) hton24(x)
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
-#define is_would_block_error(errnum)	(errnum==WSAEWOULDBLOCK)
+#define is_would_block_error(errnum) (errnum == WSAEWOULDBLOCK)
 #else
-#define is_would_block_error(errnum)	(errnum==EWOULDBLOCK || errnum==EAGAIN)
+#define is_would_block_error(errnum) (errnum == EWOULDBLOCK || errnum == EAGAIN)
 #endif
 
 void ortp_ev_queue_put(OrtpEvQueue *q, OrtpEvent *ev);

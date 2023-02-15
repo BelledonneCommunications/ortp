@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,9 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <bctoolbox/defs.h>
+
 #include "ortp_tester.h"
 
-static FILE * log_file = NULL;
+static FILE *log_file = NULL;
 
 static void log_handler(int lev, const char *fmt, va_list args) {
 #ifdef _WIN32
@@ -69,13 +71,13 @@ int ortp_tester_set_log_file(const char *filename) {
 	return 0;
 }
 
-int silent_arg_func(const char *arg) {
+int silent_arg_func(BCTBX_UNUSED(const char *arg)) {
 	bctbx_set_log_level("ortp", BCTBX_LOG_ERROR);
 	bctbx_set_log_level(BCTBX_LOG_DOMAIN, BCTBX_LOG_ERROR);
 	return 0;
 }
 
-int verbose_arg_func(const char *arg) {
+int verbose_arg_func(BCTBX_UNUSED(const char *arg)) {
 	bctbx_set_log_level("ortp", BCTBX_LOG_DEBUG);
 	bctbx_set_log_level(BCTBX_LOG_DOMAIN, BCTBX_LOG_DEBUG);
 	return 0;
@@ -102,7 +104,6 @@ void ortp_tester_uninit() {
 	bc_tester_uninit();
 }
 
-
 #if defined(_WIN32) && !defined(MS2_WINDOWS_DESKTOP)
 #define BUILD_ENTRY_POINT 0
 #else
@@ -110,7 +111,7 @@ void ortp_tester_uninit() {
 #endif
 
 #if BUILD_ENTRY_POINT
-int main (int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 	int i, ret;
 
 	silent_arg_func(NULL);

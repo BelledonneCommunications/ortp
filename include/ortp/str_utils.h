@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -21,23 +21,28 @@
 #ifndef STR_UTILS_H
 #define STR_UTILS_H
 
-
 #include <ortp/port.h>
 #if defined(ORTP_TIMESTAMP)
 #include <time.h>
 #endif
 
-
 #ifndef MIN
-#define MIN(a,b) (((a)>(b)) ? (b) : (a))
+#define MIN(a, b) (((a) > (b)) ? (b) : (a))
 #endif
 #ifndef MAX
-#define MAX(a,b) (((a)>(b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-#define return_if_fail(expr) if (!(expr)) {printf("%s:%i- assertion"#expr "failed\n",__FILE__,__LINE__); return;}
-#define return_val_if_fail(expr,ret) if (!(expr)) {printf("%s:%i- assertion" #expr "failed\n",__FILE__,__LINE__); return (ret);}
-
+#define return_if_fail(expr)                                                                                           \
+	if (!(expr)) {                                                                                                     \
+		printf("%s:%i- assertion" #expr "failed\n", __FILE__, __LINE__);                                               \
+		return;                                                                                                        \
+	}
+#define return_val_if_fail(expr, ret)                                                                                  \
+	if (!(expr)) {                                                                                                     \
+		printf("%s:%i- assertion" #expr "failed\n", __FILE__, __LINE__);                                               \
+		return (ret);                                                                                                  \
+	}
 
 typedef struct ortp_recv_addr {
 	int family;
@@ -54,8 +59,7 @@ typedef struct ortp_recv_addr_map {
 	uint64_t ts;
 } ortp_recv_addr_map_t;
 
-typedef struct msgb
-{
+typedef struct msgb {
 	struct msgb *b_prev;
 	struct msgb *b_next;
 	struct msgb *b_cont;
@@ -65,25 +69,25 @@ typedef struct msgb
 	uint32_t reserved1;
 	uint32_t reserved2;
 	struct timeval timestamp;
-	ortp_recv_addr_t recv_addr; /*contains the destination address of incoming packets, used for ICE processing*/
-	struct sockaddr_storage net_addr; /*source address of incoming packet, or dest address of outgoing packet, used only by simulator and modifiers*/
-	socklen_t net_addrlen; /*source (dest) address of incoming (outgoing) packet length used by simulator and modifiers*/
+	ortp_recv_addr_t recv_addr;       /*contains the destination address of incoming packets, used for ICE processing*/
+	struct sockaddr_storage net_addr; /*source address of incoming packet, or dest address of outgoing packet, used only
+	                                     by simulator and modifiers*/
+	socklen_t
+	    net_addrlen; /*source (dest) address of incoming (outgoing) packet length used by simulator and modifiers*/
 	uint8_t ttl_or_hl;
 } mblk_t;
-
 
 // Data Block
 typedef struct datab {
 	unsigned char *db_base;
 	unsigned char *db_lim;
-	void (*db_freefn)(void*);
-	void * db_ref;	// Atomic variable
+	void (*db_freefn)(void *);
+	void *db_ref; // Atomic variable
 } dblk_t;
 
-typedef struct _queue
-{
+typedef struct _queue {
 	mblk_t _q_stopper;
-	int q_mcount;	/*number of packet in the q */
+	int q_mcount; /*number of packet in the q */
 } queue_t;
 
 #ifdef __cplusplus
@@ -91,25 +95,24 @@ extern "C" {
 #endif
 
 ORTP_PUBLIC dblk_t *dblk_alloc(size_t size);
-ORTP_PUBLIC dblk_t *dblk_alloc2(uint8_t *buf, size_t size, void (*freefn)(void*));
+ORTP_PUBLIC dblk_t *dblk_alloc2(uint8_t *buf, size_t size, void (*freefn)(void *));
 ORTP_PUBLIC void dblk_ref(dblk_t *d);
 ORTP_PUBLIC void dblk_unref(dblk_t *d);
 ORTP_PUBLIC int dblk_ref_value(dblk_t *db);
-ORTP_PUBLIC unsigned char * dblk_base(dblk_t *db);
-ORTP_PUBLIC unsigned char * dblk_lim(dblk_t *db);
-
+ORTP_PUBLIC unsigned char *dblk_base(dblk_t *db);
+ORTP_PUBLIC unsigned char *dblk_lim(dblk_t *db);
 
 ORTP_PUBLIC void qinit(queue_t *q);
 
 ORTP_PUBLIC void putq(queue_t *q, mblk_t *m);
 
-ORTP_PUBLIC mblk_t * getq(queue_t *q);
+ORTP_PUBLIC mblk_t *getq(queue_t *q);
 
-ORTP_PUBLIC void insq(queue_t *q,mblk_t *emp, mblk_t *mp);
+ORTP_PUBLIC void insq(queue_t *q, mblk_t *emp, mblk_t *mp);
 
 ORTP_PUBLIC void remq(queue_t *q, mblk_t *mp);
 
-ORTP_PUBLIC mblk_t * peekq(queue_t *q);
+ORTP_PUBLIC mblk_t *peekq(queue_t *q);
 
 /* remove and free all messages in the q */
 #define FLUSHALL 0
@@ -124,7 +127,7 @@ ORTP_PUBLIC mblk_t *allocb(size_t size, int unused);
 #define BPRI_MED 0
 
 /* allocates a mblk_t, that points to a datab_t, that points to buf; buf will be freed using freefn */
-ORTP_PUBLIC mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void*) );
+ORTP_PUBLIC mblk_t *esballoc(uint8_t *buf, size_t size, int pri, void (*freefn)(void *));
 
 /* frees a mblk_t, and if the datab ref_count is 0, frees it and the buffer too */
 ORTP_PUBLIC void freeb(mblk_t *m);
@@ -137,16 +140,16 @@ ORTP_PUBLIC void freemsg(mblk_t *mp);
 ORTP_PUBLIC mblk_t *dupb(mblk_t *m);
 
 /* duplicates a complex mblk_t, buffer is not duplicated */
-ORTP_PUBLIC mblk_t	*dupmsg(mblk_t* m);
+ORTP_PUBLIC mblk_t *dupmsg(mblk_t *m);
 
 /* returns the size of data of a message */
 ORTP_PUBLIC size_t msgdsize(const mblk_t *mp);
 
 /* concatenates all fragment of a complex message and crop or extend the buffer to the given length */
-ORTP_PUBLIC void msgpullup(mblk_t *mp,size_t len);
+ORTP_PUBLIC void msgpullup(mblk_t *mp, size_t len);
 
 /* concatenates all fragment of a complex message and insert an empty buffer of the given length at the given offset */
-ORTP_PUBLIC void msgpullup_with_insert(mblk_t *mp,size_t offset, size_t len);
+ORTP_PUBLIC void msgpullup_with_insert(mblk_t *mp, size_t offset, size_t len);
 
 /* duplicates a single message, but with buffer included */
 ORTP_PUBLIC mblk_t *copyb(const mblk_t *mp);
@@ -154,26 +157,27 @@ ORTP_PUBLIC mblk_t *copyb(const mblk_t *mp);
 /* duplicates a complex message with buffer included */
 ORTP_PUBLIC mblk_t *copymsg(const mblk_t *mp);
 
-ORTP_PUBLIC mblk_t * appendb(mblk_t *mp, const char *data, size_t size, bool_t pad);
+ORTP_PUBLIC mblk_t *appendb(mblk_t *mp, const char *data, size_t size, bool_t pad);
 ORTP_PUBLIC void msgappend(mblk_t *mp, const char *data, size_t size, bool_t pad);
 
 ORTP_PUBLIC mblk_t *concatb(mblk_t *mp, mblk_t *newm);
 
-/*Make sure the message has a unique owner, if not duplicate the underlying data buffer so that it can be changed without impacting others.
- Note that in case of copy, the message will be un-fragmented, exactly the way msgpullup() does. Always returns mp.*/
-ORTP_PUBLIC mblk_t * msgown(mblk_t *mp);
+/*Make sure the message has a unique owner, if not duplicate the underlying data buffer so that it can be changed
+ without impacting others. Note that in case of copy, the message will be un-fragmented, exactly the way msgpullup()
+ does. Always returns mp.*/
+ORTP_PUBLIC mblk_t *msgown(mblk_t *mp);
 
-#define qempty(q) (&(q)->_q_stopper==(q)->_q_stopper.b_next)
-#define qfirst(q) ((q)->_q_stopper.b_next!=&(q)->_q_stopper ? (q)->_q_stopper.b_next : NULL)
+#define qempty(q) (&(q)->_q_stopper == (q)->_q_stopper.b_next)
+#define qfirst(q) ((q)->_q_stopper.b_next != &(q)->_q_stopper ? (q)->_q_stopper.b_next : NULL)
 #define qbegin(q) ((q)->_q_stopper.b_next)
-#define qlast(q) ((q)->_q_stopper.b_prev!=&(q)->_q_stopper ? (q)->_q_stopper.b_prev : NULL)
-#define qend(q,mp)	((mp)==&(q)->_q_stopper)
-#define qnext(q,mp) ((mp)->b_next)
+#define qlast(q) ((q)->_q_stopper.b_prev != &(q)->_q_stopper ? (q)->_q_stopper.b_prev : NULL)
+#define qend(q, mp) ((mp) == &(q)->_q_stopper)
+#define qnext(q, mp) ((mp)->b_next)
 
-typedef struct _msgb_allocator{
+typedef struct _msgb_allocator {
 	queue_t q;
 	int max_blocks;
-}msgb_allocator_t;
+} msgb_allocator_t;
 
 ORTP_PUBLIC void msgb_allocator_init(msgb_allocator_t *pa);
 /* Set a maximum number of blocks that can be managed by the allocator.
@@ -183,7 +187,7 @@ ORTP_PUBLIC mblk_t *msgb_allocator_alloc(msgb_allocator_t *pa, size_t size);
 ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 
 ORTP_PUBLIC void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen);
-ORTP_PUBLIC void ortp_sockaddr_to_recvaddr(const struct sockaddr * addr, ortp_recv_addr_t * recvaddr);
+ORTP_PUBLIC void ortp_sockaddr_to_recvaddr(const struct sockaddr *addr, ortp_recv_addr_t *recvaddr);
 
 #ifdef __cplusplus
 }

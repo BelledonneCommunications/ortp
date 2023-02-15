@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,47 +18,41 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "scheduler.h"
 #include <ortp/ortp.h>
 #include <ortp/sessionset.h>
-#include "scheduler.h"
-
 
 /**
  * Allocates and initialize a new empty session set.
  *
  * @return the empty session set.
-**/
-SessionSet * session_set_new()
-{
-	SessionSet *set=(SessionSet *) ortp_malloc(sizeof(SessionSet));
+ **/
+SessionSet *session_set_new() {
+	SessionSet *set = (SessionSet *)ortp_malloc(sizeof(SessionSet));
 	session_set_init(set);
 	return set;
 }
 
-
 /**
  * Destroys a session set.
  *
-**/
+ **/
 
-void session_set_destroy(SessionSet *set)
-{
+void session_set_destroy(SessionSet *set) {
 	ortp_free(set);
 }
 
-int count_power_items_simple(uint32_t v)
-{
-	int c = 0,j;
-	for (j=0;j<32;j++){
-		if ( ((v)>>j) & 1){
-		++c;
-        }
+int count_power_items_simple(uint32_t v) {
+	int c = 0, j;
+	for (j = 0; j < 32; j++) {
+		if (((v) >> j) & 1) {
+			++c;
+		}
 	}
 	return c;
 }
 
-int count_power_items_fast(uint32_t v)
-{
+int count_power_items_fast(uint32_t v) {
 	int c = 0;
 	while (v) {
 		c += (v & 1);
@@ -67,25 +61,24 @@ int count_power_items_fast(uint32_t v)
 	return c;
 }
 
-int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, SessionSet *result_set)
-{
-	uint32_t *mask1,*mask2,*mask3;
-	int i=0;
-	int ret=0;
-	mask1=(uint32_t*)(void*)&sched_set->rtpset;
-	mask2=(uint32_t*)(void*)&user_set->rtpset;
-	mask3=(uint32_t*)(void*)&result_set->rtpset;
-	while(i<maxs+1){
-		*mask3=(*mask1) & (*mask2);	/* computes the AND between the two masks*/
+int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, SessionSet *result_set) {
+	uint32_t *mask1, *mask2, *mask3;
+	int i = 0;
+	int ret = 0;
+	mask1 = (uint32_t *)(void *)&sched_set->rtpset;
+	mask2 = (uint32_t *)(void *)&user_set->rtpset;
+	mask3 = (uint32_t *)(void *)&result_set->rtpset;
+	while (i < maxs + 1) {
+		*mask3 = (*mask1) & (*mask2); /* computes the AND between the two masks*/
 		/* and unset the sessions that have been found from the sched_set */
-		*mask1=(*mask1) & (~(*mask3));
+		*mask1 = (*mask1) & (~(*mask3));
 		ret += count_power_items_fast(*mask3);
-		i+=32;
+		i += 32;
 		mask1++;
 		mask2++;
 		mask3++;
 	}
-	//printf("session_set_and: ret=%i\n",ret);
+	// printf("session_set_and: ret=%i\n",ret);
 	return ret;
 }
 
@@ -110,68 +103,65 @@ int session_set_and(SessionSet *sched_set, int maxs, SessionSet *user_set, Sessi
  * @param sends a set of rtp sessions to be watched for write events
  * @param errors a set of rtp sessions to be watched for errors
  * @return: the number of sessions on which the selected events happened.
-**/
-int session_set_select(SessionSet *recvs, SessionSet *sends, SessionSet *errors)
-{
-	int ret=0,bits;
+ **/
+int session_set_select(SessionSet *recvs, SessionSet *sends, SessionSet *errors) {
+	int ret = 0, bits;
 	SessionSet temp;
-	RtpScheduler *sched=ortp_get_scheduler();
+	RtpScheduler *sched = ortp_get_scheduler();
 
 	/*lock the scheduler to not read the masks while they are being modified by the scheduler*/
 	rtp_scheduler_lock(sched);
 
-	while(1){
+	while (1) {
 		/* computes the SessionSet intersection (in the other words mask intersection) between
 		the mask given by the user and scheduler masks */
-		if (recvs!=NULL){
+		if (recvs != NULL) {
 			session_set_init(&temp);
-			bits=session_set_and(&sched->r_sessions,sched->all_max,recvs,&temp);
-			ret+=bits;
+			bits = session_set_and(&sched->r_sessions, sched->all_max, recvs, &temp);
+			ret += bits;
 			/* copy the result set in the given user set (might be empty) */
-			if (ret>0) session_set_copy(recvs,&temp);
+			if (ret > 0) session_set_copy(recvs, &temp);
 		}
-		if (sends!=NULL){
+		if (sends != NULL) {
 			session_set_init(&temp);
-			bits=session_set_and(&sched->w_sessions,sched->all_max,sends,&temp);
-			ret+=bits;
-			if (ret>0){
+			bits = session_set_and(&sched->w_sessions, sched->all_max, sends, &temp);
+			ret += bits;
+			if (ret > 0) {
 				/* copy the result set in the given user set (might be empty)*/
-				session_set_copy(sends,&temp);
+				session_set_copy(sends, &temp);
 			}
 		}
-		if (errors!=NULL){
+		if (errors != NULL) {
 			session_set_init(&temp);
-			bits=session_set_and(&sched->e_sessions,sched->all_max,errors,&temp);
-			ret+=bits;
-			if (ret>0){
+			bits = session_set_and(&sched->e_sessions, sched->all_max, errors, &temp);
+			ret += bits;
+			if (ret > 0) {
 				/* copy the result set in the given user set */
-				session_set_copy(errors,&temp);
+				session_set_copy(errors, &temp);
 			}
 		}
-		if (ret>0){
+		if (ret > 0) {
 			/* there are set file descriptors, return immediately */
-			//printf("There are %i sessions set, returning.\n",ret);
+			// printf("There are %i sessions set, returning.\n",ret);
 			rtp_scheduler_unlock(sched);
 			return ret;
 		}
-		//printf("There are %i sessions set.\n",ret);
+		// printf("There are %i sessions set.\n",ret);
 		/* else we wait until the next loop of the scheduler*/
-		ortp_cond_wait(&sched->unblock_select_cond,&sched->lock);
+		ortp_cond_wait(&sched->unblock_select_cond, &sched->lock);
 	}
 
 	return -1;
 }
 
-int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *errors,  struct timeval *timeout)
-{
-	int ret=0,bits;
+int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *errors, struct timeval *timeout) {
+	int ret = 0, bits;
 	int remainingTime; // duration in ms
 	SessionSet temp;
 	RtpScheduler *sched;
-	if (timeout==NULL)
-		return session_set_select(recvs, sends, errors);
-	sched=ortp_get_scheduler();
-	remainingTime = timeout->tv_usec/1000 + timeout->tv_sec*1000;
+	if (timeout == NULL) return session_set_select(recvs, sends, errors);
+	sched = ortp_get_scheduler();
+	remainingTime = timeout->tv_usec / 1000 + timeout->tv_sec * 1000;
 
 	/*lock the scheduler to not read the masks while they are being modified by the scheduler*/
 	rtp_scheduler_lock(sched);
@@ -179,42 +169,42 @@ int session_set_timedselect(SessionSet *recvs, SessionSet *sends, SessionSet *er
 	do {
 		/* computes the SessionSet intersection (in the other words mask intersection) between
 		the mask given by the user and scheduler masks */
-		if (recvs!=NULL){
+		if (recvs != NULL) {
 			session_set_init(&temp);
-			bits=session_set_and(&sched->r_sessions,sched->all_max,recvs,&temp);
-			ret+=bits;
+			bits = session_set_and(&sched->r_sessions, sched->all_max, recvs, &temp);
+			ret += bits;
 			/* copy the result set in the given user set (might be empty) */
-			if (ret>0) session_set_copy(recvs,&temp);
+			if (ret > 0) session_set_copy(recvs, &temp);
 		}
-		if (sends!=NULL){
+		if (sends != NULL) {
 			session_set_init(&temp);
-			bits=session_set_and(&sched->w_sessions,sched->all_max,sends,&temp);
-			ret+=bits;
-			if (ret>0){
+			bits = session_set_and(&sched->w_sessions, sched->all_max, sends, &temp);
+			ret += bits;
+			if (ret > 0) {
 				/* copy the result set in the given user set (might be empty)*/
-				session_set_copy(sends,&temp);
+				session_set_copy(sends, &temp);
 			}
 		}
-		if (errors!=NULL){
+		if (errors != NULL) {
 			session_set_init(&temp);
-			bits=session_set_and(&sched->e_sessions,sched->all_max,errors,&temp);
-			ret+=bits;
-			if (ret>0){
+			bits = session_set_and(&sched->e_sessions, sched->all_max, errors, &temp);
+			ret += bits;
+			if (ret > 0) {
 				/* copy the result set in the given user set */
-				session_set_copy(errors,&temp);
+				session_set_copy(errors, &temp);
 			}
 		}
-		if (ret>0){
+		if (ret > 0) {
 			/* there are set file descriptors, return immediately */
-			//printf("There are %i sessions set, returning.\n",ret);
+			// printf("There are %i sessions set, returning.\n",ret);
 			rtp_scheduler_unlock(sched);
 			return ret;
 		}
-		//printf("There are %i sessions set.\n",ret);
+		// printf("There are %i sessions set.\n",ret);
 		/* else we wait until the next loop of the scheduler*/
-		ortp_cond_wait(&sched->unblock_select_cond,&sched->lock);
+		ortp_cond_wait(&sched->unblock_select_cond, &sched->lock);
 		remainingTime -= sched->timer_inc;
-	} while (remainingTime>0);
+	} while (remainingTime > 0);
 	rtp_scheduler_unlock(sched);
 
 	return -1;

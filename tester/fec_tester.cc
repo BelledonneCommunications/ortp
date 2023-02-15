@@ -13,22 +13,22 @@ static FecParameters *newFecParams(int L, int D, int repairWindow) {
 	return params;
 } /*
  static void fillEncoder(FecEncoder &encoder) {
-	 for (int i = 0; i < encoder.getSize(); i++) {
-		 Bitstring bs = generateBitstring(160 * i, 150 + i, 'a' + i);
-		 encoder.add(bs);
-	 }
+     for (int i = 0; i < encoder.getSize(); i++) {
+         Bitstring bs = generateBitstring(160 * i, 150 + i, 'a' + i);
+         encoder.add(bs);
+     }
  }
  static mblk_t *new_packet(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t *payload, size_t
  packet_size) { mblk_t *packet = NULL;
 
-	 packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, payload, packet_size);
-	 rtp_set_seqnumber(packet, seqnum);
-	 rtp_set_timestamp(packet, timestamp);
-	 return packet;
+     packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, payload, packet_size);
+     rtp_set_seqnumber(packet, seqnum);
+     rtp_set_timestamp(packet, timestamp);
+     return packet;
  }*/
 
-static mblk_t *newPacketWithLetter(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t car,
-								   size_t packet_size) {
+static mblk_t *
+newPacketWithLetter(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t car, size_t packet_size) {
 	mblk_t *packet = NULL;
 	packet = rtp_session_create_packet_header(session, packet_size); // reserve packet_size after the header
 	memset(packet->b_wptr, car, packet_size);
@@ -49,17 +49,15 @@ static bool_t compare_header_fields(mblk_t *ma, mblk_t *mb) {
 	uint16_t ext = rtp_get_extbit(ma);
 
 	return (rtp_get_version(ma) == rtp_get_version(mb)) && (rtp_get_padbit(ma) == rtp_get_padbit(mb)) &&
-		   (cc == rtp_get_cc(mb)) && (ext == rtp_get_extbit(mb)) && (rtp_get_markbit(ma) == rtp_get_markbit(mb)) &&
-		   (rtp_get_payload_type(ma) == rtp_get_payload_type(mb)) && (rtp_get_seqnumber(ma) == rtp_get_seqnumber(mb)) &&
-		   (rtp_get_ssrc(ma) == rtp_get_ssrc(ma));
+	       (cc == rtp_get_cc(mb)) && (ext == rtp_get_extbit(mb)) && (rtp_get_markbit(ma) == rtp_get_markbit(mb)) &&
+	       (rtp_get_payload_type(ma) == rtp_get_payload_type(mb)) && (rtp_get_seqnumber(ma) == rtp_get_seqnumber(mb)) &&
+	       (rtp_get_ssrc(ma) == rtp_get_ssrc(ma));
 }
 static bool_t compare_csrc_fields(mblk_t *ma, mblk_t *mb) {
 	uint16_t cc = rtp_get_cc(ma);
-	if (cc != rtp_get_cc(mb))
-		return FALSE;
+	if (cc != rtp_get_cc(mb)) return FALSE;
 	for (uint8_t i = 0; i < cc; i++) {
-		if (rtp_get_csrc(ma, i) != rtp_get_csrc(mb, i))
-			return FALSE;
+		if (rtp_get_csrc(ma, i) != rtp_get_csrc(mb, i)) return FALSE;
 	}
 	return TRUE;
 }
@@ -73,15 +71,12 @@ static bool_t compare_ext_headers(mblk_t *ma, mblk_t *mb) {
 
 	if (ext) {
 
-		if (ext != rtp_get_extbit(mb))
-			return FALSE;
+		if (ext != rtp_get_extbit(mb)) return FALSE;
 
 		size_ext_a = rtp_get_extheader(ma, &profile_ext_a, &data_ext_a);
 		size_ext_b = rtp_get_extheader(mb, &profile_ext_b, &data_ext_b);
-		if (size_ext_a != size_ext_b)
-			return FALSE;
-		if (!((profile_ext_a == profile_ext_b) && (memcmp(data_ext_a, data_ext_b, size_ext_a) == 0)))
-			return FALSE;
+		if (size_ext_a != size_ext_b) return FALSE;
+		if (!((profile_ext_a == profile_ext_b) && (memcmp(data_ext_a, data_ext_b, size_ext_a) == 0))) return FALSE;
 	}
 	return TRUE;
 }
@@ -92,24 +87,17 @@ static bool_t compare_payloads(mblk_t *ma, mblk_t *mb) {
 
 	size_payload_a = rtp_get_payload(ma, &payload_a);
 	size_payload_b = rtp_get_payload(mb, &payload_b);
-	if (size_payload_a != size_payload_b)
-		return FALSE;
-	if (memcmp(payload_a, payload_b, size_payload_a) != 0)
-		return FALSE;
+	if (size_payload_a != size_payload_b) return FALSE;
+	if (memcmp(payload_a, payload_b, size_payload_a) != 0) return FALSE;
 	return TRUE;
 }
 static bool_t packets_are_equals(mblk_t *ma, mblk_t *mb) {
 
-	if (!compare_sizes(ma, mb))
-		return FALSE;
-	if (!compare_header_fields(ma, mb))
-		return FALSE;
-	if (!compare_csrc_fields(ma, mb))
-		return FALSE;
-	if (!compare_ext_headers(ma, mb))
-		return FALSE;
-	if (!compare_payloads(ma, mb))
-		return FALSE;
+	if (!compare_sizes(ma, mb)) return FALSE;
+	if (!compare_header_fields(ma, mb)) return FALSE;
+	if (!compare_csrc_fields(ma, mb)) return FALSE;
+	if (!compare_ext_headers(ma, mb)) return FALSE;
+	if (!compare_payloads(ma, mb)) return FALSE;
 	return TRUE;
 }
 
@@ -127,8 +115,6 @@ static void bitstring_add_test(void) {
 	BC_ASSERT_EQUAL(bsA.getLength(), 150, uint32_t, "%u");
 	BC_ASSERT_EQUAL(bsB.getLength(), 160, uint32_t, "%u");
 
-
-	
 	bsA.add(bsB);
 	uint16_t header = bsA.getHeader();
 	uint16_t expectedHeader = 0;
@@ -138,7 +124,7 @@ static void bitstring_add_test(void) {
 	BC_ASSERT_EQUAL(header, expectedHeader, uint16_t, "%d");
 	BC_ASSERT_EQUAL(bsA.getLength(), expectedLength, int, "%d");
 	BC_ASSERT_EQUAL(bsA.getTimestamp(), expectedTs, int, "%d");
-	
+
 	freemsg(packetA);
 	freemsg(packetB);
 	rtp_session_destroy(session);
@@ -219,10 +205,8 @@ static void source_packet_add_payload_test3(void) {
 	pA.addPayload(pB);
 	uint8_t expectedPayload[180] = {0};
 	for (int i = 0; i < 180; i++) {
-		if (i < 120)
-			expectedPayload[i] = 'a' ^ 'b';
-		else
-			expectedPayload[i] = 'a';
+		if (i < 120) expectedPayload[i] = 'a' ^ 'b';
+		else expectedPayload[i] = 'a';
 	}
 
 	size_t sizeA = pA.getPayloadBuffer(&rptr);
@@ -260,7 +244,7 @@ static void repair_packet_add_payload1(void) {
 
 	mblk_t *packetA = newPacketWithLetter(session, 0, 123456, 'a', 150);
 	FecSourcePacket sourceA(packetA);
-	FecRepairPacket repair(session,session, 0, 5, 1);
+	FecRepairPacket repair(session, session, 0, 5, 1);
 
 	repair.addPayload(sourceA);
 	uint8_t *expectedBuffer = NULL;
@@ -304,7 +288,7 @@ static void encoder_init1D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(10, 0, 200000);
 	FecEncoder cluster(params);
-	cluster.init(session,session);
+	cluster.init(session, session);
 
 	auto rowRepair = cluster.getRowRepair();
 	auto colRepair = cluster.getColRepair();
@@ -325,7 +309,7 @@ static void encoder_init2D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(10, 10, 200000);
 	FecEncoder cluster(params);
-	cluster.init(session,session);
+	cluster.init(session, session);
 
 	auto rowRepair = cluster.getRowRepair();
 	auto colRepair = cluster.getColRepair();
@@ -371,7 +355,7 @@ static void encoder_add2D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(5, 5, 200000);
 	FecEncoder cluster(params);
-	cluster.init(session,session);
+	cluster.init(session, session);
 
 	uint8_t *sourcePayload = NULL;
 	uint8_t *rowRepairPayload = NULL;
@@ -406,16 +390,14 @@ static void encoder_areFull_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(5, 5, 200000);
 	FecEncoder cluster(params);
-	cluster.init(session,session);
+	cluster.init(session, session);
 	mblk_t *packet = NULL;
 	for (int i = 0; i < cluster.getSize(); i++) {
 		packet = newPacketWithLetter(session, i, i * 60, 'a' + i, 150 + i);
 		FecSourcePacket source(packet);
 		cluster.add(source);
-		if (((i % cluster.getColumns()) == (cluster.getColumns())))
-			BC_ASSERT_TRUE(cluster.isRowFull());
-		if (i >= 20 && i < 25)
-			BC_ASSERT_TRUE(cluster.isColFull());
+		if (((i % cluster.getColumns()) == (cluster.getColumns()))) BC_ASSERT_TRUE(cluster.isRowFull());
+		if (i >= 20 && i < 25) BC_ASSERT_TRUE(cluster.isColFull());
 		freemsg(packet);
 	}
 	BC_ASSERT_TRUE(cluster.isFull());
@@ -429,7 +411,7 @@ static void encoder_fill_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(5, 3, 200000);
 	FecEncoder encoder(params);
-	encoder.init(session,session);
+	encoder.init(session, session);
 
 	for (int i = 0; i < 15; i++) {
 
@@ -457,7 +439,7 @@ static void encoder_reset(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(5, 0, 200000);
 	FecEncoder encoder(params);
-	encoder.init(session,session);
+	encoder.init(session, session);
 
 	mblk_t *expected = encoder.getRowRepairMblk(0);
 
@@ -508,7 +490,7 @@ static void recieve_cluster_repairOne_test(void) {
 	int L = 5;
 	int missing = 1;
 	auto cluster = RecieveCluster(session, 200);
-	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(session,session, 0, L, 0));
+	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(session, session, 0, L, 0));
 	std::vector<std::shared_ptr<FecSourcePacket>> base;
 	mblk_t *packet = NULL;
 
@@ -517,8 +499,7 @@ static void recieve_cluster_repairOne_test(void) {
 		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
 		base.push_back(source);
 		repair->add(*source);
-		if (i != missing)
-			cluster.add(i, source);
+		if (i != missing) cluster.add(i, source);
 		freemsg(packet);
 	}
 	cluster.repairOne(*repair);
@@ -543,8 +524,7 @@ static void recieve_cluster_repair1DNonInterleaved_test(void) {
 		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
 		base.push_back(source);
 		repair->add(*source);
-		if (i != missing)
-			cluster.add(i, source);
+		if (i != missing) cluster.add(i, source);
 		freemsg(packet);
 	}
 	cluster.add(repair);
@@ -573,8 +553,7 @@ static void recieve_cluster_repair1DInterleaved_test(void) {
 		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
 		base.push_back(source);
 		repair->add(*source);
-		if (i != missing)
-			cluster.add(i, source);
+		if (i != missing) cluster.add(i, source);
 		freemsg(packet);
 	}
 	cluster.add(repair);
@@ -592,7 +571,7 @@ static void encode_decode_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(5, 5, 200000);
 	FecEncoder encoder(params);
-	encoder.init(session,session);
+	encoder.init(session, session);
 	RecieveCluster cluster(session, 500);
 	mblk_t *packet = NULL;
 	int missing = 12;
@@ -637,11 +616,11 @@ static void encode_decode_2D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	FecParameters *params = newFecParams(5, 5, 200000);
 	FecEncoder encoder(params);
-	encoder.init(session,session);
+	encoder.init(session, session);
 	RecieveCluster cluster(session, 500);
 	mblk_t *packet = NULL;
-	int missing[25] = {1,0,1,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,1,1,1};
-	std::vector <std::shared_ptr<FecSourcePacket> > missed;
+	int missing[25] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1};
+	std::vector<std::shared_ptr<FecSourcePacket>> missed;
 
 	for (int i = 0; i < 25; i++) {
 		packet = newPacketWithLetter(session, i, i * 5, ('a' + i) % 26, 1000);
@@ -668,21 +647,19 @@ static void encode_decode_2D_test(void) {
 		}
 		freemsg(packet);
 	}
-	for(int i = 0; i<25; i++){
-		
-		if(!missing[i]) continue;		
+	for (int i = 0; i < 25; i++) {
+
+		if (!missing[i]) continue;
 		auto find = cluster.getSourcePacket(i);
 		BC_ASSERT_PTR_NULL(find);
-		
 	}
 	cluster.repair2D();
 	int miss = 0;
-	for(int i = 0; i<25; i++){
-		if(!missing[i]) continue;		
+	for (int i = 0; i < 25; i++) {
+		if (!missing[i]) continue;
 		auto find = cluster.getSourcePacket(i);
 		BC_ASSERT_PTR_NOT_NULL(find);
-		if(find)
-			BC_ASSERT_TRUE(packets_are_equals(missed[miss]->getPacket(), find->getPacket()));
+		if (find) BC_ASSERT_TRUE(packets_are_equals(missed[miss]->getPacket(), find->getPacket()));
 		miss++;
 	}
 	rtp_session_destroy(session);
@@ -691,39 +668,39 @@ static void encode_decode_2D_test(void) {
 
 static test_t tests[] = {
 
-	TEST_NO_TAG("bitstring add", bitstring_add_test),
-	TEST_NO_TAG("source_packet_get_payload", source_packet_get_payload_test),
-	TEST_NO_TAG("source_packet_add_payload same size", source_packet_add_payload_test1),
-	TEST_NO_TAG("source_packet_add_payload bigger", source_packet_add_payload_test2),
-	TEST_NO_TAG("source_packet_add_payload smaller", source_packet_add_payload_test3),
-	TEST_NO_TAG("repair_packet_bitstring", repair_packet_bitstring_test),
-	TEST_NO_TAG("repair_packet_add Payload", repair_packet_add_payload1),
-	TEST_NO_TAG("repair packet seqnum list non interleaved", repair_packet_seqnumListNonInterleaved_test),
-	TEST_NO_TAG("repair packet seqnum list interleaved", repair_packet_seqnumListInterleaved_test),
+    TEST_NO_TAG("bitstring add", bitstring_add_test),
+    TEST_NO_TAG("source_packet_get_payload", source_packet_get_payload_test),
+    TEST_NO_TAG("source_packet_add_payload same size", source_packet_add_payload_test1),
+    TEST_NO_TAG("source_packet_add_payload bigger", source_packet_add_payload_test2),
+    TEST_NO_TAG("source_packet_add_payload smaller", source_packet_add_payload_test3),
+    TEST_NO_TAG("repair_packet_bitstring", repair_packet_bitstring_test),
+    TEST_NO_TAG("repair_packet_add Payload", repair_packet_add_payload1),
+    TEST_NO_TAG("repair packet seqnum list non interleaved", repair_packet_seqnumListNonInterleaved_test),
+    TEST_NO_TAG("repair packet seqnum list interleaved", repair_packet_seqnumListInterleaved_test),
 
-	TEST_NO_TAG("encoder init1D", encoder_init1D_test),
-	TEST_NO_TAG("encoder init2D", encoder_init2D_test),
-	TEST_NO_TAG("encoder add1D", encoder_add1D_test),
-	TEST_NO_TAG("encoder add2D", encoder_add2D_test),
-	TEST_NO_TAG("encoder fill", encoder_fill_test),
+    TEST_NO_TAG("encoder init1D", encoder_init1D_test),
+    TEST_NO_TAG("encoder init2D", encoder_init2D_test),
+    TEST_NO_TAG("encoder add1D", encoder_add1D_test),
+    TEST_NO_TAG("encoder add2D", encoder_add2D_test),
+    TEST_NO_TAG("encoder fill", encoder_fill_test),
 
-	TEST_NO_TAG("encoder reset", encoder_reset),
-	TEST_NO_TAG("encoder are full", encoder_areFull_test),
-	TEST_NO_TAG("recieve cluster add", recieve_cluster_add_test),
+    TEST_NO_TAG("encoder reset", encoder_reset),
+    TEST_NO_TAG("encoder are full", encoder_areFull_test),
+    TEST_NO_TAG("recieve cluster add", recieve_cluster_add_test),
 
-	TEST_NO_TAG("recieve cluster repair one", recieve_cluster_repairOne_test),
-	TEST_NO_TAG("recieve cluster repair 1D non interleaved", recieve_cluster_repair1DNonInterleaved_test),
-	TEST_NO_TAG("recieve cluster repair 1D interleaved", recieve_cluster_repair1DInterleaved_test),
-	TEST_NO_TAG("encode decode", encode_decode_test),
-	TEST_NO_TAG("encode decode 2D", encode_decode_2D_test),
+    TEST_NO_TAG("recieve cluster repair one", recieve_cluster_repairOne_test),
+    TEST_NO_TAG("recieve cluster repair 1D non interleaved", recieve_cluster_repair1DNonInterleaved_test),
+    TEST_NO_TAG("recieve cluster repair 1D interleaved", recieve_cluster_repair1DInterleaved_test),
+    TEST_NO_TAG("encode decode", encode_decode_test),
+    TEST_NO_TAG("encode decode 2D", encode_decode_2D_test),
 };
 
 test_suite_t fec_test_suite = {
-	"FEC",							  // Name of test suite
-	NULL,							  // Before all callback
-	NULL,							  // After all callback
-	NULL,							  // Before each callback
-	NULL,							  // After each callback
-	sizeof(tests) / sizeof(tests[0]), // Size of test table
-	tests							  // Table of test suite
+    "FEC",                            // Name of test suite
+    NULL,                             // Before all callback
+    NULL,                             // After all callback
+    NULL,                             // Before each callback
+    NULL,                             // After each callback
+    sizeof(tests) / sizeof(tests[0]), // Size of test table
+    tests                             // Table of test suite
 };

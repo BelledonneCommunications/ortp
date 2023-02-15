@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,6 +19,8 @@
  */
 
 #include <algorithm>
+
+#include <bctoolbox/defs.h>
 
 #include "ortp/logging.h"
 #include "ortp/rtpsession.h"
@@ -44,7 +46,8 @@ extern "C" void rtp_bundle_set_mid_extension_id(RtpBundle *bundle, int id) {
 extern "C" void rtp_bundle_add_session(RtpBundle *bundle, const char *mid, RtpSession *session) {
 	((RtpBundleCxx *)bundle)->addSession(mid, session);
 }
-extern "C" void rtp_bundle_add_fec_session(RtpBundle *bundle, const RtpSession *source_session, RtpSession *fec_session) {
+extern "C" void
+rtp_bundle_add_fec_session(RtpBundle *bundle, const RtpSession *source_session, RtpSession *fec_session) {
 	((RtpBundleCxx *)bundle)->addFecSession(source_session, fec_session);
 }
 extern "C" void rtp_bundle_remove_session_by_id(RtpBundle *bundle, const char *mid) {
@@ -95,14 +98,14 @@ void RtpBundleCxx::setMidId(int id) {
 }
 void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 	auto it =
-		std::find_if(sessions.begin(), sessions.end(),
-					 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
+	    std::find_if(sessions.begin(), sessions.end(),
+	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
 	if (it != sessions.end()) {
 		ortp_error("RtpBundle [%p]: Cannot add session (%p) has it is already in the bundle", this, session);
 		return;
 	}
-	
+
 	sessions.emplace(mid, session);
 
 	session->bundle = (RtpBundle *)this;
@@ -112,13 +115,14 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 		session->is_primary = TRUE;
 	}
 }
-void  RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fecSession){
-	auto it =
-		std::find_if(sessions.begin(), sessions.end(),
-					 [sourceSession](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == sourceSession; });
+void RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fecSession) {
+	auto it = std::find_if(
+	    sessions.begin(), sessions.end(),
+	    [sourceSession](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == sourceSession; });
 
 	if (it == sessions.end()) {
-		ortp_error("RtpBundle [%p]: Cannot add session (%p) because the associated source session isn't in the bundle", this, fecSession);
+		ortp_error("RtpBundle [%p]: Cannot add session (%p) because the associated source session isn't in the bundle",
+		           this, fecSession);
 		return;
 	}
 	std::string mid = getSessionMid(it->second);
@@ -145,9 +149,9 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 		}
 		ssrcToMidMutex.unlock();
 
-		if(session->second->fec_stream != NULL){
+		if (session->second->fec_stream != NULL) {
 			auto fec_session = fec_sessions.find(mid);
-			if(fec_session != fec_sessions.end()){
+			if (fec_session != fec_sessions.end()) {
 				fec_session->second->bundle = NULL;
 				fec_sessions.erase(mid);
 			}
@@ -159,8 +163,8 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 
 void RtpBundleCxx::removeSession(RtpSession *session) {
 	auto it =
-		std::find_if(sessions.begin(), sessions.end(),
-					 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
+	    std::find_if(sessions.begin(), sessions.end(),
+	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
 	if (it != sessions.end()) {
 		removeSession(it->first);
@@ -172,7 +176,7 @@ void RtpBundleCxx::clear() {
 		RtpSession *session = entry.second;
 		session->bundle = NULL;
 	}
-	for(const auto &entry : fec_sessions){
+	for (const auto &entry : fec_sessions) {
 		RtpSession *session = entry.second;
 		session->bundle = NULL;
 	}
@@ -200,15 +204,15 @@ void RtpBundleCxx::setPrimarySession(const std::string &mid) {
 
 const std::string &RtpBundleCxx::getSessionMid(RtpSession *session) const {
 	auto it =
-		std::find_if(sessions.begin(), sessions.end(),
-					 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
+	    std::find_if(sessions.begin(), sessions.end(),
+	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
 	if (it != sessions.end()) {
 		return it->first;
-	}
-	else {//Could be a FEC session
-		it = std::find_if(fec_sessions.begin(), fec_sessions.end(),
-					 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
+	} else { // Could be a FEC session
+		it = std::find_if(
+		    fec_sessions.begin(), fec_sessions.end(),
+		    [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 		if (it != sessions.end()) {
 			return it->first;
 		}
@@ -227,7 +231,7 @@ bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const 
 			ortp_message("Rtp Bundle [%p] SSRC [%u] paired with mid [%s]", this, ssrc, mid.c_str());
 			return true;
 		} else if ((*entry).second.mid != mid) {
-			if (isRtp) {	
+			if (isRtp) {
 				ortp_message("Rtp Bundle [%p]: received a mid update via RTP.", this);
 				if (entry->second.sequenceNumber < sequenceNumber) {
 					Mid value = {mid, sequenceNumber};
@@ -246,8 +250,11 @@ bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const 
 	return false;
 }
 
-static void getSsrcFromSdes(void *userData, uint32_t ssrc, rtcp_sdes_type_t t, const char *content,
-							uint8_t contentLen) {
+static void getSsrcFromSdes(void *userData,
+                            uint32_t ssrc,
+                            rtcp_sdes_type_t t,
+                            BCTBX_UNUSED(const char *content),
+                            BCTBX_UNUSED(uint8_t contentLen)) {
 	uint32_t *value = (uint32_t *)userData;
 
 	if (*value == 0 || t == RTCP_SDES_MID) {
@@ -264,37 +271,37 @@ static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
 	uint32_t ssrc = 0;
 
 	switch (rtcp_common_header_get_packet_type(ch)) {
-	case RTCP_SR:
-		return rtcp_SR_get_ssrc(m);
-	case RTCP_RR:
-		return rtcp_RR_get_ssrc(m);
-	case RTCP_SDES:
-		rtcp_sdes_parse(m, getSsrcFromSdes, &ssrc);
-		return ssrc;
-	case RTCP_BYE:
-		if (rtcp_BYE_get_ssrc(m, 0, &ssrc)) {
+		case RTCP_SR:
+			return rtcp_SR_get_ssrc(m);
+		case RTCP_RR:
+			return rtcp_RR_get_ssrc(m);
+		case RTCP_SDES:
+			rtcp_sdes_parse(m, getSsrcFromSdes, &ssrc);
 			return ssrc;
-		}
-		return -1;
-	case RTCP_APP:
-		return rtcp_APP_get_ssrc(m);
-	case RTCP_RTPFB:
-		return rtcp_RTPFB_get_packet_sender_ssrc(m);
-	case RTCP_PSFB:
-		return rtcp_PSFB_get_packet_sender_ssrc(m);
-	case RTCP_XR:
-		return rtcp_XR_get_ssrc(m);
-	default:
-		ortp_warning("Unknown RTCP packet type (%u) while retrieving it's SSRC",
-					 rtcp_common_header_get_packet_type(ch));
-		break;
+		case RTCP_BYE:
+			if (rtcp_BYE_get_ssrc(m, 0, &ssrc)) {
+				return ssrc;
+			}
+			return -1;
+		case RTCP_APP:
+			return rtcp_APP_get_ssrc(m);
+		case RTCP_RTPFB:
+			return rtcp_RTPFB_get_packet_sender_ssrc(m);
+		case RTCP_PSFB:
+			return rtcp_PSFB_get_packet_sender_ssrc(m);
+		case RTCP_XR:
+			return rtcp_XR_get_ssrc(m);
+		default:
+			ortp_warning("Unknown RTCP packet type (%u) while retrieving it's SSRC",
+			             rtcp_common_header_get_packet_type(ch));
+			break;
 	}
 
 	return -1;
 }
 
-static void checkForSessionSdesCallback(void *userData, uint32_t ssrc, rtcp_sdes_type_t t, const char *content,
-										uint8_t contentLen) {
+static void checkForSessionSdesCallback(
+    void *userData, uint32_t ssrc, rtcp_sdes_type_t t, const char *content, uint8_t contentLen) {
 	RtpBundleCxx *bundle = (RtpBundleCxx *)userData;
 	std::string value(content, contentLen);
 
@@ -302,8 +309,8 @@ static void checkForSessionSdesCallback(void *userData, uint32_t ssrc, rtcp_sdes
 		// Update the mid map with the corresponding session
 		if (!bundle->updateMid(value, ssrc, UINT16_MAX, false)) {
 			ortp_warning("Rtp Bundle [%p]: SSRC %u not found and SDES mid \"%s\" from msg does not "
-						 "correspond to any sessions",
-						 bundle, ssrc, value.c_str());
+			             "correspond to any sessions",
+			             bundle, ssrc, value.c_str());
 		}
 
 		bundle->sdesParseMid = value;
@@ -314,9 +321,9 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 	const std::lock_guard<std::mutex> guard(ssrcToMidMutex);
 	uint32_t ssrc;
 
-	if (isRtp && rtp_get_version(m)!= 2) {
+	if (isRtp && rtp_get_version(m) != 2) {
 		/* STUN packet*/
-		return primary; 
+		return primary;
 	}
 
 	ssrc = getSsrcFromMessage(m, isRtp);
@@ -335,22 +342,22 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 				if (!updateMid(mid, ssrc, rtp_get_seqnumber(m), true)) {
 					if (it == ssrcToMid.end()) {
 						ortp_warning("Rtp Bundle [%p]: SSRC %u not found and mid \"%s\" from msg (%d) does not "
-									 "correspond to any sessions",
-									 this, ssrc, mid.c_str(), (int)rtp_get_seqnumber(m));
+						             "correspond to any sessions",
+						             this, ssrc, mid.c_str(), (int)rtp_get_seqnumber(m));
 						return NULL;
 					}
 				}
 			} else {
 				if (it == ssrcToMid.end()) {
 					ortp_warning("Rtp Bundle [%p]: SSRC %u not found and msg (%d) does not have a mid extension header",
-								 this, ssrc, (int)rtp_get_seqnumber(m));
+					             this, ssrc, (int)rtp_get_seqnumber(m));
 					return NULL;
 				}
 			}
 		} else {
 			if (it == ssrcToMid.end()) {
 				ortp_warning("Rtp Bundle [%p]: SSRC %u not found and msg (%d) does not have an extension header", this,
-							 ssrc, (int)rtp_get_seqnumber(m));
+				             ssrc, (int)rtp_get_seqnumber(m));
 				return NULL;
 			}
 		}
@@ -380,15 +387,16 @@ RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
 	} else {
 		try {
 			auto session = sessions.at(it->second.mid);
-			if(session->fec_stream){
+			if (session->fec_stream) {
 				RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
-				if(rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)){
+				if (rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)) {
 					return fec_session;
 				}
 			}
 			return session;
-		} catch (std::out_of_range&) {
-			ortp_warning("Rtp Bundle [%p]: Unable to find session with mid %s (SSRC %u)", this, it->second.mid.c_str(), ssrc);
+		} catch (std::out_of_range &) {
+			ortp_warning("Rtp Bundle [%p]: Unable to find session with mid %s (SSRC %u)", this, it->second.mid.c_str(),
+			             ssrc);
 			return nullptr;
 		}
 	}
@@ -454,7 +462,7 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 		} else {
 			const rtcp_common_header_t *ch = rtcp_get_common_header(tmp);
 			ortp_warning("Rtp Bundle [%p]: Rctp msg (%d) ssrc=%u does not correspond to any sessions", this,
-						 rtcp_common_header_get_packet_type(ch), getSsrcFromMessage(tmp, false));
+			             rtcp_common_header_get_packet_type(ch), getSsrcFromMessage(tmp, false));
 			freemsg(tmp);
 		}
 	} while (rtcp_next_packet(m));

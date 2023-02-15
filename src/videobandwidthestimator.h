@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,24 +18,23 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #ifndef VIDEOBANDWIDTHESTIMATOR_H
 #define VIDEOBANDWIDTHESTIMATOR_H
 
+#include <bctoolbox/list.h>
 #include <ortp/port.h>
 #include <ortp/utils.h>
-#include <bctoolbox/list.h>
 
-typedef struct _OrtpVideoBandwidthEstimatorPacket{
+typedef struct _OrtpVideoBandwidthEstimatorPacket {
 	uint32_t sent_timestamp;
 	struct timeval recv_first_timestamp;
 	struct timeval recv_last_timestamp;
 	unsigned int bytes;
 	unsigned int count;
 	float bitrate;
-}OrtpVideoBandwidthEstimatorPacket;
+} OrtpVideoBandwidthEstimatorPacket;
 
-typedef struct _OrtpVideoBandwidthEstimator{
+typedef struct _OrtpVideoBandwidthEstimator {
 	struct _RtpSession *session;
 	unsigned int packet_count_min;
 	unsigned int packets_size_max;
@@ -43,10 +42,10 @@ typedef struct _OrtpVideoBandwidthEstimator{
 	OrtpVideoBandwidthEstimatorPacket *last_packet;
 	bctbx_list_t *packets;
 	uint32_t last_computed;
-    int nb_packets_computed;
-}OrtpVideoBandwidthEstimator;
+	int nb_packets_computed;
+} OrtpVideoBandwidthEstimator;
 
-OrtpVideoBandwidthEstimator * ortp_video_bandwidth_estimator_new(struct _RtpSession *session);
+OrtpVideoBandwidthEstimator *ortp_video_bandwidth_estimator_new(struct _RtpSession *session);
 
 void ortp_video_bandwidth_estimator_destroy(OrtpVideoBandwidthEstimator *vbe);
 
@@ -90,7 +89,11 @@ unsigned int ortp_video_bandwidth_estimator_get_history_max_size(OrtpVideoBandwi
  */
 unsigned int ortp_video_bandwidth_estimator_get_trust(OrtpVideoBandwidthEstimator *vbe);
 
-void ortp_video_bandwidth_estimator_process_packet(OrtpVideoBandwidthEstimator *vbe, uint32_t sent_timestamp, const struct timeval *recv_timestamp, int msgsize, bool_t is_last);
+void ortp_video_bandwidth_estimator_process_packet(OrtpVideoBandwidthEstimator *vbe,
+                                                   uint32_t sent_timestamp,
+                                                   const struct timeval *recv_timestamp,
+                                                   int msgsize,
+                                                   bool_t is_last);
 
 float ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(OrtpVideoBandwidthEstimator *vbe);
 

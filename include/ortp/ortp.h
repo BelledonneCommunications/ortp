@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2010-2022 Belledonne Communications SARL.
  *
- * This file is part of oRTP 
+ * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
  *
  * This program is free software: you can redistribute it and/or modify
@@ -60,7 +60,7 @@
  * \file ortp.h
  * \brief General purpose library functions.
  *
-**/
+ **/
 
 #ifndef ORTP_H
 #define ORTP_H
@@ -69,8 +69,7 @@
 #include "ortp/sessionset.h"
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 ORTP_PUBLIC bool_t ortp_min_version_required(int major, int minor, int micro);
