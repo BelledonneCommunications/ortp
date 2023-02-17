@@ -29,10 +29,9 @@ static RtpBundle *csrc_bundle = NULL;
 static char mid[9] = "bundleid";
 static uint32_t CSRC = 0xaa55a55a;
 #define PAYLOAD_SIZE 33
-static uint8_t payload[PAYLOAD_SIZE] = {
-	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
-	0x20};
+static uint8_t payload[PAYLOAD_SIZE] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a,
+                                        0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15,
+                                        0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20};
 
 static int tester_before_all(void) {
 	ortp_init();
@@ -48,14 +47,16 @@ static int tester_before_all(void) {
 
 	/* create a session with a CSRC */
 	csrc_session = rtp_session_new(RTP_SESSION_SENDONLY);
-	rtp_session_add_contributing_source(csrc_session, CSRC, "cname", "name", "email", "phone", "location", "tool", "note");
+	rtp_session_add_contributing_source(csrc_session, CSRC, "cname", "name", "email", "phone", "location", "tool",
+	                                    "note");
 
 	/* create a session with CSRC and bundle it */
 	csrc_bundled_session = rtp_session_new(RTP_SESSION_SENDONLY);
 	csrc_bundle = rtp_bundle_new();
 	rtp_bundle_add_session(csrc_bundle, mid, csrc_bundled_session);
 	rtp_bundle_set_mid_extension_id(csrc_bundle, RTP_EXTENSION_MID);
-	rtp_session_add_contributing_source(csrc_bundled_session, CSRC, "cname", "name", "email", "phone", "location", "tool", "note");
+	rtp_session_add_contributing_source(csrc_bundled_session, CSRC, "cname", "name", "email", "phone", "location",
+	                                    "tool", "note");
 
 	return 0;
 }
@@ -63,9 +64,9 @@ static int tester_before_all(void) {
 static int tester_after_all(void) {
 	rtp_session_destroy(session);
 	rtp_bundle_delete(bundle);
-	bundle= NULL;
+	bundle = NULL;
 	rtp_bundle_delete(csrc_bundle);
-	csrc_bundle= NULL;
+	csrc_bundle = NULL;
 	rtp_session_destroy(bundled_session);
 	rtp_session_destroy(csrc_session);
 	rtp_session_destroy(csrc_bundled_session);
@@ -90,23 +91,24 @@ static void insert_extension_header_into_packet_base(uint8_t with_payload, RtpSe
 
 	mblk_t *packet;
 	switch (with_payload) {
-		case PAYLOAD :
+		case PAYLOAD:
 			/* payload and header in one continuous message block */
-			packet = rtp_session_create_packet_header(test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
+			packet = rtp_session_create_packet_header(
+			    test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
 			memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
 			packet->b_wptr += PAYLOAD_SIZE;
 			break;
-		case DETACHED_PAYLOAD :
+		case DETACHED_PAYLOAD:
 			/* fragmented message block */
 			packet = rtp_session_create_packet_header(test_session, 0);
 			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 			break;
-		case NO_PAYLOAD :
+		case NO_PAYLOAD:
 		default: // NO PAYLAOD
 			packet = rtp_session_create_packet_header(test_session, 0);
 	}
 
-	rtp_add_extension_header(packet, 10, strlen(test), (uint8_t *) test);
+	rtp_add_extension_header(packet, 10, strlen(test), (uint8_t *)test);
 
 	extbit = rtp_get_extbit(packet);
 	BC_ASSERT_EQUAL(extbit, 1, uint16_t, "%d");
@@ -126,7 +128,7 @@ static void insert_extension_header_into_packet_base(uint8_t with_payload, RtpSe
 		uint8_t *p = NULL;
 		int psize = rtp_get_payload(packet, &p);
 		if (BC_ASSERT_TRUE(psize == PAYLOAD_SIZE)) {
-			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE)== 0);
+			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE) == 0);
 		}
 	}
 
@@ -142,9 +144,9 @@ static void insert_extension_header_into_packet_base(uint8_t with_payload, RtpSe
 
 	if (test_session == csrc_session || test_session == csrc_bundled_session) {
 		uint16_t cc = rtp_get_cc(packet);
-		BC_ASSERT_EQUAL(cc,1, uint16_t, "%d");
+		BC_ASSERT_EQUAL(cc, 1, uint16_t, "%d");
 		if (cc == 1) {
-			BC_ASSERT_EQUAL(rtp_get_csrc(packet, 0), CSRC, uint32_t, "%d");
+			BC_ASSERT_EQUAL((rtp_get_csrc(packet, 0)), CSRC, uint32_t, "%d");
 		}
 	}
 
@@ -197,8 +199,8 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 	int i;
 	mblk_t *packet;
 	char *test = "running test"; // 12 bytes -> 13 with header, 1 padding bytes
-	char *foo = "foo"; // -> no padding bytes
-	char *bar = "bar12"; // -> 2 padding bytes
+	char *foo = "foo";           // -> no padding bytes
+	char *bar = "bar12";         // -> 2 padding bytes
 	int expected_header_size = 0;
 	int expected_header_size_with_padding = 0;
 	uint8_t expected_extensions_values[10][64];
@@ -206,18 +208,19 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 
 	// Test multiple extension into the same packet
 	switch (with_payload) {
-		case PAYLOAD :
+		case PAYLOAD:
 			/* payload and header in one continuous message block */
-			packet = rtp_session_create_packet_header(test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
+			packet = rtp_session_create_packet_header(
+			    test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
 			memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
 			packet->b_wptr += PAYLOAD_SIZE;
 			break;
-		case DETACHED_PAYLOAD :
+		case DETACHED_PAYLOAD:
 			/* fragmented message block */
 			packet = rtp_session_create_packet_header(test_session, 0);
 			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 			break;
-		case NO_PAYLOAD :
+		case NO_PAYLOAD:
 		default: // NO PAYLAOD
 			packet = rtp_session_create_packet_header(test_session, 0);
 	}
@@ -227,25 +230,26 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 	}
 
 	for (i = 1; i < 11; i++) {
-		if ((test_session == bundled_session || test_session == csrc_bundled_session) && i == RTP_EXTENSION_MID) continue; // Do no overwritte MID header if any
-		switch((bctbx_random() % 3) + 1) {
+		if ((test_session == bundled_session || test_session == csrc_bundled_session) && i == RTP_EXTENSION_MID)
+			continue; // Do no overwritte MID header if any
+		switch ((bctbx_random() % 3) + 1) {
 			case 1:
 				rtp_add_extension_header(packet, i, strlen(test), (uint8_t *)test);
-				expected_header_size += 1+strlen(test); // 1 byte header plus extension itself
-				expected_extensions_size[i-1]=strlen(test);
-				memcpy(expected_extensions_values[i-1], test, strlen(test));
+				expected_header_size += 1 + strlen(test); // 1 byte header plus extension itself
+				expected_extensions_size[i - 1] = strlen(test);
+				memcpy(expected_extensions_values[i - 1], test, strlen(test));
 				break;
 			case 2:
 				rtp_add_extension_header(packet, i, strlen(foo), (uint8_t *)foo);
-				expected_header_size += 1+strlen(foo); // 1 byte header plus extension itself
-				expected_extensions_size[i-1]=strlen(foo);
-				memcpy(expected_extensions_values[i-1], foo, strlen(foo));
+				expected_header_size += 1 + strlen(foo); // 1 byte header plus extension itself
+				expected_extensions_size[i - 1] = strlen(foo);
+				memcpy(expected_extensions_values[i - 1], foo, strlen(foo));
 				break;
 			default:
 				rtp_add_extension_header(packet, i, strlen(bar), (uint8_t *)bar);
-				expected_header_size += 1+strlen(bar); // 1 byte header plus extension itself
-				expected_extensions_size[i-1]=strlen(bar);
-				memcpy(expected_extensions_values[i-1], bar, strlen(bar));
+				expected_header_size += 1 + strlen(bar); // 1 byte header plus extension itself
+				expected_extensions_size[i - 1] = strlen(bar);
+				memcpy(expected_extensions_values[i - 1], bar, strlen(bar));
 				break;
 		}
 
@@ -260,7 +264,7 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 	for (i = 0; i < 10; i++) {
 		uint8_t *data = NULL;
 		int size = rtp_get_extension_header(packet, i + 1, &data);
-		if ((test_session == bundled_session || test_session == csrc_bundled_session)&& i+1 == RTP_EXTENSION_MID) {
+		if ((test_session == bundled_session || test_session == csrc_bundled_session) && i + 1 == RTP_EXTENSION_MID) {
 			BC_ASSERT_EQUAL(size, (int)(strlen(mid)), int, "%d");
 			if (size == (int)strlen(mid)) {
 				BC_ASSERT_TRUE(memcmp(data, mid, size) == 0);
@@ -276,15 +280,15 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 		uint8_t *p = NULL;
 		int psize = rtp_get_payload(packet, &p);
 		if (BC_ASSERT_TRUE(psize == PAYLOAD_SIZE)) {
-			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE)== 0);
+			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE) == 0);
 		}
 	}
 
 	if (test_session == csrc_session || test_session == csrc_bundled_session) {
 		uint16_t cc = rtp_get_cc(packet);
-		BC_ASSERT_EQUAL(cc,1, uint16_t, "%d");
+		BC_ASSERT_EQUAL(cc, 1, uint16_t, "%d");
 		if (cc == 1) {
-			BC_ASSERT_EQUAL(rtp_get_csrc(packet, 0), CSRC, uint32_t, "%d");
+			BC_ASSERT_EQUAL((rtp_get_csrc(packet, 0)), CSRC, uint32_t, "%d");
 		}
 	}
 
@@ -337,18 +341,19 @@ static void insert_client_to_mixer_into_packet_base(uint8_t with_payload, RtpSes
 	mblk_t *packet = NULL;
 
 	switch (with_payload) {
-		case PAYLOAD :
+		case PAYLOAD:
 			/* payload and header in one continuous message block */
-			packet = rtp_session_create_packet_header(test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
+			packet = rtp_session_create_packet_header(
+			    test_session, PAYLOAD_SIZE); // ask for PAYLOAD size to be allocated after the header
 			memcpy(packet->b_wptr, payload, PAYLOAD_SIZE);
 			packet->b_wptr += PAYLOAD_SIZE;
 			break;
-		case DETACHED_PAYLOAD :
+		case DETACHED_PAYLOAD:
 			/* fragmented message block */
 			packet = rtp_session_create_packet_header(test_session, 0);
 			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 			break;
-		case NO_PAYLOAD :
+		case NO_PAYLOAD:
 		default: // NO PAYLAOD
 			packet = rtp_session_create_packet_header(test_session, 0);
 	}
@@ -358,11 +363,12 @@ static void insert_client_to_mixer_into_packet_base(uint8_t with_payload, RtpSes
 	result = rtp_get_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL, &voice_activity);
 	BC_ASSERT_EQUAL(result, -64, int, "%d");
 	BC_ASSERT_EQUAL(voice_activity, TRUE, bool_t, "%d");
-	rtp_add_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL+1, FALSE, 0);
+	rtp_add_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL + 1, FALSE, 0);
 	result = rtp_get_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL, &voice_activity);
 	BC_ASSERT_EQUAL(result, -64, int, "%d");
 	BC_ASSERT_EQUAL(voice_activity, TRUE, int, "%d");
-	result = rtp_get_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL+1, &voice_activity);
+	result =
+	    rtp_get_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL + 1, &voice_activity);
 	BC_ASSERT_EQUAL(result, 0, int, "%d");
 	BC_ASSERT_EQUAL(voice_activity, FALSE, int, "%d");
 
@@ -370,7 +376,7 @@ static void insert_client_to_mixer_into_packet_base(uint8_t with_payload, RtpSes
 		uint8_t *p = NULL;
 		int psize = rtp_get_payload(packet, &p);
 		if (BC_ASSERT_TRUE(psize == PAYLOAD_SIZE)) {
-			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE)== 0);
+			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE) == 0);
 		}
 	}
 
@@ -386,9 +392,9 @@ static void insert_client_to_mixer_into_packet_base(uint8_t with_payload, RtpSes
 
 	if (test_session == csrc_session || test_session == csrc_bundled_session) {
 		uint16_t cc = rtp_get_cc(packet);
-		BC_ASSERT_EQUAL(cc,1, uint16_t, "%d");
+		BC_ASSERT_EQUAL(cc, 1, uint16_t, "%d");
 		if (cc == 1) {
-			BC_ASSERT_EQUAL(rtp_get_csrc(packet, 0), CSRC, uint32_t, "%d");
+			BC_ASSERT_EQUAL((rtp_get_csrc(packet, 0)), CSRC, uint32_t, "%d");
 		}
 	}
 
@@ -435,14 +441,16 @@ static void insert_client_to_mixer_into_packet_with_detached_payload_in_csrc_bun
 	insert_client_to_mixer_into_packet_base(DETACHED_PAYLOAD, csrc_bundled_session);
 }
 
-static void insert_mixer_to_client_into_packet_base(bool_t with_payload, bool_t use_create_with_mixer, RtpSession *test_session) {
+static void
+insert_mixer_to_client_into_packet_base(bool_t with_payload, bool_t use_create_with_mixer, RtpSession *test_session) {
 	int audio_size;
 	rtp_audio_level_t audio_levels[15];
 	rtp_audio_level_t values[5] = {{1, -127}, {2, -115}, {0, -53}, {4, -28}, {5, 0}};
 	mblk_t *packet = NULL;
 
 	if (use_create_with_mixer) {
-		packet = rtp_session_create_packet_header_with_mixer_to_client_audio_level(test_session, 0, RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL, 5, values);
+		packet = rtp_session_create_packet_header_with_mixer_to_client_audio_level(
+		    test_session, 0, RTP_EXTENSION_MIXER_TO_CLIENT_AUDIO_LEVEL, 5, values);
 		if (with_payload == TRUE) {
 			packet->b_cont = rtp_create_packet(payload, PAYLOAD_SIZE);
 		}
@@ -479,7 +487,7 @@ static void insert_mixer_to_client_into_packet_base(bool_t with_payload, bool_t 
 		uint8_t *p = NULL;
 		int psize = rtp_get_payload(packet, &p);
 		if (BC_ASSERT_TRUE(psize == PAYLOAD_SIZE)) {
-			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE)== 0);
+			BC_ASSERT_TRUE(memcmp(p, payload, PAYLOAD_SIZE) == 0);
 		}
 	}
 
@@ -556,20 +564,27 @@ static void insert_frame_marking_into_packet_with_payload_in_bundled_session(voi
 
 static void padding_test(void) {
 	// packet with the header, ext are 1 : bar1, 2:foo, 3 padding bytes
-	uint8_t ext1[4] = {0x62, 0x61, 0x72, 0x31}; // extension with id 1 is "bar1"
-	uint8_t ext2[3] = {0x66, 0x6f, 0x6f}; // extension with id 2 is "foo"
+	uint8_t ext1[4] = {0x62, 0x61, 0x72, 0x31};       // extension with id 1 is "bar1"
+	uint8_t ext2[3] = {0x66, 0x6f, 0x6f};             // extension with id 2 is "foo"
 	uint8_t ext3[5] = {0x01, 0x02, 0x03, 0x04, 0x05}; // extension with id 3
-	uint8_t raw_packet_padding_at_the_end[28] = {0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfd, 0x8a, 0x1a, 0x76, 0xbe, 0xde, 0x00, 0x03, 0x13, 0x62, 0x61, 0x72, 0x31, 0x22, 0x66, 0x6f, 0x6f, 0x00, 0x00, 0x00};
-	uint8_t raw_packet_padding_at_the_begining[28] = {0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfd, 0x8a, 0x1a, 0x76, 0xbe, 0xde, 0x00, 0x03, 0x00, 0x00, 0x00, 0x13, 0x62, 0x61, 0x72, 0x31, 0x22, 0x66, 0x6f, 0x6f};
-	uint8_t raw_packet_padding_in_the_middle[28] = {0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfd, 0x8a, 0x1a, 0x76, 0xbe, 0xde, 0x00, 0x03, 0x13, 0x62, 0x61, 0x72, 0x31, 0x00, 0x00, 0x00, 0x22, 0x66, 0x6f, 0x6f};
-	uint8_t *raw_packets[3] = {raw_packet_padding_at_the_end, raw_packet_padding_at_the_begining, raw_packet_padding_in_the_middle};
+	uint8_t raw_packet_padding_at_the_end[28] = {0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfd, 0x8a,
+	                                             0x1a, 0x76, 0xbe, 0xde, 0x00, 0x03, 0x13, 0x62, 0x61, 0x72,
+	                                             0x31, 0x22, 0x66, 0x6f, 0x6f, 0x00, 0x00, 0x00};
+	uint8_t raw_packet_padding_at_the_begining[28] = {0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfd, 0x8a,
+	                                                  0x1a, 0x76, 0xbe, 0xde, 0x00, 0x03, 0x00, 0x00, 0x00, 0x13,
+	                                                  0x62, 0x61, 0x72, 0x31, 0x22, 0x66, 0x6f, 0x6f};
+	uint8_t raw_packet_padding_in_the_middle[28] = {0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xfd, 0x8a,
+	                                                0x1a, 0x76, 0xbe, 0xde, 0x00, 0x03, 0x13, 0x62, 0x61, 0x72,
+	                                                0x31, 0x00, 0x00, 0x00, 0x22, 0x66, 0x6f, 0x6f};
+	uint8_t *raw_packets[3] = {raw_packet_padding_at_the_end, raw_packet_padding_at_the_begining,
+	                           raw_packet_padding_in_the_middle};
 	mblk_t *packet;
 	uint8_t *data;
 
-	int i,size;
+	int i, size;
 
-	for (i=0; i<3; i++) {
-		ortp_message("run on pattern %d",i);
+	for (i = 0; i < 3; i++) {
+		ortp_message("run on pattern %d", i);
 		packet = rtp_create_packet(raw_packets[i], 28);
 		/* check ext bit and size - expected to be 12 */
 		BC_ASSERT_EQUAL(rtp_get_extbit(packet), 1, uint16_t, "%d");
@@ -596,13 +611,14 @@ static void padding_test(void) {
 		/* check ext bit and size - expected to be 16 */
 		BC_ASSERT_EQUAL(rtp_get_extbit(packet), 1, uint16_t, "%d");
 		size = rtp_get_extheader(packet, NULL, NULL);
-		if (i==0) {
+		if (i == 0) {
 			// when padding is at the end, it is re-used, so we can fit the 3 extensions in 16 bytes
 			// 4+3+5 for content, 3 for ids = 15 bytes -> 16 bytes with rounding up to %4=0
 			BC_ASSERT_EQUAL(size, 16, unsigned int, "%d");
 		} else {
-			// when padding is not at the end, we will not reuse it when adding an extension. We need 20 bytes to fit the 3 extensions
-			// 4+3+5 for content, 3 for ids + 3 padding bytes from the original message = 18 -> 20 bytes with rounding up to %4=0
+			// when padding is not at the end, we will not reuse it when adding an extension. We need 20 bytes to fit
+			// the 3 extensions 4+3+5 for content, 3 for ids + 3 padding bytes from the original message = 18 -> 20
+			// bytes with rounding up to %4=0
 			BC_ASSERT_EQUAL(size, 20, unsigned int, "%d");
 		}
 
@@ -658,7 +674,7 @@ static void create_packet_with_payload_in_bundled_session(void) {
 	}
 	size = rtp_get_payload(packet, &data);
 	if (BC_ASSERT_TRUE(size == PAYLOAD_SIZE)) {
-		BC_ASSERT_TRUE(memcmp(data, payload, PAYLOAD_SIZE)== 0);
+		BC_ASSERT_TRUE(memcmp(data, payload, PAYLOAD_SIZE) == 0);
 	}
 	freemsg(packet);
 
@@ -673,70 +689,112 @@ static void create_packet_with_payload_in_bundled_session(void) {
 	}
 	size = rtp_get_payload(packet, &data);
 	if (BC_ASSERT_TRUE(size == PAYLOAD_SIZE)) {
-		BC_ASSERT_TRUE(memcmp(data, payload, PAYLOAD_SIZE)== 0);
+		BC_ASSERT_TRUE(memcmp(data, payload, PAYLOAD_SIZE) == 0);
 	}
 	freemsg(packet);
 }
 
 static test_t tests[] = {
-	TEST_NO_TAG("Create packet with payload in a bundled session", create_packet_with_payload_in_bundled_session),
-	TEST_NO_TAG("Insert an extension header into a packet", insert_extension_header_into_packet),
-	TEST_NO_TAG("Insert an extension header into a packet with payload", insert_extension_header_into_packet_with_payload),
-	TEST_NO_TAG("Insert an extension header into a packet with detached payload", insert_extension_header_into_packet_with_detached_payload),
-	TEST_NO_TAG("Insert an extension header into a packet in bundled session", insert_extension_header_into_packet_in_bundled_session),
-	TEST_NO_TAG("Insert an extension header into a packet with payload in bundled session", insert_extension_header_into_packet_with_payload_in_bundled_session),
-	TEST_NO_TAG("Insert an extension header into a packet with detached payload in bundled session", insert_extension_header_into_packet_with_detached_payload_in_bundled_session),
-	TEST_NO_TAG("Insert an extension header into a packet in csrc session", insert_extension_header_into_packet_in_csrc_session),
-	TEST_NO_TAG("Insert an extension header into a packet with payload in csrc session", insert_extension_header_into_packet_with_payload_in_csrc_session),
-	TEST_NO_TAG("Insert an extension header into a packet with detached payload in csrc session", insert_extension_header_into_packet_with_detached_payload_in_csrc_session),
-	TEST_NO_TAG("Insert an extension header into a packet in csrc bundled session", insert_extension_header_into_packet_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert an extension header into a packet with payload in csrc bundled session", insert_extension_header_into_packet_with_payload_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert an extension header into a packet with detached payload in csrc bundled session", insert_extension_header_into_packet_with_detached_payload_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet", insert_multiple_extension_headers_into_packet),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with payload", insert_multiple_extension_headers_into_packet_with_payload),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload", insert_multiple_extension_headers_into_packet_with_detached_payload),
-	TEST_NO_TAG("Insert multiple extension headers into a packet in bundled session", insert_multiple_extension_headers_into_packet_in_bundled_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with payload in bundled session", insert_multiple_extension_headers_into_packet_with_payload_in_bundled_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload in bundled session", insert_multiple_extension_headers_into_packet_with_detached_payload_in_bundled_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet in csrc session", insert_multiple_extension_headers_into_packet_in_csrc_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with payload in bundled session", insert_multiple_extension_headers_into_packet_with_payload_in_csrc_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload in bundled session", insert_multiple_extension_headers_into_packet_with_detached_payload_in_csrc_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet in csrc bundled session", insert_multiple_extension_headers_into_packet_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with payload in csrc bundled session", insert_multiple_extension_headers_into_packet_with_payload_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload in csrc bundled session", insert_multiple_extension_headers_into_packet_with_detached_payload_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet", insert_client_to_mixer_into_packet),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with payload", insert_client_to_mixer_into_packet_with_payload),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload", insert_client_to_mixer_into_packet_with_detached_payload),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet in bundled session", insert_client_to_mixer_into_packet_in_bundled_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with payload in bundled session", insert_client_to_mixer_into_packet_with_payload_in_bundled_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload in bundled session", insert_client_to_mixer_into_packet_with_detached_payload_in_bundled_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet in csrc session", insert_client_to_mixer_into_packet_in_csrc_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with payload in csrc session", insert_client_to_mixer_into_packet_with_payload_in_csrc_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload in csrc session", insert_client_to_mixer_into_packet_with_detached_payload_in_csrc_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet in csrc bundled session", insert_client_to_mixer_into_packet_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with payload in csrc bundled session", insert_client_to_mixer_into_packet_with_payload_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload in csrc bundled session", insert_client_to_mixer_into_packet_with_detached_payload_in_csrc_bundled_session),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet", insert_mixer_to_client_into_packet),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet with payload", insert_mixer_to_client_into_packet_with_payload),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet in bundled session", insert_mixer_to_client_into_packet_in_bundled_session),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet with payload in bundled session", insert_mixer_to_client_into_packet_with_payload_in_bundled_session),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet using create packet with mixer", insert_mixer_to_client_into_packet_use_create_with_mixer),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet with payload using create packet with mixer", insert_mixer_to_client_into_packet_with_payload_use_create_with_mixer),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet in bundled session using create packet with mixer", insert_mixer_to_client_into_packet_in_bundled_session_use_create_with_mixer),
-	TEST_NO_TAG("Insert mixer to client audio level into a packet with payload in bundled session using create packet with mixer", insert_mixer_to_client_into_packet_with_payload_in_bundled_session_use_create_with_mixer),
-	TEST_NO_TAG("Insert frame marking into a packet", insert_frame_marking_into_packet),
-	TEST_NO_TAG("Insert frame marking into a packet with payload", insert_frame_marking_into_packet_with_payload),
-	TEST_NO_TAG("Insert frame marking into a packet in bundled session", insert_frame_marking_into_packet_in_bundled_session),
-	TEST_NO_TAG("Insert frame marking into a packet with payload in bundled session", insert_frame_marking_into_packet_with_payload_in_bundled_session),
-	TEST_NO_TAG("Padding", padding_test)
-};
+    TEST_NO_TAG("Create packet with payload in a bundled session", create_packet_with_payload_in_bundled_session),
+    TEST_NO_TAG("Insert an extension header into a packet", insert_extension_header_into_packet),
+    TEST_NO_TAG("Insert an extension header into a packet with payload",
+                insert_extension_header_into_packet_with_payload),
+    TEST_NO_TAG("Insert an extension header into a packet with detached payload",
+                insert_extension_header_into_packet_with_detached_payload),
+    TEST_NO_TAG("Insert an extension header into a packet in bundled session",
+                insert_extension_header_into_packet_in_bundled_session),
+    TEST_NO_TAG("Insert an extension header into a packet with payload in bundled session",
+                insert_extension_header_into_packet_with_payload_in_bundled_session),
+    TEST_NO_TAG("Insert an extension header into a packet with detached payload in bundled session",
+                insert_extension_header_into_packet_with_detached_payload_in_bundled_session),
+    TEST_NO_TAG("Insert an extension header into a packet in csrc session",
+                insert_extension_header_into_packet_in_csrc_session),
+    TEST_NO_TAG("Insert an extension header into a packet with payload in csrc session",
+                insert_extension_header_into_packet_with_payload_in_csrc_session),
+    TEST_NO_TAG("Insert an extension header into a packet with detached payload in csrc session",
+                insert_extension_header_into_packet_with_detached_payload_in_csrc_session),
+    TEST_NO_TAG("Insert an extension header into a packet in csrc bundled session",
+                insert_extension_header_into_packet_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert an extension header into a packet with payload in csrc bundled session",
+                insert_extension_header_into_packet_with_payload_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert an extension header into a packet with detached payload in csrc bundled session",
+                insert_extension_header_into_packet_with_detached_payload_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet", insert_multiple_extension_headers_into_packet),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with payload",
+                insert_multiple_extension_headers_into_packet_with_payload),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload",
+                insert_multiple_extension_headers_into_packet_with_detached_payload),
+    TEST_NO_TAG("Insert multiple extension headers into a packet in bundled session",
+                insert_multiple_extension_headers_into_packet_in_bundled_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with payload in bundled session",
+                insert_multiple_extension_headers_into_packet_with_payload_in_bundled_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload in bundled session",
+                insert_multiple_extension_headers_into_packet_with_detached_payload_in_bundled_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet in csrc session",
+                insert_multiple_extension_headers_into_packet_in_csrc_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with payload in bundled session",
+                insert_multiple_extension_headers_into_packet_with_payload_in_csrc_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload in bundled session",
+                insert_multiple_extension_headers_into_packet_with_detached_payload_in_csrc_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet in csrc bundled session",
+                insert_multiple_extension_headers_into_packet_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with payload in csrc bundled session",
+                insert_multiple_extension_headers_into_packet_with_payload_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert multiple extension headers into a packet with detached payload in csrc bundled session",
+                insert_multiple_extension_headers_into_packet_with_detached_payload_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet", insert_client_to_mixer_into_packet),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with payload",
+                insert_client_to_mixer_into_packet_with_payload),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload",
+                insert_client_to_mixer_into_packet_with_detached_payload),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet in bundled session",
+                insert_client_to_mixer_into_packet_in_bundled_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with payload in bundled session",
+                insert_client_to_mixer_into_packet_with_payload_in_bundled_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload in bundled session",
+                insert_client_to_mixer_into_packet_with_detached_payload_in_bundled_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet in csrc session",
+                insert_client_to_mixer_into_packet_in_csrc_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with payload in csrc session",
+                insert_client_to_mixer_into_packet_with_payload_in_csrc_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload in csrc session",
+                insert_client_to_mixer_into_packet_with_detached_payload_in_csrc_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet in csrc bundled session",
+                insert_client_to_mixer_into_packet_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with payload in csrc bundled session",
+                insert_client_to_mixer_into_packet_with_payload_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert client to mixer audio level into a packet with detached payload in csrc bundled session",
+                insert_client_to_mixer_into_packet_with_detached_payload_in_csrc_bundled_session),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet", insert_mixer_to_client_into_packet),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet with payload",
+                insert_mixer_to_client_into_packet_with_payload),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet in bundled session",
+                insert_mixer_to_client_into_packet_in_bundled_session),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet with payload in bundled session",
+                insert_mixer_to_client_into_packet_with_payload_in_bundled_session),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet using create packet with mixer",
+                insert_mixer_to_client_into_packet_use_create_with_mixer),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet with payload using create packet with mixer",
+                insert_mixer_to_client_into_packet_with_payload_use_create_with_mixer),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet in bundled session using create packet with mixer",
+                insert_mixer_to_client_into_packet_in_bundled_session_use_create_with_mixer),
+    TEST_NO_TAG("Insert mixer to client audio level into a packet with payload in bundled session using create packet "
+                "with mixer",
+                insert_mixer_to_client_into_packet_with_payload_in_bundled_session_use_create_with_mixer),
+    TEST_NO_TAG("Insert frame marking into a packet", insert_frame_marking_into_packet),
+    TEST_NO_TAG("Insert frame marking into a packet with payload", insert_frame_marking_into_packet_with_payload),
+    TEST_NO_TAG("Insert frame marking into a packet in bundled session",
+                insert_frame_marking_into_packet_in_bundled_session),
+    TEST_NO_TAG("Insert frame marking into a packet with payload in bundled session",
+                insert_frame_marking_into_packet_with_payload_in_bundled_session),
+    TEST_NO_TAG("Padding", padding_test)};
 
 test_suite_t extension_header_test_suite = {
-	"Extension header",				  // Name of test suite
-	tester_before_all,				  // Before all callback
-	tester_after_all,				  // After all callback
-	NULL,							  // Before each callback
-	NULL,							  // After each callback
-	sizeof(tests) / sizeof(tests[0]), // Size of test table
-	tests							  // Table of test suite
+    "Extension header",               // Name of test suite
+    tester_before_all,                // Before all callback
+    tester_after_all,                 // After all callback
+    NULL,                             // Before each callback
+    NULL,                             // After each callback
+    sizeof(tests) / sizeof(tests[0]), // Size of test table
+    tests                             // Table of test suite
 };
