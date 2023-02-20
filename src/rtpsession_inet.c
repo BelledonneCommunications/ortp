@@ -1603,12 +1603,13 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 	msghdr.msg_controllen = sizeof(control);
 #ifdef USE_RECVMSG
 	ret = rtp_recvmsg(socket, msg, flags, from, fromlen, &msghdr, bufsz);
+	if(ret >= 0) {
+		struct cmsghdr *cmsghdr;
 #else
 	ret = recvfrom(socket, msg->b_wptr, bufsz, flags, from, fromlen);
 #endif
-	if(ret >= 0) {
-		struct cmsghdr *cmsghdr;
 #endif
+#if defined USE_RECVMSG || defined _WIN32
 		for (cmsghdr = CMSG_FIRSTHDR(&msghdr); cmsghdr != NULL ; cmsghdr = CMSG_NXTHDR(&msghdr, cmsghdr)) {
 #ifdef _RECV_SO_TIMESTAMP_TYPE
 			if (cmsghdr->cmsg_level == SOL_SOCKET && cmsghdr->cmsg_type == _RECV_SO_TIMESTAMP_TYPE) {
@@ -1663,6 +1664,7 @@ int rtp_session_rtp_recv_abstract(ortp_socket_t socket, mblk_t *msg, int flags, 
 		}
 	}else{
 	}
+#endif
 	return ret;
 }
 
