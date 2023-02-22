@@ -156,7 +156,7 @@ mblk_t	*rtp_session_create_telephone_event_packet(RtpSession *session, int start
  *
  *@return 0 on success.
 **/
-int rtp_session_add_telephone_event(UNUSED(RtpSession *session),
+int rtp_session_add_telephone_event(BCTBX_UNUSED(RtpSession *session),
 			mblk_t *packet, uint8_t event, int end, uint8_t volume, uint16_t duration)
 {
 	mblk_t *mp=packet;

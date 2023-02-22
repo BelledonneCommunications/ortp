@@ -199,7 +199,7 @@ void rtp_session_clear_contributing_sources(RtpSession *session) {
 	flushq(q, 0);
 }
 
-void rtcp_common_header_init(rtcp_common_header_t *ch, UNUSED(RtpSession *s), int type, int rc, size_t bytes_len){
+void rtcp_common_header_init(rtcp_common_header_t *ch, BCTBX_UNUSED(RtpSession *s), int type, int rc, size_t bytes_len){
 	rtcp_common_header_set_version(ch,2);
 	rtcp_common_header_set_padbit(ch,0);
 	rtcp_common_header_set_packet_type(ch,type);
@@ -343,7 +343,7 @@ static void report_block_init(report_block_t *b, RtpSession *session){
 	}
 }
 
-static void extended_statistics(RtpSession *session, UNUSED(report_block_t * rb) ) {
+static void extended_statistics(RtpSession *session, BCTBX_UNUSED(report_block_t * rb) ) {
 	/* the jitter raw value is kept in stream clock units */
 	uint32_t jitter = (uint32_t)session->rtp.jittctl.inter_jitter;
 	session->stats.sent_rtcp_packets ++;

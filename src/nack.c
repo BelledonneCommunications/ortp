@@ -103,7 +103,7 @@ static int ortp_nack_rtp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
 	return (int) msgdsize(msg);
 }
 
-static int ortp_nack_rtp_process_on_receive(UNUSED(RtpTransportModifier *t), mblk_t *msg) {
+static int ortp_nack_rtp_process_on_receive(BCTBX_UNUSED(RtpTransportModifier *t), mblk_t *msg) {
 	return (int) msgdsize(msg);
 }
 
@@ -158,7 +158,7 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 	return (int) msgdsize(msg);
 }
 
-static int ortp_nack_rtcp_process_on_receive(UNUSED(RtpTransportModifier *t), mblk_t *msg) {
+static int ortp_nack_rtcp_process_on_receive(BCTBX_UNUSED(RtpTransportModifier *t), mblk_t *msg) {
 	return (int) msgdsize(msg);
 }
 

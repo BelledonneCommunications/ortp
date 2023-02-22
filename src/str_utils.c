@@ -58,7 +58,7 @@ unsigned char * dblk_lim(dblk_t *db) {
 	return db->db_lim;
 }
 
-mblk_t *allocb(size_t size, UNUSED(int pri))
+mblk_t *allocb(size_t size, BCTBX_UNUSED(int pri))
 {
 	mblk_t *mp;
 	dblk_t *datab;
@@ -72,7 +72,7 @@ mblk_t *allocb(size_t size, UNUSED(int pri))
 	return mp;
 }
 
-mblk_t *esballoc(uint8_t *buf, size_t size, UNUSED(int pri), void (*freefn)(void*) )
+mblk_t *esballoc(uint8_t *buf, size_t size, BCTBX_UNUSED(int pri), void (*freefn)(void*) )
 {
 	mblk_t *mp;
 	dblk_t *datab;
@@ -190,7 +190,7 @@ void remq(queue_t *q, mblk_t *mp){
 }
 
 /* remove and free all messages in the q */
-void flushq(queue_t *q, UNUSED(int how))
+void flushq(queue_t *q, BCTBX_UNUSED(int how))
 {
 	mblk_t *mp;
 
@@ -319,7 +319,7 @@ void msgb_allocator_set_max_blocks(msgb_allocator_t *pa, int max_blocks){
 	pa->max_blocks = max_blocks;
 }
 
-static void msgb_allocator_free_db(UNUSED(void *unused)){
+static void msgb_allocator_free_db(BCTBX_UNUSED(void *unused)){
 }
 
 mblk_t *msgb_allocator_alloc(msgb_allocator_t *a, size_t size){

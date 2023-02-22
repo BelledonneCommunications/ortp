@@ -46,7 +46,7 @@ static int rtcp_xr_header_init(uint8_t *buf, RtpSession *session, int bytes_len)
 	return sizeof(rtcp_xr_header_t);
 }
 
-static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, UNUSED(RtpSession *session)) {
+static int rtcp_xr_rcvr_rtt_init(uint8_t *buf, BCTBX_UNUSED(RtpSession *session)) {
 	struct timeval tv;
 	uint64_t ntp;
 	rtcp_xr_rcvr_rtt_report_block_t *block = (rtcp_xr_rcvr_rtt_report_block_t *)buf;
