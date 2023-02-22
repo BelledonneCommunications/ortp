@@ -146,7 +146,8 @@ static void insert_extension_header_into_packet_base(uint8_t with_payload, RtpSe
 		uint16_t cc = rtp_get_cc(packet);
 		BC_ASSERT_EQUAL(cc, 1, uint16_t, "%d");
 		if (cc == 1) {
-			BC_ASSERT_EQUAL((rtp_get_csrc(packet, 0)), CSRC, uint32_t, "%d");
+			uint32_t csrc = rtp_get_csrc(packet, 0);
+			BC_ASSERT_EQUAL(csrc, CSRC, uint32_t, "%d");
 		}
 	}
 
@@ -288,7 +289,8 @@ static void insert_multiple_extension_headers_into_packet_base(uint8_t with_payl
 		uint16_t cc = rtp_get_cc(packet);
 		BC_ASSERT_EQUAL(cc, 1, uint16_t, "%d");
 		if (cc == 1) {
-			BC_ASSERT_EQUAL((rtp_get_csrc(packet, 0)), CSRC, uint32_t, "%d");
+			uint32_t csrc = rtp_get_csrc(packet, 0);
+			BC_ASSERT_EQUAL(csrc, CSRC, uint32_t, "%d");
 		}
 	}
 
@@ -394,7 +396,8 @@ static void insert_client_to_mixer_into_packet_base(uint8_t with_payload, RtpSes
 		uint16_t cc = rtp_get_cc(packet);
 		BC_ASSERT_EQUAL(cc, 1, uint16_t, "%d");
 		if (cc == 1) {
-			BC_ASSERT_EQUAL((rtp_get_csrc(packet, 0)), CSRC, uint32_t, "%d");
+			uint32_t csrc = rtp_get_csrc(packet, 0);
+			BC_ASSERT_EQUAL(csrc, CSRC, uint32_t, "%d");
 		}
 	}
 
