@@ -41,8 +41,6 @@ set(SOURCE_FILES_C
 	rtp_tester.c
 )
 
-set (CMAKE_CXX_STANDARD 11)
-
 set(IOS_RESOURCE_FILE)
 set(SOURCE_FILES_CXX
 	fec_tester.cc

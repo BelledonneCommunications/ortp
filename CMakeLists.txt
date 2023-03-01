@@ -87,7 +87,10 @@ if(NOT ANDROID)
 	check_include_file(sys/shm.h HAVE_SYS_SHM_H)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")# need this for check_cxx_source_compiles because CMAKE_CXX_STANDARD doesn't work.
+set (CMAKE_CXX_STANDARD 17)
+
+set(CMAKE_CXX_FLAGS_BAK "${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")# need this for check_cxx_source_compiles because CMAKE_CXX_STANDARD doesn't work.
 check_cxx_source_compiles("#include <atomic>
 using namespace std;
 int main(int argc, char *argv[]) {
@@ -100,6 +103,7 @@ return 0;
 if(NOT HAVE_ATOMIC)
 	message(FATAL_ERROR "Atomic(C++) libraries have not been found for ORTP.")
 endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BAK}")
 
 check_function_exists(arc4random HAVE_ARC4RANDOM)
 check_symbol_exists(recvmsg "sys/socket.h" HAVE_RECVMSG)
