@@ -47,9 +47,6 @@ Autotools procedure is deprecated. Use CMake to configure the source code.
 
 - `CMAKE_INSTALL_PREFIX=<string>` : install prefix
 - `CMAKE_PREFIX_PATH=<string>`    : column-separated list of prefixes where to search for dependencies
-- `ENABLE_SHARED=NO`              : do not build the shared library
-- `ENABLE_STATIC=NO`              : do not build the static library
-- `ENABLE_STRICT=NO`              : build without strict compilation flags (-Wall -Werror)
 - `ENABLE_TESTS=YES`              : build tester binaries
 - `ENABLE_DOC=NO`                 : do not generate the documentation
 - `ENABLE_DEBUG_LOGS=YES`         : turn on debug-level logs

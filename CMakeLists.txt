@@ -1,5 +1,5 @@
 ############################################################################
-# Copyright (c) 2010-2022 Belledonne Communications SARL.
+# Copyright (c) 2010-2023 Belledonne Communications SARL.
 #
 # This file is part of oRTP 
 # (see https://gitlab.linphone.org/BC/public/ortp).
@@ -20,16 +20,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ############################################################################
 
-cmake_minimum_required(VERSION 3.1)
-
-# CMP0077 policy is required by Flexisip build. Remove it once the CMake required
-# version is higer or equal to 3.13.
-if(NOT CMAKE_VERSION VERSION_LESS 3.13)
-    cmake_policy(SET CMP0077 NEW)
-endif()
+cmake_minimum_required(VERSION 3.22)
 
 project(oRTP VERSION 5.3.0)
-
 
 
 set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
@@ -40,8 +33,6 @@ set(ORTP_SO_VERSION "15") # incremented for 4.4.0 version.
 set(ORTP_DOC_VERSION "${ORTP_VERSION_MAJOR}.${ORTP_VERSION_MINOR}")
 
 
-option(ENABLE_SHARED "Build shared library." YES)
-option(ENABLE_STATIC "Build static library." YES)
 option(ENABLE_DOC "Enable documentation generation with Doxygen." YES)
 option(ENABLE_NTP_TIMESTAMP "Turn on NTP timestamping on packet reception." NO)
 option(ENABLE_PERF "Disable costly features to reduce cpu consumtion and increase performance." NO)
@@ -53,8 +44,7 @@ option(ENABLE_PACKAGE_SOURCE "Create 'package_source' target for source archive 
 set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
-# Hidden non-cache options:
-# * DISABLE_BC_PACKAGE_SEARCH: skip find_package() for every BC package (bctoolbox, ortp, etc.)
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 
 include(CheckIncludeFile)
@@ -69,7 +59,7 @@ if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	message(STATUS "Setting install rpath to ${CMAKE_INSTALL_RPATH}")
 endif()
 
-set(MSVC_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include/MSVC")
+set(MSVC_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include/MSVC")
 if(MSVC)
 	list(APPEND CMAKE_REQUIRED_INCLUDES "${MSVC_INCLUDE_DIR}")
 endif()
@@ -77,8 +67,9 @@ endif()
 find_package(Threads)
 find_library(LIBM NAMES m)
 
-if(NOT DISABLE_BC_PACKAGE_SEARCH)
-	find_package(bctoolbox 0.2.0 REQUIRED)
+find_package(BcToolbox)
+if(NOT BCTOOLBOX_FOUND)
+	find_package(bctoolbox 0.2.0 CONFIG REQUIRED)
 endif()
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
@@ -119,7 +110,7 @@ endif()
 include_directories(
 	include/
 	src/
-	${CMAKE_CURRENT_BINARY_DIR}
+	${PROJECT_BINARY_DIR}
 )
 if(MSVC)
 	include_directories(${MSVC_INCLUDE_DIR})
@@ -127,7 +118,7 @@ endif()
 
 
 set(ORTP_CPPFLAGS ${BCTOOLBOX_CPPFLAGS})
-if(ENABLE_STATIC)
+if(NOT BUILD_SHARED_LIBS)
 	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
 endif()
 if(ENABLE_PERF)
@@ -150,13 +141,13 @@ if(ORTP_CPPFLAGS)
 	add_definitions(${ORTP_CPPFLAGS})
 endif()
 set(POSIXTIMER_INTERVAL 10000)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp-config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/ortp-config.h)
-set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/ortp-config.h PROPERTIES GENERATED ON)
-add_definitions(-DHAVE_CONFIG_H)
+configure_file(${PROJECT_SOURCE_DIR}/ortp-config.h.cmake ${PROJECT_BINARY_DIR}/ortp-config.h)
+set_source_files_properties(${PROJECT_BINARY_DIR}/ortp-config.h PROPERTIES GENERATED ON)
+add_compile_definitions("HAVE_CONFIG_H")
 
 # Enable stdint.h limit macros on C++ files. (Windows only.)
 if(MSVC)
-	add_definitions("-D__STDC_LIMIT_MACROS")
+	add_compile_definitions("__STDC_LIMIT_MACROS")
 endif()
 
 set(STRICT_OPTIONS_CPP )
@@ -197,23 +188,25 @@ endif()
 if(ENABLE_DOC)
 	find_package(Doxygen)
 	if(DOXYGEN_FOUND)
-		set(srcdir ${CMAKE_CURRENT_SOURCE_DIR})
-		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.doxygen.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen)
+		set(DOXYGEN_INPUT "")
 		file(GLOB DOC_INPUT_FILES
-			include/ortp/[^.]*.h
-			src/[^.]*.h
-			src/[^.]*.c
+			"${PROJECT_SOURCE_DIR}/include/ortp/[^.]*.h"
+			"${PROJECT_SOURCE_DIR}/src/[^.]*.h"
+			"${PROJECT_SOURCE_DIR}/src/[^.]*.c"
 		)
-		add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html"
-			COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen
-			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/ortp.doxygen ${DOC_INPUT_FILES}
+		foreach (INPUT_FILE ${DOC_INPUT_FILES})
+			string(CONCAT DOXYGEN_INPUT ${DOXYGEN_INPUT} " \"${INPUT_FILE}\"")
+		endforeach ()
+		configure_file(${PROJECT_SOURCE_DIR}/ortp.doxygen.in ${PROJECT_BINARY_DIR}/ortp.doxygen)
+		add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/doc/html/index.html"
+			COMMAND "${DOXYGEN_EXECUTABLE}" "${PROJECT_BINARY_DIR}/ortp.doxygen"
+			DEPENDS "${PROJECT_BINARY_DIR}/ortp.doxygen" ${DOC_INPUT_FILES}
 		)
-		add_custom_target(ortp-html-doc ALL DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/doc/html/index.html")
-		install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/doc/html"
+		add_custom_target(ortp-html-doc ALL DEPENDS "${PROJECT_BINARY_DIR}/doc/html/index.html")
+		install(DIRECTORY "${PROJECT_BINARY_DIR}/doc/html"
 			DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}")
 	endif()
 endif()
-
 
 
 
@@ -224,8 +217,8 @@ set(includedir ${prefix}/include)
 set(ORTP_PKGCONFIG_VERSION "${ORTP_VERSION}")
 set(ORTPDEPS_LIBS )
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/ortp.pc.in ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
+configure_file(${PROJECT_SOURCE_DIR}/ortp.pc.in ${PROJECT_BINARY_DIR}/ortp.pc)
+install(FILES ${PROJECT_BINARY_DIR}/ortp.pc DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig")
 
 if (ENABLE_PACKAGE_SOURCE)
 	add_subdirectory(build)
@@ -236,18 +229,13 @@ include(CMakePackageConfigHelpers)
 set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_TARGET_NAME}")
 
 write_basic_package_version_file(
-	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
+	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
 	VERSION ${ORTP_VERSION}
 	COMPATIBILITY AnyNewerVersion
 )
-if(LINPHONE_BUILDER_GROUP_EXTERNAL_SOURCE_PATH_BUILDERS)
-	export(EXPORT "${EXPORT_TARGET_NAME}Targets"
-		FILE "${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Targets.cmake"
-	)
-endif()
 
-configure_package_config_file(ORTPConfig.cmake.in
-	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
+configure_package_config_file("cmake/ORTPConfig.cmake.in"
+	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
 	INSTALL_DESTINATION ${CONFIG_PACKAGE_LOCATION}
 	NO_SET_AND_CHECK_MACRO
 )
@@ -258,13 +246,13 @@ install(EXPORT ${EXPORT_TARGET_NAME}Targets
 )
 
 install(FILES
-	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
-	"${CMAKE_CURRENT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
+	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
+	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
 	DESTINATION ${CONFIG_PACKAGE_LOCATION}
 )
-install(FILES 	"${CMAKE_CURRENT_SOURCE_DIR}/README.md" 
-	"${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG.md" 
-	"${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt" 
-	"${CMAKE_CURRENT_SOURCE_DIR}/AUTHORS.md" 
+install(FILES "${PROJECT_SOURCE_DIR}/README.md" 
+	"${PROJECT_SOURCE_DIR}/CHANGELOG.md" 
+	"${PROJECT_SOURCE_DIR}/LICENSE.txt" 
+	"${PROJECT_SOURCE_DIR}/AUTHORS.md" 
 	DESTINATION "${CMAKE_INSTALL_DATADIR}/doc/ortp-${ORTP_VERSION}"
 )

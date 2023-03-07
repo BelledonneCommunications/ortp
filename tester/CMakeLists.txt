@@ -1,5 +1,5 @@
 ############################################################################
-# Copyright (c) 2010-2022 Belledonne Communications SARL.
+# Copyright (c) 2010-2023 Belledonne Communications SARL.
 #
 # This file is part of oRTP 
 # (see https://gitlab.linphone.org/BC/public/ortp).
@@ -20,11 +20,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 ############################################################################
 
-if(ENABLE_SHARED)
-	set(ORTP_LIBS_FOR_TESTER ortp)
-else()
-	set(ORTP_LIBS_FOR_TESTER ortp-static)
-endif()
+set(ORTP_LIBS_FOR_TESTER ortp)
 
 if(WIN32)
 	#required for htons()
@@ -52,9 +48,9 @@ bc_apply_compile_flags(SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_CXX)
 bc_apply_compile_flags(SOURCE_FILES_OBJC STRICT_OPTIONS_CPP STRICT_OPTIONS_OBJC)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-	add_library(ortp_tester_static STATIC ${SOURCE_FILES_C} ${SOURCE_FILES_CXX})
-	target_include_directories(ortp_tester_static PUBLIC ${BCTOOLBOX_INCLUDE_DIRS})
-	target_link_libraries(ortp_tester_static ${ORTP_LIBS_FOR_TESTER} bctoolbox bctoolbox-tester)
+	add_library(ortp-tester-static STATIC ${SOURCE_FILES_C} ${SOURCE_FILES_CXX})
+	target_include_directories(ortp-tester-static PUBLIC ${BCTOOLBOX_INCLUDE_DIRS})
+	target_link_libraries(ortp-tester-static ${ORTP_LIBS_FOR_TESTER} bctoolbox bctoolbox-tester)
 	
 	# TODO : implement tester-runtime like bellesip
 	#install(FILES "${CMAKE_CURRENT_BINARY_DIR}/BelledonneCommunications.ortp.Tester.winmd" DESTINATION lib)
@@ -68,33 +64,33 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 else()
 	if(IOS)
 		set_source_files_properties(${IOS_RESOURCES_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
-		add_executable(ortp_tester MACOSX_BUNDLE ${IOS_RESOURCES_FILES} ${SOURCE_FILES_C} ${SOURCE_FILES_CXX} ${SOURCE_FILES_OBJC})
-		set_target_properties(ortp_tester PROPERTIES
+		add_executable(ortp-tester MACOSX_BUNDLE ${IOS_RESOURCES_FILES} ${SOURCE_FILES_C} ${SOURCE_FILES_CXX} ${SOURCE_FILES_OBJC})
+		set_target_properties(ortp-tester PROPERTIES
 			MACOSX_FRAMEWORK_INFO_PLIST Info.plist.in
 			MACOSX_BUNDLE_BUNDLE_NAME org.linphone.ortp.ortp-tester
 			MACOSX_BUNDLE_BUNDLE_VERSION 1.0
 			MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0")
 
 	else()
-		add_executable(ortp_tester ${SOURCE_FILES_C} ${SOURCE_FILES_CXX} ${SOURCE_FILES_OBJC})
+		add_executable(ortp-tester ${SOURCE_FILES_C} ${SOURCE_FILES_CXX} ${SOURCE_FILES_OBJC})
 	endif()
 
-	set_target_properties(ortp_tester PROPERTIES LINKER_LANGUAGE CXX)
-	target_include_directories(ortp_tester PUBLIC ${BCTOOLBOX_INCLUDE_DIRS})
-	target_link_libraries(ortp_tester ${ORTP_LIBS_FOR_TESTER} bctoolbox bctoolbox-tester)
+	set_target_properties(ortp-tester PROPERTIES LINKER_LANGUAGE CXX)
+	target_include_directories(ortp-tester PUBLIC ${BCTOOLBOX_INCLUDE_DIRS})
+	target_link_libraries(ortp-tester ${ORTP_LIBS_FOR_TESTER} bctoolbox bctoolbox-tester)
 	string(REPLACE ";" " " LINK_FLAGS_STR "${LINK_FLAGS}")
 
 	if(LINK_FLAGS_STR)
-		set_target_properties(ortp_tester PROPERTIES LINK_FLAGS "${LINK_FLAGS_STR}")
+		set_target_properties(ortp-tester PROPERTIES LINK_FLAGS "${LINK_FLAGS_STR}")
 	endif()
 
 	if(NOT IOS)
-		install(TARGETS ortp_tester
+		install(TARGETS ortp-tester
 			RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 			LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 			ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 			PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 		)
-		install(FILES ${RAW_FILES} DESTINATION "${CMAKE_INSTALL_DATADIR}/ortp_tester/raw")
+		install(FILES ${RAW_FILES} DESTINATION "${CMAKE_INSTALL_DATADIR}/ortp-tester/raw")
 	endif()
 endif()

@@ -225,7 +225,7 @@ extern "C" {
  *   be NULL, in which case the function returns the required length
  * \param destLen Length of the buffer into which the result is to be written. Must
  *   be at least as large as that indicated by the return value from
- *   \link b64::b64_encode b64_encode(NULL, srcSize, NULL, 0)\endlink.
+ *   \link b64_encode b64_encode(NULL, srcSize, NULL, 0)\endlink.
  *
  * \return 0 if the size of the buffer was insufficient, or the length of the
  * converted buffer was longer than \c destLen
@@ -250,7 +250,7 @@ ORTP_PUBLIC size_t b64_encode(void const *src, size_t srcSize, char *dest, size_
  *   be NULL, in which case the function returns the required length
  * \param destLen Length of the buffer into which the result is to be written. Must
  *   be at least as large as that indicated by the return value from
- *   \link b64::b64_encode2 b64_encode2(NULL, srcSize, NULL, 0, flags, lineLen, rc)\endlink.
+ *   \link b64_encode2 b64_encode2(NULL, srcSize, NULL, 0, flags, lineLen, rc)\endlink.
  * \param flags A combination of the B64_FLAGS enumeration, that moderate the
  *   behaviour of the function
  * \param lineLen If the flags parameter contains B64_F_LINE_LEN_USE_PARAM, then
@@ -302,9 +302,9 @@ size_t b64_encode2(void const *src,
  *   might be larger than the actual required size, but will never be smaller.
  *
  * \note \anchor anchor__4_characters The behaviour of both
- * \link b64::b64_encode2 b64_encode2()\endlink
+ * \link b64_encode2 b64_encode2()\endlink
  * and
- * \link b64::b64_decode2 b64_decode2()\endlink
+ * \link b64_decode2 b64_decode2()\endlink
  * are undefined if the line length is not a multiple of 4.
  *
  * \note Threading: The function is fully re-entrant.
@@ -344,9 +344,9 @@ ORTP_PUBLIC size_t b64_decode(char const *src, size_t srcLen, void *dest, size_t
  *   might be larger than the actual required size, but will never be smaller.
  *
  * \note The behaviour of both
- * \link b64::b64_encode2 b64_encode2()\endlink
+ * \link b64_encode2 b64_encode2()\endlink
  * and
- * \link b64::b64_decode2 b64_decode2()\endlink
+ * \link b64_decode2 b64_decode2()\endlink
  * are undefined if the line length is not a multiple of 4.
  *
  * \note Threading: The function is fully re-entrant.
@@ -364,7 +364,7 @@ size_t b64_decode2(char const *src,
 
 /** \brief Returns the textual description of the error
  *
- * \param code The \link b64::B64_RC error code\endlink
+ * \param code The \link B64_RC error code\endlink
  */
 char const *b64_getErrorString(B64_RC code);
 
@@ -372,7 +372,7 @@ char const *b64_getErrorString(B64_RC code);
  *
  * \see b64_getErrorString()
  *
- * \param code The \link b64::B64_RC error code\endlink
+ * \param code The \link B64_RC error code\endlink
  */
 size_t b64_getErrorStringLength(B64_RC code);
 

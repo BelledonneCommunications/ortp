@@ -1,5 +1,5 @@
 ############################################################################
-# Copyright (c) 2010-2022 Belledonne Communications SARL.
+# Copyright (c) 2010-2023 Belledonne Communications SARL.
 #
 # This file is part of oRTP 
 # (see https://gitlab.linphone.org/BC/public/ortp).
@@ -98,26 +98,20 @@ bc_apply_compile_flags(ORTP_SOURCE_FILES_C STRICT_OPTIONS_CPP STRICT_OPTIONS_C)
 bc_apply_compile_flags(ORTP_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_CXX)
 
 
-
-if(ENABLE_STATIC)
-	add_library(ortp-static STATIC ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
-	set_target_properties(ortp-static PROPERTIES OUTPUT_NAME ortp)
-	set_target_properties(ortp-static PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
-	target_compile_definitions(ortp-static PRIVATE "ORTP_EXPORTS")
-	target_include_directories(ortp-static
-		PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:include>
-	)
-	target_link_libraries(ortp-static PUBLIC bctoolbox INTERFACE ${LIBS})
-	install(TARGETS ortp-static EXPORT ${EXPORT_TARGET_NAME}Targets
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-	)
+add_library(ortp ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
+set_target_properties(ortp PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(ortp PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
+target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
+target_include_directories(ortp
+	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include>
+)
+target_link_libraries(ortp PUBLIC bctoolbox PRIVATE ${LIBS})
+if(WIN32)
+	target_compile_options(ortp PRIVATE "/DELAYLOAD:Qwave.dll")
 endif()
-if(ENABLE_SHARED)
-	add_library(ortp SHARED ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
-	set_target_properties(ortp PROPERTIES LINKER_LANGUAGE CXX)
-	set_target_properties(ortp PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
+
+if(BUILD_SHARED_LIBS)
 	if(APPLE)
 		if(IOS)
 			set(MIN_OS ${LINPHONE_IOS_DEPLOYMENT_TARGET})
@@ -136,15 +130,6 @@ if(ENABLE_SHARED)
 		# Do not version shared library on Android
 		set_target_properties(ortp PROPERTIES SOVERSION ${ORTP_SO_VERSION})
 	endif()
-	if(WIN32)
-		target_compile_options(ortp PRIVATE "/DELAYLOAD:Qwave.dll")
-	endif()
-	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
-	target_include_directories(ortp
-		PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-		$<INSTALL_INTERFACE:include>
-	)
-	target_link_libraries(ortp PUBLIC bctoolbox PRIVATE ${LIBS})
 	if(MSVC)
 		if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
 			install(FILES $<TARGET_PDB_FILE:ortp>
@@ -153,14 +138,15 @@ if(ENABLE_SHARED)
 			)
 		endif()
 	endif()
-	install(TARGETS ortp EXPORT ${EXPORT_TARGET_NAME}Targets
-		RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-		LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-		FRAMEWORK DESTINATION Frameworks
-		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-	)
 endif()
+
+install(TARGETS ortp EXPORT ${EXPORT_TARGET_NAME}Targets
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	FRAMEWORK DESTINATION Frameworks
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+)
 
 if(ENABLE_TESTS AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsPhone" AND NOT CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 	add_subdirectory(tests)
