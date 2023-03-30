@@ -180,6 +180,7 @@ ORTP_VAR_PUBLIC PayloadType payload_type_h265;
 ORTP_VAR_PUBLIC PayloadType payload_type_x_snow;
 ORTP_VAR_PUBLIC PayloadType payload_type_jpeg;
 ORTP_VAR_PUBLIC PayloadType payload_type_vp8;
+ORTP_VAR_PUBLIC PayloadType payload_type_av1;
 
 ORTP_VAR_PUBLIC PayloadType payload_type_g722;
 ORTP_VAR_PUBLIC PayloadType payload_type_flexfec;
