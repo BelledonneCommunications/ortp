@@ -1,31 +1,24 @@
 
-#include "fecstream.h"
+#include "fecstream/fecstream.h"
 #include "ortp/payloadtype.h"
 #include "ortp_tester.h"
 
 using namespace ortp;
+/*
+static void fillEncoder(FecEncoder &encoder) {
+    for (int i = 0; i < encoder.getSize(); i++) {
+        Bitstring bs = generateBitstring(160 * i, 150 + i, 'a' + i);
+        encoder.add(bs);
+    }
+}
+static mblk_t *new_packet(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t *payload, size_t
+packet_size) { mblk_t *packet = NULL;
 
-static FecParameters *newFecParams(int L, int D, int repairWindow) {
-	FecParameters *params = new FecParameters;
-	params->L = L;
-	params->D = D;
-	params->repairWindow = repairWindow;
-	return params;
-} /*
- static void fillEncoder(FecEncoder &encoder) {
-     for (int i = 0; i < encoder.getSize(); i++) {
-         Bitstring bs = generateBitstring(160 * i, 150 + i, 'a' + i);
-         encoder.add(bs);
-     }
- }
- static mblk_t *new_packet(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t *payload, size_t
- packet_size) { mblk_t *packet = NULL;
-
-     packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, payload, packet_size);
-     rtp_set_seqnumber(packet, seqnum);
-     rtp_set_timestamp(packet, timestamp);
-     return packet;
- }*/
+    packet = rtp_session_create_packet(session, RTP_FIXED_HEADER_SIZE, payload, packet_size);
+    rtp_set_seqnumber(packet, seqnum);
+    rtp_set_timestamp(packet, timestamp);
+    return packet;
+}*/
 
 static mblk_t *
 newPacketWithLetter(struct _RtpSession *session, int seqnum, uint32_t timestamp, uint8_t car, size_t packet_size) {
@@ -286,9 +279,10 @@ static void repair_packet_seqnumListInterleaved_test(void) {
 static void encoder_init1D_test(void) {
 
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(10, 0, 200000);
-	FecEncoder cluster(params);
-	cluster.init(session, session);
+
+	FecParamsController params(10, 0, 200000);
+	FecEncoder cluster(&params);
+	cluster.init(session, session, 0U);
 
 	auto rowRepair = cluster.getRowRepair();
 	auto colRepair = cluster.getColRepair();
@@ -302,14 +296,13 @@ static void encoder_init1D_test(void) {
 	BC_ASSERT_EQUAL(rowRepair.size(), 1, size_t, "%zu");
 	BC_ASSERT_EQUAL(colRepair.size(), 0, size_t, "%zu");
 
-	delete params;
 	rtp_session_destroy(session);
 }
 static void encoder_init2D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(10, 10, 200000);
-	FecEncoder cluster(params);
-	cluster.init(session, session);
+	FecParamsController params(10, 10, 200000);
+	FecEncoder cluster(&params);
+	cluster.init(session, session, 0U);
 
 	auto rowRepair = cluster.getRowRepair();
 	auto colRepair = cluster.getColRepair();
@@ -323,14 +316,13 @@ static void encoder_init2D_test(void) {
 	BC_ASSERT_EQUAL(rowRepair.size(), 10, size_t, "%zu");
 	BC_ASSERT_EQUAL(colRepair.size(), 10, size_t, "%zu");
 
-	delete params;
 	rtp_session_destroy(session);
 }
 static void encoder_add1D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 0, 200000);
-	FecEncoder cluster(params);
-	cluster.init(session, session);
+	FecParamsController params(5, 0, 200000);
+	FecEncoder cluster(&params);
+	cluster.init(session, session, 0U);
 	uint8_t *sourcePayload = NULL;
 	uint8_t *repairPayload = NULL;
 
@@ -347,15 +339,14 @@ static void encoder_add1D_test(void) {
 	BC_ASSERT_EQUAL(repairSize, sourceSize, size_t, "%zu");
 	BC_ASSERT_TRUE(memcmp(sourcePayload, repairPayload, sourceSize) == 0);
 
-	delete params;
 	freemsg(packet);
 	rtp_session_destroy(session);
 }
 static void encoder_add2D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 5, 200000);
-	FecEncoder cluster(params);
-	cluster.init(session, session);
+	FecParamsController params(5, 5, 200000);
+	FecEncoder cluster(&params);
+	cluster.init(session, session, 0U);
 
 	uint8_t *sourcePayload = NULL;
 	uint8_t *rowRepairPayload = NULL;
@@ -380,7 +371,6 @@ static void encoder_add2D_test(void) {
 	BC_ASSERT_EQUAL(colRepairSize, sourceSize, size_t, "%zu");
 	BC_ASSERT_TRUE(memcmp(sourcePayload, colRepairPayload, sourceSize) == 0);
 
-	delete params;
 	freemsg(packet);
 	rtp_session_destroy(session);
 }
@@ -388,9 +378,10 @@ static void encoder_add2D_test(void) {
 static void encoder_areFull_test(void) {
 
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 5, 200000);
-	FecEncoder cluster(params);
-	cluster.init(session, session);
+	FecParamsController params(5, 5, 200000);
+	FecEncoder cluster(&params);
+
+	cluster.init(session, session, 0U);
 	mblk_t *packet = NULL;
 	for (int i = 0; i < cluster.getSize(); i++) {
 		packet = newPacketWithLetter(session, i, i * 60, 'a' + i, 150 + i);
@@ -401,7 +392,6 @@ static void encoder_areFull_test(void) {
 		freemsg(packet);
 	}
 	BC_ASSERT_TRUE(cluster.isFull());
-	delete params;
 
 	rtp_session_destroy(session);
 }
@@ -409,9 +399,9 @@ static void encoder_areFull_test(void) {
 static void encoder_fill_test(void) {
 
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 3, 200000);
-	FecEncoder encoder(params);
-	encoder.init(session, session);
+	FecParamsController params(5, 3, 200000);
+	FecEncoder encoder(&params);
+	encoder.init(session, session, 0U);
 
 	for (int i = 0; i < 15; i++) {
 
@@ -431,15 +421,14 @@ static void encoder_fill_test(void) {
 		BC_ASSERT_EQUAL(*rptr, value, uint8_t, "%u");
 	}
 
-	delete params;
 	rtp_session_destroy(session);
 }
 
 static void encoder_reset(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 0, 200000);
-	FecEncoder encoder(params);
-	encoder.init(session, session);
+	FecParamsController params(5, 0, 200000);
+	FecEncoder encoder(&params);
+	encoder.init(session, session, 0U);
 
 	mblk_t *expected = encoder.getRowRepairMblk(0);
 
@@ -457,24 +446,22 @@ static void encoder_reset(void) {
 	rtp_session_destroy(session);
 	freemsg(expected);
 	freemsg(actual);
-
-	delete params;
 }
 
-static void recieve_cluster_add_test(void) {
+static void receive_cluster_add_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	auto cluster = RecieveCluster(session, 200);
+	auto cluster = ReceiveCluster(session, 200);
 	mblk_t *packet = NULL;
 	for (int i = 0; i <= 10; i++) {
 		packet = newPacketWithLetter(session, i, i * 20, 'a' + i, 150 + i);
-		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
+		auto source = std::make_shared<FecSourcePacket>(packet);
 		cluster.add(i, source);
 		freemsg(packet);
 	}
 
 	BC_ASSERT_TRUE(cluster.isFull());
 	packet = newPacketWithLetter(session, 11, 220, 'z', 150);
-	std::shared_ptr<FecSourcePacket> next(new FecSourcePacket(packet));
+	auto next = std::make_shared<FecSourcePacket>(packet);
 	cluster.add(11, next);
 	BC_ASSERT_TRUE(cluster.isFull());
 	auto source = cluster.getSource();
@@ -484,19 +471,19 @@ static void recieve_cluster_add_test(void) {
 	freemsg(packet);
 }
 
-static void recieve_cluster_repairOne_test(void) {
+static void receive_cluster_repairOne_test(void) {
 
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	int L = 5;
 	int missing = 1;
-	auto cluster = RecieveCluster(session, 200);
+	auto cluster = ReceiveCluster(session, 200);
 	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(session, session, 0, L, 0));
 	std::vector<std::shared_ptr<FecSourcePacket>> base;
 	mblk_t *packet = NULL;
 
 	for (int i = 0; i < L; i++) {
 		packet = newPacketWithLetter(session, i, i * 20, 'a' + i, 150 + i);
-		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
+		auto source = std::make_shared<FecSourcePacket>(packet);
 		base.push_back(source);
 		repair->add(*source);
 		if (i != missing) cluster.add(i, source);
@@ -510,18 +497,18 @@ static void recieve_cluster_repairOne_test(void) {
 	rtp_session_destroy(session);
 }
 
-static void recieve_cluster_repair1DNonInterleaved_test(void) {
+static void receive_cluster_repair1DNonInterleaved_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	int L = 5;
 	int missing = 1;
-	RecieveCluster cluster = RecieveCluster(session, 200);
-	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(session, session, 0, L, 0));
+	ReceiveCluster cluster = ReceiveCluster(session, 200);
+	auto repair = std::make_shared<FecRepairPacket>(session, session, 0, L, 0);
 	std::vector<std::shared_ptr<FecSourcePacket>> base;
 	mblk_t *packet = NULL;
 
 	for (int i = 0; i < L; i++) {
 		packet = newPacketWithLetter(session, i, i * 20, 'a' + i, 150 + i);
-		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
+		auto source = std::make_shared<FecSourcePacket>(packet);
 		base.push_back(source);
 		repair->add(*source);
 		if (i != missing) cluster.add(i, source);
@@ -537,20 +524,21 @@ static void recieve_cluster_repair1DNonInterleaved_test(void) {
 	rtp_session_destroy(session);
 }
 
-static void recieve_cluster_repair1DInterleaved_test(void) {
+static void receive_cluster_repair1DInterleaved_test(void) {
 
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
 	int L = 5;
 	int D = 5;
 	int missing = 5;
-	auto cluster = RecieveCluster(session, 400);
-	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(session, session, 0, L, D));
+	auto cluster = ReceiveCluster(session, 400);
+	auto repair = std::make_shared<FecRepairPacket>(session, session, 0, L, D);
+
 	std::vector<std::shared_ptr<FecSourcePacket>> base;
 	mblk_t *packet = NULL;
 
 	for (int i = 0; i < L * D; i += L) {
 		packet = newPacketWithLetter(session, i, 20 * i, 'a' + i, 150);
-		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
+		auto source = std::make_shared<FecSourcePacket>(packet);
 		base.push_back(source);
 		repair->add(*source);
 		if (i != missing) cluster.add(i, source);
@@ -569,10 +557,10 @@ static void recieve_cluster_repair1DInterleaved_test(void) {
 static void encode_decode_test(void) {
 
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 5, 200000);
-	FecEncoder encoder(params);
-	encoder.init(session, session);
-	RecieveCluster cluster(session, 500);
+	FecParamsController params(5, 5, 200000);
+	FecEncoder encoder(&params);
+	encoder.init(session, session, 0U);
+	ReceiveCluster cluster(session, 500);
 	mblk_t *packet = NULL;
 	int missing = 12;
 	std::shared_ptr<FecSourcePacket> p;
@@ -582,7 +570,7 @@ static void encode_decode_test(void) {
 		if (encoder.isFull()) {
 			encoder.reset(i);
 		}
-		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
+		auto source = std::make_shared<FecSourcePacket>(packet);
 		encoder.add(*source);
 		if (encoder.isRowFull()) {
 			int row = encoder.getCurrentRow();
@@ -609,15 +597,14 @@ static void encode_decode_test(void) {
 	BC_ASSERT_PTR_NOT_NULL(find);
 	BC_ASSERT_TRUE(packets_are_equals(p->getPacket(), find->getPacket()));
 	rtp_session_destroy(session);
-	delete params;
 }
 
 static void encode_decode_2D_test(void) {
 	RtpSession *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	FecParameters *params = newFecParams(5, 5, 200000);
-	FecEncoder encoder(params);
-	encoder.init(session, session);
-	RecieveCluster cluster(session, 500);
+	FecParamsController params(5, 5, 200000);
+	FecEncoder encoder(&params);
+	encoder.init(session, session, 0U);
+	ReceiveCluster cluster(session, 500);
 	mblk_t *packet = NULL;
 	int missing[25] = {1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1};
 	std::vector<std::shared_ptr<FecSourcePacket>> missed;
@@ -627,7 +614,7 @@ static void encode_decode_2D_test(void) {
 		if (encoder.isFull()) {
 			encoder.reset(i);
 		}
-		std::shared_ptr<FecSourcePacket> source(new FecSourcePacket(packet));
+		auto source = std::make_shared<FecSourcePacket>(packet);
 		encoder.add(*source);
 		if (encoder.isRowFull()) {
 			int row = encoder.getCurrentRow();
@@ -663,7 +650,6 @@ static void encode_decode_2D_test(void) {
 		miss++;
 	}
 	rtp_session_destroy(session);
-	delete params;
 }
 
 static test_t tests[] = {
@@ -686,11 +672,11 @@ static test_t tests[] = {
 
     TEST_NO_TAG("encoder reset", encoder_reset),
     TEST_NO_TAG("encoder are full", encoder_areFull_test),
-    TEST_NO_TAG("recieve cluster add", recieve_cluster_add_test),
+    TEST_NO_TAG("receive cluster add", receive_cluster_add_test),
 
-    TEST_NO_TAG("recieve cluster repair one", recieve_cluster_repairOne_test),
-    TEST_NO_TAG("recieve cluster repair 1D non interleaved", recieve_cluster_repair1DNonInterleaved_test),
-    TEST_NO_TAG("recieve cluster repair 1D interleaved", recieve_cluster_repair1DInterleaved_test),
+    TEST_NO_TAG("receive cluster repair one", receive_cluster_repairOne_test),
+    TEST_NO_TAG("receive cluster repair 1D non interleaved", receive_cluster_repair1DNonInterleaved_test),
+    TEST_NO_TAG("receive cluster repair 1D interleaved", receive_cluster_repair1DInterleaved_test),
     TEST_NO_TAG("encode decode", encode_decode_test),
     TEST_NO_TAG("encode decode 2D", encode_decode_2D_test),
 };

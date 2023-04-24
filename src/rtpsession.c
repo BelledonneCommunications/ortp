@@ -1388,11 +1388,6 @@ static int __rtp_session_sendm_with_ts_2(
 		session->duplication_left -= 1.f;
 	}
 
-	// if((session->fec_stream != NULL) && (mp != NULL)){
-
-	// 	fec_stream_on_new_packet_sent(session->fec_stream, mp);
-	// }
-
 	error = rtp_session_rtp_send(session, mp);
 
 	/*send RTCP packet if needed */
@@ -1620,7 +1615,7 @@ mblk_t *rtp_session_recvm_with_ts(RtpSession *session, uint32_t user_ts) {
 	session->rtcp_xr_stats.discarded_count += rejected;
 
 end:
-	if (session->fec_stream != NULL && mp != NULL) {
+	if (session->fec_stream != NULL && fec_stream_enabled(session->fec_stream) && mp != NULL) {
 		if (session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)) {
 			mblk_t *fec_mp = fec_stream_find_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
 			if (fec_mp != NULL) {
@@ -1705,7 +1700,7 @@ end:
 		ortp_debug("No mp for timestamp queried");
 	}
 	if (session->fec_stream != NULL) {
-		fec_stream_recieve_repair_packet(session->fec_stream, user_ts);
+		fec_stream_receive_repair_packet(session->fec_stream, user_ts);
 	}
 	rtp_session_rtcp_process_recv(session);
 
@@ -2942,7 +2937,7 @@ int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t,
 	return ret;
 }
 
-int meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTransportModifier *modifier, mblk_t *msg) {
+int meta_rtp_transport_apply_all_except_one_on_receive(RtpTransport *t, RtpTransportModifier *modifier, mblk_t *msg) {
 	int ret = 0;
 	int prev_ret;
 

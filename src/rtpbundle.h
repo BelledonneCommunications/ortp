@@ -64,6 +64,7 @@ private:
 		uint16_t sequenceNumber;
 	};
 
+	RtpSession *getFecSessionFromRTCP(const mblk_t *m);
 	bool dispatchRtpMessage(mblk_t *m);
 	bool dispatchRtcpMessage(mblk_t *m);
 	bool assignmentPossible(RtpSession *session, const mblk_t *m, uint32_t ssrc, bool isRtp);

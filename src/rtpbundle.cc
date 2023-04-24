@@ -368,6 +368,15 @@ void RtpBundleCxx::checkForSessionSdesCallback(
 		bundle->sdesParseMid = value;
 	}
 }
+RtpSession *RtpBundleCxx::getFecSessionFromRTCP(const mblk_t *m) {
+
+	for (auto &pair : fec_sessions) {
+		if (rtp_session_get_recv_ssrc(pair.second) == getSsrcFromMessage(m, false)) {
+			return pair.second;
+		}
+	}
+	return nullptr;
+}
 
 bool RtpBundleCxx::assignmentPossible(RtpSession *session, const mblk_t *m, uint32_t ssrc, bool isRtp) {
 	if (session->ssrc_set) return false;
@@ -444,6 +453,11 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 			}
 		}
 	} else {
+
+		if (rtcp_is_RTPFB(m) && getFecSessionFromRTCP(m) != NULL) {
+			ortp_error("[flexfec] Received an RTCP packet for flexfec session");
+			return NULL;
+		}
 		if (rtcp_is_SDES(m)) {
 			/* The checkForSessionSdesCallback() checks for presence of mid and may associate
 			 * mid and SSRC */
@@ -451,7 +465,17 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 			rtcp_sdes_parse(m, checkForSessionSdesCallback, this);
 
 			if (sdesParseMid.empty()) {
+				if (it == ssrcToMid.end()) {
+					return NULL;
+				}
+			} else {
+				sdesParseMid = "";
+			}
+		} else {
+			if (it == ssrcToMid.end()) {
+				// Cannot look at mid in RTCP as it is not a SDES
 				ortp_message("RtpBundle[%p]: No mid found in RTCP", this);
+				return NULL;
 			}
 		}
 	}

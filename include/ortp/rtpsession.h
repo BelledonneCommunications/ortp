@@ -893,7 +893,7 @@ ORTP_PUBLIC int
 meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags);
 
 ORTP_PUBLIC int
-meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTransportModifier *modifier, mblk_t *msg);
+meta_rtp_transport_apply_all_except_one_on_receive(RtpTransport *t, RtpTransportModifier *modifier, mblk_t *msg);
 /**
  * get endpoint if any
  * @param[in] transport RtpTransport object.
@@ -959,35 +959,31 @@ ORTP_PUBLIC void
 rtp_session_use_local_addr(RtpSession *session, const char *rtp_local_addr, const char *rtcp_local_addr);
 
 typedef struct _FecStream FecStream;
-typedef struct FecParameters_t {
-	uint8_t L;
-	uint8_t D;
-	uint32_t repairWindow;
-
-} FecParameters;
+typedef struct _FecParams FecParams;
 
 typedef struct fec_stats_t {
 
-	int col_repair_sended;
-	int col_repair_recieved;
-	int row_repair_sended;
-	int row_repair_recieved;
+	int col_repair_sent;
+	int col_repair_received;
+	int row_repair_sent;
+	int row_repair_received;
 	int packets_lost;
 	int packets_recovered;
-
+	int tmmbr_received;
 } fec_stats;
 
-ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, FecParameters *fecParams);
+ORTP_PUBLIC FecParams *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow);
+ORTP_PUBLIC float fec_params_update_from_ratio(FecParams *params, float ratio);
+
+ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, FecParams *fecParams);
 ORTP_PUBLIC void fec_stream_destroy(FecStream *fec_stream);
-ORTP_PUBLIC void fec_stream_on_new_packet_sent(FecStream *fec_stream, mblk_t *packet);
-ORTP_PUBLIC void fec_stream_on_new_packet_recieved(FecStream *fec_stream, mblk_t *packet);
-ORTP_PUBLIC void fec_stream_recieve_repair_packet(FecStream *fec_stream, uint32_t timestamp);
+ORTP_PUBLIC void fec_stream_receive_repair_packet(FecStream *fec_stream, uint32_t timestamp);
 ORTP_PUBLIC mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16_t seqnum);
 ORTP_PUBLIC RtpSession *fec_stream_get_fec_session(FecStream *fec_stream);
-ORTP_PUBLIC FecParameters *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow);
 ORTP_PUBLIC void fec_stream_print_stats(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_init(FecStream *fec_stream);
 ORTP_PUBLIC fec_stats *fec_stream_get_stats(FecStream *fec_stream);
+ORTP_PUBLIC bool_t fec_stream_enabled(FecStream *fec_stream);
 
 /* Audio Bandwidth Estimator stats */
 typedef struct abe_stats {
@@ -1011,6 +1007,7 @@ ORTP_PUBLIC const abe_stats_t *rtp_session_get_audio_bandwidth_estimator_stats(R
  * @return the duplicate rate used by ABE, -1 if no ABE exists in the session
  */
 ORTP_PUBLIC int rtp_session_get_audio_bandwidth_estimator_duplicate_rate(RtpSession *session);
+
 #ifdef __cplusplus
 }
 #endif

@@ -378,11 +378,6 @@ void rtp_session_rtp_parse(
 		check_for_seq_number_gap_immediate(session, rtp);
 	}
 
-	// if(session->fec_stream != NULL)
-	// {
-	// 	fec_stream_on_new_packet_recieved(session->fec_stream, mp);
-	// }
-
 	if (queue_packet(&session->rtp.rq, session->rtp.jittctl.params.max_packets, mp, rtp, &discarded, &duplicate))
 		jitter_control_update_size(&session->rtp.jittctl, &session->rtp.rq);
 	stats->discarded += discarded;
