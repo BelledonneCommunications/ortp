@@ -1526,7 +1526,6 @@ end:
 				OrtpEventData *evdata;
 
 				mp = fec_mp;
-
 				ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
 				evdata = ortp_event_get_data(ev);
 				evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
@@ -1575,6 +1574,18 @@ end:
 			rtp_header_set_timestamp(rtp, changed_ts);
 			/*ortp_debug("Returned packet has timestamp %u, with clock slide compensated it is
 			 * %u",packet_ts,rtp_header_get_timestamp(rtp));*/
+		}
+		if ((session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)) {
+
+			int diff = rtp_header_get_seqnumber(rtp) - session->rtp.rcv_last_seq;
+			if (diff >= 3) {
+				OrtpEvent *event = NULL;
+				OrtpEventData *event_data = NULL;
+				event = ortp_event_new(ORTP_EVENT_BURST_OCCURED);
+				event_data = ortp_event_get_data(event);
+				event_data->info.sequence_number_diff = diff;
+				rtp_session_dispatch_event(session, event);
+			}
 		}
 		session->rtp.rcv_last_ts = packet_ts;
 		session->rtp.rcv_last_seq = rtp_header_get_seqnumber(rtp);

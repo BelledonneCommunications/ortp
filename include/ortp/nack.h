@@ -41,6 +41,8 @@ struct _OrtpNackContext {
 	int min_jitter_before_nack;
 	bool_t decrease_jitter_timer_running;
 	uint64_t decrease_jitter_timer_start;
+	uint64_t cum_packet_loss;
+	uint64_t loss_before_nack;
 };
 
 typedef struct _OrtpNackContext OrtpNackContext;

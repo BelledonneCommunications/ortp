@@ -134,6 +134,8 @@ static void check_for_seq_number_gap_immediate(RtpSession *session, rtp_header_t
 		}
 
 		diff = seq_number - first_missed_seq;
+		session->stats.loss_before_nack += diff;
+
 		pid = first_missed_seq;
 
 		for (i = 0; i <= (diff / 16); i++) {

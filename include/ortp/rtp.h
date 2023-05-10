@@ -71,6 +71,7 @@ typedef struct rtp_stats {
 	    sent_rtcp_packets; /* outgoing RTCP packets counter (only packets that embed a report block are considered) */
 	uint64_t
 	    recv_rtcp_packets; /* incoming RTCP packets counter (only packets that embed a report block are considered) */
+	uint64_t loss_before_nack; /*Number of packets asked for a resend*/
 } rtp_stats_t;
 
 typedef struct jitter_stats {
