@@ -27,6 +27,7 @@
  ****************************************************************************/
 
 #include <bctoolbox/defs.h>
+#include <bctoolbox/port.h>
 
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
@@ -505,7 +506,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 }
 
 static float rtcp_rand(float t) {
-	return t * ((rand() / ((float)RAND_MAX)) + 0.5f);
+	return t * ((bctbx_random() / ((float)0xffffffff)) + 0.5f);
 }
 
 /**
