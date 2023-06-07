@@ -24,6 +24,7 @@
 #include "ortp-config.h"
 #endif
 
+#include "audiobandwidthestimator.h"
 #include "congestiondetector.h"
 #include "jitterctl.h"
 #include "ortp/ortp.h"
@@ -261,6 +262,7 @@ void rtp_session_init(RtpSession *session, int mode) {
 	/* Initialize RTCP send algorithm */
 	session->target_upload_bandwidth = 80000; /* 80kbits/s to have 4kbits/s dedicated to RTCP if
 	                                             rtp_session_set_target_upload_bandwidth() is not called. */
+	session->max_target_upload_bandwidth = 0; /* this one is set only using rtp_session_set_target_upload_bandwidth() */
 	session->rtcp.send_algo.initial = TRUE;
 	session->rtcp.send_algo.allow_early = TRUE;
 
@@ -344,6 +346,23 @@ void rtp_session_enable_video_bandwidth_estimator(RtpSession *session,
 			ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator);
 	}
 	session->video_bandwidth_estimator_enabled = params->enabled;
+}
+
+void rtp_session_enable_audio_bandwidth_estimator(RtpSession *session,
+                                                  const OrtpAudioBandwidthEstimatorParams *params) {
+	if (params->enabled) {
+		if (!session->rtp.audio_bw_estimator) {
+			session->rtp.audio_bw_estimator = ortp_audio_bandwidth_estimator_new(session);
+		}
+		if (params->packets_history_size > 0)
+			session->rtp.audio_bw_estimator->packets_history_size = params->packets_history_size;
+		if (params->trust_percentage > 0) session->rtp.audio_bw_estimator->trust_percentage = params->trust_percentage;
+		if (params->duplicated_packet_rate > 0)
+			session->rtp.audio_bw_estimator->duplicated_packet_rate = params->duplicated_packet_rate;
+		if (!session->audio_bandwidth_estimator_enabled)
+			ortp_audio_bandwidth_estimator_reset(session->rtp.audio_bw_estimator);
+	}
+	session->audio_bandwidth_estimator_enabled = params->enabled;
 }
 
 void jb_parameters_init(JBParameters *jbp) {
@@ -470,6 +489,9 @@ void rtp_session_set_rtcp_report_interval(RtpSession *session, int value_ms) {
 void rtp_session_set_target_upload_bandwidth(RtpSession *session, int target_bandwidth) {
 	ortp_message("RtpSession: target upload bandwidth set to %i", target_bandwidth);
 	session->target_upload_bandwidth = target_bandwidth;
+	if (target_bandwidth > session->max_target_upload_bandwidth) {
+		session->max_target_upload_bandwidth = target_bandwidth;
+	}
 }
 int rtp_session_get_target_upload_bandwidth(RtpSession *session) {
 	return session->target_upload_bandwidth;
@@ -1906,6 +1928,10 @@ void rtp_session_uninit(RtpSession *session) {
 		ortp_video_bandwidth_estimator_destroy(session->rtp.video_bw_estimator);
 	}
 
+	if (session->rtp.audio_bw_estimator) {
+		ortp_audio_bandwidth_estimator_destroy(session->rtp.audio_bw_estimator);
+	}
+
 	rtp_session_get_transports(session, &rtp_meta_transport, &rtcp_meta_transport);
 	if (rtp_meta_transport) meta_rtp_transport_destroy(rtp_meta_transport);
 	if (rtcp_meta_transport) meta_rtp_transport_destroy(rtcp_meta_transport);
@@ -2721,7 +2747,9 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg, int flags, const str
 		} else {
 			ortp_error("meta_rtp_transport_sendto(): rtcp-mux enabled but no RTP meta transport is specified !");
 		}
-	} else ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
+	} else {
+		ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
+	}
 	return ret;
 }
 
@@ -3122,5 +3150,21 @@ void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable) {
 			fec_stream_destroy(session->fec_stream);
 			session->fec_stream = NULL;
 		}
+	}
+}
+
+const abe_stats_t *rtp_session_get_audio_bandwidth_estimator_stats(RtpSession *session) {
+	if (session->rtp.audio_bw_estimator) {
+		return &session->rtp.audio_bw_estimator->stats;
+	} else {
+		return NULL;
+	}
+}
+
+int rtp_session_get_audio_bandwidth_estimator_duplicate_rate(RtpSession *session) {
+	if (session->rtp.audio_bw_estimator) {
+		return (int)ortp_audio_bandwidth_estimator_get_duplicate_rate(session->rtp.audio_bw_estimator);
+	} else {
+		return -1;
 	}
 }

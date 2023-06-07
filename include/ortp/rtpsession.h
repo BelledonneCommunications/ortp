@@ -112,7 +112,9 @@ typedef struct _WaitPoint {
 
 typedef enum {
 	RtpTransportModifierLevelEncryption,
-	RtpTransportModifierLevelForwardErrorCorrection
+	RtpTransportModifierLevelForwardErrorCorrection,
+	RtpTransportModifierLevelAudioBandwidthEstimator, // The audio bandwith estimator must be executed last(in sending)
+	                                                  // and first (in receiving), keep this enum last
 } RtpTransportModifierLevel;
 
 #define ORTP_RTP_TRANSPORT_MODIFIER_DEFAULT_LEVEL RtpTransportModifierLevelEncryption
@@ -339,15 +341,14 @@ typedef struct _RtpStream {
 	uint32_t rcv_query_ts_offset; /* the first user timestamp asked by the application */
 	uint32_t rcv_last_ts;         /* the last stream timestamp got by the application */
 	uint16_t rcv_last_seq;        /* the last stream sequence number got by the application*/
-	uint16_t pad;
-	uint32_t rcv_last_app_ts; /* the last application timestamp asked by the application */
-	uint32_t rcv_last_ret_ts; /* the timestamp of the last sample returned (only for continuous audio)*/
-	uint32_t hwrcv_extseq;    /* last received on socket extended sequence number */
+	uint16_t snd_seq;             /* send sequence number */
+	uint32_t rcv_last_app_ts;     /* the last application timestamp asked by the application */
+	uint32_t rcv_last_ret_ts;     /* the timestamp of the last sample returned (only for continuous audio)*/
+	uint32_t hwrcv_extseq;        /* last received on socket extended sequence number */
 	uint32_t hwrcv_seq_at_last_SR;
 	uint32_t hwrcv_since_last_SR;
 	uint32_t last_rcv_SR_ts;         /* NTP timestamp (middle 32 bits) of last received SR */
 	struct timeval last_rcv_SR_time; /* time at which last SR was received  */
-	uint16_t snd_seq;                /* send sequence number */
 	uint32_t last_rtcp_packet_count; /*the sender's octet count in the last sent RTCP SR*/
 	uint32_t sent_payload_bytes;     /*used for RTCP sender reports*/
 	int recv_errno;
@@ -358,6 +359,7 @@ typedef struct _RtpStream {
 	jitter_stats_t jitter_stats;
 	struct _OrtpCongestionDetector *congdetect;
 	struct _OrtpVideoBandwidthEstimator *video_bw_estimator;
+	struct _OrtpAudioBandwidthEstimator *audio_bw_estimator;
 	ortp_thread_t win_t;
 	volatile bool_t is_win_thread_running;
 	ortp_mutex_t winthread_lock;
@@ -403,7 +405,9 @@ struct _RtpSession {
 	int inc_same_ssrc_count;
 	int hw_recv_pt; /* recv payload type before jitter buffer */
 	int recv_buf_size;
-	int target_upload_bandwidth; /* Target upload bandwidth at network layer (with IP and UDP headers) in bits/s */
+	int target_upload_bandwidth;     /* Target upload bandwidth at network layer (with IP and UDP headers) in bits/s */
+	int max_target_upload_bandwidth; /* the largest target upload bandwidth at network layer (with IP and UDP headers)
+	                                    in bits/s ever set through rtp_session_set_target_upload_bandwidth */
 	RtpSignalTable on_ssrc_changed;
 	RtpSignalTable on_payload_type_changed;
 	RtpSignalTable on_telephone_event_packet;
@@ -466,6 +470,7 @@ struct _RtpSession {
 
 	bool_t warn_non_working_pkt_info;
 	bool_t transfer_mode;
+	bool_t audio_bandwidth_estimator_enabled;
 };
 
 /**
@@ -479,6 +484,17 @@ typedef struct _OrtpVideoBandwidthEstimatorParams {
 	unsigned int
 	    trust_percentage; /** percentage for which the chosen bandwidth value in all available will be inferior */
 } OrtpVideoBandwidthEstimatorParams;
+
+/**
+ * Structure describing the audio bandwidth estimator parameters
+ **/
+typedef struct _OrtpAudioBandwidthEstimatorParams {
+	int enabled;                       /**<Whether estimator is enabled or off.*/
+	unsigned int packets_history_size; /**< number of packets needed to compute the available video bandwidth */
+	unsigned int
+	    trust_percentage; /**< percentage for which the chosen bandwidth value in all available will be inferior */
+	unsigned int duplicated_packet_rate; /**< the rate packets are duplicated by sender */
+} OrtpAudioBandwidthEstimatorParams;
 
 #ifdef __cplusplus
 extern "C" {
@@ -807,6 +823,8 @@ ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, cons
 ORTP_PUBLIC void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled);
 ORTP_PUBLIC void rtp_session_enable_video_bandwidth_estimator(RtpSession *session,
                                                               const OrtpVideoBandwidthEstimatorParams *params);
+ORTP_PUBLIC void rtp_session_enable_audio_bandwidth_estimator(RtpSession *session,
+                                                              const OrtpAudioBandwidthEstimatorParams *params);
 
 ORTP_PUBLIC void rtp_session_rtcp_set_lost_packet_value(RtpSession *session, const int value);
 ORTP_PUBLIC void rtp_session_rtcp_set_jitter_value(RtpSession *session, const unsigned int value);
@@ -940,6 +958,29 @@ ORTP_PUBLIC FecParameters *fec_params_new(uint8_t L, uint8_t D, uint32_t repairW
 ORTP_PUBLIC void fec_stream_print_stats(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_init(FecStream *fec_stream);
 ORTP_PUBLIC fec_stats *fec_stream_get_stats(FecStream *fec_stream);
+
+/* Audio Bandwidth Estimator stats */
+typedef struct abe_stats {
+	uint32_t sent_dup; /**< Number of duplicated packet generated */
+	uint32_t
+	    recv_dup; /**< Number of duplicated packet received(this includes only the one used to estimate bandwidth) */
+} abe_stats_t;
+
+/**
+ * Get the stats from audio bandwidth estimator if any
+ * @param[in]	session		The RtpSession holding the ABE
+ *
+ * @return the ABE stats, NULL if no ABE exists in the session
+ */
+ORTP_PUBLIC const abe_stats_t *rtp_session_get_audio_bandwidth_estimator_stats(RtpSession *session);
+
+/**
+ * Get the current duplication rate for the audio bandwidth estimator
+ * @param[in]	session		The RtpSession holding the ABE
+ *
+ * @return the duplicate rate used by ABE, -1 if no ABE exists in the session
+ */
+ORTP_PUBLIC int rtp_session_get_audio_bandwidth_estimator_duplicate_rate(RtpSession *session);
 #ifdef __cplusplus
 }
 #endif

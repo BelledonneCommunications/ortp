@@ -64,6 +64,7 @@ struct _OrtpEventData {
 		uint32_t received_rtt_character;
 		bool_t congestion_detected;
 		float video_bandwidth_available;
+		float audio_bandwidth_available;
 		int jitter_min_size_for_nack;
 		uint16_t reconstructed_packet_seq_number;
 
@@ -108,6 +109,7 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_SRTP_ENCRYPTION_CHANGED                                                                             \
 	26 /* srtp status changed - set key material source and crypto suite usesd in stream stats */
 #define ORTP_EVENT_BURST_OCCURED 27
+#define ORTP_EVENT_NEW_AUDIO_BANDWIDTH_ESTIMATION_AVAILABLE 28
 
 ORTP_PUBLIC OrtpEventData *ortp_event_get_data(OrtpEvent *ev);
 ORTP_PUBLIC void ortp_event_destroy(OrtpEvent *ev);
