@@ -107,7 +107,7 @@ target_include_directories(ortp
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>
 )
-target_link_libraries(ortp PUBLIC bctoolbox PRIVATE ${LIBS})
+target_link_libraries(ortp PUBLIC ${BCToolbox_TARGET} PRIVATE ${LIBS})
 if(WIN32)
 	target_compile_options(ortp PRIVATE "/DELAYLOAD:Qwave.dll")
 endif()
@@ -141,7 +141,7 @@ if(BUILD_SHARED_LIBS)
 	endif()
 endif()
 
-install(TARGETS ortp EXPORT ${EXPORT_TARGET_NAME}Targets
+install(TARGETS ortp EXPORT ${PROJECT_NAME}Targets
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

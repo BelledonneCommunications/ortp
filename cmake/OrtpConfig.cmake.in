@@ -1,5 +1,5 @@
 ############################################################################
-# ORTPConfig.cmake.in
+# OrtpConfig.cmake.in
 # Copyright (C) 2015-2023  Belledonne Communications, Grenoble France
 #
 ############################################################################
@@ -20,31 +20,32 @@
 #
 ############################################################################
 #
-# Config file for the oRTP package.
-# It defines the following variables:
+# Config file for the ortp package.
 #
-#  ORTP_FOUND - system has oRTP
-#  ORTP_INCLUDE_DIRS - the oRTP include directory
-#  ORTP_LIBRARIES - The libraries needed to use oRTP
-#  ORTP_CPPFLAGS - The cflags needed to use oRTP
+# Targets
+# ^^^^^^^
+#
+# The following targets are defined:
+#  ortp - The ortp library target
+#
+#
+# Result variables
+# ^^^^^^^^^^^^^^^^
+#
+# This config file will set the following variables in your project:
+#
+#  Ortp_FOUND - The ortp library has been found
+#  Ortp_TARGET - The name of the CMake target for the ortp library
+
 
 @PACKAGE_INIT@
 
-set(ORTP_TARGETNAME ortp)
+include("${CMAKE_CURRENT_LIST_DIR}/OrtpTargets.cmake")
 
-include("${CMAKE_CURRENT_LIST_DIR}/${ORTP_TARGETNAME}Targets.cmake")
+set(Ortp_TARGET ortp)
 
-if(@BUILD_SHARED_LIBS@)
-	set(ORTP_LIBRARIES ${ORTP_TARGETNAME})
-else()
-	get_target_property(ORTP_LIBRARIES ${ORTP_TARGETNAME} LOCATION)
-	get_target_property(ORTP_LINK_LIBRARIES ${ORTP_TARGETNAME} INTERFACE_LINK_LIBRARIES)
-	if(ORTP_LINK_LIBRARIES)
-	  list(APPEND ORTP_LIBRARIES ${ORTP_LINK_LIBRARIES})
-	endif()
-endif()
+# We must propagate the public dependencies and the private dependencies for static build
+include(CMakeFindDependencyMacro)
+find_dependency(BCToolbox)
 
-get_target_property(ORTP_INCLUDE_DIRS ${ORTP_TARGETNAME} INTERFACE_INCLUDE_DIRECTORIES)
-
-set(ORTP_CPPFLAGS @ORTP_CPPFLAGS@)
-set(ORTP_FOUND 1)
+check_required_components(Ortp)

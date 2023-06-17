@@ -50,8 +50,7 @@ bc_apply_compile_flags(SOURCE_FILES_OBJC STRICT_OPTIONS_CPP STRICT_OPTIONS_OBJC)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 	add_library(ortp-tester-static STATIC ${SOURCE_FILES_C} ${SOURCE_FILES_CXX})
-	target_include_directories(ortp-tester-static PUBLIC ${BCTOOLBOX_INCLUDE_DIRS})
-	target_link_libraries(ortp-tester-static ${ORTP_LIBS_FOR_TESTER} bctoolbox bctoolbox-tester)
+	target_link_libraries(ortp-tester-static PRIVATE ${ORTP_LIBS_FOR_TESTER} PUBLIC ${BCToolbox_tester_TARGET})
 	
 	# TODO : implement tester-runtime like bellesip
 	#install(FILES "${CMAKE_CURRENT_BINARY_DIR}/BelledonneCommunications.ortp.Tester.winmd" DESTINATION lib)
@@ -77,8 +76,7 @@ else()
 	endif()
 
 	set_target_properties(ortp-tester PROPERTIES LINKER_LANGUAGE CXX)
-	target_include_directories(ortp-tester PUBLIC ${BCTOOLBOX_INCLUDE_DIRS})
-	target_link_libraries(ortp-tester ${ORTP_LIBS_FOR_TESTER} bctoolbox bctoolbox-tester)
+	target_link_libraries(ortp-tester PRIVATE ${ORTP_LIBS_FOR_TESTER} ${BCToolbox_tester_TARGET})
 	string(REPLACE ";" " " LINK_FLAGS_STR "${LINK_FLAGS}")
 
 	if(LINK_FLAGS_STR)

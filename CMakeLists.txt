@@ -22,7 +22,7 @@
 
 cmake_minimum_required(VERSION 3.22)
 
-project(oRTP VERSION 5.3.0)
+project(Ortp VERSION 5.3.0)
 
 
 set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
@@ -40,7 +40,7 @@ option(ENABLE_STRICT "Build with strict compile options." YES)
 option(ENABLE_TESTS "Enable compilation of test programs." NO)
 option(ENABLE_UNIT_TESTS "Enable compilation of unit tests." YES)
 option(ENABLE_DEBUG_LOGS "Turn on or off debug level logs." NO)
-option(ENABLE_PACKAGE_SOURCE "Create 'package_source' target for source archive making (CMake >= 3.11)" OFF)
+option(ENABLE_PACKAGE_SOURCE "Create 'package_source' target for source archive making" OFF)
 set(WITH_THREAD_STACK_SIZE "0" CACHE STRING "Set thread stack size (0 is the OS default).")
 
 
@@ -59,18 +59,10 @@ if(NOT CMAKE_INSTALL_RPATH AND CMAKE_INSTALL_PREFIX)
 	message(STATUS "Setting install rpath to ${CMAKE_INSTALL_RPATH}")
 endif()
 
-set(MSVC_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include/MSVC")
-if(MSVC)
-	list(APPEND CMAKE_REQUIRED_INCLUDES "${MSVC_INCLUDE_DIR}")
-endif()
-
 find_package(Threads)
 find_library(LIBM NAMES m)
 
-find_package(BcToolbox)
-if(NOT BCTOOLBOX_FOUND)
-	find_package(bctoolbox 0.2.0 CONFIG REQUIRED)
-endif()
+find_package(BCToolbox 5.3.0 REQUIRED)
 
 check_include_file(sys/uio.h HAVE_SYS_UIO_H)
 check_include_file(sys/audio.h HAVE_SYS_AUDIO_H)
@@ -112,12 +104,9 @@ include_directories(
 	src/
 	${PROJECT_BINARY_DIR}
 )
-if(MSVC)
-	include_directories(${MSVC_INCLUDE_DIR})
-endif()
 
 
-set(ORTP_CPPFLAGS ${BCTOOLBOX_CPPFLAGS})
+set(ORTP_CPPFLAGS)
 if(NOT BUILD_SHARED_LIBS)
 	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
 endif()
@@ -177,8 +166,6 @@ if(STRICT_OPTIONS_C)
 	list(REMOVE_DUPLICATES STRICT_OPTIONS_C)
 endif()
 
-set(EXPORT_TARGET_NAME ortp)
-
 add_subdirectory(include)
 add_subdirectory(src)
 if(ENABLE_UNIT_TESTS AND NOT WIN32)
@@ -225,31 +212,26 @@ if (ENABLE_PACKAGE_SOURCE)
 endif()
 
 include(CMakePackageConfigHelpers)
-
-set(CONFIG_PACKAGE_LOCATION "${CMAKE_INSTALL_LIBDIR}/cmake/${EXPORT_TARGET_NAME}")
-
-write_basic_package_version_file(
-	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
-	VERSION ${ORTP_VERSION}
-	COMPATIBILITY AnyNewerVersion
-)
-
-configure_package_config_file("cmake/ORTPConfig.cmake.in"
-	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
-	INSTALL_DESTINATION ${CONFIG_PACKAGE_LOCATION}
+set(CMAKE_MODULES_INSTALL_DIR "${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/cmake")
+configure_package_config_file("cmake/${PROJECT_NAME}Config.cmake.in" "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+	INSTALL_DESTINATION "${CMAKE_MODULES_INSTALL_DIR}"
 	NO_SET_AND_CHECK_MACRO
 )
-
-install(EXPORT ${EXPORT_TARGET_NAME}Targets
-	FILE "${EXPORT_TARGET_NAME}Targets.cmake"
-	DESTINATION ${CONFIG_PACKAGE_LOCATION}
+write_basic_package_version_file("${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+	VERSION ${PROJECT_VERSION}
+	COMPATIBILITY AnyNewerVersion
 )
-
 install(FILES
-	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}Config.cmake"
-	"${PROJECT_BINARY_DIR}/${EXPORT_TARGET_NAME}ConfigVersion.cmake"
-	DESTINATION ${CONFIG_PACKAGE_LOCATION}
+	"${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+	"${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+	DESTINATION ${CMAKE_MODULES_INSTALL_DIR}
 )
+
+install(EXPORT ${PROJECT_NAME}Targets
+	FILE "${PROJECT_NAME}Targets.cmake"
+	DESTINATION ${CMAKE_MODULES_INSTALL_DIR}
+)
+
 install(FILES "${PROJECT_SOURCE_DIR}/README.md" 
 	"${PROJECT_SOURCE_DIR}/CHANGELOG.md" 
 	"${PROJECT_SOURCE_DIR}/LICENSE.txt" 
