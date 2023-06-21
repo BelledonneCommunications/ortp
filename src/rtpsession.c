@@ -2719,7 +2719,7 @@ static int _meta_rtp_transport_send_through_endpoint(
 }
 
 int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen) {
-	size_t prev_ret;
+	int prev_ret;
 	int ret = 0;
 	OList *elem;
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl *)t->data;
@@ -2728,7 +2728,7 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg, int flags, const str
 		meta_rtp_set_session(t->session, m);
 	}
 
-	prev_ret = msgdsize(msg);
+	prev_ret = (int)msgdsize(msg);
 	for (elem = m->modifiers; elem != NULL; elem = o_list_next(elem)) {
 		RtpTransportModifier *rtm = (RtpTransportModifier *)elem->data;
 		ret = rtm->t_process_on_send(rtm, msg);
@@ -2784,7 +2784,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send(RtpTransport *t,
  */
 int meta_rtp_transport_modifier_inject_packet_to_send_to(
     RtpTransport *t, RtpTransportModifier *tpm, mblk_t *msg, int flags, const struct sockaddr *to, socklen_t tolen) {
-	size_t prev_ret;
+	int prev_ret;
 	int ret;
 	bool_t foundMyself = tpm ? FALSE : TRUE; /*if no modifier, start from the beginning*/
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl *)t->data;
@@ -2794,7 +2794,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(
 		meta_rtp_set_session(t->session, m);
 	}
 
-	prev_ret = msgdsize(msg);
+	prev_ret = (int)msgdsize(msg);
 	for (; elem != NULL; elem = o_list_next(elem)) {
 		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
 		RtpTransportModifier *rtm = (RtpTransportModifier *)elem->data;
@@ -2825,7 +2825,7 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t,
                                                       mblk_t *msg,
                                                       BCTBX_UNUSED(int flags)) {
 	int ret = 0;
-	size_t prev_ret;
+	int prev_ret;
 	bool_t foundMyself = tpm ? FALSE : TRUE; /*if no modifier, start from the beginning*/
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl *)t->data;
 	OList *elem = m->modifiers;
@@ -2834,8 +2834,8 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t,
 	for (; elem != NULL; elem = o_list_next(elem)) {
 		last_elem = elem;
 	}
-	prev_ret = msgdsize(msg);
-	ret = (int)prev_ret;
+	prev_ret = (int)msgdsize(msg);
+	ret = prev_ret;
 	for (; last_elem != NULL; last_elem = o_list_prev(last_elem)) {
 		/* run modifiers only after packet injection, the modifier given in parameter is not applied */
 		RtpTransportModifier *rtm = (RtpTransportModifier *)last_elem->data;
@@ -2846,8 +2846,8 @@ static int _meta_rtp_transport_recv_through_modifiers(RtpTransport *t,
 				// something went wrong in the modifier (failed to decrypt for instance)
 				break;
 			}
-			msg->b_wptr += ((size_t)ret - prev_ret);
-			prev_ret = (size_t)ret;
+			msg->b_wptr += (ret - prev_ret);
+			prev_ret = ret;
 		}
 		/* check if we must inject the packet */
 		if (rtm == tpm) {
@@ -2873,7 +2873,7 @@ int meta_rtp_transport_modifier_inject_packet_to_recv(RtpTransport *t,
 
 int meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTransportModifier *modifier, mblk_t *msg) {
 	int ret = 0;
-	size_t prev_ret;
+	int prev_ret;
 
 	MetaRtpTransportImpl *m = (MetaRtpTransportImpl *)t->data;
 	OList *elem = m->modifiers;
@@ -2883,8 +2883,8 @@ int meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTrans
 		last_elem = elem;
 	}
 
-	prev_ret = msgdsize(msg);
-	ret = (int)prev_ret;
+	prev_ret = (int)msgdsize(msg);
+	ret = prev_ret;
 	for (; last_elem != NULL; last_elem = o_list_prev(last_elem)) {
 
 		RtpTransportModifier *current_modifier = (RtpTransportModifier *)last_elem->data;
@@ -2895,8 +2895,8 @@ int meta_rtp_transport_apply_all_except_one_on_recieve(RtpTransport *t, RtpTrans
 			// something went wrong in the modifier (failed to decrypt for instance)
 			break;
 		}
-		msg->b_wptr += ((size_t)ret - prev_ret);
-		prev_ret = (size_t)ret;
+		msg->b_wptr += (ret - prev_ret);
+		prev_ret = ret;
 	}
 	return ret;
 }
