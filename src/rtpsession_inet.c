@@ -84,9 +84,7 @@
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG                                                                                               \
 	{                                                                                                                  \
-		0xf689d7c8, 0x6f1f, 0x436b, {                                                                                  \
-			0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22                                                             \
-		}                                                                                                              \
+		0xf689d7c8, 0x6f1f, 0x436b, { 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22 }                                 \
 	}
 #ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
@@ -1399,11 +1397,8 @@ void update_sent_bytes(OrtpStream *os, int nbytes) {
 
 static void update_recv_bytes(OrtpStream *os, size_t nbytes, const struct timeval *recv_time) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	if ((os->recv_bytes == 0) && (os->recv_bw_start.tv_sec == 0) && (os->recv_bw_start.tv_usec == 0)) {
-		bctbx_gettimeofday(&os->recv_bw_start, NULL);
-	}
-	os->recv_bytes += (unsigned int)(nbytes + overhead);
 	ortp_bw_estimator_packet_received(&os->recv_bw_estimator, nbytes + overhead, recv_time);
+	ortp_bw_estimator_packet_received(&os->recv_average_bw_estimator, nbytes + overhead, recv_time);
 }
 
 static void

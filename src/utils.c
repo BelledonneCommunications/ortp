@@ -33,6 +33,25 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv) {
 	return msw << 32 | lsw;
 }
 
+/**
+ * Bandwidth estimator
+ * To get more precise download bandwidth estimator, the following algorithm is applied:
+ * - timeline is divided in steps (typical value: 10ms)
+ * - each time a packet is received, it is considered to have been received during the last step,
+ *   all the previous step have an incoming data amount set to 0
+ * - at each step, the previous value is kept pondered by a depreciation factor alpha (typical 0.95)
+ * - when a packet arrives, the number of steps since the last packet is computed using the timestamp
+ *   set on reception in the packet itself.
+ * - the previous value part is computed as following: v*(alpha^steps_number)
+ * - the current packet contribution: size*(1-alpha)
+ * - the value is stored in bytes/steps
+ *
+ * Packets are supposed to arrive quite regularly at a max rate of one each 100ms, more likely 20ms
+ * Having alpha=0.95 and step = 10ms gives a good measure on the last 850 ms(.95^85 ~= 1%)
+ * Having alpha=0.985 and step = 10ms gives a good measure on the last 3 second(.99^300 ~= 1%)
+ * (when packets arrive quite regularly at a max rate of one each 100ms)
+ *
+ */
 void ortp_bw_estimator_init(OrtpBwEstimator *obj, float alpha, float step) {
 	obj->one_minus_alpha = 1.0f - alpha;
 	obj->inv_step = 1.0f / step;

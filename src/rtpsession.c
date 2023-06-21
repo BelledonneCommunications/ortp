@@ -305,6 +305,8 @@ void rtp_session_init(RtpSession *session, int mode) {
 
 	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95f, 0.01f);
 	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95f, 0.01f);
+	ortp_bw_estimator_init(&session->rtp.gs.recv_average_bw_estimator, 0.985f, 0.01f);
+	ortp_bw_estimator_init(&session->rtcp.gs.recv_average_bw_estimator, 0.985f, 0.01f);
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
@@ -2177,29 +2179,12 @@ static float compute_bw(struct timeval *orig, unsigned int *bytes, const struct 
 
 #define BW_GAMMA 0.5f
 
-static void compute_recv_bandwidth(OrtpStream *os, const struct timeval *current) {
-	os->download_bw = compute_bw(&os->recv_bw_start, &os->recv_bytes, current);
-	os->recv_bytes = 0;
-	os->average_download_bw = (os->average_download_bw == 0)
-	                              ? os->download_bw
-	                              : (1 - BW_GAMMA) * os->average_download_bw + BW_GAMMA * os->download_bw;
-}
-
 static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current) {
 	os->upload_bw = compute_bw(&os->send_bw_start, &os->sent_bytes, current);
 	os->sent_bytes = 0;
 	os->average_upload_bw = (os->average_upload_bw == 0)
 	                            ? os->upload_bw
 	                            : (1 - BW_GAMMA) * os->average_upload_bw + BW_GAMMA * os->upload_bw;
-}
-
-float rtp_session_compute_recv_bandwidth(RtpSession *session) {
-	struct timeval current;
-	bctbx_gettimeofday(&current, NULL);
-
-	compute_recv_bandwidth(&session->rtp.gs, &current);
-	compute_recv_bandwidth(&session->rtcp.gs, &current);
-	return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 }
 
 float rtp_session_compute_send_bandwidth(RtpSession *session) {
@@ -2216,13 +2201,13 @@ float rtp_session_compute_send_bandwidth(RtpSession *session) {
  * Computation must have been done with rtp_session_compute_recv_bandwidth()
  **/
 float rtp_session_get_recv_bandwidth(RtpSession *session) {
-	// return session->rtp.gs.download_bw + session->rtcp.gs.download_bw;
 	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator) +
 	       ortp_bw_estimator_get_value(&session->rtcp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_recv_bandwidth_smooth(RtpSession *session) {
-	return session->rtp.gs.average_download_bw + session->rtcp.gs.average_download_bw;
+	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_average_bw_estimator) +
+	       ortp_bw_estimator_get_value(&session->rtcp.gs.recv_average_bw_estimator);
 }
 
 /**
@@ -2238,7 +2223,6 @@ float rtp_session_get_send_bandwidth_smooth(RtpSession *session) {
 }
 
 float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {
-	// return session->rtp.gs.download_bw;
 	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator);
 }
 
@@ -2247,7 +2231,6 @@ float rtp_session_get_rtp_send_bandwidth(RtpSession *session) {
 }
 
 float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session) {
-	// return session->rtcp.gs.download_bw;
 	return ortp_bw_estimator_get_value(&session->rtcp.gs.recv_bw_estimator);
 }
 
