@@ -18,9 +18,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ortp_tester.h"
+
 #include <bctoolbox/defs.h>
 
-#include "ortp_tester.h"
+#include "ortp_tester_utils.h"
 
 static FILE *log_file = NULL;
 
@@ -117,8 +119,16 @@ int main(int argc, char *argv[]) {
 	silent_arg_func(NULL);
 	ortp_tester_init(NULL);
 
+#ifdef HAVE_CONFIG_H
+	// If the tester is not installed we configure it, so it can be launched without installing
+	if (!ortp_is_executable_installed(argv[0], "raw/h265-iframe")) {
+		bc_tester_set_resource_dir_prefix(ORTP_LOCAL_RESOURCE_LOCATION);
+		printf("Resource dir set to %s\n", ORTP_LOCAL_RESOURCE_LOCATION);
+	}
+#endif
+
 	for (i = 1; i < argc; ++i) {
-		int ret = bc_tester_parse_args(argc, argv, i);
+		ret = bc_tester_parse_args(argc, argv, i);
 		if (ret > 0) {
 			i += ret - 1;
 			continue;

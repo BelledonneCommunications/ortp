@@ -40,6 +40,7 @@ set(SOURCE_FILES_C
 set(IOS_RESOURCE_FILE)
 set(SOURCE_FILES_CXX
 	fec_tester.cc
+	ortp_tester_utils.cc
 )
 set(SOURCE_FILES_OBJC)
 
