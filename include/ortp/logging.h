@@ -91,9 +91,8 @@ ORTP_PUBLIC OrtpLogFunc ortp_get_log_handler(void);
 /**
  * Tell oRTP the id of the thread used to output the logs.
  * This is meant to output all the logs from the same thread to prevent deadlock problems at the application level.
- * @param[in] thread_id The id of the thread that will output the logs (can be obtained using ortp_thread_self()).
  */
-#define ortp_set_log_thread_id bctbx_set_log_thread_id
+#define ortp_set_log_thread_id(id) bctbx_set_log_thread_id(id)
 /*ORTP_PUBLIC void ortp_set_log_thread_id(unsigned long thread_id);*/
 
 #ifdef ORTP_DEBUG_MODE
