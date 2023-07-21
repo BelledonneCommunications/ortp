@@ -67,8 +67,6 @@ struct _OrtpEventData {
 		float video_bandwidth_available;
 		float audio_bandwidth_available;
 		int jitter_min_size_for_nack;
-		uint16_t reconstructed_packet_seq_number;
-
 	} info;
 };
 
@@ -105,7 +103,6 @@ ORTP_PUBLIC OrtpEventType ortp_event_get_type(const OrtpEvent *ev);
 #define ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE 21
 #define ORTP_EVENT_ICE_DEACTIVATION_NEEDED 22
 #define ORTP_EVENT_JITTER_UPDATE_FOR_NACK 23
-#define ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED 24
 #define ORTP_EVENT_DO_NOT_USE_RESERVED 25 /* taken by ORTP_EVENT_ICE_CHECK_LIST_DEFAULT_CANDIDATE_VERIFIED */
 #define ORTP_EVENT_SRTP_ENCRYPTION_CHANGED                                                                             \
 	26 /* srtp status changed - set key material source and crypto suite usesd in stream stats */

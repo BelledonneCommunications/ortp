@@ -1,9 +1,30 @@
+/*
+ * Copyright (c) 2010-2024 Belledonne Communications SARL.
+ *
+ * This file is part of oRTP
+ * (see https://gitlab.linphone.org/BC/public/ortp).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "packet-api.h"
 using namespace ortp;
 
 Bitstring::Bitstring() {
 	memset(&mBuffer[0], 0, 8);
 }
+
 Bitstring::Bitstring(const mblk_t *packet) {
 
 	size_t payload_size = msgdsize(packet) - RTP_FIXED_HEADER_SIZE;
@@ -18,22 +39,32 @@ void Bitstring::add(Bitstring const &other) {
 
 	*(uint64_t *)&mBuffer[0] ^= *(uint64_t *)&other.mBuffer[0];
 }
+
 void Bitstring::reset() {
 	memset(&mBuffer[0], 0, 8);
 }
 
 void Bitstring::setHeader(uint16_t *h) {
-	*(uint16_t *)&mBuffer[0] = *(uint16_t *)h;
+	mBuffer[0] = (*h & 0xff);
+	mBuffer[1] = (*h >> 8);
 }
+
 void Bitstring::setLength(uint16_t l) {
-	*(uint16_t *)&mBuffer[6] = (uint16_t)l;
+	mBuffer[6] = l & 0xff;
+	mBuffer[7] = (l >> 8);
 }
+
 void Bitstring::setTimestamp(uint32_t t) {
-	*(uint32_t *)&mBuffer[2] = t;
+	mBuffer[2] = t & 0xff;
+	mBuffer[3] = (t >> 8) & 0xff;
+	mBuffer[4] = (t >> 16) & 0xff;
+	mBuffer[5] = ((t >> 16) >> 8);
 }
+
 bool Bitstring::equals(Bitstring const &other) {
 	return (memcmp(&mBuffer[0], &other.mBuffer[0], 8) == 0);
 }
+
 void Bitstring::write(mblk_t *packet) {
 	rtp_set_version(packet, 2);
 	rtp_set_padbit(packet, (mBuffer[0] >> 5) & 0x1);
@@ -43,31 +74,29 @@ void Bitstring::write(mblk_t *packet) {
 	rtp_set_payload_type(packet, mBuffer[1] & 0x7F);
 	rtp_set_timestamp(packet, getTimestamp());
 }
-FecSourcePacket::FecSourcePacket(struct _RtpSession *session) {
 
-	mPacket = rtp_session_create_packet_header(session, 0);
-	Bitstring bitstring(mPacket);
-}
-FecSourcePacket::FecSourcePacket(struct _RtpSession *session, const Bitstring &bs) {
-
+FecSourcePacket::FecSourcePacket(const struct _RtpSession *session, const Bitstring &bs) {
 	mPacket = allocb(RTP_FIXED_HEADER_SIZE, BPRI_MED);
 	mPacket->b_wptr += RTP_FIXED_HEADER_SIZE;
 	rtp_set_ssrc(mPacket, rtp_session_get_send_ssrc(session));
 	mBitstring.add(bs);
 }
-FecSourcePacket::FecSourcePacket(const mblk_t *incoming) : mBitstring(incoming) {
 
-	mPacket = copymsg(incoming);
+FecSourcePacket::FecSourcePacket(mblk_t *incoming) : mBitstring(incoming) {
+	mPacket = incoming;
 }
+
 void FecSourcePacket::initPayload(uint16_t length) {
 
 	msgpullup(mPacket, msgdsize(mPacket) + length);
 	memset(mPacket->b_wptr, 0, length);
 	mPacket->b_wptr += length;
 }
+
 void FecSourcePacket::addBitstring(Bitstring const &other) {
 	mBitstring.add(other);
 }
+
 void FecSourcePacket::addPayload(const uint8_t *toAdd, size_t size) {
 
 	uint8_t *wptr = NULL;
@@ -80,6 +109,7 @@ void FecSourcePacket::addPayload(const uint8_t *toAdd, size_t size) {
 		rptr++;
 	}
 }
+
 void FecSourcePacket::addPayload(FecSourcePacket const &other) {
 
 	uint8_t *other_rptr = NULL;
@@ -92,13 +122,16 @@ void FecSourcePacket::add(FecSourcePacket const &other) {
 	addBitstring(other.mBitstring);
 	addPayload(other);
 }
+
 void FecSourcePacket::writeBitstring() {
 	mBitstring.write(mPacket);
 }
+
 size_t FecSourcePacket::getPayloadBuffer(uint8_t **start) const {
 	*start = mPacket->b_rptr + RTP_FIXED_HEADER_SIZE;
 	return msgdsize(mPacket) - RTP_FIXED_HEADER_SIZE;
 }
+
 mblk_t *FecSourcePacket::transfer() {
 	if (mPacket) {
 		mblk_t *ret = mPacket;
@@ -107,26 +140,37 @@ mblk_t *FecSourcePacket::transfer() {
 	}
 	return nullptr;
 }
+
 mblk_t *FecSourcePacket::getPacket() const {
 	return mPacket;
 }
+
 mblk_t *FecSourcePacket::getPacketCopy() const {
 	return copymsg(mPacket);
 }
+
 const Bitstring &FecSourcePacket::getBitstring() const {
 	return mBitstring;
 }
+
 void FecSourcePacket::setSsrc(uint32_t ssrc) {
 	rtp_set_ssrc(mPacket, ssrc);
 }
+
 void FecSourcePacket::setSequenceNumber(uint16_t seqnum) {
 	rtp_set_seqnumber(mPacket, seqnum);
 }
+
+uint16_t FecSourcePacket::getSequenceNumber() const {
+	return rtp_get_seqnumber(mPacket);
+}
+
 FecSourcePacket::~FecSourcePacket() {
 	if (mPacket) {
 		freemsg(mPacket);
 	}
 }
+
 FecRepairPacket::FecRepairPacket(
     struct _RtpSession *fecSession, struct _RtpSession *sourceSession, uint16_t seqnumBase, uint8_t L, uint8_t D) {
 	mPacket = NULL;
@@ -150,6 +194,7 @@ FecRepairPacket::FecRepairPacket(
 	*(uint8_t *)mPacket->b_wptr = mD;
 	mPacket->b_wptr += sizeof(uint8_t);
 }
+
 FecRepairPacket::FecRepairPacket(const mblk_t *repairPacket) {
 
 	mPacket = copymsg(repairPacket);
@@ -167,17 +212,20 @@ size_t FecRepairPacket::bitstringStart(uint8_t **start) const {
 	rtp_get_payload(mPacket, start);
 	return (8 * sizeof(uint8_t));
 }
+
 size_t FecRepairPacket::parametersStart(uint8_t **start) const {
 
 	size_t bitstringSize = bitstringStart(start);
 	*start += bitstringSize;
 	return rtp_get_cc(mPacket) * sizeof(uint32_t);
 }
+
 size_t FecRepairPacket::repairPayloadStart(uint8_t **start) const {
 	size_t parametersSize = parametersStart(start);
 	*start += parametersSize;
 	return (mPacket->b_wptr - *start);
 }
+
 Bitstring FecRepairPacket::extractBitstring() const {
 
 	uint8_t *rptr = NULL;
@@ -186,21 +234,25 @@ Bitstring FecRepairPacket::extractBitstring() const {
 	bitstringStart(&rptr);
 	bs.setHeader((uint16_t *)rptr);
 	rptr += sizeof(uint16_t);
-	bs.setTimestamp(*(uint32_t *)rptr);
+	uint32_t timestamp =
+	    ((uint32_t)rptr[3] << 24) | ((uint32_t)rptr[2] << 16) | ((uint32_t)rptr[1] << 8) | (uint32_t)rptr[0];
+	bs.setTimestamp(timestamp);
 	rptr += sizeof(uint32_t);
 	bs.setLength(ntohs(*(uint16_t *)rptr));
 
 	return bs;
 }
+
 void FecRepairPacket::addBitstring(Bitstring const &bitstring) {
 	uint8_t *ptr = NULL;
 	bitstringStart(&ptr);
 	*(uint16_t *)ptr ^= bitstring.getHeader();
 	ptr += sizeof(uint16_t);
-	*(uint32_t *)ptr ^= bitstring.getTimestamp();
+	bitstring.addTimestamp(ptr);
 	ptr += sizeof(uint32_t);
 	*(uint16_t *)ptr ^= htons(bitstring.getLength());
 }
+
 void FecRepairPacket::addPayload(FecSourcePacket const &sourcePacket) {
 
 	uint8_t *packet_rptr = NULL;
@@ -223,10 +275,12 @@ void FecRepairPacket::addPayload(FecSourcePacket const &sourcePacket) {
 		packet_rptr++;
 	}
 }
+
 void FecRepairPacket::add(FecSourcePacket const &sourcePacket) {
 	addBitstring(sourcePacket.getBitstring());
 	addPayload(sourcePacket);
 }
+
 std::vector<uint16_t> FecRepairPacket::createSequenceNumberList() const {
 	std::vector<uint16_t> list;
 	uint8_t step = ((mD <= 1) ? 1 : mL);
@@ -237,6 +291,7 @@ std::vector<uint16_t> FecRepairPacket::createSequenceNumberList() const {
 	}
 	return list;
 }
+
 void FecRepairPacket::reset(uint16_t seqnumBase) {
 
 	this->mSeqnumBase = seqnumBase;
@@ -255,18 +310,27 @@ void FecRepairPacket::reset(uint16_t seqnumBase) {
 	*(uint8_t *)mPacket->b_wptr = mD;
 	mPacket->b_wptr += sizeof(uint8_t);
 }
+
 uint32_t FecRepairPacket::getProtectedSsrc() const {
 	return rtp_get_csrc(mPacket, 0);
 }
+
 uint8_t FecRepairPacket::getL() const {
 	return mL;
 }
+
 uint8_t FecRepairPacket::getD() const {
 	return mD;
 }
+
 uint16_t FecRepairPacket::getSeqnumBase() const {
 	return mSeqnumBase;
 };
+
+uint16_t FecRepairPacket::getSeqnum() const {
+	return rtp_get_seqnumber(mPacket);
+};
+
 mblk_t *FecRepairPacket::transfer() {
 	if (mPacket) {
 		mblk_t *ret = mPacket;
@@ -275,13 +339,16 @@ mblk_t *FecRepairPacket::transfer() {
 	}
 	return nullptr;
 }
+
 mblk_t *FecRepairPacket::getRepairPacket() const {
 	return mPacket;
 };
+
 mblk_t *FecRepairPacket::getCopy() {
 	if (mPacket) return copymsg(mPacket);
 	return nullptr;
 }
+
 FecRepairPacket::~FecRepairPacket() {
 	if (mPacket) {
 		freemsg(mPacket);

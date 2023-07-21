@@ -88,6 +88,7 @@ ORTP_PUBLIC rtp_stats_t *ortp_get_global_stats(void);
 
 ORTP_PUBLIC void ortp_global_stats_display(void);
 ORTP_PUBLIC void rtp_stats_display(const rtp_stats_t *stats, const char *header);
+ORTP_PUBLIC void rtp_stats_display_all(const rtp_stats_t *stats1, const rtp_stats_t *stats2, const char *header);
 ORTP_PUBLIC void rtp_stats_reset(rtp_stats_t *stats);
 
 #ifdef __cplusplus

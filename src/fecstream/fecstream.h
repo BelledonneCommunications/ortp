@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2022 Belledonne Communications SARL.
+ * Copyright (c) 2010-2024 Belledonne Communications SARL.
  *
  * This file is part of oRTP
  * (see https://gitlab.linphone.org/BC/public/ortp).
@@ -17,18 +17,15 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef FECSTREAM_H
 #define FECSTREAM_H
 
-#include <iostream>
-#include <map>
-#include <memory>
-#include <ortp/rtpsession.h>
-#include <vector>
-
 #include "fec-encoder.h"
+#include "overhead.h"
 #include "receive-cluster.h"
-
+#include <mutex>
+#include <ortp/rtpsession.h>
 namespace ortp {
 
 #ifdef _WIN32
@@ -46,26 +43,43 @@ private:
 	fec_stats mStats;
 	RtpTransportModifier *mModifier;
 	bool mIsEnabled;
+	Overhead mMeasuredOverhead;
+	queue_t mSourcePackets;
+	std::mutex mQueueMutex;
+	std::recursive_mutex mSendMutex;
+	std::recursive_mutex mReceiveMutex;
+
+	struct {
+		uint8_t L;
+		uint8_t D;
+		bool is2D;
+		bool isUpdated;
+	} mEncoderUpdate;
+
+	void updateReceivedSourcePackets();
+	void updateEncoder();
 
 public:
 	FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParamsController *fecParams);
 	void init();
-
 	static int processOnSend(struct _RtpTransportModifier *m, mblk_t *packet);
 	static int processOnReceive(struct _RtpTransportModifier *m, mblk_t *packet);
 	void onNewSourcePacketSent(mblk_t *packet);
 	void onNewSourcePacketReceived(mblk_t *packet);
 	void receiveRepairPacket(uint32_t timestamp);
+	void resetCluster();
 	mblk_t *findMissingPacket(uint16_t seqnum);
 	RtpSession *getFecSession() const;
 	RtpSession *getSourceSession() const;
 	fec_stats *getStats();
+	void countLostPackets(int16_t diff);
 	void printStats();
 	void update(FecParamsController *) override;
 	bool isEnabled();
-	void disable();
-	void enable(FecParamsController *params);
-	~FecStreamCxx(){};
+	float getMeasuredOverhead();
+	void resetMeasuredOverhead();
+	void resetMeasuredOverhead(size_t columnNumber);
+	~FecStreamCxx();
 };
 
 void modifierFree(struct _RtpTransportModifier *m);

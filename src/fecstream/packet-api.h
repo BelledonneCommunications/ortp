@@ -1,4 +1,22 @@
-
+/*
+ * Copyright (c) 2010-2024 Belledonne Communications SARL.
+ *
+ * This file is part of oRTP
+ * (see https://gitlab.linphone.org/BC/public/ortp).
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #ifndef PACKET_API_H
 #define PACKET_API_H
@@ -23,7 +41,14 @@ public:
 		return *(uint16_t *)&mBuffer[0];
 	}
 	inline uint32_t getTimestamp() const {
-		return *(uint32_t *)&mBuffer[2];
+		uint32_t timestamp = ((uint32_t)mBuffer[5] << 24) | ((uint32_t)mBuffer[4] << 16) | ((uint32_t)mBuffer[3] << 8) |
+		                     (uint32_t)mBuffer[2];
+		return timestamp;
+	}
+	inline void addTimestamp(uint8_t *ptr) const {
+		for (uint8_t i = 0; i < 4; i++) {
+			ptr[i] ^= mBuffer[i + 2];
+		}
 	}
 	inline uint16_t getLength() const {
 		return *(uint16_t *)&mBuffer[6];
@@ -42,9 +67,14 @@ private:
 	Bitstring mBitstring;
 
 public:
-	FecSourcePacket(struct _RtpSession *session, const Bitstring &bs);
-	FecSourcePacket(struct _RtpSession *session);
-	FecSourcePacket(const mblk_t *incoming);
+	FecSourcePacket(const struct _RtpSession *session, const Bitstring &bs);
+
+	/**
+	 * This constructor creates a FecSourcePacket from a packet. Warning: it does not copy the packet.
+	 *
+	 * @param incoming input source packet.
+	 */
+	FecSourcePacket(mblk_t *incoming);
 	FecSourcePacket(const FecSourcePacket &other) = delete;
 	FecSourcePacket &operator=(const FecSourcePacket &other) = delete;
 	void addBitstring(Bitstring const &other);
@@ -60,6 +90,7 @@ public:
 	mblk_t *transfer();
 	void setSsrc(uint32_t ssrc);
 	void setSequenceNumber(uint16_t seqnum);
+	uint16_t getSequenceNumber() const;
 	~FecSourcePacket();
 };
 
@@ -92,6 +123,7 @@ public:
 	uint8_t getL() const;
 	uint8_t getD() const;
 	uint16_t getSeqnumBase() const;
+	uint16_t getSeqnum() const;
 	mblk_t *transfer();
 	mblk_t *getRepairPacket() const;
 	mblk_t *getCopy();

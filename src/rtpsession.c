@@ -339,6 +339,10 @@ void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled
 	session->congestion_detector_enabled = enabled;
 }
 
+void rtp_session_reset_video_bandwidth_estimator(RtpSession *session) {
+	ortp_video_bandwidth_estimator_reset_measurements(session->rtp.video_bw_estimator);
+}
+
 void rtp_session_enable_video_bandwidth_estimator(RtpSession *session,
                                                   const OrtpVideoBandwidthEstimatorParams *params) {
 	if (params->enabled) {
@@ -730,7 +734,7 @@ void rtp_session_set_ssrc(RtpSession *session, uint32_t ssrc) {
  *
  * @param session a rtp session.
  **/
-uint32_t rtp_session_get_send_ssrc(RtpSession *session) {
+uint32_t rtp_session_get_send_ssrc(const RtpSession *session) {
 	return session->snd.ssrc;
 }
 
@@ -1504,6 +1508,65 @@ static void check_for_seq_number_gap(RtpSession *session, rtp_header_t *rtp) {
 }
 
 /**
+ * Detects and attempts to recover the missing rtp packets between the last one received in the \a
+ * session->rtp.rcv_last_seq and the newest one in the jitter buffer, using the Forward Error Correction (FEC)
+ * algorithm. The missing packets are detected by analyzing the sequence of rtp sequence numbers. Each time a gap > 1 is
+ * found, the function fec_stream_find_missing_packet is called and the FEC algorithm is applied. If the correction is
+ * successful, the FEC function returns a non NULL recovered rtp packet on which the modifiers have been applied,
+ * that is inserted into the jitter buffer.
+ *
+ * This function works only if the FEC is enabled.
+ *
+ *
+ * @param session a rtp session.
+ **/
+static void apply_fec_on_missing_packets(RtpSession *session) {
+
+	uint16_t last_seq_num = session->rtp.rcv_last_seq;
+	mblk_t *mp_newest = qlast(&session->rtp.rq);
+
+	if (mp_newest != NULL) {
+		uint16_t newest_seq_num = rtp_get_seqnumber(mp_newest);
+		if (newest_seq_num - last_seq_num > (uint16_t)session->rtp.rq.q_mcount) {
+
+			uint16_t ref_seq_num = last_seq_num;
+			uint16_t next_seq_num = 0;
+			uint16_t seq_num_diff = 0;
+			for (mblk_t *mp = qbegin(&session->rtp.rq); !qend(&session->rtp.rq, mp); mp = qnext(&session->rtp.rq, mp)) {
+
+				if (mp != NULL) {
+					uint16_t seq_num_missing = ref_seq_num + 1;
+
+					/* detect missing packets */
+					next_seq_num = rtp_get_seqnumber(mp);
+
+					if (next_seq_num < ref_seq_num) {
+						ortp_message("Wrong sequence numbers in jitter buffer: reference %u, next %u", next_seq_num,
+						             ref_seq_num);
+						seq_num_diff = 0;
+					} else {
+						seq_num_diff = next_seq_num - ref_seq_num;
+						while (seq_num_diff > 1) {
+
+							mblk_t *fec_mp = NULL;
+							fec_mp = fec_stream_find_missing_packet(session->fec_stream, seq_num_missing);
+
+							if (fec_mp != NULL) {
+								/* inject recovered packet in jitter buffer */
+								rtp_putq(&session->rtp.rq, fec_mp);
+							}
+							seq_num_missing++;
+							seq_num_diff--;
+						}
+					}
+					ref_seq_num = next_seq_num;
+				}
+			}
+		}
+	}
+}
+
+/**
  *	Try to get a rtp packet presented as a mblk_t structure from the rtp session.
  *	The \a user_ts parameter is relative to the first timestamp of the incoming stream. In other
  *	words, the application does not have to know the first timestamp of the stream, it can
@@ -1600,6 +1663,11 @@ mblk_t *rtp_session_recvm_with_ts(RtpSession *session, uint32_t user_ts) {
 		rtp_session_unset_flag(session, RTP_SESSION_RECV_SYNC);
 	}
 
+	/* if FEC enabled: detect and recover missing packets in jitter buffer */
+	if ((session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) && (session->fec_stream != NULL)) {
+		apply_fec_on_missing_packets(session);
+	}
+
 	/*calculate the stream timestamp from the user timestamp */
 	ts = jitter_control_get_compensated_timestamp(&session->rtp.jittctl, user_ts);
 	if (session->rtp.jittctl.params.enabled == TRUE) {
@@ -1615,31 +1683,19 @@ mblk_t *rtp_session_recvm_with_ts(RtpSession *session, uint32_t user_ts) {
 	session->rtcp_xr_stats.discarded_count += rejected;
 
 end:
-	if (session->fec_stream != NULL && fec_stream_enabled(session->fec_stream) && mp != NULL) {
-		if (session->rtp.rcv_last_seq + 1 != rtp_get_seqnumber(mp)) {
-			mblk_t *fec_mp = fec_stream_find_missing_packet(session->fec_stream, session->rtp.rcv_last_seq + 1);
-			if (fec_mp != NULL) {
-				OrtpEvent *ev;
-				OrtpEventData *evdata;
 
-				mp = fec_mp;
-				ev = ortp_event_new(ORTP_EVENT_SOURCE_PACKET_RECONSTRUCTED);
-				evdata = ortp_event_get_data(ev);
-				evdata->info.reconstructed_packet_seq_number = rtp_get_seqnumber(mp);
-				rtp_session_dispatch_event(session, ev);
-			} else {
-				if (!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
-			}
-		} else {
-			if (!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
-		}
-	} else {
-		if (!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
-	}
+	if (!qempty(&session->rtp.rq) && mp != NULL) remq(&session->rtp.rq, mp);
 
 	if (mp != NULL) {
 		size_t msgsize = msgdsize(mp); /* evaluate how much bytes (including header) is received by app */
 		uint32_t packet_ts;
+		if ((session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) && (session->fec_stream != NULL)) {
+			/* count missing rtp packets for FEC stats*/
+			if (rtp_get_seqnumber(mp) > session->rtp.rcv_last_seq + 1) {
+				int16_t seq_num_diff = (int16_t)rtp_get_seqnumber(mp) - (int16_t)session->rtp.rcv_last_seq - 1;
+				fec_stream_count_lost_packets(session->fec_stream, seq_num_diff);
+			}
+		}
 		ortp_global_stats.recv += msgsize;
 		session->stats.recv += msgsize;
 		rtp = (rtp_header_t *)mp->b_rptr;
@@ -1864,7 +1920,7 @@ void rtp_session_set_time_jump_limit(RtpSession *session, int milisecs) {
 	uint32_t ts;
 	session->rtp.time_jump = milisecs;
 	ts = rtp_session_time_to_ts(session, milisecs);
-	if (ts == 0) session->rtp.ts_jump = 1 << 31; /* do not detect ts jump */
+	if (ts == 0) session->rtp.ts_jump = (uint32_t)1 << (uint32_t)31; /* do not detect ts jump */
 	else session->rtp.ts_jump = ts;
 }
 
@@ -2065,6 +2121,7 @@ void rtp_session_resync(RtpSession *session) {
 	rtp_session_init_jitter_buffer(session);
 	if (session->rtp.congdetect) ortp_congestion_detector_reset(session->rtp.congdetect);
 	if (session->rtp.video_bw_estimator) ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator);
+	if (session->fec_stream) fec_stream_reset_cluster(session->fec_stream);
 
 	/* Since multiple streams might share the same session (fixed RTCP port for example),
 	RTCP values might be erroneous (number of packets received is computed
@@ -2265,10 +2322,16 @@ static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current
 
 float rtp_session_compute_send_bandwidth(RtpSession *session) {
 	struct timeval current;
+	FecStream *fec_stream;
+	RtpSession *fec_session;
 	bctbx_gettimeofday(&current, NULL);
-
-	compute_send_bandwidth(&session->rtp.gs, &current);
+	fec_stream = session->fec_stream;
+	if (fec_stream != NULL) {
+		fec_session = fec_stream_get_fec_session(fec_stream);
+		compute_send_bandwidth(&fec_session->rtp.gs, &current);
+	}
 	compute_send_bandwidth(&session->rtcp.gs, &current);
+	compute_send_bandwidth(&session->rtp.gs, &current);
 	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
 }
 

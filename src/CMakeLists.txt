@@ -72,7 +72,9 @@ set(ORTP_SOURCE_FILES_CXX
 	fecstream/fec-encoder.cpp
 	fecstream/packet-api.cpp
 	fecstream/receive-cluster.cpp
+	fecstream/fec-packets-connection.cpp
 	fecstream/fec-params.cpp
+	fecstream/overhead.cpp
 )
 
 add_definitions(
@@ -104,7 +106,7 @@ bc_apply_compile_flags(ORTP_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_C
 
 add_library(ortp ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 set_target_properties(ortp PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(ortp PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED ON)
+set_target_properties(ortp PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
 target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
 target_include_directories(ortp
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>

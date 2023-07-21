@@ -532,7 +532,7 @@ ORTP_PUBLIC int
 rtp_session_signal_connect(RtpSession *session, const char *signal_name, RtpCallback cb, void *user_data);
 ORTP_PUBLIC int rtp_session_signal_disconnect_by_callback(RtpSession *session, const char *signal_name, RtpCallback cb);
 ORTP_PUBLIC void rtp_session_set_ssrc(RtpSession *session, uint32_t ssrc);
-ORTP_PUBLIC uint32_t rtp_session_get_send_ssrc(RtpSession *session);
+ORTP_PUBLIC uint32_t rtp_session_get_send_ssrc(const RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_recv_ssrc(RtpSession *session);
 ORTP_PUBLIC void rtp_session_set_seq_number(RtpSession *session, uint16_t seq);
 ORTP_PUBLIC uint16_t rtp_session_get_seq_number(RtpSession *session);
@@ -840,6 +840,7 @@ ORTP_PUBLIC float rtp_session_get_round_trip_propagation(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params);
 ORTP_PUBLIC void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled);
+ORTP_PUBLIC void rtp_session_reset_video_bandwidth_estimator(RtpSession *session);
 ORTP_PUBLIC void rtp_session_enable_video_bandwidth_estimator(RtpSession *session,
                                                               const OrtpVideoBandwidthEstimatorParams *params);
 ORTP_PUBLIC void rtp_session_enable_audio_bandwidth_estimator(RtpSession *session,
@@ -962,34 +963,40 @@ typedef struct _FecStream FecStream;
 typedef struct _FecParams FecParams;
 
 typedef struct fec_stats_t {
-
-	int col_repair_sent;
-	int col_repair_received;
-	int row_repair_sent;
-	int row_repair_received;
-	int packets_lost;
-	int packets_recovered;
-	int tmmbr_received;
+	uint64_t col_repair_sent;
+	uint64_t col_repair_received;
+	uint64_t row_repair_sent;
+	uint64_t row_repair_received;
+	uint64_t packets_lost;
+	uint64_t packets_not_recovered;
+	uint64_t packets_recovered;
 } fec_stats;
 
-ORTP_PUBLIC FecParams *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow);
-ORTP_PUBLIC float fec_params_update_from_ratio(FecParams *params, float ratio);
+ORTP_PUBLIC FecParams *fec_params_new(uint32_t repairWindow);
+ORTP_PUBLIC void fec_params_destroy(FecParams *params);
+ORTP_PUBLIC void fec_params_update(FecParams *params, uint8_t level);
+ORTP_PUBLIC uint8_t fec_params_estimate_best_level(
+    FecParams *params, float loss_rate, int bitrate, float current_overhead, float *estimated_overhead);
 
 ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, FecParams *fecParams);
 ORTP_PUBLIC void fec_stream_destroy(FecStream *fec_stream);
+ORTP_PUBLIC void fec_stream_reset_cluster(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_receive_repair_packet(FecStream *fec_stream, uint32_t timestamp);
 ORTP_PUBLIC mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16_t seqnum);
 ORTP_PUBLIC RtpSession *fec_stream_get_fec_session(FecStream *fec_stream);
+ORTP_PUBLIC void fec_stream_count_lost_packets(FecStream *fec_stream, int16_t diff);
 ORTP_PUBLIC void fec_stream_print_stats(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_init(FecStream *fec_stream);
 ORTP_PUBLIC fec_stats *fec_stream_get_stats(FecStream *fec_stream);
 ORTP_PUBLIC bool_t fec_stream_enabled(FecStream *fec_stream);
+ORTP_PUBLIC float fec_stream_get_overhead(FecStream *fec_stream);
+ORTP_PUBLIC void fec_stream_reset_overhead_measure(FecStream *fec_stream);
 
 /* Audio Bandwidth Estimator stats */
 typedef struct abe_stats {
 	uint32_t sent_dup; /**< Number of duplicated packet generated */
-	uint32_t
-	    recv_dup; /**< Number of duplicated packet received(this includes only the one used to estimate bandwidth) */
+	uint32_t recv_dup; /**< Number of duplicated packet received(this includes only the one used to estimate
+	                      bandwidth) */
 } abe_stats_t;
 
 /**

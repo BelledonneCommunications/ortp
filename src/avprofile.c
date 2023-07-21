@@ -973,8 +973,8 @@ PayloadType payload_type_flexfec = {
     NORMAL_BITRATE(3200),
     MIME_TYPE("flexfec"),
     CHANNELS(0),
-    RECV_FMTP("repair-window=200000;L=5;D=5"),
-    SEND_FMTP("repair-window=200000;L=5;D=5"),
+    RECV_FMTP("repair-window=200000"),
+    SEND_FMTP("repair-window=200000"),
     AVPF(PAYLOAD_TYPE_AVPF_FIR | PAYLOAD_TYPE_AVPF_PLI | PAYLOAD_TYPE_AVPF_SLI | PAYLOAD_TYPE_AVPF_RPSI,
          RTCP_DEFAULT_REPORT_INTERVAL),
     FLAGS(PAYLOAD_TYPE_RTCP_FEEDBACK_ENABLED)};

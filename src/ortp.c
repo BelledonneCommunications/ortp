@@ -166,6 +166,48 @@ void rtp_stats_display(const rtp_stats_t *stats, const char *header) {
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 }
 
+/**
+ * Print all RTP statistics.
+ **/
+void rtp_stats_display_all(const rtp_stats_t *stats1, const rtp_stats_t *stats2, const char *header) {
+	ortp_log(ORTP_MESSAGE, "=================================================================================");
+	ortp_log(ORTP_MESSAGE, "%s", header);
+	ortp_log(ORTP_MESSAGE, "---------------------------------------------------------------------------------");
+	ortp_log(ORTP_MESSAGE, "                                            SRC        FEC    SRC+FEC");
+	ortp_log(ORTP_MESSAGE, "---------------------------------------------------------------------------------");
+	ortp_log(ORTP_MESSAGE, "sent                                 %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->packet_sent, stats2->packet_sent, stats1->packet_sent + stats2->packet_sent);
+	ortp_log(ORTP_MESSAGE,
+	         "                                     %10" PRId64 " %10" PRId64 " %10" PRId64 " duplicated packets",
+	         stats1->packet_dup_sent, stats2->packet_dup_sent, stats1->packet_dup_sent + stats2->packet_dup_sent);
+	ortp_log(ORTP_MESSAGE, "                                     %10" PRId64 " %10" PRId64 " %10" PRId64 " bytes  ",
+	         stats1->sent, stats2->sent, stats1->sent + stats2->sent);
+	ortp_log(ORTP_MESSAGE, "received                             %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->packet_recv, stats2->packet_recv, stats1->packet_recv + stats2->packet_recv);
+	ortp_log(ORTP_MESSAGE,
+	         "                                     %10" PRId64 " %10" PRId64 " %10" PRId64 " duplicated packets",
+	         stats1->packet_dup_recv, stats2->packet_dup_recv, stats1->packet_dup_recv + stats2->packet_dup_recv);
+	ortp_log(ORTP_MESSAGE, "                                     %10" PRId64 " %10" PRId64 " %10" PRId64 " bytes  ",
+	         stats1->hw_recv, stats2->hw_recv, stats1->hw_recv + stats2->hw_recv);
+	ortp_log(ORTP_MESSAGE, "incoming delivered to the app        %10" PRId64 " %10" PRId64 " %10" PRId64 " bytes  ",
+	         stats1->recv, stats2->recv, stats1->recv + stats2->recv);
+	ortp_log(ORTP_MESSAGE, "incoming cumulative lost             %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->cum_packet_loss, stats2->cum_packet_loss, stats1->cum_packet_loss + stats2->cum_packet_loss);
+	ortp_log(ORTP_MESSAGE, "incoming received too late           %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->outoftime, stats2->outoftime, stats1->outoftime + stats2->outoftime);
+	ortp_log(ORTP_MESSAGE, "incoming bad formatted               %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->bad, stats2->bad, stats1->bad + stats2->bad);
+	ortp_log(ORTP_MESSAGE, "incoming discarded (queue overflow)  %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->discarded, stats2->discarded, stats1->discarded + stats2->discarded);
+	ortp_log(ORTP_MESSAGE, "sent rtcp                            %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->sent_rtcp_packets, stats2->sent_rtcp_packets,
+	         stats1->sent_rtcp_packets + stats2->sent_rtcp_packets);
+	ortp_log(ORTP_MESSAGE, "received rtcp                        %10" PRId64 " %10" PRId64 " %10" PRId64 " packets",
+	         stats1->recv_rtcp_packets, stats2->recv_rtcp_packets,
+	         stats1->recv_rtcp_packets + stats2->recv_rtcp_packets);
+	ortp_log(ORTP_MESSAGE, "=================================================================================");
+}
+
 void ortp_global_stats_reset(void) {
 	memset(&ortp_global_stats, 0, sizeof(rtp_stats_t));
 }

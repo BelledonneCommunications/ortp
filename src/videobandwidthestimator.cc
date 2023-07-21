@@ -99,6 +99,7 @@ public:
 	static const VideoBandwidthEstimator *toCpp(const OrtpVideoBandwidthEstimator *vbe) {
 		return reinterpret_cast<const VideoBandwidthEstimator *>(vbe);
 	}
+	void resetMeasurements();
 
 private:
 	void initializeMeasurement(uint32_t sent_timestamp, const struct timeval *recv_timestamp);
@@ -204,6 +205,14 @@ void VideoBandwidthEstimator::processPacket(uint32_t sent_timestamp,
 	}
 }
 
+void VideoBandwidthEstimator::resetMeasurements() {
+	mLastEstimationTime.tv_sec = 0;
+	mLastEstimationTime.tv_usec = 0;
+	mCurrentMeasurement.reset();
+	mMeasurements.clear();
+	return;
+}
+
 } // namespace ortp
 
 using namespace ortp;
@@ -255,4 +264,8 @@ void ortp_video_bandwidth_estimator_process_packet(OrtpVideoBandwidthEstimator *
                                                    int msgsize,
                                                    bool_t is_last) {
 	VideoBandwidthEstimator::toCpp(vbe)->processPacket(sent_timestamp, recv_timestamp, msgsize, is_last);
+}
+
+void ortp_video_bandwidth_estimator_reset_measurements(OrtpVideoBandwidthEstimator *vbe) {
+	VideoBandwidthEstimator::toCpp(vbe)->resetMeasurements();
 }
