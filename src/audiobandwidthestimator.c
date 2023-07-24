@@ -156,7 +156,7 @@ static int ortp_abe_process_onreceive(struct _RtpTransportModifier *tm, mblk_t *
 		RtpSession *session = abe->session;
 		int overhead = ortp_stream_is_ipv6(&session->rtp.gs) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 		if (ortp_audio_bandwidth_estimator_process_packet(abe, rtp_header_get_timestamp(rtp), &packet->timestamp,
-		                                                  msgsize + overhead, rtp_header_get_seqnumber(rtp))) {
+		                                                  (int)(msgsize + overhead), rtp_header_get_seqnumber(rtp))) {
 			return 0; // packet is a duplicate, drop it
 		}
 	}
