@@ -77,4 +77,6 @@ uint64_t ortp_timeval_to_ntp(const struct timeval *tv);
 
 int _ortp_sendto(ortp_socket_t sockfd, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports);
+bool_t _rtcp_next_packet(mblk_t *m);
+
 #endif

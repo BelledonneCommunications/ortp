@@ -109,11 +109,12 @@ static int ortp_nack_rtp_process_on_receive(BCTBX_UNUSED(RtpTransportModifier *t
 }
 
 static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) {
-	mblk_t *pullmsg = dupmsg(msg);
-	msgpullup(pullmsg, (size_t)-1);
+	RtcpParserContext rtcpctx;
+
+	const mblk_t *m_rtcp = rtcp_parser_context_init(&rtcpctx, msg);
 
 	do {
-		if (rtcp_is_RTPFB(pullmsg) && rtcp_RTPFB_get_type(pullmsg) == RTCP_RTPFB_NACK) {
+		if (rtcp_is_RTPFB(m_rtcp) && rtcp_RTPFB_get_type(m_rtcp) == RTCP_RTPFB_NACK) {
 			OrtpNackContext *userData = (OrtpNackContext *)t->data;
 			OrtpEvent *ev;
 			OrtpEventData *evd;
@@ -154,9 +155,9 @@ static int ortp_nack_rtcp_process_on_send(RtpTransportModifier *t, mblk_t *msg) 
 
 			break;
 		}
-	} while (rtcp_next_packet(pullmsg));
+	} while ((m_rtcp = rtcp_parser_context_next_packet(&rtcpctx)) != NULL);
 
-	freemsg(pullmsg);
+	rtcp_parser_context_uninit(&rtcpctx);
 	return (int)msgdsize(msg);
 }
 

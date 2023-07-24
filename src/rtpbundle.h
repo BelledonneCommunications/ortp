@@ -27,11 +27,7 @@
 
 #include "ortp/rtpsession.h"
 
-/* Need to declare this function so the class can be friend with it */
-static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
-
 class RtpBundleCxx {
-	friend void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
 
 public:
 	RtpBundleCxx() = default;
@@ -60,12 +56,13 @@ public:
 	bool updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp);
 
 private:
+	static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
 	struct Mid {
 		std::string mid;
 		uint16_t sequenceNumber;
 	};
 
-	RtpSession *checkForSession(mblk_t *m, bool isRtp);
+	RtpSession *checkForSession(const mblk_t *m, bool isRtp);
 
 	bool dispatchRtpMessage(mblk_t *m);
 	bool dispatchRtcpMessage(mblk_t *m);

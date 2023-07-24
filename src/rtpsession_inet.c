@@ -84,7 +84,9 @@
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG                                                                                               \
 	{                                                                                                                  \
-		0xf689d7c8, 0x6f1f, 0x436b, { 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22 }                                 \
+		0xf689d7c8, 0x6f1f, 0x436b, {                                                                                  \
+			0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22                                                             \
+		}                                                                                                              \
 	}
 #ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
@@ -1699,7 +1701,7 @@ static void compute_rtt_from_report_block(RtpSession *session, const struct time
 	session->cum_loss = report_block_get_cum_packet_lost(rb);
 }
 
-static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, const struct timeval *now) {
+static void compute_rtcp_xr_statistics(RtpSession *session, const mblk_t *block, const struct timeval *now) {
 	uint64_t ntp_timestamp;
 	OrtpRtcpXrStats *stats = &session->rtcp_xr_stats;
 
@@ -1718,7 +1720,7 @@ static void compute_rtcp_xr_statistics(RtpSession *session, mblk_t *block, const
 	}
 }
 
-static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
+static void handle_rtcp_rtpfb_packet(RtpSession *session, const mblk_t *block) {
 	switch (rtcp_RTPFB_get_type(block)) {
 		case RTCP_RTPFB_TMMBR:
 			if (session->rtcp.tmmbr_info.received) freemsg(session->rtcp.tmmbr_info.received);
@@ -1755,6 +1757,8 @@ static void handle_rtcp_rtpfb_packet(RtpSession *session, mblk_t *block) {
 static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockaddr *addr, socklen_t addrlen) {
 	rtcp_common_header_t *rtcp;
 	RtpStream *rtpstream = &session->rtp;
+	RtcpParserContext rtcpctx;
+	const mblk_t *rtcp_packet;
 
 	int msgsize = (int)(block->b_wptr - block->b_rptr);
 	if (msgsize < RTCP_COMMON_HEADER_SIZE) {
@@ -1792,6 +1796,7 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 
 	update_recv_bytes(&session->rtcp.gs, (int)(block->b_wptr - block->b_rptr), &block->timestamp);
 
+	rtcp_packet = rtcp_parser_context_init(&rtcpctx, block);
 	/* compound rtcp packet can be composed by more than one rtcp message */
 	do {
 		struct timeval reception_date;
@@ -1800,7 +1805,7 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 		/* Getting the reception date from the main clock */
 		bctbx_gettimeofday(&reception_date, NULL);
 
-		if (rtcp_is_SR(block)) {
+		if (rtcp_is_SR(rtcp_packet)) {
 			rtcp_sr_t *sr = (rtcp_sr_t *)rtcp;
 
 			/* The session descriptor values are reset in case there is an error in the SR block parsing */
@@ -1828,18 +1833,17 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 			 * ) */
 			rtpstream->last_rcv_SR_time.tv_usec = reception_date.tv_usec;
 			rtpstream->last_rcv_SR_time.tv_sec = reception_date.tv_sec;
-			rb = rtcp_SR_get_report_block(block, 0);
+			rb = rtcp_SR_get_report_block(rtcp_packet, 0);
 			if (rb) compute_rtt_from_report_block(session, &reception_date, rb);
-		} else if (rtcp_is_RR(block)) {
-			rb = rtcp_RR_get_report_block(block, 0);
+		} else if (rtcp_is_RR(rtcp_packet)) {
+			rb = rtcp_RR_get_report_block(rtcp_packet, 0);
 			if (rb) compute_rtt_from_report_block(session, &reception_date, rb);
-		} else if (rtcp_is_XR(block)) {
-			compute_rtcp_xr_statistics(session, block, &reception_date);
-		} else if (rtcp_is_RTPFB(block)) {
-			handle_rtcp_rtpfb_packet(session, block);
+		} else if (rtcp_is_XR(rtcp_packet)) {
+			compute_rtcp_xr_statistics(session, rtcp_packet, &reception_date);
+		} else if (rtcp_is_RTPFB(rtcp_packet)) {
+			handle_rtcp_rtpfb_packet(session, rtcp_packet);
 		}
-	} while (rtcp_next_packet(block));
-	rtcp_rewind(block);
+	} while ((rtcp_packet = rtcp_parser_context_next_packet(&rtcpctx)) != NULL);
 
 	rtp_session_update_remote_sock_addr(session, block, FALSE, FALSE);
 	return 0;

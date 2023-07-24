@@ -126,29 +126,31 @@ static bool_t is_rtcp_event(OrtpEventType type) {
 	return (type == ORTP_EVENT_RTCP_PACKET_RECEIVED || type == ORTP_EVENT_RTCP_PACKET_EMITTED);
 }
 
-static void iterate_cbs(OrtpEvDispatcher *disp, OrtpEvent *ev) {
+static void analyse_event_and_invoke(OrtpEvDispatcher *disp, OrtpEvent *ev) {
 	OrtpEventData *d = ortp_event_get_data(ev);
+	OrtpEventType evt = ortp_event_get_type(ev);
+	bool_t is_rtcp =
+	    (evt == ORTP_EVENT_RTCP_PACKET_RECEIVED || evt == ORTP_EVENT_RTCP_PACKET_EMITTED) && d->packet != NULL;
 	do {
 		/*for each packet part, if ANY iterate through the whole callback list to see if
 		anyone is interested in it*/
-		OrtpEventData *d = ortp_event_get_data(ev);
+
 		OList *it;
-		OrtpEventType evt = ortp_event_get_type(ev);
 		for (it = disp->cbs; it != NULL; it = it->next) {
 			OrtpEvDispatcherData *data = (OrtpEvDispatcherData *)it->data;
 			if (evt == data->type) {
-				if (!is_rtcp_event(data->type) || rtcp_is_type(d->packet, data->subtype)) {
+				if (!is_rtcp_event(data->type) || (is_rtcp && rtcp_is_type(d->packet, data->subtype))) {
 					data->on_found(d, data->user_data);
 				}
 			}
 		}
-	} while (d->packet != NULL && rtcp_next_packet(d->packet));
+	} while (is_rtcp && _rtcp_next_packet(d->packet));
 }
 
 void ortp_ev_dispatcher_iterate(OrtpEvDispatcher *d) {
 	OrtpEvent *ev = NULL;
 	while ((ev = ortp_ev_queue_get(d->q)) != NULL) {
-		iterate_cbs(d, ev);
+		analyse_event_and_invoke(d, ev);
 		ortp_event_destroy(ev);
 	}
 }

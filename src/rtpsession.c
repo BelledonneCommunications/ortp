@@ -2346,7 +2346,7 @@ int rtp_get_payload(mblk_t *packet, unsigned char **start) {
  * @return the size of the extension in bytes (the payload size, it can be 0), -1 if parsing of the extension header
  *failed or if no extension is present.
  **/
-int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext) {
+int rtp_get_extheader(const mblk_t *packet, uint16_t *profile, uint8_t **start_ext) {
 	int size = 0;
 	uint8_t *ext_header;
 	if (rtp_get_extbit(packet)) {
@@ -2542,7 +2542,7 @@ void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data
  * @return the size of the wanted extension in bytes, -1 if there is no extension header or the wanted extension was not
  *found.
  **/
-int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data) {
+int rtp_get_extension_header(const mblk_t *packet, int id, uint8_t **data) {
 	uint8_t *ext_header, *tmp;
 	uint16_t profile;
 	size_t ext_header_size, size;

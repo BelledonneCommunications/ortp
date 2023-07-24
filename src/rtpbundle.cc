@@ -262,7 +262,7 @@ static void getSsrcFromSdes(void *userData,
 	}
 }
 
-static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
+static uint32_t getSsrcFromMessage(const mblk_t *m, bool isRtp) {
 	if (isRtp) {
 		return rtp_get_ssrc(m);
 	}
@@ -300,7 +300,7 @@ static uint32_t getSsrcFromMessage(mblk_t *m, bool isRtp) {
 	return -1;
 }
 
-static void checkForSessionSdesCallback(
+void RtpBundleCxx::checkForSessionSdesCallback(
     void *userData, uint32_t ssrc, rtcp_sdes_type_t t, const char *content, uint8_t contentLen) {
 	RtpBundleCxx *bundle = (RtpBundleCxx *)userData;
 	std::string value(content, contentLen);
@@ -317,7 +317,7 @@ static void checkForSessionSdesCallback(
 	}
 }
 
-RtpSession *RtpBundleCxx::checkForSession(mblk_t *m, bool isRtp) {
+RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp) {
 	const std::lock_guard<std::mutex> guard(ssrcToMidMutex);
 	uint32_t ssrc;
 
@@ -422,7 +422,6 @@ bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 		ortp_mutex_lock(&session->rtp.gs.bundleq_lock);
 		putq(&session->rtp.gs.bundleq, m);
 		ortp_mutex_unlock(&session->rtp.gs.bundleq_lock);
-
 		return true;
 	}
 
@@ -431,20 +430,24 @@ bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 
 bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 	mblk_t *primarymsg = NULL;
+	const mblk_t *m_rtcp;
 
 	// Check if the packet contains a SDES first
+	RtcpParserContext rtcp_parser_ctx;
+	m_rtcp = rtcp_parser_context_init(&rtcp_parser_ctx, m);
 	do {
-		if (rtcp_is_SDES(m)) {
+		if (rtcp_is_SDES(m_rtcp)) {
 			// call checkForSession that will update the mid table
-			checkForSession(m, false);
+			checkForSession(m_rtcp, false);
 		}
-	} while (rtcp_next_packet(m));
-	rtcp_rewind(m);
+	} while ((m_rtcp = rtcp_parser_context_next_packet(&rtcp_parser_ctx)) != NULL);
+
+	m_rtcp = rtcp_parser_context_start(&rtcp_parser_ctx);
 
 	do {
-		mblk_t *tmp = dupmsg(m);
-		tmp->b_rptr = m->b_rptr;
-		tmp->b_wptr = tmp->b_rptr + rtcp_get_size(m);
+
+		mblk_t *tmp = dupmsg((mblk_t *)m_rtcp); /* const qualifier discarded intentionally*/
+		tmp->b_wptr = tmp->b_rptr + rtcp_get_size(m_rtcp);
 
 		// TODO: some RTCP packet can be for multiple session (e.g. BYE)
 
@@ -465,22 +468,21 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 			             rtcp_common_header_get_packet_type(ch), getSsrcFromMessage(tmp, false));
 			freemsg(tmp);
 		}
-	} while (rtcp_next_packet(m));
-	rtcp_rewind(m);
+	} while ((m_rtcp = rtcp_parser_context_next_packet(&rtcp_parser_ctx)) != NULL);
+
+	rtcp_parser_context_uninit(&rtcp_parser_ctx);
 
 	if (primarymsg) {
 		msgpullup(primarymsg, (size_t)-1);
+		msgpullup(m, (size_t)-1);
 
-		// TODO: Fix when possible
+		// FIXME: not so elegant to copy back to the original mblk_t.
 		size_t len = primarymsg->b_wptr - primarymsg->b_rptr;
 		memcpy(m->b_rptr, primarymsg->b_rptr, len);
 		m->b_wptr = m->b_rptr + len;
-
 		freemsg(primarymsg);
-
 		return false;
 	}
-
 	freemsg(m);
 	return true;
 }

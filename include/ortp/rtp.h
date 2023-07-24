@@ -154,12 +154,12 @@ ORTP_PUBLIC void rtp_add_csrc(mblk_t *mp, uint32_t csrc);
 #define rtp_get_csrc(mp, idx) rtp_header_get_csrc((rtp_header_t *)((mp)->b_rptr), (idx))
 
 ORTP_PUBLIC int rtp_get_payload(mblk_t *packet, unsigned char **start);
-ORTP_PUBLIC int rtp_get_extheader(mblk_t *packet, uint16_t *profile, uint8_t **start_ext);
+ORTP_PUBLIC int rtp_get_extheader(const mblk_t *packet, uint16_t *profile, uint8_t **start_ext);
 
 /* Extension header api */
 ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
 ORTP_PUBLIC void rtp_write_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
-ORTP_PUBLIC int rtp_get_extension_header(mblk_t *packet, int id, uint8_t **data);
+ORTP_PUBLIC int rtp_get_extension_header(const mblk_t *packet, int id, uint8_t **data);
 
 /* Audio Level api */
 ORTP_PUBLIC void rtp_add_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t voice_activity, int audio_level);

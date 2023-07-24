@@ -390,10 +390,21 @@ ORTP_PUBLIC void rtp_session_rtcp_process_recv(struct _RtpSession *s);
 ORTP_PUBLIC size_t rtcp_get_size(const mblk_t *m);
 /*in case of coumpound packet, set read pointer of m to the beginning of the next RTCP
 packet */
-ORTP_PUBLIC bool_t rtcp_next_packet(mblk_t *m);
+ORTP_PUBLIC ORTP_DEPRECATED bool_t rtcp_next_packet(mblk_t *m);
 /* put the read pointer at the first RTCP packet of the compound packet (as before any previous calls ot
  * rtcp_next_packet() */
-ORTP_PUBLIC void rtcp_rewind(mblk_t *m);
+ORTP_PUBLIC ORTP_DEPRECATED void rtcp_rewind(mblk_t *m);
+
+typedef struct _RtcpParserContext {
+	mblk_t *current_packet;
+	uint8_t *start;
+} RtcpParserContext;
+
+ORTP_PUBLIC const mblk_t *rtcp_parser_context_init(RtcpParserContext *context, const mblk_t *compound_packet);
+ORTP_PUBLIC const mblk_t *rtcp_parser_context_next_packet(RtcpParserContext *context);
+ORTP_PUBLIC const mblk_t *rtcp_parser_context_start(RtcpParserContext *context);
+ORTP_PUBLIC void rtcp_parser_context_uninit(RtcpParserContext *context);
+
 /* get common header*/
 ORTP_PUBLIC const rtcp_common_header_t *rtcp_get_common_header(const mblk_t *m);
 

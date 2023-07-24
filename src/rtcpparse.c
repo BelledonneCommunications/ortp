@@ -25,15 +25,9 @@
 #include "ortp/str_utils.h"
 #include "utils.h"
 
-size_t rtcp_get_size(const mblk_t *m) {
-	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
-	if (ch == NULL) return 0;
-	return (1 + rtcp_common_header_get_length(ch)) * 4;
-}
-
 /*in case of compound packet, set read pointer of m to the beginning of the next RTCP
 packet */
-bool_t rtcp_next_packet(mblk_t *m) {
+bool_t _rtcp_next_packet(mblk_t *m) {
 	size_t nextlen = rtcp_get_size(m);
 	if ((nextlen > 0) && (m->b_rptr + nextlen < m->b_wptr)) {
 		m->b_rptr += nextlen;
@@ -42,6 +36,48 @@ bool_t rtcp_next_packet(mblk_t *m) {
 	return FALSE;
 }
 
+const mblk_t *rtcp_parser_context_init(RtcpParserContext *context, const mblk_t *compound_packet) {
+	context->current_packet =
+	    dupmsg((mblk_t *)compound_packet); /* const qualifier discarded - the returned packet is const anyway.*/
+	if (context->current_packet->b_cont) msgpullup(context->current_packet, (size_t)-1);
+	context->start = context->current_packet->b_rptr;
+	return context->current_packet;
+}
+
+const mblk_t *rtcp_parser_context_next_packet(RtcpParserContext *context) {
+	if (_rtcp_next_packet(context->current_packet)) return context->current_packet;
+	return NULL;
+}
+
+const mblk_t *rtcp_parser_context_start(RtcpParserContext *context) {
+	context->current_packet->b_rptr = context->start;
+	return context->current_packet;
+}
+
+void rtcp_parser_context_uninit(RtcpParserContext *context) {
+	if (context->current_packet) freemsg(context->current_packet);
+}
+
+size_t rtcp_get_size(const mblk_t *m) {
+	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
+	size_t ret, totalsize;
+	if (ch == NULL) return 0;
+	ret = (1 + rtcp_common_header_get_length(ch)) * 4;
+	totalsize = m->b_wptr - m->b_rptr;
+	if (ret > totalsize) {
+		ortp_warning("RTCP packet indicates size [%i] which goes behond end of packet [%i], truncating.", (int)ret,
+		             (int)totalsize);
+		ret = totalsize;
+	}
+	return ret;
+}
+
+/* deprecated function */
+bool_t rtcp_next_packet(mblk_t *m) {
+	return _rtcp_next_packet(m);
+}
+
+/* deprecated function */
 void rtcp_rewind(mblk_t *m) {
 	m->b_rptr = m->b_datap->db_base;
 }
