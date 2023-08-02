@@ -702,5 +702,6 @@ test_suite_t fec_test_suite = {
     NULL,                             // Before each callback
     NULL,                             // After each callback
     sizeof(tests) / sizeof(tests[0]), // Size of test table
-    tests                             // Table of test suite
+    tests,                            // Table of test suite
+    0                                 // Average execution time
 };
