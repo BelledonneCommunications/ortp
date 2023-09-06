@@ -849,6 +849,7 @@ ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mx
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc);
 
 ORTP_PUBLIC void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable);
+ORTP_PUBLIC bool_t rtp_session_transfer_mode_enabled(RtpSession *session);
 
 /*private */
 ORTP_PUBLIC void rtp_session_init(RtpSession *session, int mode);
@@ -922,6 +923,16 @@ ORTP_PUBLIC int rtp_bundle_send_through_primary(
     RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
 /* Returns FALSE if the rtp packet or at least one of the RTCP packet (compound) was for the primary */
 ORTP_PUBLIC bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m);
+/**
+ * @brief Retrieve a session from a bundle using an outgoing message
+ *
+ * @param[in]	bundle	The bundle holding the rtp sessions
+ * @param[in]	m	The ougoing message
+ * @return	the Rtp session used to send this message, NULL if not found in the bundle
+ *
+ * Warning: this function current implementation assumes a match MID/SSRC, it may change
+ */
+ORTP_PUBLIC RtpSession *rtp_bundle_lookup_session_for_outgoing_packet(RtpBundle *bundle, mblk_t *m);
 ORTP_PUBLIC void
 rtp_session_use_local_addr(RtpSession *session, const char *rtp_local_addr, const char *rtcp_local_addr);
 

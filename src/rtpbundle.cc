@@ -84,6 +84,10 @@ extern "C" bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *
 	return ((RtpBundleCxx *)bundle)->dispatch(is_rtp, m);
 }
 
+extern "C" RtpSession *rtp_bundle_lookup_session_for_outgoing_packet(RtpBundle *bundle, mblk_t *m) {
+	return ((RtpBundleCxx *)bundle)->checkForSession(m, true);
+}
+
 // C++ - Implementation
 
 RtpBundleCxx::~RtpBundleCxx() {

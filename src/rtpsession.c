@@ -1289,11 +1289,19 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 				}
 			}
 		}
-		if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype) && !session->transfer_mode) {
-			rtp_header_set_seqnumber(rtp, session->rtp.snd_seq);
+
+		/* When in transfer mode, set the actual seq_number to use in the session but leave the packet untouched
+		 * SRTP modifier will manage the sequence number: fetch the session one and save the original one in the
+		 * SRTP OHB */
+		if (session->transfer_mode) {
 			session->rtp.snd_seq++;
 		} else {
-			session->rtp.snd_seq = rtp_header_get_seqnumber(rtp) + 1;
+			if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)) {
+				rtp_header_set_seqnumber(rtp, session->rtp.snd_seq);
+				session->rtp.snd_seq++;
+			} else {
+				session->rtp.snd_seq = rtp_header_get_seqnumber(rtp) + 1;
+			}
 		}
 		session->rtp.snd_last_ts = packet_ts;
 
@@ -3134,6 +3142,10 @@ void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable) {
 			session->fec_stream = NULL;
 		}
 	}
+}
+
+bool_t rtp_session_transfer_mode_enabled(RtpSession *session) {
+	return session->transfer_mode;
 }
 
 const abe_stats_t *rtp_session_get_audio_bandwidth_estimator_stats(RtpSession *session) {
