@@ -1815,13 +1815,13 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 
 			if (ntohl(sr->ssrc) != session->rcv.ssrc) {
 				ortp_debug("Receiving a RTCP SR packet from an unknown ssrc");
-				return 0;
+				continue;
 			}
 
 			if (msgsize < RTCP_COMMON_HEADER_SIZE + RTCP_SSRC_FIELD_SIZE + RTCP_SENDER_INFO_SIZE +
 			                  (RTCP_REPORT_BLOCK_SIZE * sr->ch.rc)) {
 				ortp_debug("Receiving a too short RTCP SR packet");
-				return 0;
+				break;
 			}
 
 			/* Saving the data to fill LSR and DLSR field in next RTCP report to be transmitted */
@@ -1844,7 +1844,7 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 			handle_rtcp_rtpfb_packet(session, rtcp_packet);
 		}
 	} while ((rtcp_packet = rtcp_parser_context_next_packet(&rtcpctx)) != NULL);
-
+	rtcp_parser_context_uninit(&rtcpctx);
 	rtp_session_update_remote_sock_addr(session, block, FALSE, FALSE);
 	return 0;
 }
