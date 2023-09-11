@@ -54,6 +54,14 @@ FecStreamCxx::FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, 
 	mFecSession->fec_stream = NULL;
 	memset(&mStats, 0, sizeof(fec_stats));
 }
+
+FecStreamCxx::~FecStreamCxx() {
+	if (parameters != nullptr) {
+		bctbx_free(parameters);
+		parameters = nullptr;
+	}
+}
+
 void FecStreamCxx::init() {
 	RtpTransport *transport = NULL;
 	RtpBundle *bundle = (RtpBundle *)mSourceSession->bundle;
@@ -144,7 +152,6 @@ void FecStreamCxx::onNewSourcePacketRecieved(mblk_t *packet) {
 }
 
 void FecStreamCxx::recieveRepairPacket(uint32_t timestamp) {
-
 	mblk_t *repair_packet = rtp_session_recvm_with_ts(mFecSession, timestamp);
 
 	if (repair_packet == NULL) return;
@@ -152,6 +159,8 @@ void FecStreamCxx::recieveRepairPacket(uint32_t timestamp) {
 
 	std::shared_ptr<FecRepairPacket> repair(new FecRepairPacket(repair_packet));
 	mCluster.add(repair);
+
+	freemsg(repair_packet);
 }
 void FecStreamCxx::printStats() {
 

@@ -289,6 +289,8 @@ private:
 
 public:
 	FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParameters *fecParams);
+	virtual ~FecStreamCxx();
+
 	void init();
 	static int processOnSend(struct _RtpTransportModifier *m, mblk_t *packet);
 	static int processOnRecieve(struct _RtpTransportModifier *m, mblk_t *packet);
@@ -306,7 +308,6 @@ public:
 		return &mStats;
 	};
 	void printStats();
-	~FecStreamCxx(){};
 };
 
 void modifierFree(struct _RtpTransportModifier *m);
