@@ -86,7 +86,9 @@ void *ortp_malloc0(size_t size) {
 char *ortp_strdup(const char *tmp) {
 	size_t sz;
 	char *ret;
+
 	if (tmp == NULL) return NULL;
+
 	sz = strlen(tmp) + 1;
 	ret = (char *)ortp_malloc(sz);
 	strcpy(ret, tmp);
@@ -371,99 +373,19 @@ char *WSAAPI gai_strerror(int errnum) {
 #include <sys/stat.h>
 #include <sys/un.h>
 
-/* portable named pipes */
-
-#ifdef HAVE_SYS_SHM_H
-
 #endif
 
-#elif defined(_WIN32) && !defined(_WIN32_WCE)
-
-#endif
-
-#ifdef __MACH__
-#include <sys/timeb.h>
-#include <sys/types.h>
-#endif
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif // _MSC_VER
 void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime) {
-#if defined(_WIN32_WCE) || defined(_WIN32)
-#if defined(ORTP_WINDOWS_DESKTOP) && !defined(ENABLE_MICROSOFT_STORE_APP) && !defined(ORTP_WINDOWS_UWP)
-	DWORD timemillis;
-#if defined(_WIN32_WCE)
-	timemillis = GetTickCount();
-#else
-	timemillis = timeGetTime();
-#endif
-	ret->tv_sec = timemillis / 1000;
-	ret->tv_nsec = (timemillis % 1000) * 1000000LL;
-#else
-	ULONGLONG timemillis = GetTickCount64();
-	ret->tv_sec = timemillis / 1000;
-	ret->tv_nsec = (timemillis % 1000) * 1000000LL;
-#endif
-#elif defined(__MACH__) && defined(__GNUC__) && (__GNUC__ >= 3)
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	ret->tv_sec = tv.tv_sec;
-	ret->tv_nsec = tv.tv_usec * 1000LL;
-#elif defined(__MACH__)
-	struct timeb time_val;
-
-	ftime(&time_val);
-	ret->tv_sec = time_val.time;
-	ret->tv_nsec = time_val.millitm * 1000000LL;
-#else
-	struct timespec ts;
-	if (clock_gettime(realtime ? CLOCK_REALTIME : CLOCK_MONOTONIC, &ts) < 0) {
-		ortp_fatal("clock_gettime() doesn't work: %s", strerror(errno));
-	}
-	ret->tv_sec = ts.tv_sec;
-	ret->tv_nsec = ts.tv_nsec;
-#endif
+	if (realtime) bctbx_get_utc_cur_time(ret);
+	else bctbx_get_cur_time(ret);
 }
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif // _MSC_VER
 
 void ortp_get_cur_time(ortpTimeSpec *ret) {
-	_ortp_get_cur_time(ret, FALSE);
+	bctbx_get_cur_time(ret);
 }
 
 void ortp_sleep_until(const ortpTimeSpec *ts) {
-#ifdef __linux__
-	struct timespec rq;
-	rq.tv_sec = ts->tv_sec;
-	rq.tv_nsec = ts->tv_nsec;
-	while (clock_nanosleep(CLOCK_REALTIME, TIMER_ABSTIME, &rq, NULL) == -1 && errno == EINTR) {
-	}
-#else
-	ortpTimeSpec current;
-	ortpTimeSpec diff;
-	_ortp_get_cur_time(&current, TRUE);
-	diff.tv_sec = ts->tv_sec - current.tv_sec;
-	diff.tv_nsec = ts->tv_nsec - current.tv_nsec;
-	if (diff.tv_nsec < 0) {
-		diff.tv_nsec += 1000000000LL;
-		diff.tv_sec -= 1;
-	}
-#ifdef _WIN32
-	ortp_sleep_ms((int)((diff.tv_sec * 1000LL) + (diff.tv_nsec / 1000000LL)));
-#else
-	{
-		struct timespec dur, rem;
-		dur.tv_sec = diff.tv_sec;
-		dur.tv_nsec = diff.tv_nsec;
-		while (nanosleep(&dur, &rem) == -1 && errno == EINTR) {
-			dur = rem;
-		};
-	}
-#endif
-#endif
+	bctbx_sleep_until(ts);
 }
 
 #if defined(_WIN32) && !defined(_MSC_VER)

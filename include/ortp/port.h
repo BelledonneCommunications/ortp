@@ -70,6 +70,7 @@ typedef pthread_mutex_t ortp_mutex_t;
 typedef pthread_cond_t ortp_cond_t;
 
 #ifdef __INTEL_COMPILER
+
 #pragma warning(disable : 111)  // statement is unreachable
 #pragma warning(disable : 181)  // argument is incompatible with corresponding format string conversion
 #pragma warning(disable : 188)  // enumerated type mixed with another type
@@ -290,10 +291,7 @@ typedef unsigned char bool_t;
 #define TRUE 1
 #define FALSE 0
 
-typedef struct ortpTimeSpec {
-	int64_t tv_sec;
-	int64_t tv_nsec;
-} ortpTimeSpec;
+typedef struct bctoolboxTimeSpec ortpTimeSpec;
 
 #ifdef __cplusplus
 extern "C" {
