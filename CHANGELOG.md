@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- ortp memory functions (replaced by bctoolbox ones)
+- most of port.c content, that is replaced by bctoolbox
+
 
 ## [5.1.0] - 2022-02-14
 

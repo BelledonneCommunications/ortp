@@ -22,17 +22,38 @@
 #ifndef ORTP_PORT_H
 #define ORTP_PORT_H
 
+#include "bctoolbox/port.h"
+
 #ifndef ORTP_DEPRECATED
 #if defined(_MSC_VER)
 #define ORTP_DEPRECATED __declspec(deprecated)
 #else
 #define ORTP_DEPRECATED __attribute__((deprecated))
-#endif
-#endif
+#endif // _MSC_VER
+#endif // ORTP_DEPRECATED
 
 #if __APPLE__
 #include "TargetConditionals.h"
 #endif
+
+typedef bctbx_socket_t ortp_socket_t;
+typedef bctbx_cond_t ortp_cond_t;
+typedef bctbx_mutex_t ortp_mutex_t;
+typedef bctbx_thread_t ortp_thread_t;
+
+#define ortp_thread_create bctbx_thread_create
+#define ortp_thread_join bctbx_thread_join
+#define ortp_thread_self bctbx_thread_self
+#define ortp_thread_exit(arg) bctbx_thread_exit
+#define ortp_mutex_init bctbx_mutex_init
+#define ortp_mutex_lock bctbx_mutex_lock
+#define ortp_mutex_unlock bctbx_mutex_unlock
+#define ortp_mutex_destroy bctbx_mutex_destroy
+#define ortp_cond_init bctbx_cond_init
+#define ortp_cond_signal bctbx_cond_signal
+#define ortp_cond_broadcast bctbx_cond_broadcast
+#define ortp_cond_wait bctbx_cond_wait
+#define ortp_cond_destroy bctbx_cond_destroy
 
 #if !defined(_WIN32) && !defined(_WIN32_WCE)
 /********************************/
@@ -64,11 +85,6 @@
 
 #include <netdb.h>
 
-typedef int ortp_socket_t;
-typedef pthread_t ortp_thread_t;
-typedef pthread_mutex_t ortp_mutex_t;
-typedef pthread_cond_t ortp_cond_t;
-
 #ifdef __INTEL_COMPILER
 
 #pragma warning(disable : 111)  // statement is unreachable
@@ -81,46 +97,17 @@ typedef pthread_cond_t ortp_cond_t;
 #pragma warning(disable : 1418) // external function definition with no prior declaration
 #pragma warning(disable : 1419) // external declaration in primary source file
 #pragma warning(disable : 1469) // "cc" clobber ignored
-#endif
+#endif                          // __INTEL_COMPILER
 
 #define ORTP_PUBLIC
 #define ORTP_INLINE inline
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-int __ortp_thread_join(ortp_thread_t thread, void **ptr);
-int __ortp_thread_create(ortp_thread_t *thread, pthread_attr_t *attr, void *(*routine)(void *), void *arg);
-unsigned long __ortp_thread_self(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#define ortp_thread_create __ortp_thread_create
-#define ortp_thread_join __ortp_thread_join
-#define ortp_thread_self __ortp_thread_self
-#define ortp_thread_exit pthread_exit
-#define ortp_mutex_init pthread_mutex_init
-#define ortp_mutex_lock pthread_mutex_lock
-#define ortp_mutex_unlock pthread_mutex_unlock
-#define ortp_mutex_destroy pthread_mutex_destroy
-#define ortp_cond_init pthread_cond_init
-#define ortp_cond_signal pthread_cond_signal
-#define ortp_cond_broadcast pthread_cond_broadcast
-#define ortp_cond_wait pthread_cond_wait
-#define ortp_cond_destroy pthread_cond_destroy
-
 #define SOCKET_OPTION_VALUE void *
 #define SOCKET_BUFFER void *
 
-#define getSocketError() strerror(errno)
-#define getSocketErrorCode() (errno)
-#define ortp_gettimeofday(tv, tz) gettimeofday(tv, tz)
 #define ortp_log10f(x) log10f(x)
 
-#else
+#else // !defined(_WIN32) && !defined(_WIN32_WCE)
 /*********************************/
 /* definitions for WIN32 flavour */
 /*********************************/
@@ -133,7 +120,7 @@ unsigned long __ortp_thread_self(void);
 #include <ws2tcpip.h>
 #ifdef _MSC_VER
 #include <io.h>
-#endif
+#endif // _MSC_VER
 
 #if defined(__MINGW32__) || !defined(WINAPI_FAMILY_PARTITION) || !defined(WINAPI_PARTITION_DESKTOP)
 #define ORTP_WINDOWS_DESKTOP 1
@@ -148,8 +135,8 @@ unsigned long __ortp_thread_self(void);
 #define ORTP_WINDOWS_PHONE 1
 #elif defined(WINAPI_PARTITION_APP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP)
 #define ORTP_WINDOWS_UNIVERSAL 1
-#endif
-#endif
+#endif // defined(WINAPI_PARTITION_DESKTOP) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#endif // defined(WINAPI_FAMILY_PARTITION)
 
 #ifdef _MSC_VER
 #ifdef ORTP_STATIC
@@ -173,61 +160,14 @@ typedef unsigned int uint32_t;
 typedef int int32_t;
 typedef unsigned char uint8_t;
 typedef __int16 int16_t;
-#else
+#else // _MSC_VER
 #include <io.h>
 #include <stdint.h> /*provided by mingw32*/
-#define ORTP_PUBLIC
-ORTP_PUBLIC char *strtok_r(char *str, const char *delim, char **nextp);
-#endif
 
-#define vsnprintf _vsnprintf
-
-typedef SOCKET ortp_socket_t;
-#ifdef ORTP_WINDOWS_DESKTOP
-typedef HANDLE ortp_cond_t;
-typedef HANDLE ortp_mutex_t;
-#else
-typedef CONDITION_VARIABLE ortp_cond_t;
-typedef SRWLOCK ortp_mutex_t;
-#endif
-typedef HANDLE ortp_thread_t;
-
-#define ortp_thread_create WIN_thread_create
-#define ortp_thread_join WIN_thread_join
-#define ortp_thread_self WIN_thread_self
-#define ortp_thread_exit(arg)
-#define ortp_mutex_init WIN_mutex_init
-#define ortp_mutex_lock WIN_mutex_lock
-#define ortp_mutex_unlock WIN_mutex_unlock
-#define ortp_mutex_destroy WIN_mutex_destroy
-#define ortp_cond_init WIN_cond_init
-#define ortp_cond_signal WIN_cond_signal
-#define ortp_cond_broadcast WIN_cond_broadcast
-#define ortp_cond_wait WIN_cond_wait
-#define ortp_cond_destroy WIN_cond_destroy
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-ORTP_PUBLIC int WIN_mutex_init(ortp_mutex_t *m, void *attr_unused);
-ORTP_PUBLIC int WIN_mutex_lock(ortp_mutex_t *mutex);
-ORTP_PUBLIC int WIN_mutex_unlock(ortp_mutex_t *mutex);
-ORTP_PUBLIC int WIN_mutex_destroy(ortp_mutex_t *mutex);
-ORTP_PUBLIC int WIN_thread_create(ortp_thread_t *t, void *attr_unused, void *(*func)(void *), void *arg);
-ORTP_PUBLIC int WIN_thread_join(ortp_thread_t thread, void **unused);
-ORTP_PUBLIC unsigned long WIN_thread_self(void);
-ORTP_PUBLIC int WIN_cond_init(ortp_cond_t *cond, void *attr_unused);
-ORTP_PUBLIC int WIN_cond_wait(ortp_cond_t *cond, ortp_mutex_t *mutex);
-ORTP_PUBLIC int WIN_cond_signal(ortp_cond_t *cond);
-ORTP_PUBLIC int WIN_cond_broadcast(ortp_cond_t *cond);
-ORTP_PUBLIC int WIN_cond_destroy(ortp_cond_t *cond);
-
-#ifdef __cplusplus
-}
-#endif
+#endif // _MSC_VER
 
 #define SOCKET_OPTION_VALUE char *
+#define SOCKET_BUFFER void *
 #define ORTP_INLINE __inline
 
 #if defined(_WIN32_WCE)
@@ -253,25 +193,16 @@ const char *ortp_strerror(DWORD value);
 
 #define ortp_log10f(x) log10f(x)
 
-#endif
+#endif // defined(_WIN32_WCE)
 
 #ifdef __cplusplus
 extern "C" {
-#endif
-
-ORTP_PUBLIC const char *getWinSocketError(int error);
-#ifndef getSocketErrorCode
-#define getSocketErrorCode() WSAGetLastError()
-#endif
-#ifndef getSocketError
-#define getSocketError() getWinSocketError(WSAGetLastError())
 #endif
 
 #ifndef F_OK
 #define F_OK 00 /* Visual Studio does not define F_OK */
 #endif
 
-ORTP_PUBLIC int ortp_gettimeofday(struct timeval *tv, void *tz);
 #ifdef _WORKAROUND_MINGW32_BUGS
 char *WSAAPI gai_strerror(int errnum);
 #endif
@@ -280,7 +211,7 @@ char *WSAAPI gai_strerror(int errnum);
 }
 #endif
 
-#endif
+#endif // _MSC_VER
 
 #ifndef _BOOL_T_
 #define _BOOL_T_
@@ -297,20 +228,12 @@ typedef struct bctoolboxTimeSpec ortpTimeSpec;
 extern "C" {
 #endif
 
-ORTP_PUBLIC void *ortp_malloc(size_t sz);
-ORTP_PUBLIC void ortp_free(void *ptr);
-ORTP_PUBLIC void *ortp_realloc(void *ptr, size_t sz);
-ORTP_PUBLIC void *ortp_malloc0(size_t sz);
-ORTP_PUBLIC char *ortp_strdup(const char *tmp);
-
-/*override the allocator with this method, to be called BEFORE ortp_init()*/
-typedef struct _OrtpMemoryFunctions {
-	void *(*malloc_fun)(size_t sz);
-	void *(*realloc_fun)(void *ptr, size_t sz);
-	void (*free_fun)(void *ptr);
-} OrtpMemoryFunctions;
-
-void ortp_set_memory_functions(OrtpMemoryFunctions *functions);
+#define ortp_malloc(sz) bctbx_malloc(sz)
+#define ortp_free(ptr) bctbx_free(ptr)
+#define ortp_realloc(ptr, sz) bctbx_realloc(ptr, sz)
+#define ortp_malloc0(sz) bctbx_malloc0(sz)
+#define ortp_strdup(str) bctbx_strdup(str)
+#define ortp_strndup(str, n) bctbx_strndup(str, n)
 
 #define ortp_new(type, count) (type *)ortp_malloc(sizeof(type) * (count))
 #define ortp_new0(type, count) (type *)ortp_malloc0(sizeof(type) * (count))
@@ -319,24 +242,18 @@ ORTP_PUBLIC int close_socket(ortp_socket_t sock);
 ORTP_PUBLIC int set_non_blocking_socket(ortp_socket_t sock);
 ORTP_PUBLIC int set_blocking_socket(ortp_socket_t sock);
 
-ORTP_PUBLIC char *ortp_strndup(const char *str, int n);
 #define ortp_strdup_printf bctbx_strdup_printf
-/*ORTP_PUBLIC char *ortp_strdup_printf(const char *fmt,...);*/
 #define ortp_strdup_vprintf bctbx_strdup_vprintf
-/*ORTP_PUBLIC char *ortp_strdup_vprintf(const char *fmt, va_list ap);*/
 #define ortp_strcat_printf bctbx_strcat_printf
-/*ORTP_PUBLIC char *ortp_strcat_printf(char *dst, const char *fmt,...);*/
-
-ORTP_PUBLIC char *ortp_strcat_vprintf(char *dst, const char *fmt, va_list ap);
+#define ortp_strcat_vprintf bctbx_strcat_vprintf
 
 #define ortp_file_exist(pathname) bctbx_file_exist(pathname)
 
-ORTP_PUBLIC void ortp_get_cur_time(ortpTimeSpec *ret);
-void _ortp_get_cur_time(ortpTimeSpec *ret, bool_t realtime);
+#define ortp_get_cur_time(ts) bctbx_get_cur_time(ts)
 #define ortp_get_cur_time_ms(void) bctbx_get_cur_time_ms(void)
 #define ortp_sleep_ms(ms) bctbx_sleep_ms(ms)
-ORTP_PUBLIC void ortp_sleep_until(const ortpTimeSpec *ts);
-ORTP_PUBLIC int ortp_timespec_compare(const ortpTimeSpec *s1, const ortpTimeSpec *s2);
+#define ortp_sleep_until(ts) bctbx_sleep_until(ts)
+#define ortp_timespec_compare(t1, t2) bctbx_timespec_compare(t1, t2)
 #define ortp_random(void) bctbx_random(void)
 
 /* portable named pipes  and shared memory*/
@@ -375,7 +292,6 @@ typedef int ortp_pipe_t;
 
 #ifdef __cplusplus
 }
-
 #endif
 
 #if (defined(_WIN32) || defined(_WIN32_WCE)) && !defined(ORTP_STATIC)
@@ -399,4 +315,4 @@ typedef int ortp_pipe_t;
 #define __ios 1
 #endif
 
-#endif
+#endif // ORTP_PORT_H

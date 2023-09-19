@@ -211,7 +211,7 @@ void ortp_audio_bandwidth_estimator_reset(OrtpAudioBandwidthEstimator *abe) {
 	abe->last_timestamp.tv_sec = 0;
 	abe->last_timestamp.tv_usec = 0;
 	abe->last_seq_number = 0;
-	abe->packets = bctbx_list_free_with_data(abe->packets, ortp_free);
+	abe->packets = bctbx_list_free_with_data(abe->packets, bctbx_free);
 }
 
 void ortp_audio_bandwidth_estimator_set_history_max_size(OrtpAudioBandwidthEstimator *abe, unsigned int value) {

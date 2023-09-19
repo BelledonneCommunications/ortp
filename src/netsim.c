@@ -388,22 +388,6 @@ mblk_t *rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t 
 	return om;
 }
 
-/*compares two ortpTimeSpec s1 and s2.
- * returns a negative value if s1 is earlier than s2, 0 if they are equal, a positive value if s1 is later than s2*/
-int ortp_timespec_compare(const ortpTimeSpec *s1, const ortpTimeSpec *s2) {
-	int64_t secdiff = s1->tv_sec - s2->tv_sec;
-	if (secdiff == 0) {
-		int64_t nsec_diff = s1->tv_nsec - s2->tv_nsec;
-		if (nsec_diff < 0) {
-			return -1;
-		} else if (nsec_diff > 0) {
-			return 1;
-		} else return 0;
-	} else if (secdiff < 0) {
-		return -1;
-	} else return 1;
-}
-
 static mblk_t *rtp_session_netsim_find_next_packet_to_send(RtpSession *session) {
 	mblk_t *om;
 	ortpTimeSpec min_packet_time = {0, 0};
@@ -475,7 +459,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 				freemsg(todrop); /*free the last message while the mutex is not held*/
 				todrop = NULL;
 			}
-			_ortp_get_cur_time(&current, TRUE);
+			bctbx_get_utc_cur_time(&current);
 			packet_time.tv_sec = om->timestamp.tv_sec;
 			packet_time.tv_nsec = om->timestamp.tv_usec * 1000LL;
 			if (is_rtp_packet && om->timestamp.tv_sec == 0 && om->timestamp.tv_usec == 0) {
@@ -499,7 +483,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
 		if (todrop) freemsg(todrop);
 		if (sleep_until->tv_sec == 0) {
-			_ortp_get_cur_time(&current, TRUE);
+			bctbx_get_utc_cur_time(&current);
 			/*no pending packet in the queue yet, schedule a wake up not too far*/
 			sleep_until->tv_sec = current.tv_sec;
 			sleep_until->tv_nsec = current.tv_nsec + 1000000LL; /*in 1 ms*/

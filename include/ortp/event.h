@@ -22,6 +22,7 @@
 #define ortp_events_h
 
 #include "bctoolbox/list.h"
+#include "ortp/port.h"
 #include "ortp/rtcp.h"
 #include "ortp/str_utils.h"
 

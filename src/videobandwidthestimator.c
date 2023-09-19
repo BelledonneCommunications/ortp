@@ -46,7 +46,7 @@ void ortp_video_bandwidth_estimator_reset(OrtpVideoBandwidthEstimator *vbe) {
 	ortp_free(vbe->last_packet);
 	vbe->last_packet = NULL;
 	vbe->nb_packets_computed = 0;
-	vbe->packets = bctbx_list_free_with_data(vbe->packets, ortp_free);
+	vbe->packets = bctbx_list_free_with_data(vbe->packets, bctbx_free);
 }
 
 void ortp_video_bandwidth_estimator_set_packets_count_min(OrtpVideoBandwidthEstimator *vbe, unsigned int value) {

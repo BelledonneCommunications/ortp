@@ -53,7 +53,7 @@ static bool_t win32_init_sockets(void) {
 
 	wVersionRequested = MAKEWORD(2, 0);
 	if ((i = WSAStartup(wVersionRequested, &wsaData)) != 0) {
-		ortp_error("Unable to initialize windows socket api, reason: %d (%s)", i, getWinSocketError(i));
+		ortp_error("Unable to initialize windows socket api, reason: %d (%s)", i, getSocketErrorWithCode(i));
 		return FALSE;
 	}
 	return TRUE;
