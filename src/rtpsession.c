@@ -341,9 +341,14 @@ void rtp_session_enable_video_bandwidth_estimator(RtpSession *session,
 		if (!session->rtp.video_bw_estimator) {
 			session->rtp.video_bw_estimator = ortp_video_bandwidth_estimator_new(session);
 		}
-		if (params->packet_count_min > 0) session->rtp.video_bw_estimator->packet_count_min = params->packet_count_min;
-		if (params->packets_size_max > 0) session->rtp.video_bw_estimator->packets_size_max = params->packets_size_max;
-		if (params->trust_percentage > 0) session->rtp.video_bw_estimator->trust_percentage = params->trust_percentage;
+		if (params->packet_count_min > 0)
+			ortp_video_bandwidth_estimator_set_packets_count_min(session->rtp.video_bw_estimator,
+			                                                     params->packet_count_min);
+		if (params->min_required_measurements > 0)
+			ortp_video_bandwidth_estimator_set_min_measurements_count(session->rtp.video_bw_estimator,
+			                                                          params->min_required_measurements);
+		if (params->trust_percentage > 0)
+			ortp_video_bandwidth_estimator_set_trust(session->rtp.video_bw_estimator, params->trust_percentage);
 		if (!session->video_bandwidth_estimator_enabled)
 			ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator);
 	}

@@ -259,6 +259,12 @@ static int simulate_jitter_by_bit_budget_reduction(OrtpNetworkSimulatorCtx *sim,
 	return budget_adjust;
 }
 
+static int get_packet_overhead(RtpSession *session, mblk_t *packet) {
+	bool_t is_rtp_packet = packet->reserved1;
+	bool_t is_ipv6 = is_rtp_packet ? ortp_stream_is_ipv6(&session->rtp.gs) : ortp_stream_is_ipv6(&session->rtcp.gs);
+	return is_ipv6 ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
+}
+
 static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *input) {
 	OrtpNetworkSimulatorCtx *sim = session->net_sim_ctx;
 	struct timeval current;
@@ -266,7 +272,6 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 	int bits;
 	int budget_increase;
 	mblk_t *output = NULL;
-	int overhead = (session->rtp.gs.sockfamily == AF_INET6) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 
 	bctbx_gettimeofday(&current, NULL);
 
@@ -283,7 +288,7 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 	/* queue the packet for sending*/
 	if (input) {
 		putq(&sim->q, input);
-		bits = ((int)msgdsize(input) + overhead) * 8;
+		bits = ((int)msgdsize(input) + get_packet_overhead(session, input)) * 8;
 		sim->qsize += bits;
 	}
 	/*flow control*/
@@ -291,25 +296,25 @@ static mblk_t *simulate_bandwidth_limit_and_jitter(RtpSession *session, mblk_t *
 		// ortp_message("rtp_session_network_simulate(): discarding packets.");
 		output = getq(&sim->q);
 		if (output) {
-			bits = ((int)msgdsize(output) + overhead) * 8;
+			bits = ((int)msgdsize(output) + get_packet_overhead(session, output)) * 8;
 			sim->qsize -= bits;
 			sim->drop_by_congestion++;
 			freemsg(output);
 		}
 	}
 
-	output = NULL;
+	output = peekq(&sim->q);
 
-	/*see if we can output a packet*/
-	if (sim->bit_budget >= 0) {
-		output = getq(&sim->q);
-		if (output) {
-			bits = ((int)msgdsize(output) + overhead) * 8;
+	if (output) {
+		bits = ((int)msgdsize(output) + get_packet_overhead(session, output)) * 8;
+		/*see if we can output a packet*/
+		if (sim->bit_budget >= bits) {
 			sim->bit_budget -= bits;
 			sim->qsize -= bits;
-		}
+			output = getq(&sim->q);
+		} else output = NULL;
 	}
-	if (output == NULL && input == NULL && sim->bit_budget >= 0) {
+	if (qempty(&sim->q) && sim->bit_budget >= 0) {
 		/* unused budget is lost...*/
 		sim->last_check.tv_sec = 0;
 	}

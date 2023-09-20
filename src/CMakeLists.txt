@@ -63,13 +63,13 @@ set(ORTP_SOURCE_FILES_C
 	sessionset.c
 	str_utils.c
 	telephonyevents.c
-	videobandwidthestimator.c
 	utils.c
 )
 set(ORTP_SOURCE_FILES_CXX
 	dblk.cc	#HAVE_ATOMIC is mandatory
 	rtpbundle.cc
 	fecstream.cc
+	videobandwidthestimator.cc
 )
 
 add_definitions(

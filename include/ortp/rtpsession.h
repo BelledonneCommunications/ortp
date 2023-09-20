@@ -474,12 +474,12 @@ struct _RtpSession {
  * Structure describing the video bandwidth estimator parameters
  **/
 typedef struct _OrtpVideoBandwidthEstimatorParams {
-	int enabled;                   /**<Whether estimator is enabled or off.*/
-	unsigned int packet_count_min; /** minimum number of packets with the same sent timestamp to be processed
-	                                  continuously before being used */
-	unsigned int packets_size_max; /** number of packets needed to compute the available video bandwidth */
+	int enabled;                        /**<Whether estimator is enabled or off.*/
+	unsigned int packet_count_min;      /**<minimum number of packets with the same sent timestamp to be processed
+	                                       continuously before being used */
+	unsigned min_required_measurements; /**<Minimum number of measurements required to make an estimate */
 	unsigned int
-	    trust_percentage; /** percentage for which the chosen bandwidth value in all available will be inferior */
+	    trust_percentage; /**<percentage for which the chosen bandwidth value in all available will be inferior */
 } OrtpVideoBandwidthEstimatorParams;
 
 /**
