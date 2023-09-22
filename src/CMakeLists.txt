@@ -34,7 +34,6 @@ endif()
 set(ORTP_SOURCE_FILES_C
 	audiobandwidthestimator.c
 	avprofile.c
-	b64.c
 	congestiondetector.c
 	event.c
 	extremum.c
