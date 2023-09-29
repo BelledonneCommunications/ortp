@@ -80,7 +80,7 @@ public:
 		mMinMeasurements = (size_t)count;
 	}
 	unsigned int getMinMeasurements() const {
-		return mMinMeasurements;
+		return (unsigned int)mMinMeasurements;
 	}
 	float makeAvailableBandwidthEstimate();
 	void processPacket(uint32_t sent_timestamp, const struct timeval *recv_timestamp, int msgsize, bool_t is_last);
