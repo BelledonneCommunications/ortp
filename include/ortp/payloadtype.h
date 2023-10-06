@@ -46,6 +46,9 @@ extern "C" {
 #define PAYLOAD_TYPE_USER_FLAG_2 (1 << 6)
 #define PAYLOAD_TYPE_USER_FLAG_3 (1 << 7)
 #define PAYLOAD_TYPE_USER_FLAG_4 (1 << 8)
+#define PAYLOAD_TYPE_USER_FLAG_5 (1 << 9)
+#define PAYLOAD_TYPE_USER_FLAG_6 (1 << 10)
+#define PAYLOAD_TYPE_USER_FLAG_7 (1 << 11)
 /* ask for more if you need*/
 
 #define PAYLOAD_TYPE_FLAG_CAN_RECV PAYLOAD_TYPE_USER_FLAG_1
