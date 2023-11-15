@@ -23,6 +23,9 @@
 
 #define RTP_CALLBACK_TABLE_MAX_ENTRIES 5
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 typedef void (*RtpCallback)(struct _RtpSession *, void *arg1, void *arg2, void *arg3);
 
 struct _RtpSignalTable {
@@ -49,4 +52,7 @@ void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2);
 
 int rtp_signal_table_remove_by_callback(RtpSignalTable *table, RtpCallback cb);
 
+#ifdef __cplusplus
+}
+#endif
 #endif

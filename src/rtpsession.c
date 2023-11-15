@@ -116,10 +116,6 @@ bool_t wait_point_check(WaitPoint *wp, uint32_t t) {
 
 extern void rtp_parse(RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen);
 
-static uint32_t uint32_t_random(void) {
-	return bctbx_random();
-}
-
 /* put an rtp packet in queue. It is called by rtp_parse()
    A return value of -1 means the packet was a duplicate, 0 means the packet was ok */
 int rtp_putq(queue_t *q, mblk_t *mp) {
@@ -235,7 +231,7 @@ void rtp_session_init(RtpSession *session, int mode) {
 	}
 	if ((mode == RTP_SESSION_SENDONLY) || (mode == RTP_SESSION_SENDRECV)) {
 		rtp_session_set_flag(session, RTP_SESSION_SEND_NOT_STARTED);
-		session->snd.ssrc = uint32_t_random();
+		session->snd.ssrc = bctbx_random();
 		/* set default source description */
 		rtp_session_set_source_description(session, "unknown@unknown", NULL, NULL, NULL, NULL, "oRTP-" ORTP_VERSION,
 		                                   NULL);
@@ -274,6 +270,8 @@ void rtp_session_init(RtpSession *session, int mode) {
 	rtp_signal_table_init(&session->on_timestamp_jump, session, "timestamp_jump");
 	rtp_signal_table_init(&session->on_network_error, session, "network_error");
 	rtp_signal_table_init(&session->on_rtcp_bye, session, "rtcp_bye");
+	rtp_signal_table_init(&session->on_new_incoming_ssrc_in_bundle, session, "new_incoming_ssrc_found_in_bundle");
+	rtp_signal_table_init(&session->on_new_outgoing_ssrc_in_bundle, session, "new_outgoing_ssrc_found_in_bundle");
 	wait_point_init(&session->snd.wp);
 	wait_point_init(&session->rcv.wp);
 	/*defaults send payload type to 0 (pcmu)*/
@@ -631,6 +629,14 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession *session, unsigned i
  *              the user_data.
  *	"congestion_state_changed": congestion detector object changed its internal state. Arguments of
  *								the callback function are previous and new states.
+ *	"new_incoming_ssrc_found_in_bundle": a new SSRC is detected in the bundle dispatch and no sessions are free to
+ *attach it. Arguments are:
+ *					- a RtpBundle pointer
+ *					- a pointer to an RtpSession pointer so the callback can create a new RtpSession and pass it back.
+ *	"new_outgoing_ssrc_found_in_bundle": a new SSRC is detected in the bundle while sending a packet
+ *				Arguments are:
+ *					- a RtpBundle pointer
+ *					- a pointer to an RtpSession pointer so the callback can create a new RtpSession and pass it back.
  *	Returns: 0 on success, -EOPNOTSUPP if the signal does not exists, -1 if no more callbacks
  *	can be assigned to the signal type.
  *
@@ -1289,6 +1295,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 			        mode mid extension */
 			/*add the mid from the bundle if any*/
 			if (session->bundle) {
+				RtpSession *bundle_session = NULL;
 				const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 				if (mid != NULL) {
@@ -1296,6 +1303,13 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 					rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 					rtp = (rtp_header_t *)
 					          mp->b_rptr; // rtp_add_extension might pullup the message so reset the pointer to header
+				}
+
+				/* in transfer mode, if we are part of a bundle, check this is the correct session to send this packet
+				 */
+				bundle_session = rtp_bundle_lookup_session_for_outgoing_packet(session->bundle, mp);
+				if (bundle_session != NULL && bundle_session != session) {
+					return __rtp_session_sendm_with_ts(bundle_session, mp, packet_ts, send_ts);
 				}
 			}
 		}

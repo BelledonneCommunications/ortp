@@ -55,7 +55,7 @@ public:
 
 	bool updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp);
 
-	RtpSession *checkForSession(const mblk_t *m, bool isRtp);
+	RtpSession *checkForSession(const mblk_t *m, bool isRtp, bool isOutgoing = false);
 
 private:
 	static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
@@ -69,7 +69,7 @@ private:
 
 	RtpSession *primary = NULL;
 	std::map<uint32_t, Mid> ssrcToMid;
-	std::map<std::string, RtpSession *> sessions;
+	std::multimap<std::string, RtpSession *> sessions;
 	std::map<std::string, RtpSession *> fec_sessions;
 	std::mutex ssrcToMidMutex;
 

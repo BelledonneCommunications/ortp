@@ -414,6 +414,12 @@ struct _RtpSession {
 	RtpSignalTable on_timestamp_jump;
 	RtpSignalTable on_network_error;
 	RtpSignalTable on_rtcp_bye;
+	RtpSignalTable on_new_incoming_ssrc_in_bundle; /**< triggered when we cannot find a session with this send.ssrc when
+	                                                  looking for it while dispatching an incoming packet in a bundle
+	                                                  and no free sessions are found */
+	RtpSignalTable
+	    on_new_outgoing_ssrc_in_bundle; /**< triggered when we cannot find a session with this send.ssrc when looking
+	                                       for it while doing rtp_bundle_lookup_session_for_outgoing_packet */
 	bctbx_list_t *signal_tables;
 	bctbx_list_t *eventqs;
 	RtpStream rtp;
