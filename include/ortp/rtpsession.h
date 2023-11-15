@@ -193,7 +193,6 @@ typedef struct _OrtpNetworkSimulatorCtx {
 	int drop_by_congestion;
 	int drop_by_loss;
 	int total_count; /*total number of packets gone through the simulator*/
-	ortp_mutex_t mutex;
 	ortp_thread_t thread;
 	bool_t in_jitter_event;
 	bool_t thread_started;

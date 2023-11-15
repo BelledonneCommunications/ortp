@@ -1266,8 +1266,9 @@ int _ortp_sendto(
 
 int rtp_session_sendto(
     RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
-	int ret;
+	int ret = 0;
 	OrtpStream *ostr = is_rtp ? &session->rtp.gs : &session->rtcp.gs;
+	int using_simulator = FALSE;
 	_rtp_session_check_socket_refresh(session);
 
 	/*
@@ -1277,17 +1278,23 @@ int rtp_session_sendto(
 	if (m->recv_addr.family == AF_UNSPEC && ostr->used_loc_addrlen != 0)
 		ortp_sockaddr_to_recvaddr((const struct sockaddr *)&ostr->used_loc_addr, &m->recv_addr);
 
-	if (session->net_sim_ctx && (session->net_sim_ctx->params.mode == OrtpNetworkSimulatorOutbound ||
-	                             session->net_sim_ctx->params.mode == OrtpNetworkSimulatorOutboundControlled)) {
-		ret = (int)msgdsize(m);
-		m = dupmsg(m);
-		memcpy(&m->net_addr, destaddr, destlen);
-		m->net_addrlen = destlen;
-		m->reserved1 = is_rtp;
-		ortp_mutex_lock(&session->net_sim_ctx->mutex);
-		putq(&session->net_sim_ctx->send_q, m);
-		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
-	} else {
+	if (session->net_sim_ctx) {
+		ortp_mutex_lock(&session->main_mutex);
+		if (session->net_sim_ctx && (session->net_sim_ctx->params.mode == OrtpNetworkSimulatorOutbound ||
+		                             session->net_sim_ctx->params.mode == OrtpNetworkSimulatorOutboundControlled)) {
+			ortp_mutex_unlock(&session->main_mutex);
+			ret = (int)msgdsize(m);
+			m = dupmsg(m);
+			memcpy(&m->net_addr, destaddr, destlen);
+			m->net_addrlen = destlen;
+			m->reserved1 = is_rtp;
+			using_simulator = TRUE;
+			ortp_mutex_lock(&session->main_mutex);
+			putq(&session->net_sim_ctx->send_q, m);
+		}
+		ortp_mutex_unlock(&session->main_mutex);
+	}
+	if (!using_simulator) {
 		ortp_socket_t sockfd = rtp_session_get_socket(session, is_rtp || session->rtcp_mux);
 		if (sockfd != (ortp_socket_t)-1) {
 			ret = _ortp_sendto(sockfd, m, flags, destaddr, destlen);
@@ -1466,12 +1473,14 @@ int rtp_session_rtp_send(RtpSession *session, mblk_t *m) {
 	/*first send to main destination*/
 	error = rtp_session_rtp_sendto(session, m, destaddr, destlen, FALSE);
 	/*then iterate over auxiliary destinations*/
-	ortp_mutex_lock(&session->main_mutex);
-	for (elem = session->rtp.gs.aux_destinations; elem != NULL; elem = elem->next) {
-		OrtpAddress *addr = (OrtpAddress *)elem->data;
-		rtp_session_rtp_sendto(session, m, (struct sockaddr *)&addr->addr, addr->len, TRUE);
+	if (session->rtp.gs.aux_destinations) {
+		ortp_mutex_lock(&session->main_mutex);
+		for (elem = session->rtp.gs.aux_destinations; elem != NULL; elem = elem->next) {
+			OrtpAddress *addr = (OrtpAddress *)elem->data;
+			rtp_session_rtp_sendto(session, m, (struct sockaddr *)&addr->addr, addr->len, TRUE);
+		}
+		ortp_mutex_unlock(&session->main_mutex);
 	}
-	ortp_mutex_unlock(&session->main_mutex);
 	freemsg(m);
 	return error;
 }
@@ -1914,14 +1923,16 @@ static void rtp_process_incoming_packet(
 
 void rtp_session_process_incoming(
     RtpSession *session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts, bool_t received_via_rtcp_mux) {
-	if (session->net_sim_ctx && session->net_sim_ctx->params.mode == OrtpNetworkSimulatorInbound) {
-		/*drain possible packets queued in the network simulator*/
-		mp = rtp_session_network_simulate(session, mp, &is_rtp_packet);
-		if (mp)
-			rtp_process_incoming_packet(
-			    session, mp, is_rtp_packet, ts,
-			    received_via_rtcp_mux); /*BUG here: received_via_rtcp_mux is not preserved by network simulator*/
-	} else if (mp != NULL) {
+	if (session->net_sim_ctx) {
+		ortp_mutex_lock(&session->main_mutex);
+		if (session->net_sim_ctx && session->net_sim_ctx->params.mode == OrtpNetworkSimulatorInbound) {
+			/*drain possible packets queued in the network simulator*/
+			mp = rtp_session_network_simulate(session, mp, &is_rtp_packet);
+		}
+		ortp_mutex_unlock(&session->main_mutex);
+	}
+	if (mp != NULL) {
+		/*BUG here: received_via_rtcp_mux is not preserved by network simulator*/
 		rtp_process_incoming_packet(session, mp, is_rtp_packet, ts, received_via_rtcp_mux);
 	}
 }

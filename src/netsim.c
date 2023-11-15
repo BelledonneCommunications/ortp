@@ -33,7 +33,6 @@ static OrtpNetworkSimulatorCtx *simulator_ctx_new(void) {
 	qinit(&ctx->latency_q);
 	qinit(&ctx->q);
 	qinit(&ctx->send_q);
-	ortp_mutex_init(&ctx->mutex, NULL);
 	return ctx;
 }
 
@@ -50,16 +49,22 @@ static void ortp_network_simulator_dump_stats(OrtpNetworkSimulatorCtx *sim) {
 		             drop_by_flush * 100.f / sim->total_count);
 	}
 }
-void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim) {
-	ortp_network_simulator_dump_stats(sim);
-	flushq(&sim->latency_q, 0);
-	flushq(&sim->q, 0);
-	flushq(&sim->send_q, 0);
+
+void ortp_network_simulator_stop_thread(OrtpNetworkSimulatorCtx *sim) {
 	if (sim->thread_started) {
 		sim->thread_started = FALSE;
 		ortp_thread_join(sim->thread, NULL);
 	}
-	ortp_mutex_destroy(&sim->mutex);
+}
+
+void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim) {
+	ortp_network_simulator_dump_stats(sim);
+	if (sim->thread_started) {
+		ortp_network_simulator_stop_thread(sim);
+	}
+	flushq(&sim->latency_q, 0);
+	flushq(&sim->q, 0);
+	flushq(&sim->send_q, 0);
 	ortp_free(sim);
 }
 
@@ -190,7 +195,14 @@ void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetwor
 		             params->max_buffer_size, params->jitter_burst_density, params->jitter_strength,
 		             ortp_network_simulator_mode_to_string(params->mode));
 	} else {
-		session->net_sim_ctx = NULL;
+		if (sim) {
+			/* stop thread first: it is using the main_mutex internally and we don't want a deadlock with
+			 * pthread_join(). */
+			ortp_network_simulator_stop_thread(sim);
+		}
+		ortp_mutex_lock(&session->main_mutex);
+		session->net_sim_ctx = NULL; /* RtpSession can no longer use it from now on */
+		ortp_mutex_unlock(&session->main_mutex);
 		ortp_message("rtp_session_enable_network_simulation:DISABLING NETWORK SIMULATION");
 		if (sim != NULL) ortp_network_simulator_destroy(sim);
 	}
@@ -427,10 +439,10 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 	if (session->net_sim_ctx->params.mode == OrtpNetworkSimulatorOutbound) {
 		sleep_until->tv_sec = 0;
 		sleep_until->tv_nsec = 0;
-		ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		ortp_mutex_lock(&session->main_mutex);
 		while ((om = getq(&session->net_sim_ctx->send_q)) != NULL) {
 			count++;
-			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+			ortp_mutex_unlock(&session->main_mutex);
 			is_rtp_packet = om->reserved1; /*it was set by rtp_session_sendto()*/
 			om = rtp_session_network_simulate(session, om, &is_rtp_packet);
 			if (om) {
@@ -438,9 +450,9 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 				             om->net_addrlen);
 				freemsg(om);
 			}
-			ortp_mutex_lock(&session->net_sim_ctx->mutex);
+			ortp_mutex_lock(&session->main_mutex);
 		}
-		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+		ortp_mutex_unlock(&session->main_mutex);
 		if (count == 0) {
 			/*even if no packets were queued, we have to schedule the simulator*/
 			is_rtp_packet = TRUE;
@@ -456,10 +468,10 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 		ortpTimeSpec packet_time;
 		mblk_t *todrop = NULL;
 
-		ortp_mutex_lock(&session->net_sim_ctx->mutex);
+		ortp_mutex_lock(&session->main_mutex);
 		while ((om = rtp_session_netsim_find_next_packet_to_send(session)) != NULL) {
 			is_rtp_packet = om->reserved1; /*it was set by rtp_session_sendto()*/
-			ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+			ortp_mutex_unlock(&session->main_mutex);
 			if (todrop) {
 				freemsg(todrop); /*free the last message while the mutex is not held*/
 				todrop = NULL;
@@ -479,13 +491,13 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 			} else {
 				/*no packet is to be sent yet; set the time at which we want to be called*/
 				*sleep_until = packet_time;
-				ortp_mutex_lock(&session->net_sim_ctx->mutex);
+				ortp_mutex_lock(&session->main_mutex);
 				break;
 			}
-			ortp_mutex_lock(&session->net_sim_ctx->mutex);
+			ortp_mutex_lock(&session->main_mutex);
 			if (todrop) remq(&session->net_sim_ctx->send_q, todrop); /* remove the message while the mutex is held*/
 		}
-		ortp_mutex_unlock(&session->net_sim_ctx->mutex);
+		ortp_mutex_unlock(&session->main_mutex);
 		if (todrop) freemsg(todrop);
 		if (sleep_until->tv_sec == 0) {
 			bctbx_get_utc_cur_time(&current);

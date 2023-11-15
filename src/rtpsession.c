@@ -1898,9 +1898,12 @@ void rtp_session_uninit(RtpSession *session) {
 
 	/* Stop and destroy network simulator first, as its thread must be stopped before we free anything else in the
 	 * RtpSession. */
-	if (session->net_sim_ctx) ortp_network_simulator_destroy(session->net_sim_ctx);
+	if (session->net_sim_ctx) {
+		ortp_network_simulator_stop_thread(session->net_sim_ctx);
+		ortp_network_simulator_destroy(session->net_sim_ctx);
+	}
 
-		/* If rtp async thread is running stop it and wait fot it to finish */
+	/* If rtp async thread is running stop it and wait fot it to finish */
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	if (session->rtp.is_win_thread_running) {
 		session->rtp.is_win_thread_running = FALSE;

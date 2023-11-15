@@ -69,6 +69,7 @@ void rtp_session_run_rtcp_send_scheduler(RtpSession *session);
 void update_avg_rtcp_size(RtpSession *session, int bytes);
 
 mblk_t *rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t *is_rtp_packet);
+void ortp_network_simulator_stop_thread(OrtpNetworkSimulatorCtx *sim);
 void ortp_network_simulator_destroy(OrtpNetworkSimulatorCtx *sim);
 
 void rtcp_common_header_init(rtcp_common_header_t *ch, RtpSession *s, int type, int rc, size_t bytes_len);
