@@ -189,6 +189,13 @@ ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 ORTP_PUBLIC void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen);
 ORTP_PUBLIC void ortp_sockaddr_to_recvaddr(const struct sockaddr *addr, ortp_recv_addr_t *recvaddr);
 
+/* API to store retrieve a sequence number in the packet
+ * it is used by double encryption to store the original seqnum in the paquet
+ * as we need it to decrypt
+ * The information is stored in reserved1 which is also used by netsim but later
+ * reserved1 is "locked" by the seqnum from */
+#define ortp_mblk_set_original_seqnum(m, seqnum) (m)->reserved1 = (seqnum)
+#define ortp_mblk_get_original_seqnum(m) ((m)->reserved1)
 #ifdef __cplusplus
 }
 #endif

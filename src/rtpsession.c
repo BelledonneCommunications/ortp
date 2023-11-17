@@ -1016,7 +1016,7 @@ mblk_t *rtp_create_packet(const uint8_t *packet, size_t packet_size) {
  *
  * @return a packet in a message block structure holding the given buffer
  */
-ORTP_PUBLIC mblk_t *rtp_package_packet(uint8_t *packet, size_t packet_size, void (*freefn)(void *)) {
+mblk_t *rtp_package_packet(uint8_t *packet, size_t packet_size, void (*freefn)(void *)) {
 	/* create a mblk_t around the user supplied payload buffer */
 	mblk_t *mp = esballoc(packet, packet_size, BPRI_MED, freefn);
 	mp->b_wptr += packet_size;
@@ -1241,7 +1241,8 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 }
 /******************* end of DEPRECATED packet creations functions *****************************/
 
-ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts) {
+static int __rtp_session_sendm_with_ts_2(
+    RtpSession *session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts, bool_t transfer_set_mid) {
 	rtp_header_t *rtp;
 	uint32_t packet_time;
 	int error = 0;
@@ -1296,28 +1297,35 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 			/*add the mid from the bundle if any*/
 			if (session->bundle) {
 				RtpSession *bundle_session = NULL;
-				const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
+				if (transfer_set_mid == TRUE) {
+					const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
-				if (mid != NULL) {
-					int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-					rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-					rtp = (rtp_header_t *)
-					          mp->b_rptr; // rtp_add_extension might pullup the message so reset the pointer to header
+					if (mid != NULL) {
+						/* ensure the paquet MID is matching the bundle one */
+						int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+						rtp_add_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid),
+						                         (uint8_t *)mid);
+						rtp =
+						    (rtp_header_t *)
+						        mp->b_rptr; // rtp_add_extension might pullup the message so reset the pointer to header
+					}
 				}
 
 				/* in transfer mode, if we are part of a bundle, check this is the correct session to send this packet
 				 */
 				bundle_session = rtp_bundle_lookup_session_for_outgoing_packet(session->bundle, mp);
 				if (bundle_session != NULL && bundle_session != session) {
-					return __rtp_session_sendm_with_ts(bundle_session, mp, packet_ts, send_ts);
+					/* recursive call but skip the part where we set the mid extension in the packet */
+					return __rtp_session_sendm_with_ts_2(bundle_session, mp, packet_ts, send_ts, FALSE);
 				}
 			}
 		}
 
-		/* When in transfer mode, set the actual seq_number to use in the session but leave the packet untouched
-		 * SRTP modifier will manage the sequence number: fetch the session one and save the original one in the
-		 * SRTP OHB */
+		/* When in transfer mode, force the actual seq number to the session one, as we must ensure sequence number
+		 * continuity But the original one may be needed by SRTP double encryption mode, so save it in the packet */
 		if (session->transfer_mode) {
+			ortp_mblk_set_original_seqnum(mp, rtp_header_get_seqnumber(rtp));
+			rtp_header_set_seqnumber(rtp, session->rtp.snd_seq);
 			session->rtp.snd_seq++;
 		} else {
 			if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)) {
@@ -1360,6 +1368,10 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 	if (session->mode == RTP_SESSION_SENDONLY) rtp_session_rtcp_recv(session);
 
 	return error;
+}
+
+static int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts) {
+	return __rtp_session_sendm_with_ts_2(session, mp, packet_ts, send_ts, TRUE);
 }
 
 /**
