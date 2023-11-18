@@ -227,6 +227,9 @@ static ortp_socket_t create_and_bind(const char *addr,
 	}
 
 	for (res = res0; res; res = res->ai_next) {
+		bool_t isMulticast = bctbx_is_multicast_addr(res->ai_addr);
+		struct addrinfo *any = NULL;
+
 		sock = socket(res->ai_family, res->ai_socktype, 0);
 		if (sock == -1) {
 			ortp_error("Cannot create a socket with family=[%i] and socktype=[%i]: %s", res->ai_family,
@@ -292,17 +295,25 @@ static ortp_socket_t create_and_bind(const char *addr,
 		if (err < 0) {
 			ortp_warning("Fail to set recv TTL/HL socket option: %s.", getSocketError());
 		}
-
+		if (isMulticast) {
+			/* Multicast membership must be claimed before bind(), otherwise we take the risk of
+			 * getting our bind() rejected because the local unicast port is already used.
+			 * In this case we should not bind() to the multicast address itself, but to a local address.
+			 * Use ::0 or 0.0.0.0.
+			 */
+			set_multicast_group(sock, addr);
+			any = bctbx_name_to_addrinfo(res->ai_family, SOCK_DGRAM, res->ai_family == AF_INET6 ? "::0" : "0.0.0.0",
+			                             *port);
+		}
 		*sock_family = res->ai_family;
-		err = bind(sock, res->ai_addr, (int)res->ai_addrlen);
+		err = bind(sock, any ? any->ai_addr : res->ai_addr, any ? (int)any->ai_addrlen : (int)res->ai_addrlen);
+		if (any) bctbx_freeaddrinfo(any);
 		if (err != 0) {
 			ortp_error("Fail to bind rtp/rtcp socket to (addr=%s port=%i) : %s.", addr, *port, getSocketError());
 			close_socket(sock);
 			sock = -1;
 			continue;
 		}
-		/*compatibility mode. New applications should use rtp_session_set_multicast_group() instead*/
-		set_multicast_group(sock, addr);
 		break;
 	}
 

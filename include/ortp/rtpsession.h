@@ -541,6 +541,10 @@ ORTP_PUBLIC void rtp_session_enable_adaptive_jitter_compensation(RtpSession *ses
 ORTP_PUBLIC bool_t rtp_session_adaptive_jitter_compensation_enabled(RtpSession *session);
 
 ORTP_PUBLIC void rtp_session_set_time_jump_limit(RtpSession *session, int miliseconds);
+/*
+ * Join a multicast group.
+ * @deprecated Prefer using rtp_session_set_local_addr() by specifying multicast address and port to listen to.
+ */
 ORTP_PUBLIC int rtp_session_join_multicast_group(RtpSession *session, const char *ip);
 ORTP_PUBLIC int rtp_session_set_local_addr(RtpSession *session, const char *addr, int rtp_port, int rtcp_port);
 ORTP_PUBLIC int rtp_session_get_local_port(const RtpSession *session);
