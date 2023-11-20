@@ -631,11 +631,11 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession *session, unsigned i
  *								the callback function are previous and new states.
  *	"new_incoming_ssrc_found_in_bundle": a new SSRC is detected in the bundle dispatch and no sessions are free to
  *attach it. Arguments are:
- *					- a RtpBundle pointer
+ *					- a mblk_t pointer to the incoming packet
  *					- a pointer to an RtpSession pointer so the callback can create a new RtpSession and pass it back.
  *	"new_outgoing_ssrc_found_in_bundle": a new SSRC is detected in the bundle while sending a packet
  *				Arguments are:
- *					- a RtpBundle pointer
+ *					- a mblk_t pointer to the outgoing packet
  *					- a pointer to an RtpSession pointer so the callback can create a new RtpSession and pass it back.
  *	Returns: 0 on success, -EOPNOTSUPP if the signal does not exists, -1 if no more callbacks
  *	can be assigned to the signal type.

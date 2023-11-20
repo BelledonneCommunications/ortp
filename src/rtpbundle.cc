@@ -393,8 +393,7 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 			auto range = sessions.equal_range(it->second.mid);
 			for (auto s = range.first; s != range.second; ++s) {
 				auto session = s->second;
-				if ((isOutgoing && session->snd.ssrc == ssrc) ||
-				    (!isOutgoing && ((session->ssrc_set && session->rcv.ssrc == ssrc) || !session->ssrc_set))) {
+				if (isOutgoing && session->snd.ssrc == ssrc) {
 					if (session->fec_stream) {
 						RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
 						if (rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)) {
@@ -403,38 +402,53 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 					}
 					return session;
 				}
+
+				if (!isOutgoing && session->ssrc_set) {
+					/* This session already has a SSRC assigned, do they match? */
+					if (session->rcv.ssrc == ssrc) {
+						return session;
+					} else { /* check if there is a fec session that could do */
+						if (session->fec_stream) {
+							RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
+							if (rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)) {
+								/* payload type are matching */
+								if (fec_session->ssrc_set && fec_session->rcv.ssrc == ssrc) {
+									/* ssrc are matching */
+									return fec_session;
+								}
+								if (!fec_session->ssrc_set) {
+									ortp_message("Rtp Bundle: assign incoming SSRC %u to FEC session %p with pt %d",
+									             ssrc, fec_session, rtp_get_payload_type(m));
+									/* TODO shall we check the CSRC in the packet to check that this is the correct FEC
+									 * session for the associated RTP session ?*/
+									return fec_session;
+								}
+							}
+						}
+					}
+				}
+
+				/* on incoming packet, we have no session matching this SSRC but there is a blank session */
+				if (!isOutgoing && !session->ssrc_set) {
+					/* Check this blank session knows the payload type of the incoming packet - it shall not be the case
+					 * for a fec pt */
+					RtpProfile *profile = rtp_session_get_recv_profile(session);
+					if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != NULL) {
+						ortp_message("Rtp Bundle: assign incoming SSRC %u to session %p with pt %d", ssrc, session,
+						             rtp_get_payload_type(m));
+						return session;
+					}
+				}
 			}
+			RtpSession *newRtpSession = nullptr;
 			if (isOutgoing) {
-				RtpSession *newRtpSession = nullptr;
-				rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (RtpBundle *)this,
+				rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (void *)m,
 				                       &newRtpSession);
-				// If the callback created a new RTP session, make sure it is uses the SSRC
-				if (newRtpSession != nullptr) {
-					newRtpSession->snd.ssrc = ssrc;
-				}
-				return newRtpSession;
 			} else {
-				RtpSession *newRtpSession = nullptr;
-				rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (RtpBundle *)this,
+				rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m,
 				                       &newRtpSession);
-				// If the callback created a new RTP session, make sure it is associated on reception to the current
-				// ssrc
-				if (newRtpSession != nullptr) {
-					newRtpSession->ssrc_set = TRUE;
-					newRtpSession->rcv.ssrc = ssrc;
-				}
-				return newRtpSession;
 			}
-			/*
-			            auto session = sessions.at(it->second.mid);
-			            if (session->fec_stream) {
-			                RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
-			                if (rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)) {
-			                    return fec_session;
-			                }
-			            }
-			            return session;
-			*/
+			return newRtpSession;
 		} catch (std::out_of_range &) {
 			ortp_warning("Rtp Bundle [%p]: Unable to find session with mid %s (SSRC %u)", this, it->second.mid.c_str(),
 			             ssrc);
