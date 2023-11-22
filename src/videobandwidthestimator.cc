@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <vector>
 
 #define MIN_DIFFTIME 0.00001f
 
@@ -55,6 +56,13 @@ struct VBEMeasurementGreater {
 	}
 };
 
+/*
+ * The VideoBandwidthEstimator processes video packets, and computes the time that was required to receive a full frame,
+ * comprised of multiple RTP packets. This measurement is stored in container, that grows with the number of frames
+ * received. Every mMinInterval seconds, it outputs an estimation by sorting the container and getting the value for
+ * which mTrustPercetage of available measurements are above this value; so that we have high degree of confidence that
+ * the real network bandwidth is near but above the estimated value.
+ */
 class VideoBandwidthEstimator {
 public:
 	VideoBandwidthEstimator(RtpSession *session) : mSession(session) {
@@ -78,6 +86,7 @@ public:
 	}
 	void setMinMeasurements(unsigned int count) {
 		mMinMeasurements = (size_t)count;
+		mMaxMeasurements = mMinMeasurements * 3;
 	}
 	unsigned int getMinMeasurements() const {
 		return (unsigned int)mMinMeasurements;
@@ -96,28 +105,31 @@ private:
 	void processMeasurement();
 	void endMeasurement();
 	bool periodElapsed(const struct timeval &now) {
-		float duration =
-		    (now.tv_sec - mAquisitionBegin.tv_sec) + ((float)(now.tv_usec - mAquisitionBegin.tv_usec)) / 1000000.0f;
+		float duration = (now.tv_sec - mLastEstimationTime.tv_sec) +
+		                 ((float)(now.tv_usec - mLastEstimationTime.tv_usec)) / 1000000.0f;
 		return duration >= (float)mMinInterval;
 	}
 	RtpSession *mSession = nullptr;
 	unsigned int mPacketCountMin = 5;
 	unsigned int mTrustPercetage = 90;
 	size_t mMinMeasurements = 50;
+	size_t mMaxMeasurements = 150;
 	int mMinInterval = 5; // in seconds
-	struct timeval mAquisitionBegin;
+	struct timeval mLastEstimationTime {};
 	VBEInProgressMeasurement mCurrentMeasurement;
 	std::deque<VBEMeasurement> mMeasurements;
 };
 
 float VideoBandwidthEstimator::makeAvailableBandwidthEstimate() {
 	size_t index = (mTrustPercetage * mMeasurements.size()) / 100;
-	std::sort(mMeasurements.begin(), mMeasurements.end(), VBEMeasurementGreater());
-	float estimate = mMeasurements[index].mBitrate;
+	std::vector<VBEMeasurement> sortedMeasurements(mMeasurements.size());
+
+	std::partial_sort_copy(mMeasurements.begin(), mMeasurements.end(), sortedMeasurements.begin(),
+	                       sortedMeasurements.end(), VBEMeasurementGreater());
+	float estimate = sortedMeasurements[index].mBitrate;
 	ortp_message("[VBE]: front: %f  back: %f, index: %i, size: %i, new estimate: %f bit/s",
-	             mMeasurements.front().mBitrate, mMeasurements.back().mBitrate, (int)index, (int)mMeasurements.size(),
-	             estimate);
-	mMeasurements.clear();
+	             sortedMeasurements.front().mBitrate, sortedMeasurements.back().mBitrate, (int)index,
+	             (int)sortedMeasurements.size(), estimate);
 	return estimate;
 }
 
@@ -126,19 +138,26 @@ void VideoBandwidthEstimator::processMeasurement() {
 	                 1e-6f * (mCurrentMeasurement.mLastTimestamp.tv_usec - mCurrentMeasurement.mFirstTimestamp.tv_usec);
 
 	if (difftime > MIN_DIFFTIME) {
-		if (mMeasurements.empty()) {
-			mAquisitionBegin = mCurrentMeasurement.mLastTimestamp;
+		if (mLastEstimationTime.tv_sec == 0) {
+			mLastEstimationTime = mCurrentMeasurement.mLastTimestamp;
 		}
 
 		float bitrate = (mCurrentMeasurement.mBytes * 8 / difftime);
 		mMeasurements.emplace_front(VBEMeasurement{bitrate});
 
+		if (mMeasurements.size() > mMaxMeasurements) {
+			/* remove the oldest measurement */
+			mMeasurements.pop_back();
+		}
+
 		// ortp_message("VBE: added measure of %f bit/s", bitrate);
 
-		/* if the observed volume of data exceeds our threshold, make an estimate */
+		/* when interval expires, and provided that we have at least mMinMeasurements, make an estimate*/
 		if (mMeasurements.size() > mMinMeasurements && periodElapsed(mCurrentMeasurement.mLastTimestamp)) {
 			OrtpEvent *ev = ortp_event_new(ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE);
 			OrtpEventData *ed = ortp_event_get_data(ev);
+
+			mLastEstimationTime = mCurrentMeasurement.mLastTimestamp;
 			ed->info.video_bandwidth_available = makeAvailableBandwidthEstimate();
 			ortp_debug(
 			    "[VBE] Dispatching event ORTP_EVENT_NEW_VIDEO_BANDWIDTH_ESTIMATION_AVAILABLE with value %f kbits/s",
