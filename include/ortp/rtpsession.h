@@ -302,6 +302,8 @@ typedef struct _OrtpStream {
 	int loc_port;
 	socklen_t rem_addrlen;
 	struct sockaddr_storage rem_addr;
+	socklen_t rem_addr_previously_set_len;
+	struct sockaddr_storage rem_addr_previously_set;
 	socklen_t loc_addrlen;
 	struct sockaddr_storage loc_addr;
 	socklen_t used_loc_addrlen;
@@ -316,6 +318,7 @@ typedef struct _OrtpStream {
 	bctbx_list_t *aux_destinations; /*list of OrtpAddress */
 	queue_t bundleq;                /* For bundle mode */
 	ortp_mutex_t bundleq_lock;
+	bool_t remote_address_adaptation;
 } OrtpStream;
 
 typedef struct _RtpStream {

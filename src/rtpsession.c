@@ -317,6 +317,11 @@ void rtp_session_init(RtpSession *session, int mode) {
 	session->bundle = NULL;
 	session->is_primary = FALSE;
 	session->transfer_mode = FALSE;
+
+	session->rtp.gs.remote_address_adaptation = TRUE;
+	session->rtcp.gs.remote_address_adaptation = TRUE;
+	session->rtp.gs.rem_addr_previously_set_len = 0;
+	session->rtcp.gs.rem_addr_previously_set_len = 0;
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled) {

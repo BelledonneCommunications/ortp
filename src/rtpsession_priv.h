@@ -109,7 +109,7 @@ void rtp_session_do_splice(RtpSession *session, mblk_t *packet, bool_t is_rtp);
  *
  */
 
-int rtp_session_update_remote_sock_addr(RtpSession *session, mblk_t *mp, bool_t is_rtp, bool_t only_at_start);
+int rtp_session_update_remote_sock_addr(RtpSession *session, mblk_t *mp, bool_t is_rtp);
 
 void rtp_session_process_incoming(
     RtpSession *session, mblk_t *mp, bool_t is_rtp_packet, uint32_t ts, bool_t received_via_rtcp_mux);

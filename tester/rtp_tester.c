@@ -23,7 +23,6 @@
 
 static int tester_before_all(void) {
 	ortp_init();
-	ortp_scheduler_init();
 
 	return 0;
 }
@@ -56,8 +55,6 @@ static void send_packets_through_tranfer_session(void) {
 	// Create the default session
 	session = rtp_session_new(RTP_SESSION_SENDRECV);
 
-	rtp_session_set_scheduling_mode(session, 1);
-	rtp_session_set_blocking_mode(session, 1);
 	rtp_session_set_connected_mode(session, TRUE);
 	rtp_session_set_local_addr(session, "127.0.0.1", -1, -1);
 	rtp_session_set_payload_type(session, 0);
@@ -66,8 +63,6 @@ static void send_packets_through_tranfer_session(void) {
 	// Create the session that will be used to transfer the packets
 	transfer_session = rtp_session_new(RTP_SESSION_SENDRECV);
 
-	rtp_session_set_scheduling_mode(transfer_session, 1);
-	rtp_session_set_blocking_mode(transfer_session, 1);
 	rtp_session_set_connected_mode(transfer_session, TRUE);
 	rtp_session_set_local_addr(transfer_session, "127.0.0.1", -1, -1);
 	rtp_session_enable_transfer_mode(transfer_session, TRUE);
@@ -85,6 +80,7 @@ static void send_packets_through_tranfer_session(void) {
 		mblk_t *transfered_packet;
 		mblk_t *received_packet;
 		int size = 0;
+		int cpt = 0;
 
 		// Send a packet through the "normal" session and retrieve it with the transfer session
 		mblk_t *sent_packet = rtp_session_create_packet_header(
@@ -95,8 +91,11 @@ static void send_packets_through_tranfer_session(void) {
 
 		size = rtp_session_sendm_with_ts(session, copymsg(sent_packet), user_ts);
 		BC_ASSERT_GREATER(size, 0, int, "%d");
-
-		transfered_packet = rtp_session_recvm_with_ts(transfer_session, user_ts);
+		do {
+			bctbx_sleep_ms(1);
+			transfered_packet = rtp_session_recvm_with_ts(transfer_session, user_ts);
+			cpt++;
+		} while (transfered_packet == NULL && cpt < 10);
 		if (!BC_ASSERT_PTR_NOT_NULL(transfered_packet)) {
 			error = TRUE;
 		} else {
@@ -121,8 +120,12 @@ static void send_packets_through_tranfer_session(void) {
 			// Send it again via the transfer session and retrieve it with the "normal" session
 			size = rtp_session_sendm_with_ts(transfer_session, copymsg(transfered_packet), user_ts);
 			BC_ASSERT_GREATER(size, 0, int, "%d");
-
-			received_packet = rtp_session_recvm_with_ts(session, user_ts);
+			cpt = 0;
+			do {
+				bctbx_sleep_ms(1);
+				received_packet = rtp_session_recvm_with_ts(session, user_ts);
+				cpt++;
+			} while (transfered_packet == NULL && cpt < 10);
 			if (!BC_ASSERT_PTR_NOT_NULL(received_packet)) {
 				error = TRUE;
 			} else {
@@ -149,7 +152,176 @@ static void send_packets_through_tranfer_session(void) {
 	rtp_session_destroy(transfer_session);
 }
 
-static test_t tests[] = {TEST_NO_TAG("Send packets through a transfer session", send_packets_through_tranfer_session)};
+static void change_remote_address(void) {
+	RtpSession *conference;
+	RtpSession *flore;
+	mblk_t *received_packet;
+	mblk_t *sent_packet;
+	int size = 0, cpt = 0;
+	int rtp_port, rtcp_port;
+	unsigned char *buffer = ortp_malloc0(160 * sizeof(unsigned char));
+	uint32_t user_ts = 0;
+	size_t len = 160;
+
+	// Create the conference's session
+	conference = rtp_session_new(RTP_SESSION_SENDRECV);
+
+	rtp_session_set_local_addr(conference, "127.0.0.1", -1, -1);
+	rtp_session_set_payload_type(conference, 0);
+	rtp_session_enable_jitter_buffer(conference, FALSE);
+	rtp_session_set_symmetric_rtp(conference, TRUE);
+
+	// Create the flore's session
+	flore = rtp_session_new(RTP_SESSION_SENDRECV);
+
+	rtp_session_set_local_addr(flore, "127.0.0.1", -1, -1);
+	rtp_session_set_payload_type(flore, 0);
+	rtp_session_enable_jitter_buffer(flore, FALSE);
+	rtp_session_set_symmetric_rtp(flore, TRUE);
+
+	// Connect the two sessions
+	rtp_port = rtp_session_get_local_port(conference);
+	rtcp_port = rtp_session_get_local_rtcp_port(conference);
+	rtp_session_set_remote_addr_full(flore, "127.0.0.1", rtp_port, "127.0.0.1", rtcp_port);
+
+	rtp_session_set_remote_addr_full(conference, "127.0.0.1", 1, "127.0.0.1", 1);
+
+	// The conference sends a packet to a bad address
+	sent_packet = rtp_session_create_packet_header(conference, len);
+	memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+	sent_packet->b_wptr += len;
+
+	size = rtp_session_sendm_with_ts(conference, copymsg(sent_packet), user_ts);
+	BC_ASSERT_GREATER(size, 0, int, "%d");
+
+	for (cpt = 0, received_packet = NULL; received_packet == NULL && cpt < 10; cpt++) {
+		bctbx_sleep_ms(1);
+		received_packet = rtp_session_recvm_with_ts(flore, user_ts);
+	}
+	BC_ASSERT_PTR_NULL(received_packet);
+
+	freemsg(received_packet);
+	freemsg(sent_packet);
+
+	user_ts += 160;
+
+	// Flore sends a packet to the conference
+	sent_packet = rtp_session_create_packet_header(flore, len);
+	memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+	sent_packet->b_wptr += len;
+
+	size = rtp_session_sendm_with_ts(flore, copymsg(sent_packet), user_ts);
+	BC_ASSERT_GREATER(size, 0, int, "%d");
+
+	for (cpt = 0, received_packet = NULL; received_packet == NULL && cpt < 10; cpt++) {
+		bctbx_sleep_ms(1);
+		received_packet = rtp_session_recvm_with_ts(conference, user_ts);
+	}
+	BC_ASSERT_PTR_NOT_NULL(received_packet);
+
+	freemsg(received_packet);
+	freemsg(sent_packet);
+
+	user_ts += 160;
+
+	// The conference sends a packet to the adapted address of Flore
+	sent_packet = rtp_session_create_packet_header(conference, len);
+	memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+	sent_packet->b_wptr += len;
+
+	size = rtp_session_sendm_with_ts(conference, copymsg(sent_packet), user_ts);
+	BC_ASSERT_GREATER(size, 0, int, "%d");
+
+	for (cpt = 0, received_packet = NULL; received_packet == NULL && cpt < 10; cpt++) {
+		bctbx_sleep_ms(1);
+		received_packet = rtp_session_recvm_with_ts(flore, user_ts);
+	}
+	BC_ASSERT_PTR_NOT_NULL(received_packet);
+
+	freemsg(received_packet);
+	freemsg(sent_packet);
+
+	user_ts += 160;
+
+	// Flore sends a RE-INVITE with the same bad address like at the beginning
+	rtp_session_set_remote_addr_full(conference, "127.0.0.1", 1, "127.0.0.1", 1);
+
+	// The conference sends a packet to the adapted address of Flore
+	sent_packet = rtp_session_create_packet_header(conference, len);
+	memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+	sent_packet->b_wptr += len;
+
+	size = rtp_session_sendm_with_ts(conference, copymsg(sent_packet), user_ts);
+	BC_ASSERT_GREATER(size, 0, int, "%d");
+
+	for (cpt = 0, received_packet = NULL; received_packet == NULL && cpt < 10; cpt++) {
+		bctbx_sleep_ms(1);
+		received_packet = rtp_session_recvm_with_ts(flore, user_ts);
+	}
+	BC_ASSERT_PTR_NOT_NULL(received_packet);
+
+	freemsg(received_packet);
+	freemsg(sent_packet);
+
+	user_ts += 160;
+
+	for (int i = 0; i < 2; i++) {
+		// Flore address change
+		rtp_session_set_local_addr(flore, "127.0.0.1", -1, -1);
+		rtp_port = rtp_session_get_local_port(conference);
+		rtcp_port = rtp_session_get_local_rtcp_port(conference);
+		rtp_session_set_remote_addr_full(flore, "127.0.0.1", rtp_port, "127.0.0.1", rtcp_port);
+
+		// Flore sends a packet to the conference with her new address
+		sent_packet = rtp_session_create_packet_header(flore, len);
+		memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+		sent_packet->b_wptr += len;
+
+		size = rtp_session_sendm_with_ts(flore, copymsg(sent_packet), user_ts);
+		BC_ASSERT_GREATER(size, 0, int, "%d");
+
+		for (cpt = 0, received_packet = NULL; received_packet == NULL && cpt < 10; cpt++) {
+			bctbx_sleep_ms(1);
+			received_packet = rtp_session_recvm_with_ts(conference, user_ts);
+		}
+		BC_ASSERT_PTR_NOT_NULL(received_packet);
+
+		freemsg(received_packet);
+		freemsg(sent_packet);
+
+		user_ts += 160;
+
+		// The conference sends a packet to Flore
+		sent_packet = rtp_session_create_packet_header(conference, len);
+		memcpy(sent_packet->b_wptr, (uint8_t *)buffer, len);
+		sent_packet->b_wptr += len;
+
+		size = rtp_session_sendm_with_ts(conference, copymsg(sent_packet), user_ts);
+		BC_ASSERT_GREATER(size, 0, int, "%d");
+
+		for (cpt = 0, received_packet = NULL; received_packet == NULL && cpt < 10; cpt++) {
+			bctbx_sleep_ms(1);
+			received_packet = rtp_session_recvm_with_ts(flore, user_ts);
+		}
+		if (i == 0) {
+			BC_ASSERT_PTR_NOT_NULL(received_packet);
+		} else {
+			BC_ASSERT_PTR_NULL(received_packet);
+		}
+
+		freemsg(received_packet);
+		freemsg(sent_packet);
+
+		user_ts += 160;
+	}
+
+	ortp_free(buffer);
+	rtp_session_destroy(conference);
+	rtp_session_destroy(flore);
+}
+
+static test_t tests[] = {TEST_NO_TAG("Send packets through a transfer session", send_packets_through_tranfer_session),
+                         TEST_NO_TAG("Change remote address", change_remote_address)};
 
 test_suite_t rtp_test_suite = {
     "Rtp",                            // Name of test suite
