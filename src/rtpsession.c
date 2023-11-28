@@ -1322,10 +1322,14 @@ static int __rtp_session_sendm_with_ts_2(
 		}
 
 		/* When in transfer mode, force the actual seq number to the session one, as we must ensure sequence number
-		 * continuity But the original one may be needed by SRTP double encryption mode, so save it in the packet */
+		 * continuity But the original one may be needed by SRTP double encryption mode, so save it in the packet
+		 * Same thing with the payload type: we must use the current session one but save the original one */
 		if (session->transfer_mode) {
 			ortp_mblk_set_original_seqnum(mp, rtp_header_get_seqnumber(rtp));
+			ortp_mblk_set_original_pt(mp, rtp->paytype);
 			rtp_header_set_seqnumber(rtp, session->rtp.snd_seq);
+			rtp_set_payload_type(mp, session->snd.pt);
+
 			session->rtp.snd_seq++;
 		} else {
 			if (rtp_profile_is_telephone_event(session->snd.profile, rtp->paytype)) {
