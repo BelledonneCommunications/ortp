@@ -66,7 +66,6 @@ void ortp_bw_estimator_packet_received(OrtpBwEstimator *obj, size_t bytes, const
 
 	if (obj->last_packet_recv.tv_sec == 0) {
 		diff_time = 1.0f / obj->inv_step;
-		ortp_message("First estimation");
 	} else {
 		diff_time = (float)(recv_time->tv_sec - obj->last_packet_recv.tv_sec) +
 		            1e-6f * (recv_time->tv_usec - obj->last_packet_recv.tv_usec);
