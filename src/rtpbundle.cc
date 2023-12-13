@@ -436,6 +436,8 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 					if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != NULL) {
 						ortp_message("Rtp Bundle: assign incoming SSRC %u to session %p with pt %d", ssrc, session,
 						             rtp_get_payload_type(m));
+						session->ssrc_set = true;
+						session->rcv.ssrc = ssrc;
 						return session;
 					}
 				}
