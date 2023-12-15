@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.0] - 2023-12-18
+
+### Added
+- Bandwidth estimator for audio streams - to get a rough estimate of available bandwidth.
+
+### Changed
+- reworked bandwidth estimator for video streams, to improve performance in case of video codecs that outputs small
+  sequences of packets per frame (H265, AV-1).
+
 ### Removed
 - ortp memory functions (replaced by bctoolbox ones)
 - most of port.c content, that is replaced by bctoolbox

@@ -110,10 +110,10 @@ private:
 		return duration >= (float)mMinInterval;
 	}
 	RtpSession *mSession = nullptr;
-	unsigned int mPacketCountMin = 5;
+	unsigned int mPacketCountMin = 3;
 	unsigned int mTrustPercetage = 90;
-	size_t mMinMeasurements = 50;
-	size_t mMaxMeasurements = 150;
+	size_t mMinMeasurements = 70;
+	size_t mMaxMeasurements = 200;
 	int mMinInterval = 5; // in seconds
 	struct timeval mLastEstimationTime {};
 	VBEInProgressMeasurement mCurrentMeasurement;
