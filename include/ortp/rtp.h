@@ -97,6 +97,8 @@ typedef struct rtp_audio_level {
 	int dbov;
 } rtp_audio_level_t;
 
+#define RTP_AUDIO_LEVEL_NO_VOLUME -255
+
 #define RTP_FRAME_MARKER_START (1 << 7)
 #define RTP_FRAME_MARKER_END (1 << 6)
 #define RTP_FRAME_MARKER_INDEPENDENT (1 << 5)

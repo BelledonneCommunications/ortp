@@ -40,7 +40,8 @@ void rtp_add_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t voice_ac
  * @param packet the RTP packet.
  * @param id the identifier of the client to mixer audio level extension.
  * @param voice_activity set to TRUE if there is voice activity, FALSE otherwise
- * @return the client to mixer audio level in dBov, -1 if there is no extension header or the extension was not found.
+ * @return the client to mixer audio level in dBov, RTP_AUDIO_LEVEL_NO_VOLUME if there is no extension header or the
+ * extension was not found.
  **/
 int rtp_get_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t *voice_activity) {
 	uint8_t *data;
@@ -53,7 +54,7 @@ int rtp_get_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t *voice_ac
 		return (int)(*data & 0x7F) * -1; // Audio level is stored as a 7-bit number expressed in -dBov
 	}
 
-	return -1;
+	return RTP_AUDIO_LEVEL_NO_VOLUME;
 }
 
 static void rtp_add_mixer_to_client_audio_level_base(
