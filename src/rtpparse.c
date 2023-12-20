@@ -191,7 +191,7 @@ void rtp_session_rtp_parse(
 		stunlen = ntohs(stunlen);
 		if (stunlen + 20 == mp->b_wptr - mp->b_rptr) {
 			/* this looks like a stun packet */
-			rtp_session_update_remote_sock_addr(session, mp, TRUE, TRUE);
+			rtp_session_update_remote_sock_addr(session, mp, TRUE);
 			if (session->eventqs != NULL) {
 				OrtpEvent *ev = ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
 				OrtpEventData *ed = ortp_event_get_data(ev);
@@ -250,7 +250,7 @@ void rtp_session_rtp_parse(
 			}
 			if (session->inc_same_ssrc_count >= session->rtp.ssrc_changed_thres) {
 				/* store the sender rtp address to do symmetric RTP */
-				rtp_session_update_remote_sock_addr(session, mp, TRUE, FALSE);
+				rtp_session_update_remote_sock_addr(session, mp, TRUE);
 				session->rtp.rcv_last_ts = timestamp;
 				session->rcv.ssrc = ssrc;
 				rtp_signal_table_emit(&session->on_ssrc_changed);
@@ -266,11 +266,12 @@ void rtp_session_rtp_parse(
 			/* The SSRC change must not happen if we still receive
 			ssrc from the initial source. */
 			session->inc_same_ssrc_count = 0;
+			rtp_session_update_remote_sock_addr(session, mp, TRUE);
 		}
 	} else {
 		session->ssrc_set = TRUE;
 		session->rcv.ssrc = ssrc;
-		rtp_session_update_remote_sock_addr(session, mp, TRUE, FALSE);
+		rtp_session_update_remote_sock_addr(session, mp, TRUE);
 	}
 
 	/* update some statistics */

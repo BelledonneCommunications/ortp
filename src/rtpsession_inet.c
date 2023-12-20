@@ -84,9 +84,7 @@
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG                                                                                               \
 	{                                                                                                                  \
-		0xf689d7c8, 0x6f1f, 0x436b, {                                                                                  \
-			0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22                                                             \
-		}                                                                                                              \
+		0xf689d7c8, 0x6f1f, 0x436b, { 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22 }                                 \
 	}
 #ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
@@ -853,8 +851,12 @@ static int _rtp_session_set_remote_addr_full(
 	struct addrinfo *res0, *res;
 	struct sockaddr_storage *rtp_saddr = &session->rtp.gs.rem_addr;
 	socklen_t *rtp_saddr_len = &session->rtp.gs.rem_addrlen;
+	struct sockaddr_storage *rtp_saddr_prev = &session->rtp.gs.rem_addr_previously_set;
+	socklen_t *rtp_saddr_prev_len = &session->rtp.gs.rem_addr_previously_set_len;
 	struct sockaddr_storage *rtcp_saddr = &session->rtcp.gs.rem_addr;
 	socklen_t *rtcp_saddr_len = &session->rtcp.gs.rem_addrlen;
+	struct sockaddr_storage *rtcp_saddr_prev = &session->rtcp.gs.rem_addr_previously_set;
+	socklen_t *rtcp_saddr_prev_len = &session->rtcp.gs.rem_addr_previously_set_len;
 	OrtpAddress *aux_rtp = NULL, *aux_rtcp = NULL;
 
 	if (is_aux) {
@@ -892,8 +894,22 @@ static int _rtp_session_set_remote_addr_full(
 	for (res = res0; res; res = res->ai_next) {
 		/* set a destination address that has the same type as the local address */
 		if (res->ai_family == session->rtp.gs.sockfamily) {
-			memcpy(rtp_saddr, res->ai_addr, res->ai_addrlen);
-			*rtp_saddr_len = (socklen_t)res->ai_addrlen;
+			if (session->rtp.gs.remote_address_adaptation == FALSE && rtp_session_get_symmetric_rtp(session) &&
+			    memcmp(rtp_saddr_prev, res->ai_addr, res->ai_addrlen) == 0) {
+				session->rtp.gs.remote_address_adaptation = TRUE;
+				ortp_message("RtpSession[%p]: Not changing RTP stream's destination address because it is the same as "
+				             "the one previously set and we are in symmetric RTP mode.",
+				             session);
+			} else {
+				memcpy(rtp_saddr, res->ai_addr, res->ai_addrlen);
+				*rtp_saddr_len = (socklen_t)res->ai_addrlen;
+				if (*rtp_saddr_prev_len == 0) {
+					memcpy(rtp_saddr_prev, res->ai_addr, res->ai_addrlen);
+					*rtp_saddr_prev_len = (socklen_t)res->ai_addrlen;
+				} else {
+					session->rtp.gs.remote_address_adaptation = FALSE;
+				}
+			}
 			err = 0;
 			break;
 		}
@@ -919,9 +935,22 @@ static int _rtp_session_set_remote_addr_full(
 		for (res = res0; res; res = res->ai_next) {
 			/* set a destination address that has the same type as the local address */
 			if (res->ai_family == session->rtcp.gs.sockfamily) {
+				if (session->rtcp.gs.remote_address_adaptation == FALSE && rtp_session_get_symmetric_rtp(session) &&
+				    memcmp(rtcp_saddr_prev, res->ai_addr, res->ai_addrlen) == 0) {
+					session->rtcp.gs.remote_address_adaptation = TRUE;
+					bctbx_freeaddrinfo(res0);
+					goto end;
+				} else {
+					if (*rtcp_saddr_prev_len == 0) {
+						memcpy(rtcp_saddr_prev, res->ai_addr, res->ai_addrlen);
+						*rtcp_saddr_prev_len = (socklen_t)res->ai_addrlen;
+					} else {
+						session->rtcp.gs.remote_address_adaptation = FALSE;
+					}
+					memcpy(rtcp_saddr, res->ai_addr, res->ai_addrlen);
+					*rtcp_saddr_len = (socklen_t)res->ai_addrlen;
+				}
 				err = 0;
-				memcpy(rtcp_saddr, res->ai_addr, res->ai_addrlen);
-				*rtcp_saddr_len = (socklen_t)res->ai_addrlen;
 				break;
 			}
 		}
@@ -1795,7 +1824,7 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 		stunlen = ntohs(stunlen);
 		if (stunlen + 20 == block->b_wptr - block->b_rptr) {
 			/* this looks like a stun packet */
-			rtp_session_update_remote_sock_addr(session, block, FALSE, TRUE);
+			rtp_session_update_remote_sock_addr(session, block, FALSE);
 
 			if (session->eventqs != NULL) {
 				OrtpEvent *ev = ortp_event_new(ORTP_EVENT_STUN_PACKET_RECEIVED);
@@ -1865,7 +1894,7 @@ static int process_rtcp_packet(RtpSession *session, mblk_t *block, struct sockad
 		}
 	} while ((rtcp_packet = rtcp_parser_context_next_packet(&rtcpctx)) != NULL);
 	rtcp_parser_context_uninit(&rtcpctx);
-	rtp_session_update_remote_sock_addr(session, block, FALSE, FALSE);
+	rtp_session_update_remote_sock_addr(session, block, FALSE);
 	return 0;
 }
 
@@ -2224,12 +2253,12 @@ int rtp_session_rtcp_recv(RtpSession *session) {
 	return 0;
 }
 
-int rtp_session_update_remote_sock_addr(RtpSession *session, mblk_t *mp, bool_t is_rtp, bool_t only_at_start) {
+int rtp_session_update_remote_sock_addr(RtpSession *session, mblk_t *mp, bool_t is_rtp) {
 	struct sockaddr_storage *rem_addr = NULL;
 	socklen_t *rem_addrlen;
 	const char *socket_type;
 	bool_t sock_connected;
-	bool_t do_address_change = /*(rtp_get_version(mp) == 2 && */ !only_at_start;
+	bool_t *remote_address_adaptation;
 
 	if (!rtp_session_get_symmetric_rtp(session)) return -1; /*nothing to try if not rtp symetric*/
 
@@ -2240,20 +2269,18 @@ int rtp_session_update_remote_sock_addr(RtpSession *session, mblk_t *mp, bool_t 
 	if (is_rtp) {
 		rem_addr = &session->rtp.gs.rem_addr;
 		rem_addrlen = &session->rtp.gs.rem_addrlen;
+		remote_address_adaptation = &session->rtp.gs.remote_address_adaptation;
 		socket_type = "rtp";
 		sock_connected = session->flags & RTP_SOCKET_CONNECTED;
-		do_address_change = session->rtp.gs.socket != (ortp_socket_t)-1 &&
-		                    (do_address_change || rtp_session_get_stats(session)->packet_recv == 0);
 	} else {
 		rem_addr = &session->rtcp.gs.rem_addr;
 		rem_addrlen = &session->rtcp.gs.rem_addrlen;
-		sock_connected = session->flags & RTCP_SOCKET_CONNECTED;
+		remote_address_adaptation = &session->rtcp.gs.remote_address_adaptation;
 		socket_type = "rtcp";
-		do_address_change = session->rtcp.gs.socket != (ortp_socket_t)-1 &&
-		                    (do_address_change || rtp_session_get_stats(session)->recv_rtcp_packets == 0);
+		sock_connected = session->flags & RTCP_SOCKET_CONNECTED;
 	}
 
-	if (do_address_change && rem_addr && !sock_connected &&
+	if (*remote_address_adaptation == TRUE && rem_addr && !sock_connected &&
 	    !bctbx_is_multicast_addr((const struct sockaddr *)rem_addr) &&
 	    memcmp(rem_addr, &mp->net_addr, mp->net_addrlen) != 0) {
 		char current_ip_address[64] = {0};
@@ -2268,6 +2295,8 @@ int rtp_session_update_remote_sock_addr(RtpSession *session, mblk_t *mp, bool_t 
 
 		memcpy(rem_addr, &mp->net_addr, mp->net_addrlen);
 		*rem_addrlen = mp->net_addrlen;
+
+		*remote_address_adaptation = FALSE;
 #ifdef WIN32
 		if (is_rtp) {
 			/*re-apply dscp settings for the new destination (windows specific).*/
