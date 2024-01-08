@@ -22,7 +22,7 @@
 
 cmake_minimum_required(VERSION 3.22)
 
-project(Ortp VERSION 5.3.0)
+project(Ortp VERSION 5.4.0)
 
 
 set(ORTP_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
