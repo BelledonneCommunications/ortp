@@ -443,12 +443,20 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 				}
 			}
 			RtpSession *newRtpSession = nullptr;
-			if (isOutgoing) {
-				rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (void *)m,
-				                       &newRtpSession);
-			} else {
-				rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m,
-				                       &newRtpSession);
+			if (isRtp) { // Do not create new session for unknown RTCP
+				if (isOutgoing) {
+					ortp_message(
+					    "Rtp Bundle: emit assign on_new_outgoing_ssrc_in_bundle on SSRC %u from session %p with pt %d",
+					    ssrc, getPrimarySession(), rtp_get_payload_type(m));
+					rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (void *)m,
+					                       &newRtpSession);
+				} else {
+					ortp_message("Rtp Bundle: emit assign on_new_incoming_ssrc_in_bundle on SSRC %u from session %p "
+					             "with pt %d isRTP %d",
+					             ssrc, getPrimarySession(), rtp_get_payload_type(m), isRtp);
+					rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m,
+					                       &newRtpSession);
+				}
 			}
 			return newRtpSession;
 		} catch (std::out_of_range &) {
