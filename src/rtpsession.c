@@ -229,13 +229,11 @@ void rtp_session_init(RtpSession *session, int mode) {
 		rtp_session_set_flag(session, RTP_SESSION_RECV_SYNC);
 		rtp_session_set_flag(session, RTP_SESSION_RECV_NOT_STARTED);
 	}
-	if ((mode == RTP_SESSION_SENDONLY) || (mode == RTP_SESSION_SENDRECV)) {
-		rtp_session_set_flag(session, RTP_SESSION_SEND_NOT_STARTED);
-		session->snd.ssrc = bctbx_random();
-		/* set default source description */
-		rtp_session_set_source_description(session, "unknown@unknown", NULL, NULL, NULL, NULL, "oRTP-" ORTP_VERSION,
-		                                   NULL);
-	}
+
+	rtp_session_set_flag(session, RTP_SESSION_SEND_NOT_STARTED);
+	session->snd.ssrc = bctbx_random();
+	/* set default source description */
+	rtp_session_set_source_description(session, "unknown@unknown", NULL, NULL, NULL, NULL, "oRTP-" ORTP_VERSION, NULL);
 	rtp_session_set_profile(session, &av_profile); /*the default profile to work with */
 	session->rtp.gs.socket = -1;
 	session->rtcp.gs.socket = -1;
