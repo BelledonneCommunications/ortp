@@ -434,12 +434,19 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 
 				/* on incoming packet, we have no session matching this SSRC but there is a blank session */
 				if (!isOutgoing && !session->ssrc_set) {
-					/* Check this blank session knows the payload type of the incoming packet - it shall not be the case
-					 * for a fec pt */
-					RtpProfile *profile = rtp_session_get_recv_profile(session);
-					if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != NULL) {
-						ortp_message("Rtp Bundle[%p]: assign incoming SSRC %u to session %p with pt %d", this, ssrc,
-						             session, rtp_get_payload_type(m));
+					if (isRtp) { /* Check this blank session knows the payload type of the incoming packet - it shall
+						          * not be the case for a fec pt */
+						RtpProfile *profile = rtp_session_get_recv_profile(session);
+						if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != NULL) {
+							ortp_message("Rtp Bundle[%p]: assign incoming SSRC %u to session %p with pt %d", this, ssrc,
+							             session, rtp_get_payload_type(m));
+							session->ssrc_set = true;
+							session->rcv.ssrc = ssrc;
+							return session;
+						}
+					} else { // Rtcp packet
+						ortp_message("Rtp Bundle[%p]: assign incoming SSRC %u to session %p on RTCP packet reception",
+						             this, ssrc, session);
 						session->ssrc_set = true;
 						session->rcv.ssrc = ssrc;
 						return session;
