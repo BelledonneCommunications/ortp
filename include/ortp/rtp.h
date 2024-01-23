@@ -161,6 +161,7 @@ ORTP_PUBLIC int rtp_get_extheader(const mblk_t *packet, uint16_t *profile, uint8
 /* Extension header api */
 ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
 ORTP_PUBLIC void rtp_write_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
+ORTP_PUBLIC void rtp_delete_extension_header(mblk_t *packet, int id);
 ORTP_PUBLIC int rtp_get_extension_header(const mblk_t *packet, int id, uint8_t **data);
 
 /* Audio Level api */
@@ -168,9 +169,9 @@ ORTP_PUBLIC void rtp_add_client_to_mixer_audio_level(mblk_t *packet, int id, boo
 ORTP_PUBLIC int rtp_get_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t *voice_activity);
 
 ORTP_PUBLIC void
-rtp_add_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels);
+rtp_add_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, const rtp_audio_level_t *audio_levels);
 ORTP_PUBLIC void
-rtp_write_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels);
+rtp_write_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, const rtp_audio_level_t *audio_levels);
 ORTP_PUBLIC int rtp_get_mixer_to_client_audio_level(mblk_t *packet, int id, rtp_audio_level_t *audio_levels);
 
 /* Frame marking api */

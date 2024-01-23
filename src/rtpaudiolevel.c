@@ -58,7 +58,7 @@ int rtp_get_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t *voice_ac
 }
 
 static void rtp_add_mixer_to_client_audio_level_base(
-    mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels, bool_t allocate_buffer) {
+    mblk_t *packet, int id, size_t size, const rtp_audio_level_t *audio_levels, bool_t allocate_buffer) {
 	uint8_t *data;
 	int i;
 
@@ -95,7 +95,7 @@ static void rtp_add_mixer_to_client_audio_level_base(
  * @param size the size of the audio_levels list.
  * @param audio_levels the list if audio levels to set.
  **/
-void rtp_write_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels) {
+void rtp_write_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, const rtp_audio_level_t *audio_levels) {
 	rtp_add_mixer_to_client_audio_level_base(packet, id, size, audio_levels, FALSE);
 }
 /**
@@ -107,7 +107,7 @@ void rtp_write_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, 
  * @param size the size of the audio_levels list.
  * @param audio_levels the list if audio levels to set.
  **/
-void rtp_add_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, rtp_audio_level_t *audio_levels) {
+void rtp_add_mixer_to_client_audio_level(mblk_t *packet, int id, size_t size, const rtp_audio_level_t *audio_levels) {
 	rtp_add_mixer_to_client_audio_level_base(packet, id, size, audio_levels, TRUE);
 }
 

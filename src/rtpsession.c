@@ -55,7 +55,6 @@
 #endif
 
 static void ortp_stream_init(OrtpStream *os);
-static void rtp_del_extension_header(mblk_t *packet, int id);
 
 /**
  * #_RtpTransport object which can handle multiples security protocols. You can for instance use this object
@@ -1666,7 +1665,7 @@ end:
 		if (session->transfer_mode &&
 		    session->bundle) { /* in transfer mode, we must delete possible bundle header extension */
 			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-			rtp_del_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID);
+			rtp_delete_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID);
 		}
 	} else {
 		ortp_debug("No mp for timestamp queried");
@@ -2420,7 +2419,13 @@ int rtp_get_extheader(const mblk_t *packet, uint16_t *profile, uint8_t **start_e
 	return -1;
 }
 
-static void rtp_del_extension_header(mblk_t *packet, int id) {
+/**
+ * Delete an extension into the extension header.
+ * This function will simply turn the extension into padding.
+ * @param packet the RTP packet.
+ * @param id the identifier of the extension to delete.
+ **/
+void rtp_delete_extension_header(mblk_t *packet, int id) {
 	uint8_t *ext_header, *tmp;
 	uint16_t profile;
 	size_t ext_header_size, size;
@@ -2569,6 +2574,7 @@ static void rtp_add_extension_header_base(mblk_t *packet, int id, size_t size, u
 void rtp_write_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data) {
 	rtp_add_extension_header_base(packet, id, size, data, FALSE);
 }
+
 /**
  * Add an extension to the extension header
  * This function manages the mblk_t memory buffer and extends it if needed
