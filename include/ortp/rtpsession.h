@@ -462,8 +462,6 @@ struct _RtpSession {
 	bool_t permissive;  /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
 	bool_t ssrc_set;
-	bool_t ssrc_out_set; /**< Flag used by dynamic session bundle: when false this session is considered free and the
-	                        send SSRC can be changed */
 
 	bool_t reuseaddr; /*setsockopt SO_REUSEADDR */
 	bool_t rtcp_mux;

@@ -106,7 +106,7 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
 	if (it != sessions.end()) {
-		ortp_error("RtpBundle [%p]: Cannot add session (%p) has it is already in the bundle", this, session);
+		ortp_error("RtpBundle [%p]: Cannot add session (%p) as it is already in the bundle", this, session);
 		return;
 	}
 
@@ -324,6 +324,7 @@ void RtpBundleCxx::checkForSessionSdesCallback(
 RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOutgoing) {
 	const std::lock_guard<std::mutex> guard(ssrcToMidMutex);
 	uint32_t ssrc;
+	std::string mid;
 
 	if (isRtp && rtp_get_version(m) != 2) {
 		/* STUN packet*/
@@ -340,7 +341,7 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 
 			midSize = rtp_get_extension_header(m, midId != -1 ? midId : RTP_EXTENSION_MID, &data);
 			if (midSize != (size_t)-1) {
-				std::string mid = std::string((char *)data, midSize);
+				mid = std::string((char *)data, midSize);
 
 				// Update the mid map with the corresponding session
 				if (!updateMid(mid, ssrc, rtp_get_seqnumber(m), true)) {
@@ -434,48 +435,52 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 
 				/* on incoming packet, we have no session matching this SSRC but there is a blank session */
 				if (!isOutgoing && !session->ssrc_set) {
+					bool assignSsrc = false;
 					if (isRtp) { /* Check this blank session knows the payload type of the incoming packet - it shall
 						          * not be the case for a fec pt */
 						RtpProfile *profile = rtp_session_get_recv_profile(session);
 						if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != NULL) {
 							ortp_message("Rtp Bundle[%p]: assign incoming SSRC %u to session %p with pt %d", this, ssrc,
 							             session, rtp_get_payload_type(m));
-							session->ssrc_set = true;
-							session->rcv.ssrc = ssrc;
-							return session;
+							assignSsrc = true;
 						}
 					} else { // Rtcp packet
 						ortp_message("Rtp Bundle[%p]: assign incoming SSRC %u to session %p on RTCP packet reception",
 						             this, ssrc, session);
-						session->ssrc_set = true;
+						assignSsrc = true;
+					}
+					if (assignSsrc) {
+						session->ssrc_set = TRUE;
 						session->rcv.ssrc = ssrc;
 						return session;
 					}
 				}
-
-				/* on outgoing packet, check if the current session was attributed by the bundle */
-				if (isOutgoing && !session->ssrc_out_set) {
-					ortp_message("Rtp Bundle[%p]: assign outgoing SSRC %u to session %p with pt %d", this, ssrc,
-					             session, rtp_get_payload_type(m));
-					session->ssrc_out_set = true;
-					session->snd.ssrc = ssrc;
-					return session;
-				}
 			}
 			RtpSession *newRtpSession = nullptr;
-			if (isRtp) { // Do not create new session for unknown RTCP
+			if (isRtp && !mid.empty()) { // Do not create new session for unknown RTCP or when mid is unknown
 				if (isOutgoing) {
 					ortp_message(
 					    "Rtp Bundle[%p]: emit on_new_outgoing_ssrc_in_bundle on SSRC %u from session %p with pt %d",
 					    this, ssrc, getPrimarySession(), rtp_get_payload_type(m));
 					rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (void *)m,
 					                       &newRtpSession);
+					if (newRtpSession) {
+						newRtpSession->snd.ssrc = ssrc;
+					}
 				} else {
 					ortp_message(
 					    "Rtp Bundle[%p]: emit on_new_incoming_ssrc_in_bundle on SSRC %u from session %p with pt %d",
 					    this, ssrc, getPrimarySession(), rtp_get_payload_type(m));
 					rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m,
 					                       &newRtpSession);
+					if (newRtpSession) {
+						/* the new session is associated to the incoming SSRC */
+						newRtpSession->ssrc_set = TRUE;
+						newRtpSession->rcv.ssrc = ssrc;
+					}
+				}
+				if (newRtpSession && newRtpSession->bundle == NULL) {
+					addSession(mid, newRtpSession);
 				}
 			}
 			return newRtpSession;
