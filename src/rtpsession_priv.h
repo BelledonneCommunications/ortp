@@ -66,7 +66,7 @@ void rtp_session_rtp_parse(
     RtpSession *session, mblk_t *mp, uint32_t local_str_ts, struct sockaddr *addr, socklen_t addrlen);
 
 void rtp_session_run_rtcp_send_scheduler(RtpSession *session);
-void update_avg_rtcp_size(RtpSession *session, int bytes);
+void rtp_session_update_avg_rtcp_size(RtpSession *session, int bytes);
 
 mblk_t *rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t *is_rtp_packet);
 void ortp_network_simulator_stop_thread(OrtpNetworkSimulatorCtx *sim);

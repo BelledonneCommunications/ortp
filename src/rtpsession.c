@@ -215,7 +215,7 @@ mblk_t *rtp_peekq_permissive(queue_t *q, uint32_t timestamp, int *rejected) {
 	return ret;
 }
 
-void rtp_session_init(RtpSession *session, int mode) {
+void rtp_session_init(RtpSession *session, RtpSessionMode mode) {
 	JBParameters jbp;
 	if (session == NULL) {
 		ortp_debug("rtp_session_init: Invalid paramter (session=NULL)");
@@ -319,6 +319,10 @@ void rtp_session_init(RtpSession *session, int mode) {
 	session->rtcp.gs.rem_addr_previously_set_len = 0;
 }
 
+void rtp_session_set_mode(RtpSession *session, RtpSessionMode mode) {
+	session->mode = mode;
+}
+
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled) {
 	if (enabled) {
 		if (session->rtp.jittctl.params.buffer_algorithm != OrtpJitterBufferRecursiveLeastSquare) {
@@ -396,7 +400,7 @@ void jb_parameters_init(JBParameters *jbp) {
  *
  * @return the newly created rtp session.
  **/
-RtpSession *rtp_session_new(int mode) {
+RtpSession *rtp_session_new(RtpSessionMode mode) {
 	RtpSession *session;
 	session = (RtpSession *)ortp_malloc(sizeof(RtpSession));
 	if (session == NULL) {
@@ -1964,8 +1968,6 @@ void rtp_session_uninit(RtpSession *session) {
 	if (session->current_tev != NULL) freemsg(session->current_tev);
 	ortp_stream_uninit(&session->rtp.gs);
 	ortp_stream_uninit(&session->rtcp.gs);
-	if (session->full_sdes != NULL) freemsg(session->full_sdes);
-	if (session->minimal_sdes != NULL) freemsg(session->minimal_sdes);
 	bctbx_list_free_with_data(session->recv_addr_map, (bctbx_list_free_func)bctbx_free);
 
 	session->signal_tables = o_list_free(session->signal_tables);
@@ -2014,6 +2016,7 @@ void rtp_session_uninit(RtpSession *session) {
 	if (session->recv_block_cache) freemsg(session->recv_block_cache);
 
 	flushq(&session->contributing_sources, 0);
+	rtcp_sdes_items_uninit(&session->sdes_items);
 }
 
 /**

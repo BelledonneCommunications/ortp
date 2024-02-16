@@ -378,6 +378,16 @@ typedef struct _RtcpStream {
 	uint32_t last_rtcp_fb_pli_snt;
 } RtcpStream;
 
+typedef struct _RtcpSdesItems {
+	char *cname;
+	char *name;
+	char *email;
+	char *phone;
+	char *loc;
+	char *tool;
+	char *note;
+} RtcpSdesItems;
+
 typedef struct _RtpSession RtpSession;
 
 /**
@@ -441,8 +451,6 @@ struct _RtpSession {
 	/* telephony events extension */
 	int tev_send_pt;     /*telephone event to be used for sending*/
 	mblk_t *current_tev; /* the pending telephony events */
-	mblk_t *minimal_sdes;
-	mblk_t *full_sdes;
 	queue_t contributing_sources;
 	int lost_packets_test_vector;
 	unsigned int interarrival_jitter_test_vector;
@@ -458,6 +466,7 @@ struct _RtpSession {
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
 	/* fec option */
 	struct _FecStream *fec_stream;
+	RtcpSdesItems sdes_items;
 	bool_t symmetric_rtp;
 	bool_t permissive;  /*use the permissive algorithm*/
 	bool_t use_connect; /* use connect() on the socket */
@@ -509,7 +518,8 @@ ORTP_PUBLIC const char *ortp_network_simulator_mode_to_string(OrtpNetworkSimulat
 ORTP_PUBLIC OrtpNetworkSimulatorMode ortp_network_simulator_mode_from_string(const char *str);
 
 /* public API */
-ORTP_PUBLIC RtpSession *rtp_session_new(int mode);
+ORTP_PUBLIC RtpSession *rtp_session_new(RtpSessionMode mode);
+ORTP_PUBLIC void rtp_session_set_mode(RtpSession *session, RtpSessionMode mode);
 ORTP_PUBLIC void rtp_session_set_scheduling_mode(RtpSession *session, int yesno);
 ORTP_PUBLIC void rtp_session_set_blocking_mode(RtpSession *session, int yesno);
 ORTP_PUBLIC void rtp_session_set_profile(RtpSession *session, RtpProfile *profile);
@@ -864,7 +874,7 @@ ORTP_PUBLIC void rtp_session_enable_transfer_mode(RtpSession *session, bool_t en
 ORTP_PUBLIC bool_t rtp_session_transfer_mode_enabled(RtpSession *session);
 
 /*private */
-ORTP_PUBLIC void rtp_session_init(RtpSession *session, int mode);
+ORTP_PUBLIC void rtp_session_init(RtpSession *session, RtpSessionMode mode);
 #define rtp_session_set_flag(session, flag) (session)->flags |= (flag)
 #define rtp_session_unset_flag(session, flag) (session)->flags &= ~(flag)
 ORTP_PUBLIC void rtp_session_uninit(RtpSession *session);

@@ -84,7 +84,9 @@
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG                                                                                               \
 	{                                                                                                                  \
-		0xf689d7c8, 0x6f1f, 0x436b, { 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22 }                                 \
+		0xf689d7c8, 0x6f1f, 0x436b, {                                                                                  \
+			0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22                                                             \
+		}                                                                                                              \
 	}
 #ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
@@ -1556,7 +1558,7 @@ rtp_session_rtcp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destadd
 			}
 		} else {
 			update_sent_bytes(&session->rtcp.gs, error);
-			update_avg_rtcp_size(session, error);
+			rtp_session_update_avg_rtcp_size(session, error);
 		}
 	}
 	return error;
@@ -2181,22 +2183,21 @@ int rtp_session_rtp_recv(RtpSession *session, uint32_t user_ts) {
 int rtp_session_rtcp_recv(RtpSession *session) {
 	int error;
 	struct sockaddr_storage remaddr;
-
 	socklen_t addrlen = sizeof(remaddr);
 	mblk_t *mp;
 
-	if (session->rtcp.gs.socket == (ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp))
-		return -1; /*session has no RTCP sockets for the moment*/
-
 	/* In bundle mode, rtcp-mux is used. There is nothing that needs to be read on the rtcp socket.
-	 * The RTCP packets are received on the RTP socket, and dispatched to the "bundleq" of their corresponding session.
-	 * These RTCP packets queued on the bundleq will be processed by rtp_session_rtp_recv(), which has the ability to
-	 * manage rtcp-mux.
+	 * The RTCP packets are received on the RTP socket, and dispatched to the rtcp bundleq of their corresponding
+	 * session, or treated directly by the primary session if they belong to this primary session.
 	 */
 	while (1) {
 		bool_t sock_connected = !!(session->flags & RTCP_SOCKET_CONNECTED);
 		mp = NULL;
 		if (!session->bundle) {
+
+			if (session->rtcp.gs.socket == (ortp_socket_t)-1 && !rtp_session_using_transport(session, rtcp))
+				return -1; /*session has no RTCP sockets for the moment*/
+
 			mp = rtp_session_alloc_recv_block(session);
 
 			if (sock_connected) {
@@ -2247,7 +2248,7 @@ int rtp_session_rtcp_recv(RtpSession *session) {
 			ortp_mutex_unlock(&session->rtcp.gs.bundleq_lock);
 		}
 		if (mp) {
-			rtp_session_process_incoming(session, mp, FALSE, session->rtp.rcv_last_app_ts, FALSE);
+			rtp_session_process_incoming(session, mp, FALSE, session->rtp.rcv_last_app_ts, session->bundle != NULL);
 		} else break;
 	}
 	return 0;

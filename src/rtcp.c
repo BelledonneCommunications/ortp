@@ -94,11 +94,6 @@ static mblk_t *sdes_chunk_append_item(mblk_t *m, rtcp_sdes_type_t sdes_type, con
 	return m;
 }
 
-static void sdes_chunk_set_ssrc(mblk_t *m, uint32_t ssrc) {
-	sdes_chunk_t *sc = (sdes_chunk_t *)m->b_rptr;
-	sc->csrc = htonl(ssrc);
-}
-
 static mblk_t *sdes_chunk_pad(mblk_t *m) {
 	return appendb(m, "", 1, TRUE);
 }
@@ -131,6 +126,57 @@ static mblk_t *sdes_chunk_set_full_items(mblk_t *m,
 	return m;
 }
 
+void rtcp_sdes_items_uninit(RtcpSdesItems *items) {
+	if (items->cname) bctbx_free(items->cname);
+	if (items->email) bctbx_free(items->email);
+	if (items->loc) bctbx_free(items->loc);
+	if (items->name) bctbx_free(items->name);
+	if (items->note) bctbx_free(items->note);
+	if (items->phone) bctbx_free(items->phone);
+	if (items->tool) bctbx_free(items->tool);
+	memset(items, 0, sizeof(RtcpSdesItems));
+}
+
+static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
+	RtcpSdesItems *items = &session->sdes_items;
+	const char *mid = NULL;
+	mblk_t *m = NULL;
+	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
+	if (strlen(items->cname) > 255) {
+		/*
+		 * rfc3550,
+		 * 6.5 SDES: Source Description RTCP Packet
+		 * ...
+		 * Note that the text can be no longer than 255 octets,
+		 *
+		 * */
+		ortp_warning("Cname [%s] too long for session [%p]", items->cname, session);
+	}
+
+	/* Add mid to chunck if there is a bundle */
+	if (session->bundle) {
+		mid = rtp_bundle_get_session_mid(session->bundle, session);
+	}
+	if (!minimal) {
+		m = sdes_chunk_set_full_items(chunk, items->cname, items->name, items->email, items->phone, items->loc,
+		                              items->tool, items->note, mid);
+	} else {
+		m = sdes_chunk_set_minimal_items(chunk, items->cname);
+		if (mid) {
+			m = sdes_chunk_append_item(m, RTCP_SDES_MID, mid);
+		}
+		m = sdes_chunk_pad(m);
+	}
+	return chunk;
+}
+
+static void assign_string(char **str, const char *value) {
+	if (*str) bctbx_free(*str);
+	if (value) {
+		*str = bctbx_strdup(value);
+	} else *str = NULL;
+}
+
 /**
  * Set session's SDES item for automatic sending of RTCP compound packets.
  * If some items are not specified, use NULL.
@@ -143,9 +189,7 @@ void rtp_session_set_source_description(RtpSession *session,
                                         const char *loc,
                                         const char *tool,
                                         const char *note) {
-	const char *mid = NULL;
-	mblk_t *m;
-	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
+	RtcpSdesItems *items = &session->sdes_items;
 	if (strlen(cname) > 255) {
 		/*
 		 * rfc3550,
@@ -156,21 +200,13 @@ void rtp_session_set_source_description(RtpSession *session,
 		 * */
 		ortp_warning("Cname [%s] too long for session [%p]", cname, session);
 	}
-
-	/* Add mid to chunck if there is a bundle */
-	if (session->bundle) {
-		mid = rtp_bundle_get_session_mid(session->bundle, session);
-	}
-
-	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, mid);
-	if (session->full_sdes != NULL) freemsg(session->full_sdes);
-	session->full_sdes = chunk;
-	chunk = sdes_chunk_new(session->snd.ssrc);
-	m = sdes_chunk_set_minimal_items(chunk, cname);
-	m = sdes_chunk_append_item(m, RTCP_SDES_MID, mid);
-	m = sdes_chunk_pad(m);
-	if (session->minimal_sdes != NULL) freemsg(session->minimal_sdes);
-	session->minimal_sdes = chunk;
+	assign_string(&items->cname, cname);
+	assign_string(&items->name, name);
+	assign_string(&items->email, email);
+	assign_string(&items->phone, phone);
+	assign_string(&items->loc, loc);
+	assign_string(&items->tool, tool);
+	assign_string(&items->note, note);
 }
 
 void rtp_session_add_contributing_source(RtpSession *session,
@@ -223,21 +259,19 @@ void rtcp_common_header_init(
 }
 
 mblk_t *rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
-	mblk_t *mp = allocb(sizeof(rtcp_common_header_t), 0);
+	mblk_t *mp;
 	rtcp_common_header_t *rtcp;
 	mblk_t *tmp;
-	mblk_t *m = mp;
+	mblk_t *m = NULL;
 	mblk_t *sdes;
 	queue_t *q;
 	int rc = 0;
 
-	sdes = (full == TRUE) ? session->full_sdes : session->minimal_sdes;
+	sdes = rtp_session_make_sdes(session, !full);
+	mp = allocb(sizeof(rtcp_common_header_t), 0);
 	rtcp = (rtcp_common_header_t *)mp->b_wptr;
 	mp->b_wptr += sizeof(rtcp_common_header_t);
-
-	/* Concatenate all sdes chunks. */
-	sdes_chunk_set_ssrc(sdes, session->snd.ssrc);
-	m = concatb(m, dupmsg(sdes));
+	m = concatb(mp, sdes);
 	rc++;
 
 	if (full == TRUE) {
@@ -358,7 +392,6 @@ static void report_block_init(report_block_t *b, RtpSession *session) {
 static void extended_statistics(RtpSession *session, BCTBX_UNUSED(report_block_t *rb)) {
 	/* the jitter raw value is kept in stream clock units */
 	uint32_t jitter = (uint32_t)session->rtp.jittctl.inter_jitter;
-	session->stats.sent_rtcp_packets++;
 	session->rtp.jitter_stats.sum_jitter += jitter;
 	session->rtp.jitter_stats.jitter = jitter;
 	/* stores the biggest jitter for that session and its date (in millisecond) since Epoch */
@@ -425,11 +458,7 @@ static mblk_t *make_sr(RtpSession *session) {
 static mblk_t *append_sdes(RtpSession *session, mblk_t *m, bool_t full) {
 	mblk_t *sdes = NULL;
 
-	if ((full == TRUE) && (session->full_sdes != NULL)) {
-		sdes = rtp_session_create_rtcp_sdes_packet(session, full);
-	} else if ((full == FALSE) && (session->minimal_sdes != NULL)) {
-		sdes = rtp_session_create_rtcp_sdes_packet(session, full);
-	}
+	sdes = rtp_session_create_rtcp_sdes_packet(session, full);
 	return concatb(m, sdes);
 }
 
@@ -501,6 +530,7 @@ static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t 
 		/* Send the compound packet */
 		notify_sent_rtcp(session, m);
 		ortp_message("Sending RTCP %s compound message on session [%p].", (is_sr ? "SR" : "RR"), session);
+		session->stats.sent_rtcp_packets++;
 		rtp_session_rtcp_send(session, m);
 	}
 }
@@ -540,7 +570,7 @@ void compute_rtcp_interval(RtpSession *session) {
 	session->rtcp.send_algo.T_rr = (uint32_t)t;
 }
 
-void update_avg_rtcp_size(RtpSession *session, int bytes) {
+void rtp_session_update_avg_rtcp_size(RtpSession *session, int bytes) {
 	int overhead = (ortp_stream_is_ipv6(&session->rtcp.gs) == TRUE) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 	int size = bytes + overhead;
 	session->rtcp.send_algo.avg_rtcp_size = ((size + (15 * session->rtcp.send_algo.avg_rtcp_size)) / 16.f);
@@ -558,7 +588,7 @@ static void rtp_session_schedule_first_rtcp_send(RtpSession *session) {
 		return;
 
 	overhead = (ortp_stream_is_ipv6(&session->rtcp.gs) == TRUE) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	sdes_size = (session->full_sdes != NULL) ? msgdsize(session->full_sdes) + sizeof(rtcp_common_header_t) : 0;
+	sdes_size = 0; /*FIXME: should be adapted to SDES size */
 	switch (session->mode) {
 		case RTP_SESSION_RECVONLY:
 			report_size = sizeof(rtcp_rr_t);

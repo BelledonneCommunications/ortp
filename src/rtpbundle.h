@@ -66,6 +66,7 @@ private:
 
 	bool dispatchRtpMessage(mblk_t *m);
 	bool dispatchRtcpMessage(mblk_t *m);
+	bool assignmentPossible(RtpSession *session, const mblk_t *m, uint32_t ssrc, bool isRtp);
 
 	RtpSession *primary = NULL;
 	std::map<uint32_t, Mid> ssrcToMid;
