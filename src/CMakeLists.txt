@@ -107,7 +107,6 @@ bc_apply_compile_flags(ORTP_SOURCE_FILES_CXX STRICT_OPTIONS_CPP STRICT_OPTIONS_C
 add_library(ortp ${ORTP_HEADER_FILES} ${ORTP_SOURCE_FILES_C} ${ORTP_SOURCE_FILES_CXX})
 set_target_properties(ortp PROPERTIES LINKER_LANGUAGE CXX)
 set_target_properties(ortp PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
-target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
 target_include_directories(ortp
 	PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
 	$<INSTALL_INTERFACE:include>
@@ -118,6 +117,7 @@ if(WIN32)
 endif()
 
 if(BUILD_SHARED_LIBS)
+	target_compile_definitions(ortp PRIVATE "ORTP_EXPORTS")
 	if(APPLE)
 		set_target_properties(ortp PROPERTIES
 			FRAMEWORK TRUE
@@ -137,6 +137,8 @@ if(BUILD_SHARED_LIBS)
 			CONFIGURATIONS Debug RelWithDebInfo
 		)
 	endif()
+else()
+	target_compile_definitions(ortp PUBLIC "ORTP_STATIC")
 endif()
 
 install(TARGETS ortp EXPORT ${PROJECT_NAME}Targets

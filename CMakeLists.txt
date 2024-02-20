@@ -109,9 +109,6 @@ include_directories(
 
 
 set(ORTP_CPPFLAGS)
-if(NOT BUILD_SHARED_LIBS)
-	list(APPEND ORTP_CPPFLAGS "-DORTP_STATIC")
-endif()
 if(ENABLE_PERF)
 	set(PERF 1)
 endif()
