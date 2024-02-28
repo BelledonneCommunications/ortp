@@ -856,10 +856,7 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
 size_t rtp_session_calculate_packet_header_size(RtpSession *session) {
 	size_t header_size = RTP_FIXED_HEADER_SIZE;
 
-	// Add CSRC size for active speaker if contributing sources' queue is not empty
-	if (session->contributing_sources.q_mcount > 0) {
-		header_size += sizeof(uint32_t);
-	}
+	header_size += sizeof(uint32_t) * session->contributing_sources.q_mcount;
 
 	// Calculate size for mid
 	if (session->bundle) {
@@ -875,6 +872,14 @@ size_t rtp_session_calculate_packet_header_size(RtpSession *session) {
 	return header_size;
 }
 
+static void rtp_header_add_csrcs_from_session(rtp_header_t *header, RtpSession *session) {
+	mblk_t *sdes;
+	for (sdes = qbegin(&session->contributing_sources); !qend(&session->contributing_sources, sdes);
+	     sdes = qnext(&session->contributing_sources, sdes)) {
+		rtp_header_add_csrc(header, sdes_chunk_get_ssrc(sdes));
+	}
+}
+
 mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_header_size) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
@@ -884,12 +889,10 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 	rtp = (rtp_header_t *)mp->b_rptr;
 	rtp_header_init_from_session(rtp, session);
 
-	if (session->contributing_sources.q_mcount > 0) {
-		mblk_t *sdes = peekq(&session->contributing_sources);
-		rtp_header_add_csrc(rtp, sdes_chunk_get_ssrc(sdes));
-	}
+	rtp_header_add_csrcs_from_session(rtp, session);
 
 	/*add the mid from the bundle if any*/
+	ortp_mutex_lock(&session->main_mutex);
 	if (session->bundle) {
 		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
@@ -899,6 +902,7 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 	mp->b_wptr += header_size;
 	return mp;
 }
@@ -917,6 +921,7 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 	/* add the sourceSession SSRC as CSRC */
 	rtp_header_add_csrc(rtp, rtp_session_get_send_ssrc(sourceSession));
 
+	ortp_mutex_lock(&fecSession->main_mutex);
 	/*add the mid from the bundle if any*/
 	if (fecSession->bundle) {
 		const char *mid = rtp_bundle_get_session_mid(fecSession->bundle, fecSession);
@@ -927,7 +932,9 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
 	}
+	ortp_mutex_unlock(&fecSession->main_mutex);
 	mp->b_wptr += header_size;
+
 	return mp;
 }
 
@@ -950,6 +957,7 @@ mblk_t *rtp_session_create_packet_header_with_mixer_to_client_audio_level(RtpSes
 		header_size += audio_levels_size * sizeof(uint32_t); // CSRCs, add it directly to the header size
 	}
 
+	ortp_mutex_lock(&session->main_mutex);
 	// Calculate ext header size for mid
 	if (session->bundle) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
@@ -982,6 +990,7 @@ mblk_t *rtp_session_create_packet_header_with_mixer_to_client_audio_level(RtpSes
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 
 	return mp;
 }
@@ -1057,12 +1066,10 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 	rtp = (rtp_header_t *)mp->b_rptr;
 	rtp_header_init_from_session(rtp, session);
 
-	if (session->contributing_sources.q_mcount > 0) {
-		mblk_t *sdes = peekq(&session->contributing_sources);
-		rtp_header_add_csrc(rtp, sdes_chunk_get_ssrc(sdes));
-	}
+	rtp_header_add_csrcs_from_session(rtp, session);
 
 	/*add the mid from the bundle if any*/
+	ortp_mutex_lock(&session->main_mutex);
 	if (session->bundle) {
 		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
@@ -1072,6 +1079,7 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 	mp->b_wptr += header_size;
 
 	/*copy the payload, if any */
@@ -1118,6 +1126,7 @@ mblk_t *rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *s
 	}
 
 	// Calculate ext header size for mid
+	ortp_mutex_lock(&session->main_mutex);
 	if (session->bundle) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 
@@ -1156,6 +1165,7 @@ mblk_t *rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *s
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 
 	/*copy the payload, if any */
 	if (payload_size) {
@@ -1208,11 +1218,9 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 	rtp = (rtp_header_t *)mp->b_rptr;
 	rtp_header_init_from_session(rtp, session);
 
-	if (session->contributing_sources.q_mcount > 0) {
-		mblk_t *sdes = peekq(&session->contributing_sources);
-		rtp_header_add_csrc(rtp, sdes_chunk_get_ssrc(sdes));
-	}
+	rtp_header_add_csrcs_from_session(rtp, session);
 
+	ortp_mutex_lock(&session->main_mutex);
 	/*add the mid from the bundle if any*/
 	if (session->bundle) {
 		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
@@ -1223,6 +1231,7 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 		}
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 
 	mp->b_wptr += header_size;
 
@@ -1288,6 +1297,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 		} else { /* when in transfer mode, packet was created not for this session so we may have to adjust the bundle
 			        mode mid extension */
 			/*add the mid from the bundle if any*/
+			ortp_mutex_lock(&session->main_mutex);
 			if (session->bundle) {
 				const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
 
@@ -1298,6 +1308,7 @@ ORTP_PUBLIC int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uin
 					          mp->b_rptr; // rtp_add_extension might pullup the message so reset the pointer to header
 				}
 			}
+			ortp_mutex_unlock(&session->main_mutex);
 		}
 
 		/* When in transfer mode, set the actual seq_number to use in the session but leave the packet untouched
@@ -1634,12 +1645,13 @@ end:
 		if (!(session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED)) {
 			rtp_session_set_flag(session, RTP_SESSION_FIRST_PACKET_DELIVERED);
 		}
-
+		ortp_mutex_lock(&session->main_mutex);
 		if (session->transfer_mode &&
 		    session->bundle) { /* in transfer mode, we must delete possible bundle header extension */
 			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 			rtp_del_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID);
 		}
+		ortp_mutex_unlock(&session->main_mutex);
 	} else {
 		ortp_debug("No mp for timestamp queried");
 	}
@@ -3175,4 +3187,10 @@ int rtp_session_get_audio_bandwidth_estimator_duplicate_rate(RtpSession *session
 	} else {
 		return -1;
 	}
+}
+
+void rtp_session_set_bundle(RtpSession *session, RtpBundle *bundle) {
+	ortp_mutex_lock(&session->main_mutex);
+	session->bundle = bundle;
+	ortp_mutex_unlock(&session->main_mutex);
 }

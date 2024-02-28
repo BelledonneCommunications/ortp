@@ -50,6 +50,10 @@ typedef enum {
 
 #define rtp_session_using_transport(s, stream) (((s)->flags & RTP_SESSION_USING_TRANSPORT) && (s->stream.gs.tr != 0))
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int rtp_session_rtp_recv_abstract(
     ortp_socket_t socket, mblk_t *msg, int flags, struct sockaddr *from, socklen_t *fromlen);
 
@@ -121,5 +125,11 @@ void jb_parameters_init(JBParameters *jbp);
 void rtp_session_init_jitter_buffer(RtpSession *session);
 
 size_t rtp_session_calculate_packet_header_size(RtpSession *session);
+void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports);
+void rtp_session_set_bundle(RtpSession *session, RtpBundle *bundle);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

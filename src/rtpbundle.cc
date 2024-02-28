@@ -25,6 +25,7 @@
 #include "ortp/logging.h"
 #include "ortp/rtpsession.h"
 #include "rtpbundle.h"
+#include "rtpsession_priv.h"
 
 // C - Interface
 
@@ -112,12 +113,11 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 
 	sessions.emplace(mid, session);
 
-	session->bundle = (RtpBundle *)this;
-
 	if (!primary) {
 		primary = session;
 		session->is_primary = TRUE;
 	}
+	rtp_session_set_bundle(session, (RtpBundle *)this);
 }
 void RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fecSession) {
 	auto it = std::find_if(
@@ -131,13 +131,14 @@ void RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fe
 	}
 	std::string mid = getSessionMid(it->second);
 	fec_sessions.emplace(mid, fecSession);
-	fecSession->bundle = (RtpBundle *)this;
+	rtp_session_set_bundle(fecSession, (RtpBundle *)this);
 	ortp_message("Fec session [%u] added to the bundle", rtp_session_get_send_ssrc(fecSession));
 }
 
 void RtpBundleCxx::removeSession(const std::string &mid) {
 	auto session = sessions.find(mid);
 	if (session != sessions.end()) {
+		rtp_session_set_bundle(session->second, NULL);
 		if (session->second == primary) {
 			primary->is_primary = FALSE;
 			primary = NULL;
@@ -156,11 +157,11 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 		if (session->second->fec_stream != NULL) {
 			auto fec_session = fec_sessions.find(mid);
 			if (fec_session != fec_sessions.end()) {
-				fec_session->second->bundle = NULL;
+				rtp_session_set_bundle(fec_session->second, NULL);
 				fec_sessions.erase(mid);
 			}
 		}
-		session->second->bundle = NULL;
+
 		sessions.erase(mid);
 	}
 }
