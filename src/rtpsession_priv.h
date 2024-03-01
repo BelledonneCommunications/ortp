@@ -120,6 +120,6 @@ void _rtp_session_apply_socket_sizes(RtpSession *session);
 void jb_parameters_init(JBParameters *jbp);
 void rtp_session_init_jitter_buffer(RtpSession *session);
 
-size_t rtp_session_calculate_packet_header_size(RtpSession *session);
+size_t rtp_session_calculate_packet_header_size(int cc, const char *mid);
 
 #endif
