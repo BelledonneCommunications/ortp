@@ -850,23 +850,21 @@ static void rtp_header_init_from_session(rtp_header_t *rtp, RtpSession *session)
 /**
  *	Returns the size of the header a new rtp packet should have using the provided session.
  *
- *@param session a rtp session.
+ *@param cc the number of contributing sources.
+ *@param mid the mid of this session if the bundle mode is enabled.
  *@return the header size.
  **/
-size_t rtp_session_calculate_packet_header_size(RtpSession *session) {
+size_t rtp_session_calculate_packet_header_size(int cc, const char *mid) {
 	size_t header_size = RTP_FIXED_HEADER_SIZE;
 
-	header_size += sizeof(uint32_t) * session->contributing_sources.q_mcount;
+	// Add CSRC size for active speaker if contributing sources' queue is not empty
+	header_size += sizeof(uint32_t) * cc;
 
 	// Calculate size for mid
-	if (session->bundle) {
-		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
-
-		if (mid != NULL) {
-			size_t mid_size = strlen(mid);
-			size_t padding = (mid_size + 1) % 4 != 0 ? (4 - (mid_size + 1) % 4) : 0;
-			header_size += strlen(mid) + 5 + padding;
-		}
+	if (mid != NULL) {
+		size_t mid_size = strlen(mid);
+		size_t padding = (mid_size + 1) % 4 != 0 ? (4 - (mid_size + 1) % 4) : 0;
+		header_size += strlen(mid) + 5 + padding;
 	}
 
 	return header_size;
@@ -883,7 +881,16 @@ static void rtp_header_add_csrcs_from_session(rtp_header_t *header, RtpSession *
 mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_header_size) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
-	size_t header_size = rtp_session_calculate_packet_header_size(session);
+	size_t header_size;
+	const char *mid = NULL;
+
+	ortp_mutex_lock(&session->main_mutex);
+	if (session->bundle) {
+		mid = rtp_bundle_get_session_mid(session->bundle, session);
+	}
+	ortp_mutex_unlock(&session->main_mutex);
+
+	header_size = rtp_session_calculate_packet_header_size(session->contributing_sources.q_mcount, mid);
 
 	mp = allocb(header_size + extra_header_size, BPRI_MED);
 	rtp = (rtp_header_t *)mp->b_rptr;
@@ -892,18 +899,14 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 	rtp_header_add_csrcs_from_session(rtp, session);
 
 	/*add the mid from the bundle if any*/
-	ortp_mutex_lock(&session->main_mutex);
-	if (session->bundle) {
-		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
-
-		if (mid != NULL) {
-			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-			// storage is already allocated so use rtp_insert instead of rtp_add
-			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-		}
+	if (mid != NULL) {
+		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+		// storage is already allocated so use rtp_insert instead of rtp_add
+		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
-	ortp_mutex_unlock(&session->main_mutex);
+
 	mp->b_wptr += header_size;
+
 	return mp;
 }
 
@@ -912,7 +915,17 @@ mblk_t *
 rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sourceSession, size_t extra_header_size) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
-	size_t header_size = rtp_session_calculate_packet_header_size(fecSession) + 4; /* +4 for the extra CSRC*/
+	const char *mid = NULL;
+	size_t header_size;
+
+	ortp_mutex_lock(&fecSession->main_mutex);
+	if (fecSession->bundle) {
+		mid = rtp_bundle_get_session_mid(fecSession->bundle, fecSession);
+	}
+	ortp_mutex_unlock(&fecSession->main_mutex);
+
+	header_size = rtp_session_calculate_packet_header_size(fecSession->contributing_sources.q_mcount, mid) +
+	              4; /* +4 for the extra CSRC*/
 
 	mp = allocb(header_size + extra_header_size, BPRI_MED);
 	rtp = (rtp_header_t *)mp->b_rptr;
@@ -921,18 +934,13 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 	/* add the sourceSession SSRC as CSRC */
 	rtp_header_add_csrc(rtp, rtp_session_get_send_ssrc(sourceSession));
 
-	ortp_mutex_lock(&fecSession->main_mutex);
 	/*add the mid from the bundle if any*/
-	if (fecSession->bundle) {
-		const char *mid = rtp_bundle_get_session_mid(fecSession->bundle, fecSession);
-
-		if (mid != NULL) {
-			int midId = rtp_bundle_get_mid_extension_id(fecSession->bundle);
-			// storage is already allocated so use rtp_insert instead of rtp_add
-			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-		}
+	if (mid != NULL) {
+		int midId = rtp_bundle_get_mid_extension_id(fecSession->bundle);
+		// storage is already allocated so use rtp_insert instead of rtp_add
+		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
-	ortp_mutex_unlock(&fecSession->main_mutex);
+
 	mp->b_wptr += header_size;
 
 	return mp;
@@ -1054,7 +1062,16 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 	mblk_t *mp;
 	size_t msglen = payload_size;
 	rtp_header_t *rtp;
-	size_t computed_header_size = rtp_session_calculate_packet_header_size(session);
+	size_t computed_header_size;
+	const char *mid = NULL;
+
+	ortp_mutex_lock(&session->main_mutex);
+	if (session->bundle) {
+		mid = rtp_bundle_get_session_mid(session->bundle, session);
+	}
+	ortp_mutex_unlock(&session->main_mutex);
+
+	computed_header_size = rtp_session_calculate_packet_header_size(session->contributing_sources.q_mcount, mid);
 
 	if (computed_header_size > header_size) {
 		header_size = computed_header_size;
@@ -1069,17 +1086,12 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 	rtp_header_add_csrcs_from_session(rtp, session);
 
 	/*add the mid from the bundle if any*/
-	ortp_mutex_lock(&session->main_mutex);
-	if (session->bundle) {
-		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
-
-		if (mid != NULL) {
-			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-			// storage is already allocated so use rtp_insert instead of rtp_add
-			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-		}
+	if (mid != NULL) {
+		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+		// storage is already allocated so use rtp_insert instead of rtp_add
+		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
-	ortp_mutex_unlock(&session->main_mutex);
+
 	mp->b_wptr += header_size;
 
 	/*copy the payload, if any */
@@ -1211,8 +1223,17 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
                                             size_t payload_size,
                                             void (*freefn)(void *)) {
 	mblk_t *mp, *mpayload;
-	size_t header_size = rtp_session_calculate_packet_header_size(session);
+	size_t header_size;
 	rtp_header_t *rtp;
+	const char *mid = NULL;
+
+	ortp_mutex_lock(&session->main_mutex);
+	if (session->bundle) {
+		mid = rtp_bundle_get_session_mid(session->bundle, session);
+	}
+	ortp_mutex_unlock(&session->main_mutex);
+
+	header_size = rtp_session_calculate_packet_header_size(session->contributing_sources.q_mcount, mid);
 
 	mp = allocb(header_size, BPRI_MED);
 	rtp = (rtp_header_t *)mp->b_rptr;
@@ -1220,18 +1241,12 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 
 	rtp_header_add_csrcs_from_session(rtp, session);
 
-	ortp_mutex_lock(&session->main_mutex);
 	/*add the mid from the bundle if any*/
-	if (session->bundle) {
-		const char *mid = rtp_bundle_get_session_mid(session->bundle, session);
-
-		if (mid != NULL) {
-			int midId = rtp_bundle_get_mid_extension_id(session->bundle);
-			// storage is already allocated so use rtp_insert instead of rtp_add
-			rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
-		}
+	if (mid != NULL) {
+		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
+		// storage is already allocated so use rtp_insert instead of rtp_add
+		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
-	ortp_mutex_unlock(&session->main_mutex);
 
 	mp->b_wptr += header_size;
 
