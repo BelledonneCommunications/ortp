@@ -192,18 +192,20 @@ mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 	if (packet != nullptr) {
 		mblk_t *mp = packet->getPacketCopy();
 		RtpTransport *transport = NULL;
+		ortp_mutex_lock(&mSourceSession->main_mutex);
 		RtpBundle *bundle = (RtpBundle *)mSourceSession->bundle;
 		RtpSession *session = rtp_bundle_get_primary_session(bundle);
-		rtp_session_get_transports(session, &transport, NULL);
-		if (meta_rtp_transport_apply_all_except_one_on_recieve(transport, mModifier, mp) >= 0) {
-			ortp_message("Source packet reconstructed : SeqNum = %d;", (int)rtp_get_seqnumber(mp));
-			mStats.packets_recovered++;
+		ortp_mutex_unlock(&mSourceSession->main_mutex);
+		if (session) {
+			rtp_session_get_transports(session, &transport, NULL);
+			if (meta_rtp_transport_apply_all_except_one_on_recieve(transport, mModifier, mp) >= 0) {
+				ortp_message("Source packet reconstructed : SeqNum = %d;", (int)rtp_get_seqnumber(mp));
+				mStats.packets_recovered++;
+			}
+			return mp;
 		}
-		return mp;
-
-	} else {
-		return nullptr;
 	}
+	return nullptr;
 }
 FecParameters *fec_params_new(uint8_t L, uint8_t D, uint32_t repairWindow) {
 	FecParameters *fecParams = (FecParameters *)ortp_malloc0(sizeof(FecParameters));
