@@ -888,7 +888,6 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 	if (session->bundle) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 	}
-	ortp_mutex_unlock(&session->main_mutex);
 
 	header_size = rtp_session_calculate_packet_header_size(session->contributing_sources.q_mcount, mid);
 
@@ -904,6 +903,7 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 
 	mp->b_wptr += header_size;
 
@@ -922,7 +922,6 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 	if (fecSession->bundle) {
 		mid = rtp_bundle_get_session_mid(fecSession->bundle, fecSession);
 	}
-	ortp_mutex_unlock(&fecSession->main_mutex);
 
 	header_size = rtp_session_calculate_packet_header_size(fecSession->contributing_sources.q_mcount, mid) +
 	              4; /* +4 for the extra CSRC*/
@@ -940,6 +939,7 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
+	ortp_mutex_unlock(&fecSession->main_mutex);
 
 	mp->b_wptr += header_size;
 
@@ -1231,7 +1231,6 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 	if (session->bundle) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 	}
-	ortp_mutex_unlock(&session->main_mutex);
 
 	header_size = rtp_session_calculate_packet_header_size(session->contributing_sources.q_mcount, mid);
 
@@ -1247,6 +1246,7 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 
 	mp->b_wptr += header_size;
 

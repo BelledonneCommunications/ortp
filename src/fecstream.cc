@@ -192,8 +192,10 @@ mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 	if (packet != nullptr) {
 		mblk_t *mp = packet->getPacketCopy();
 		RtpTransport *transport = NULL;
+		ortp_mutex_lock(&mSourceSession->main_mutex);
 		RtpBundle *bundle = (RtpBundle *)mSourceSession->bundle;
 		RtpSession *session = rtp_bundle_get_primary_session(bundle);
+		ortp_mutex_unlock(&mSourceSession->main_mutex);
 		rtp_session_get_transports(session, &transport, NULL);
 		if (meta_rtp_transport_apply_all_except_one_on_recieve(transport, mModifier, mp) >= 0) {
 			ortp_message("Source packet reconstructed : SeqNum = %d;", (int)rtp_get_seqnumber(mp));
