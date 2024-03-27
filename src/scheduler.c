@@ -48,7 +48,7 @@ void rtp_scheduler_init(RtpScheduler *sched) {
 	sched->e_max = 0;
 }
 
-RtpScheduler *rtp_scheduler_new() {
+RtpScheduler *rtp_scheduler_new(void) {
 	RtpScheduler *sched = (RtpScheduler *)ortp_malloc(sizeof(RtpScheduler));
 	memset(sched, 0, sizeof(RtpScheduler));
 	rtp_scheduler_init(sched);

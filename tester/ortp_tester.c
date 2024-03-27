@@ -102,7 +102,7 @@ void ortp_tester_init(void (*ftester_printf)(int level, const char *fmt, va_list
 	bc_tester_add_suite(&rtp_test_suite);
 }
 
-void ortp_tester_uninit() {
+void ortp_tester_uninit(void) {
 	bc_tester_uninit();
 }
 

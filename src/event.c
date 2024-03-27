@@ -62,7 +62,7 @@ void ortp_event_destroy(OrtpEvent *ev) {
 	freemsg(ev);
 }
 
-OrtpEvQueue *ortp_ev_queue_new() {
+OrtpEvQueue *ortp_ev_queue_new(void) {
 	OrtpEvQueue *q = ortp_new(OrtpEvQueue, 1);
 	qinit(&q->q);
 	ortp_mutex_init(&q->mutex, NULL);

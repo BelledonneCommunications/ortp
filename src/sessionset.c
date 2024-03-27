@@ -27,7 +27,7 @@
  *
  * @return the empty session set.
  **/
-SessionSet *session_set_new() {
+SessionSet *session_set_new(void) {
 	SessionSet *set = (SessionSet *)ortp_malloc(sizeof(SessionSet));
 	session_set_init(set);
 	return set;

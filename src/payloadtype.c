@@ -35,7 +35,7 @@ char *payload_type_get_rtpmap(PayloadType *pt) {
 	return rtpmap;
 }
 
-PayloadType *payload_type_new() {
+PayloadType *payload_type_new(void) {
 	PayloadType *newpayload = (PayloadType *)ortp_new0(PayloadType, 1);
 	newpayload->flags |= PAYLOAD_TYPE_ALLOCATED;
 	return newpayload;
