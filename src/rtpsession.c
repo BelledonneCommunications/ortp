@@ -1980,6 +1980,11 @@ void rtp_session_unregister_event_queue(RtpSession *session, OrtpEvQueue *q) {
 	session->eventqs = o_list_remove(session->eventqs, q);
 }
 
+void rtp_session_unregister_event_queues(RtpSession *session) {
+	o_list_free(session->eventqs);
+	session->eventqs = NULL;
+}
+
 void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev) {
 	OList *it;
 	int i;

@@ -137,11 +137,17 @@ void RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fe
 
 void RtpBundleCxx::removeSession(const std::string &mid) {
 	auto session = sessions.find(mid);
+
+	// sessions is a multimap, we need to remove all RtpSessions pointed by the mid
 	if (session != sessions.end()) {
-		rtp_session_set_bundle(session->second, NULL);
-		if (session->second == primary) {
-			primary->is_primary = FALSE;
-			primary = NULL;
+		// We have to remove the bundle from each RtpSession
+		auto range = sessions.equal_range(mid);
+		for (auto i = range.first; i != range.second; ++i) {
+			rtp_session_set_bundle(i->second, NULL);
+			if (i->second == primary) {
+				primary->is_primary = FALSE;
+				primary = NULL;
+			}
 		}
 
 		ssrcToMidMutex.lock();
@@ -172,7 +178,14 @@ void RtpBundleCxx::removeSession(RtpSession *session) {
 	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
 	if (it != sessions.end()) {
-		removeSession(it->first);
+		// If we are the only RtpSession for the mid, use the removeSession(mid) instead.
+		// Else only remove the RtpSession.
+		const auto count = sessions.count(it->first);
+		if (count == 1) {
+			removeSession(it->first);
+		} else {
+			sessions.erase(it);
+		}
 	}
 }
 
@@ -308,11 +321,11 @@ static uint32_t getSsrcFromMessage(const mblk_t *m, bool isRtp) {
 
 static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 	const rtcp_common_header_t *ch = rtcp_get_common_header(m);
-	if (rtcp_common_header_get_rc(ch) != 1) return false;
 	const report_block_t *rb;
 
 	switch (rtcp_common_header_get_packet_type(ch)) {
 		case RTCP_SR:
+			if (rtcp_common_header_get_rc(ch) != 1) return false;
 			rb = rtcp_SR_get_report_block(m, 0);
 			if (rb) {
 				*ssrc = report_block_get_ssrc(rb);
@@ -320,6 +333,7 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 			}
 			break;
 		case RTCP_RR:
+			if (rtcp_common_header_get_rc(ch) != 1) return false;
 			rb = rtcp_RR_get_report_block(m, 0);
 			if (rb) {
 				*ssrc = report_block_get_ssrc(rb);
@@ -331,6 +345,7 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 			/* no referred SSRC in a SDES or APP*/
 			break;
 		case RTCP_BYE:
+			if (rtcp_common_header_get_rc(ch) != 1) return false;
 			if (rtcp_BYE_get_ssrc(m, 0, ssrc)) {
 				return true;
 			}
@@ -636,7 +651,7 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 
 	/* Now go through the compound RTCP packet and dispatch each of its elements in streams.
 	 * In order to avoid unnecessary split between SR and SDES of a same compound packet,
-	 * each RTCP element belonging to same stream are agregagated.*/
+	 * each RTCP element belonging to same stream are aggregated.*/
 	m_rtcp = rtcp_parser_context_start(&rtcp_parser_ctx);
 	std::map<RtpSession *, mblk_t *> dispatchMap;
 	do {

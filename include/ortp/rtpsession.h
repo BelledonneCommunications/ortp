@@ -750,6 +750,7 @@ ORTP_PUBLIC void rtp_session_reset_recvfrom(RtpSession *session);
 /* event API*/
 ORTP_PUBLIC void rtp_session_register_event_queue(RtpSession *session, OrtpEvQueue *q);
 ORTP_PUBLIC void rtp_session_unregister_event_queue(RtpSession *session, OrtpEvQueue *q);
+ORTP_PUBLIC void rtp_session_unregister_event_queues(RtpSession *session);
 
 /* IP bandwidth usage estimation functions, returning bits/s*/
 ORTP_PUBLIC float rtp_session_compute_send_bandwidth(RtpSession *session);
