@@ -69,6 +69,8 @@ private:
 	bool dispatchRtcpMessage(mblk_t *m);
 	bool assignmentPossible(RtpSession *session, const mblk_t *m, uint32_t ssrc, bool isRtp);
 
+	void clearSession(RtpSession *session);
+
 	RtpSession *primary = NULL;
 	std::map<uint32_t, Mid> ssrcToMid;
 	std::multimap<std::string, RtpSession *> sessions;

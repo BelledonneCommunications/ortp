@@ -642,21 +642,38 @@ void rtp_session_set_rtp_socket_recv_buffer_size(RtpSession *session, unsigned i
  *				Arguments are:
  *					- a mblk_t pointer to the outgoing packet
  *					- a pointer to an RtpSession pointer so the callback can create a new RtpSession and pass it back.
- *	Returns: 0 on success, -EOPNOTSUPP if the signal does not exists, -1 if no more callbacks
- *	can be assigned to the signal type.
  *
  * @param session 	a rtp session
  * @param signal_name	the name of a signal
  * @param cb		a RtpCallback
  * @param user_data	a pointer to any data to be passed when invoking the callback.
+ * @return 0 on success, -EOPNOTSUPP if the signal does not exists, -1 if no more callbacks can be assigned to the
+ *signal type.
  *
  **/
 int rtp_session_signal_connect(RtpSession *session, const char *signal_name, RtpCallback cb, void *user_data) {
+	return rtp_session_signal_connect_from_source_session(session, signal_name, cb, user_data, NULL);
+}
+
+/**
+ *	Connect the callback \a cb to the signal \a signal_name as \a rtp_session_signal_connect.
+ *	This is used to provide the source session in case the callback to add is coming from an other one.
+ *
+ * @param session 	a rtp session
+ * @param signal_name	the name of a signal
+ * @param cb		a RtpCallback
+ * @param user_data	a pointer to any data to be passed when invoking the callback.
+ * @param source the source session of the callback, NULL if the current session is the source
+ * @return 0 on success, -EOPNOTSUPP if the signal does not exists, -1 if no more callbacks can be assigned to the
+ *signal type.
+ **/
+int rtp_session_signal_connect_from_source_session(
+    RtpSession *session, const char *signal_name, RtpCallback cb, void *user_data, const RtpSession *source) {
 	bctbx_list_t *elem;
 	for (elem = session->signal_tables; elem != NULL; elem = o_list_next(elem)) {
 		RtpSignalTable *s = (RtpSignalTable *)elem->data;
 		if (strcmp(signal_name, s->signal_name) == 0) {
-			return rtp_signal_table_add(s, cb, user_data);
+			return rtp_signal_table_add_from_source_session(s, cb, user_data, source);
 		}
 	}
 	ortp_warning("rtp_session_signal_connect: inexistent signal %s", signal_name);
@@ -677,6 +694,52 @@ int rtp_session_signal_disconnect_by_callback(RtpSession *session, const char *s
 		RtpSignalTable *s = (RtpSignalTable *)elem->data;
 		if (strcmp(signal_name, s->signal_name) == 0) {
 			return rtp_signal_table_remove_by_callback(s, cb);
+		}
+	}
+	ortp_warning("rtp_session_signal_connect: inexistant signal %s", signal_name);
+	return -1;
+}
+
+/**
+ *	Removes callback function \a cb to the list of callbacks for signal \a signal with user data \a user_data.
+ *
+ * @param session a rtp session
+ * @param signal_name	a signal name
+ * @param cb	a callback function.
+ * @param user_data the user data.
+ * @return: 0 on success, a negative value if the callback was not found.
+ **/
+int rtp_session_signal_disconnect_by_callback_and_user_data(RtpSession *session,
+                                                            const char *signal_name,
+                                                            RtpCallback cb,
+                                                            void *user_data) {
+	OList *elem;
+	for (elem = session->signal_tables; elem != NULL; elem = o_list_next(elem)) {
+		RtpSignalTable *s = (RtpSignalTable *)elem->data;
+		if (strcmp(signal_name, s->signal_name) == 0) {
+			return rtp_signal_table_remove_by_callback_and_user_data(s, cb, user_data);
+		}
+	}
+	ortp_warning("rtp_session_signal_connect: inexistant signal %s", signal_name);
+	return -1;
+}
+
+/**
+ *	Removes callbacks functions to the list of callbacks for signal \a signal from the source session \a source.
+ *
+ * @param session a rtp session
+ * @param signal_name	a signal name
+ * @param source	the source session.
+ * @return: 0 on success, a negative value if the callback was not found.
+ **/
+int rtp_session_signal_disconnect_by_source_session(RtpSession *session,
+                                                    const char *signal_name,
+                                                    const RtpSession *source) {
+	OList *elem;
+	for (elem = session->signal_tables; elem != NULL; elem = o_list_next(elem)) {
+		RtpSignalTable *s = (RtpSignalTable *)elem->data;
+		if (strcmp(signal_name, s->signal_name) == 0) {
+			return rtp_signal_table_remove_by_source_session(s, source);
 		}
 	}
 	ortp_warning("rtp_session_signal_connect: inexistant signal %s", signal_name);
@@ -2056,7 +2119,7 @@ void rtp_session_uninit(RtpSession *session) {
 	ortp_stream_uninit(&session->rtcp.gs);
 	bctbx_list_free_with_data(session->recv_addr_map, (bctbx_list_free_func)bctbx_free);
 
-	session->signal_tables = o_list_free(session->signal_tables);
+	session->signal_tables = o_list_free_with_data(session->signal_tables, (o_list_free_func)rtp_signal_table_uninit);
 
 	if (session->rtp.congdetect) {
 		ortp_congestion_detector_destroy(session->rtp.congdetect);

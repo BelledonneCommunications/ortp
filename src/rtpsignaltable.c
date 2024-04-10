@@ -30,65 +30,106 @@ void rtp_signal_table_init(RtpSignalTable *table, RtpSession *session, const cha
 	table->session = session;
 	table->signal_name = signal_name;
 	session->signal_tables = o_list_append(session->signal_tables, (void *)table);
+	bctbx_mutex_init(&table->callback_mutex, NULL);
+}
+
+void rtp_signal_table_uninit(RtpSignalTable *table) {
+	bctbx_mutex_destroy(&table->callback_mutex);
 }
 
 int rtp_signal_table_add(RtpSignalTable *table, RtpCallback cb, void *user_data) {
-	int i;
+	return rtp_signal_table_add_from_source_session(table, cb, user_data, NULL);
+}
 
-	for (i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
-		if (table->callback[i] == NULL) {
-			table->callback[i] = cb;
-			table->user_data[i] = user_data;
+int rtp_signal_table_add_from_source_session(RtpSignalTable *table,
+                                             RtpCallback cb,
+                                             void *user_data,
+                                             const struct _RtpSession *source) {
+	bctbx_mutex_lock(&table->callback_mutex);
+
+	for (int i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
+		if (table->callback[i].cb == NULL) {
+			table->callback[i].cb = cb;
+			table->callback[i].user_data = user_data;
+			table->callback[i].source = source;
 			table->count++;
+
+			bctbx_mutex_unlock(&table->callback_mutex);
 			return 0;
 		}
 	}
+
+	bctbx_mutex_unlock(&table->callback_mutex);
 	return -1;
 }
 
 void rtp_signal_table_emit(RtpSignalTable *table) {
-	int i, c;
-
-	for (i = 0, c = 0; c < table->count; i++) {
-		if (table->callback[i] != NULL) {
-			c++; /*I like it*/
-			table->callback[i](table->session, table->user_data[i], 0, 0);
-		}
-	}
+	rtp_signal_table_emit3(table, NULL, NULL);
 }
 
 void rtp_signal_table_emit2(RtpSignalTable *table, void *arg) {
-	int i, c;
-
-	for (i = 0, c = 0; c < table->count; i++) {
-		if (table->callback[i] != NULL) {
-			c++; /*I like it*/
-			table->callback[i](table->session, arg, table->user_data[i], 0);
-		}
-	}
+	rtp_signal_table_emit3(table, arg, NULL);
 }
 
 void rtp_signal_table_emit3(RtpSignalTable *table, void *arg1, void *arg2) {
-	int i, c;
-
-	for (i = 0, c = 0; c < table->count; i++) {
-		if (table->callback[i] != NULL) {
+	for (int i = 0, c = 0; c < table->count; i++) {
+		bctbx_mutex_lock(&table->callback_mutex);
+		if (table->callback[i].cb != NULL) {
 			c++; /*I like it*/
-			table->callback[i](table->session, arg1, arg2, table->user_data[i]);
+
+			// Place the user_data at the right place depending on which emits has been called
+			if (arg1 == NULL && arg2 == NULL) {
+				table->callback[i].cb(table->session, table->callback[i].user_data, NULL, NULL);
+			} else if (arg2 == NULL) {
+				table->callback[i].cb(table->session, arg1, table->callback[i].user_data, NULL);
+			} else {
+				table->callback[i].cb(table->session, arg1, arg2, table->callback[i].user_data);
+			}
 		}
+		bctbx_mutex_unlock(&table->callback_mutex);
 	}
 }
 
 int rtp_signal_table_remove_by_callback(RtpSignalTable *table, RtpCallback cb) {
-	int i;
+	return rtp_signal_table_remove_by_callback_and_user_data(table, cb, NULL);
+}
 
-	for (i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
-		if (table->callback[i] == cb) {
-			table->callback[i] = NULL;
-			table->user_data[i] = 0;
+int rtp_signal_table_remove_by_callback_and_user_data(RtpSignalTable *table, RtpCallback cb, void *user_data) {
+	bctbx_mutex_lock(&table->callback_mutex);
+
+	for (int i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
+		if (table->callback[i].cb == cb) {
+			if (user_data == NULL || user_data == table->callback[i].user_data) {
+				table->callback[i].cb = NULL;
+				table->callback[i].user_data = NULL;
+				table->callback[i].source = NULL;
+				table->count--;
+
+				bctbx_mutex_unlock(&table->callback_mutex);
+				return 0;
+			}
+		}
+	}
+
+	bctbx_mutex_unlock(&table->callback_mutex);
+	return -1;
+}
+
+int rtp_signal_table_remove_by_source_session(RtpSignalTable *table, const RtpSession *session) {
+	bctbx_mutex_lock(&table->callback_mutex);
+
+	for (int i = 0; i < RTP_CALLBACK_TABLE_MAX_ENTRIES; i++) {
+		if (table->callback[i].source == session) {
+			table->callback[i].cb = NULL;
+			table->callback[i].user_data = NULL;
+			table->callback[i].source = NULL;
 			table->count--;
+
+			bctbx_mutex_unlock(&table->callback_mutex);
 			return 0;
 		}
 	}
+
+	bctbx_mutex_unlock(&table->callback_mutex);
 	return -1;
 }

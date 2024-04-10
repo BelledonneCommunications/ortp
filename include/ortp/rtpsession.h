@@ -530,7 +530,15 @@ ORTP_PUBLIC RtpProfile *rtp_session_get_send_profile(RtpSession *session);
 ORTP_PUBLIC RtpProfile *rtp_session_get_recv_profile(RtpSession *session);
 ORTP_PUBLIC int
 rtp_session_signal_connect(RtpSession *session, const char *signal_name, RtpCallback cb, void *user_data);
+ORTP_PUBLIC int rtp_session_signal_connect_from_source_session(
+    RtpSession *session, const char *signal_name, RtpCallback cb, void *user_data, const RtpSession *source);
 ORTP_PUBLIC int rtp_session_signal_disconnect_by_callback(RtpSession *session, const char *signal_name, RtpCallback cb);
+ORTP_PUBLIC int rtp_session_signal_disconnect_by_callback_and_user_data(RtpSession *session,
+                                                                        const char *signal_name,
+                                                                        RtpCallback cb,
+                                                                        void *user_data);
+ORTP_PUBLIC int
+rtp_session_signal_disconnect_by_source_session(RtpSession *session, const char *signal_name, const RtpSession *source);
 ORTP_PUBLIC void rtp_session_set_ssrc(RtpSession *session, uint32_t ssrc);
 ORTP_PUBLIC uint32_t rtp_session_get_send_ssrc(const RtpSession *session);
 ORTP_PUBLIC uint32_t rtp_session_get_recv_ssrc(RtpSession *session);

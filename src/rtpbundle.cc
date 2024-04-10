@@ -136,18 +136,14 @@ void RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fe
 }
 
 void RtpBundleCxx::removeSession(const std::string &mid) {
-	auto session = sessions.find(mid);
+	const auto session = sessions.find(mid);
 
 	// sessions is a multimap, we need to remove all RtpSessions pointed by the mid
 	if (session != sessions.end()) {
 		// We have to remove the bundle from each RtpSession
-		auto range = sessions.equal_range(mid);
+		const auto range = sessions.equal_range(mid);
 		for (auto i = range.first; i != range.second; ++i) {
-			rtp_session_set_bundle(i->second, NULL);
-			if (i->second == primary) {
-				primary->is_primary = FALSE;
-				primary = NULL;
-			}
+			clearSession(i->second);
 		}
 
 		ssrcToMidMutex.lock();
@@ -155,17 +151,16 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 			if (it->second.mid == mid) {
 				ssrcToMid.erase(it++);
 			} else {
-				it++;
+				++it;
 			}
 		}
 		ssrcToMidMutex.unlock();
 
-		if (session->second->fec_stream != NULL) {
-			auto fec_session = fec_sessions.find(mid);
-			if (fec_session != fec_sessions.end()) {
-				rtp_session_set_bundle(fec_session->second, NULL);
-				fec_sessions.erase(mid);
-			}
+		// If we still have a FecSession for this mid then remove it too
+		const auto fec_session = fec_sessions.find(mid);
+		if (fec_session != fec_sessions.end()) {
+			rtp_session_set_bundle(fec_session->second, NULL);
+			fec_sessions.erase(mid);
 		}
 
 		sessions.erase(mid);
@@ -173,7 +168,7 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 }
 
 void RtpBundleCxx::removeSession(RtpSession *session) {
-	auto it =
+	const auto it =
 	    std::find_if(sessions.begin(), sessions.end(),
 	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
 
@@ -184,7 +179,36 @@ void RtpBundleCxx::removeSession(RtpSession *session) {
 		if (count == 1) {
 			removeSession(it->first);
 		} else {
+			clearSession(it->second);
 			sessions.erase(it);
+		}
+	}
+}
+
+void RtpBundleCxx::clearSession(RtpSession *session) {
+	rtp_session_set_bundle(session, nullptr);
+
+	if (primary != nullptr) {
+		if (session == primary) {
+			primary->is_primary = FALSE;
+			primary = nullptr;
+		} else {
+			// Remove the session from all of primary's signal tables.
+			for (const bctbx_list_t *it = primary->signal_tables; it != nullptr; it = it->next) {
+				const auto t = static_cast<RtpSignalTable *>(it->data);
+				rtp_signal_table_remove_by_source_session(t, session);
+			}
+		}
+	}
+
+	if (session->fec_stream != nullptr) {
+		const auto it = std::find_if(fec_sessions.begin(), fec_sessions.end(),
+		                             [session](const std::pair<std::string, RtpSession *> &t) -> bool {
+			                             return t.second == fec_stream_get_fec_session(session->fec_stream);
+		                             });
+		if (it != fec_sessions.end()) {
+			rtp_session_set_bundle(it->second, nullptr);
+			fec_sessions.erase(it);
 		}
 	}
 }
