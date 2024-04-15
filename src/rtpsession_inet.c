@@ -1332,7 +1332,8 @@ int rtp_session_sendto(
 			m->reserved1 = is_rtp;
 			using_simulator = TRUE;
 			ortp_mutex_lock(&session->main_mutex);
-			putq(&session->net_sim_ctx->send_q, m);
+			if (session->net_sim_ctx) putq(&session->net_sim_ctx->send_q, m);
+			else freemsg(m);
 		}
 		ortp_mutex_unlock(&session->main_mutex);
 	}
