@@ -84,7 +84,9 @@
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
 #define WSAID_WSARECVMSG                                                                                               \
 	{                                                                                                                  \
-		0xf689d7c8, 0x6f1f, 0x436b, { 0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22 }                                 \
+		0xf689d7c8, 0x6f1f, 0x436b, {                                                                                  \
+			0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22                                                             \
+		}                                                                                                              \
 	}
 #ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
@@ -1330,7 +1332,8 @@ int rtp_session_sendto(
 			m->reserved1 = is_rtp;
 			using_simulator = TRUE;
 			ortp_mutex_lock(&session->main_mutex);
-			putq(&session->net_sim_ctx->send_q, m);
+			if (session->net_sim_ctx) putq(&session->net_sim_ctx->send_q, m);
+			else freemsg(m);
 		}
 		ortp_mutex_unlock(&session->main_mutex);
 	}
