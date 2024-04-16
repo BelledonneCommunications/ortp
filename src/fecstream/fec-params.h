@@ -27,6 +27,11 @@
 
 namespace ortp {
 
+#ifdef _WIN32
+// Disable C4251 triggered by need to export all stl template classes
+#pragma warning(disable : 4251)
+#endif // ifdef _WIN32
+
 class FecParamsController;
 
 /** @class FecParamsSubscriber
@@ -249,10 +254,10 @@ private:
 	                    mIs2Dvalues.at(mLevel).*/
 	float mOverhead; /**< Theoretical overhead, if the source and repair packets have the same size, for the current FEC
 	                    parameters. 0 if the FEC is disabled. Its current value is mLvalues.at(mLevel).*/
-	float mMaximalOverhead = 0.8; /**< Maximal overhead allowed to not use too much bandwidth for FEC stream. It is
+	float mMaximalOverhead = 0.8f; /**< Maximal overhead allowed to not use too much bandwidth for FEC stream. It is
 	                                 updated given the current available bandwidth by the function findBandwidthRange.*/
 	const std::array<float, 3> mMaxOverheadList = {
-	    0.5, 0.7, 0.9}; /**< List of maximal overheads allowed given the available bandwidth, from low to high.*/
+	    0.5f, 0.7f, 0.9f}; /**< List of maximal overheads allowed given the available bandwidth, from low to high.*/
 	std::array<float, 5> mLossRateLimitsLowBandwidth; /**< Table of loss rate given the FEC level from low to high, in
 	                                                     case of low bandwidth.*/
 	std::array<float, 5> mLossRateLimitsMediumBandwidth; /**< Table of loss rate given the FEC level from low to high,
@@ -260,16 +265,16 @@ private:
 	std::array<float, 5> mLossRateLimitsHighBandwidth; /**< Table of loss rate given the FEC level from low to high, in
 	                                                      case of high bandwidth.*/
 	const float mMaxLossRate =
-	    20.; /**< Maximal loss rate taken to compute the FEC level. If the loss rate is greater
+	    20.f; /**< Maximal loss rate taken to compute the FEC level. If the loss rate is greater
 	            than this value, the FEC should be disabled, because there might be a congestion.*/
 	int const mLowBandwidth =
 	    100000; /**< Low bandwidth threshold: below that value, the FEC is limited to avoid congestion.*/
 	int const mHighBandwidth = 300000; /**< High bandwidth threshold: above that value, the FEC level increases quickly
 	                                      with the loss rate.*/
 	std::array<float, 6> const mOverheadLimits = {
-	    0.,  0.1,    0.2, 0.4,
-	    0.5, 2. / 3.}; /**< Theoretical overheads taken to compute the loss rate tables for an increasing
-	                 FEC level. It is related to mLvalues, mDvalues and mIs2Dvalues.*/
+	    0.f,  0.1f,     0.2f, 0.4f,
+	    0.5f, 2.f / 3.f}; /**< Theoretical overheads taken to compute the loss rate tables for an increasing FEC level.
+	                         It is related to mLvalues, mDvalues and mIs2Dvalues.*/
 	std::array<uint8_t, 6> const mLvalues = {0, 10, 5, 5,
 	                                         4, 3}; /**< Table of FEC parameter L for an increasing
 	       FEC level. It is related to mOverheadLimits, mDvalues and mIs2Dvalues.*/

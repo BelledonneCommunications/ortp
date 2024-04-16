@@ -84,7 +84,7 @@ void Overhead::reset(size_t L) {
 
 float Overhead::computeOverheadEstimator() {
 	float overhead_size = static_cast<float>(mOverheads.size());
-	if (overhead_size < 5) return 0.f;
+	if (overhead_size < 5.f) return 0.f;
 
 	std::queue<float> copy_overhead = mOverheads;
 	float mean_overhead = 0.f;

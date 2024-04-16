@@ -85,13 +85,13 @@ void FecParamsController::computeLossRateTables() {
 }
 
 float FecParamsController::computeOverhead(uint8_t L, uint8_t D, bool is2D) {
-	if (L == 0) return 0.;
+	if (L == 0) return 0.f;
 	if (is2D) {
-		return (1.0 / (float)L) + ((D > 0) ? (1.0 / (float)D) : 0.0);
+		return (1.0f / (float)L) + ((D > 0) ? (1.0f / (float)D) : 0.0f);
 	} else if (D == 0) {
-		return 1.0 / (float)L;
+		return 1.0f / (float)L;
 	} else {
-		return 1.0 / (float)D;
+		return 1.0f / (float)D;
 	}
 }
 
@@ -112,7 +112,7 @@ std::array<float, 5> FecParamsController::findBandwidthRange(int availableBandwi
 }
 
 uint8_t FecParamsController::findLevelGivenLossRate(float lossRate, std::array<float, 5> *lossRateLimits) {
-	uint8_t i = lossRateLimits->size();
+	uint8_t i = static_cast<uint8_t>(lossRateLimits->size());
 	bool paramFound = false;
 	while (!paramFound && i > 0) {
 		if (lossRate >= lossRateLimits->at(i - 1)) {
@@ -141,7 +141,7 @@ uint8_t FecParamsController::estimateBestLevel(float lossRate,
 	uint8_t bestLevel = findLevelGivenLossRate(lossRate, &lossRateLimits);
 	float theoreticalOverhead =
 	    computeOverhead(mLvalues.at(bestLevel), mDvalues.at(bestLevel), mIs2Dvalues.at(bestLevel));
-	float newOverhead = 0.;
+	float newOverhead = 0.f;
 
 	if (mOverhead > 0.) {
 		// estimation of overhead for this level
@@ -159,14 +159,14 @@ uint8_t FecParamsController::estimateBestLevel(float lossRate,
 	}
 	// FEC is currently disabled
 	if (newOverhead == 0.) {
-		newOverhead = theoreticalOverhead * 2.;
+		newOverhead = theoreticalOverhead * 2.f;
 
 		// reduction of the fec level if needed
 		while (newOverhead > mMaximalOverhead) {
 			bestLevel--;
 			theoreticalOverhead =
 			    computeOverhead(mLvalues.at(bestLevel), mDvalues.at(bestLevel), mIs2Dvalues.at(bestLevel));
-			newOverhead = theoreticalOverhead * 2.;
+			newOverhead = theoreticalOverhead * 2.f;
 		}
 	}
 	*estimatedOverhead = newOverhead;
