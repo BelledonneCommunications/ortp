@@ -340,7 +340,7 @@ void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled
 }
 
 void rtp_session_reset_video_bandwidth_estimator(RtpSession *session) {
-	ortp_video_bandwidth_estimator_reset_measurements(session->rtp.video_bw_estimator);
+	ortp_video_bandwidth_estimator_reset(session->rtp.video_bw_estimator);
 }
 
 void rtp_session_enable_video_bandwidth_estimator(RtpSession *session,

@@ -74,7 +74,12 @@ static bool_t ortp_congestion_detector_set_state(OrtpCongestionDetector *cd, Ort
 void ortp_congestion_detector_reset(OrtpCongestionDetector *cd) {
 	cd->initialized = FALSE;
 	cd->skip = FALSE;
-	ortp_congestion_detector_set_state(cd, CongestionStateNormal);
+	if (ortp_congestion_detector_set_state(cd, CongestionStateNormal)) {
+		OrtpEvent *ev = ortp_event_new(ORTP_EVENT_CONGESTION_STATE_CHANGED);
+		OrtpEventData *ed = ortp_event_get_data(ev);
+		ed->info.congestion_detected = FALSE;
+		rtp_session_dispatch_event(cd->session, ev);
+	}
 }
 
 OrtpCongestionDetector *ortp_congestion_detector_new(RtpSession *session) {

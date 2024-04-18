@@ -83,11 +83,6 @@ void ortp_video_bandwidth_estimator_process_packet(OrtpVideoBandwidthEstimator *
 
 float ortp_video_bandwidth_estimator_get_estimated_available_bandwidth(OrtpVideoBandwidthEstimator *vbe);
 
-/**
- * Reset the measurements of video bandwidth.
- */
-void ortp_video_bandwidth_estimator_reset_measurements(OrtpVideoBandwidthEstimator *vbe);
-
 #ifdef __cplusplus
 }
 #endif
