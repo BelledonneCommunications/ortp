@@ -20,6 +20,9 @@
 #ifdef HAVE_CONFIG_H
 #include "ortp-config.h"
 #endif
+#ifndef _WIN32
+#include <sys/resource.h>
+#endif
 #include "ortp/ortp.h"
 #include "ortp/rtpsession.h"
 #include "rtpsession_priv.h"
@@ -114,6 +117,14 @@ static void set_high_prio(void) {
 		ortp_message("ortp network simulator: sched policy set to %s and priority value (%i)",
 		             sched_policy_to_string(policy), param.sched_priority);
 	}
+	/* The linux kernel has sched_get_priority_max(SCHED_OTHER)=sched_get_priority_max(SCHED_OTHER)=0. As long as we
+	 * can't use SCHED_RR or SCHED_FIFO, the only way to increase priority of a calling thread is to use
+	 * setpriority().*/
+	if (setpriority(PRIO_PROCESS, 0, -20) == -1) {
+		ortp_message("Ortp network simulator setpriority() failed: %s, nevermind.", strerror(errno));
+	} else {
+		ortp_message("Ortp network simulator priority increased to maximum.");
+	}
 #endif
 }
 
@@ -155,6 +166,7 @@ OrtpNetworkSimulatorMode ortp_network_simulator_mode_from_string(const char *str
 }
 
 void rtp_session_enable_network_simulation(RtpSession *session, const OrtpNetworkSimulatorParams *params) {
+	set_high_prio();
 	OrtpNetworkSimulatorCtx *sim = session->net_sim_ctx;
 	if (params->enabled) {
 		if (sim == NULL) {
