@@ -1403,7 +1403,7 @@ static int __rtp_session_sendm_with_ts_2(
 	return error;
 }
 
-static int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts) {
+int __rtp_session_sendm_with_ts(RtpSession *session, mblk_t *mp, uint32_t packet_ts, uint32_t send_ts) {
 	return __rtp_session_sendm_with_ts_2(session, mp, packet_ts, send_ts, TRUE);
 }
 

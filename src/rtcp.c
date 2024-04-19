@@ -152,7 +152,7 @@ static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 		 * */
 		ortp_warning("Cname [%s] too long for session [%p]", items->cname, session);
 	}
-
+	ortp_mutex_lock(&session->main_mutex);
 	/* Add mid to chunck if there is a bundle */
 	if (session->bundle) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
@@ -167,6 +167,7 @@ static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 		}
 		m = sdes_chunk_pad(m);
 	}
+	ortp_mutex_unlock(&session->main_mutex);
 	return chunk;
 }
 
@@ -200,6 +201,7 @@ void rtp_session_set_source_description(RtpSession *session,
 		 * */
 		ortp_warning("Cname [%s] too long for session [%p]", cname, session);
 	}
+	ortp_mutex_lock(&session->main_mutex);
 	assign_string(&items->cname, cname);
 	assign_string(&items->name, name);
 	assign_string(&items->email, email);
@@ -207,6 +209,7 @@ void rtp_session_set_source_description(RtpSession *session,
 	assign_string(&items->loc, loc);
 	assign_string(&items->tool, tool);
 	assign_string(&items->note, note);
+	ortp_mutex_unlock(&session->main_mutex);
 }
 
 void rtp_session_add_contributing_source(RtpSession *session,
