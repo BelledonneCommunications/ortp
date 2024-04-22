@@ -45,7 +45,8 @@ struct _OrtpEventData {
 		bool_t zrtp_stream_encrypted;
 		bool_t ice_processing_successful;
 		struct _ZrtpInfo {
-			char sas[32]; // up to 31 + null characters
+			char sas[32];              // up to 31 + null characters
+			char incorrect_sas[3][32]; // List of 3 half bad SAS. Up to 31 + null characters
 			bool_t verified;
 			bool_t cache_mismatch;
 			bool_t pad[2];
