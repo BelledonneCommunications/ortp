@@ -250,6 +250,7 @@ ORTP_PUBLIC int set_blocking_socket(ortp_socket_t sock);
 #define ortp_file_exist(pathname) bctbx_file_exist(pathname)
 
 #define ortp_get_cur_time(ts) bctbx_get_cur_time(ts)
+#define ortp_get_utc_cur_time(ts) bctbx_get_utc_cur_time(ts)
 #define ortp_get_cur_time_ms(void) bctbx_get_cur_time_ms(void)
 #define ortp_sleep_ms(ms) bctbx_sleep_ms(ms)
 #define ortp_sleep_until(ts) bctbx_sleep_until(ts)

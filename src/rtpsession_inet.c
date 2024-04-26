@@ -1438,13 +1438,13 @@ int rtp_session_recvfrom(
 	return ret;
 }
 
-void update_sent_bytes(OrtpStream *os, int nbytes) {
+void ortp_stream_update_sent_bytes(OrtpStream *os, int nbytes) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	if ((os->sent_bytes == 0) && (os->send_bw_start.tv_sec == 0) && (os->send_bw_start.tv_usec == 0)) {
-		/* Initialize bandwidth computing time when has not been started yet. */
-		bctbx_gettimeofday(&os->send_bw_start, NULL);
-	}
-	os->sent_bytes += nbytes + overhead;
+	struct timeval current;
+	bctbx_gettimeofday(&current, NULL);
+
+	ortp_bw_estimator_packet_received(&os->send_bw_estimator, nbytes + overhead, &current);
+	ortp_bw_estimator_packet_received(&os->send_average_bw_estimator, nbytes + overhead, &current);
 }
 
 static void update_recv_bytes(OrtpStream *os, size_t nbytes, const struct timeval *recv_time) {
@@ -1492,7 +1492,7 @@ rtp_session_rtp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destaddr
 			} else log_send_error(session, "rtp", m, destaddr, destlen);
 			session->rtp.send_errno = getSocketErrorCode();
 		} else {
-			update_sent_bytes(&session->rtp.gs, error);
+			ortp_stream_update_sent_bytes(&session->rtp.gs, error);
 		}
 	}
 	return error;
@@ -1558,7 +1558,7 @@ rtp_session_rtcp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destadd
 				log_send_error(session, "rtcp", m, destaddr, destlen);
 			}
 		} else {
-			update_sent_bytes(&session->rtcp.gs, error);
+			ortp_stream_update_sent_bytes(&session->rtcp.gs, error);
 			rtp_session_update_avg_rtcp_size(session, error);
 		}
 	}

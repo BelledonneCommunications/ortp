@@ -311,10 +311,8 @@ typedef struct _OrtpStream {
 	struct _RtpTransport *tr;
 	OrtpBwEstimator recv_bw_estimator;
 	OrtpBwEstimator recv_average_bw_estimator;
-	struct timeval send_bw_start; /* used for bandwidth estimation */
-	unsigned int sent_bytes;      /* used for bandwidth estimation */
-	float upload_bw;
-	float average_upload_bw;
+	OrtpBwEstimator send_bw_estimator;
+	OrtpBwEstimator send_average_bw_estimator;
 	bctbx_list_t *aux_destinations; /*list of OrtpAddress */
 	queue_t bundleq;                /* For bundle mode */
 	ortp_mutex_t bundleq_lock;
@@ -761,8 +759,6 @@ ORTP_PUBLIC void rtp_session_unregister_event_queue(RtpSession *session, OrtpEvQ
 ORTP_PUBLIC void rtp_session_unregister_event_queues(RtpSession *session);
 
 /* IP bandwidth usage estimation functions, returning bits/s*/
-ORTP_PUBLIC float rtp_session_compute_send_bandwidth(RtpSession *session);
-ORTP_PUBLIC float rtp_session_compute_recv_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_send_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_recv_bandwidth(RtpSession *session);
 ORTP_PUBLIC float rtp_session_get_rtp_send_bandwidth(RtpSession *session);

@@ -303,6 +303,11 @@ void rtp_session_init(RtpSession *session, RtpSessionMode mode) {
 	ortp_bw_estimator_init(&session->rtp.gs.recv_average_bw_estimator, 0.985f, 0.01f);
 	ortp_bw_estimator_init(&session->rtcp.gs.recv_average_bw_estimator, 0.985f, 0.01f);
 
+	ortp_bw_estimator_init(&session->rtp.gs.send_bw_estimator, 0.95f, 0.01f);
+	ortp_bw_estimator_init(&session->rtcp.gs.send_bw_estimator, 0.95f, 0.01f);
+	ortp_bw_estimator_init(&session->rtp.gs.send_average_bw_estimator, 0.985f, 0.01f);
+	ortp_bw_estimator_init(&session->rtcp.gs.send_average_bw_estimator, 0.985f, 0.01f);
+
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
 	ortp_mutex_init(&session->rtp.winthread_lock, NULL);
@@ -2367,45 +2372,8 @@ void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno) {
 	session->use_connect = yesno;
 }
 
-static float compute_bw(struct timeval *orig, unsigned int *bytes, const struct timeval *current) {
-	float bw;
-	float time;
-
-	time = (float)((double)(current->tv_sec - orig->tv_sec) + ((double)(current->tv_usec - orig->tv_usec) * 1e-6));
-	bw = ((float)*bytes) * 8 / (time + 0.0001f);
-	/*+0.0001 avoids a division by zero without changing the results significatively*/
-	*orig = *current;
-	return bw;
-}
-
-#define BW_GAMMA 0.5f
-
-static void compute_send_bandwidth(OrtpStream *os, const struct timeval *current) {
-	os->upload_bw = compute_bw(&os->send_bw_start, &os->sent_bytes, current);
-	os->sent_bytes = 0;
-	os->average_upload_bw = (os->average_upload_bw == 0)
-	                            ? os->upload_bw
-	                            : (1 - BW_GAMMA) * os->average_upload_bw + BW_GAMMA * os->upload_bw;
-}
-
-float rtp_session_compute_send_bandwidth(RtpSession *session) {
-	struct timeval current;
-	FecStream *fec_stream;
-	RtpSession *fec_session;
-	bctbx_gettimeofday(&current, NULL);
-	fec_stream = session->fec_stream;
-	if (fec_stream != NULL) {
-		fec_session = fec_stream_get_fec_session(fec_stream);
-		compute_send_bandwidth(&fec_session->rtp.gs, &current);
-	}
-	compute_send_bandwidth(&session->rtcp.gs, &current);
-	compute_send_bandwidth(&session->rtp.gs, &current);
-	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
-}
-
 /**
  * Get last computed recv bandwidth.
- * Computation must have been done with rtp_session_compute_recv_bandwidth()
  **/
 float rtp_session_get_recv_bandwidth(RtpSession *session) {
 	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator) +
@@ -2419,14 +2387,15 @@ float rtp_session_get_recv_bandwidth_smooth(RtpSession *session) {
 
 /**
  * Get last computed send bandwidth.
- * Computation must have been done with rtp_session_compute_send_bandwidth()
  **/
 float rtp_session_get_send_bandwidth(RtpSession *session) {
-	return session->rtp.gs.upload_bw + session->rtcp.gs.upload_bw;
+	return ortp_bw_estimator_get_value(&session->rtp.gs.send_bw_estimator) +
+	       ortp_bw_estimator_get_value(&session->rtcp.gs.send_bw_estimator);
 }
 
 float rtp_session_get_send_bandwidth_smooth(RtpSession *session) {
-	return session->rtp.gs.average_upload_bw + session->rtcp.gs.average_upload_bw;
+	return ortp_bw_estimator_get_value(&session->rtp.gs.send_average_bw_estimator) +
+	       ortp_bw_estimator_get_value(&session->rtcp.gs.send_average_bw_estimator);
 }
 
 float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {
@@ -2434,7 +2403,7 @@ float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {
 }
 
 float rtp_session_get_rtp_send_bandwidth(RtpSession *session) {
-	return session->rtp.gs.upload_bw;
+	return ortp_bw_estimator_get_value(&session->rtp.gs.send_bw_estimator);
 }
 
 float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session) {
@@ -2442,7 +2411,7 @@ float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session) {
 }
 
 float rtp_session_get_rtcp_send_bandwidth(RtpSession *session) {
-	return session->rtcp.gs.upload_bw;
+	return ortp_bw_estimator_get_value(&session->rtcp.gs.send_bw_estimator);
 }
 
 int rtp_session_get_last_send_error_code(RtpSession *session) {
@@ -3013,7 +2982,7 @@ int meta_rtp_transport_modifier_inject_packet_to_send_to(
 	}
 
 	ret = _meta_rtp_transport_send_through_endpoint(t, msg, flags, to, tolen);
-	update_sent_bytes(&t->session->rtp.gs, ret);
+	ortp_stream_update_sent_bytes(&t->session->rtp.gs, ret);
 	return ret;
 }
 
