@@ -55,12 +55,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
 	# TODO : implement tester-runtime like bellesip
 	#install(FILES "${CMAKE_CURRENT_BINARY_DIR}/BelledonneCommunications.ortp.Tester.winmd" DESTINATION lib)
 
-	#if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	#	install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/BelledonneCommunications.ortp.Tester.pdb
-	#		DESTINATION ${CMAKE_INSTALL_LIBDIR}
-	#		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-	#	)
-	#endif()
+	#install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/BelledonneCommunications.ortp.Tester.pdb
+	#	DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	#	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+	#	CONFIGURATIONS Debug RelWithDebInfo
+	#)
 else()
 	if(IOS)
 		set_source_files_properties(${IOS_RESOURCES_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -77,11 +76,6 @@ else()
 
 	set_target_properties(ortp-tester PROPERTIES LINKER_LANGUAGE CXX)
 	target_link_libraries(ortp-tester PRIVATE ${ORTP_LIBS_FOR_TESTER} ${BCToolbox_tester_TARGET})
-	string(REPLACE ";" " " LINK_FLAGS_STR "${LINK_FLAGS}")
-
-	if(LINK_FLAGS_STR)
-		set_target_properties(ortp-tester PROPERTIES LINK_FLAGS "${LINK_FLAGS_STR}")
-	endif()
 
 	if(NOT IOS)
 		install(TARGETS ortp-tester
