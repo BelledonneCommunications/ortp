@@ -27,6 +27,8 @@
 
 #include "ortp/rtpsession.h"
 
+#include <vector>
+
 class RtpBundleCxx {
 
 public:
@@ -53,16 +55,13 @@ public:
 	 * Returns true if dispatched, false is the packet belongs to the primary session where it was received.*/
 	bool dispatch(bool isRtp, mblk_t *m);
 
-	bool updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp);
-
 	RtpSession *checkForSession(const mblk_t *m, bool isRtp, bool isOutgoing = false);
 
 private:
 	static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
-	struct Mid {
-		std::string mid;
-		uint16_t sequenceNumber;
-	};
+	std::string getMid(const mblk_t *m, bool isRtp);
+
+	bool assignSsrcToMid(uint32_t ssrc, const std::string &mid, bool isRtp);
 
 	RtpSession *getFecSessionFromRTCP(const mblk_t *m);
 	bool dispatchRtpMessage(mblk_t *m);
@@ -72,12 +71,12 @@ private:
 	void clearSession(RtpSession *session);
 
 	RtpSession *primary = NULL;
-	std::map<uint32_t, Mid> ssrcToMid;
+	std::map<uint32_t, std::string> ssrcToMid;
 	std::multimap<std::string, RtpSession *> sessions;
 	std::map<std::string, RtpSession *> fec_sessions;
 	std::mutex ssrcToMidMutex;
 
-	std::string sdesParseMid = "";
+	std::string sdesParseMid;
 	int midId = -1;
 };
 

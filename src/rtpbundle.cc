@@ -148,8 +148,8 @@ void RtpBundleCxx::removeSession(const std::string &mid) {
 
 		ssrcToMidMutex.lock();
 		for (auto it = ssrcToMid.begin(); it != ssrcToMid.end();) {
-			if (it->second.mid == mid) {
-				ssrcToMid.erase(it++);
+			if (it->second == mid) {
+				it = ssrcToMid.erase(it);
 			} else {
 				++it;
 			}
@@ -263,33 +263,17 @@ const std::string &RtpBundleCxx::getSessionMid(RtpSession *session) const {
 	throw std::string("the session must be in the bundle!");
 }
 
-bool RtpBundleCxx::updateMid(const std::string &mid, const uint32_t ssrc, const uint16_t sequenceNumber, bool isRtp) {
-	auto session = sessions.find(mid);
-	if (session != sessions.end()) {
-		auto entry = ssrcToMid.find(ssrc);
-		if (entry == ssrcToMid.end()) {
-			Mid value = {mid, isRtp ? sequenceNumber : (uint16_t)0};
-			ssrcToMid[ssrc] = value;
+bool RtpBundleCxx::assignSsrcToMid(const uint32_t ssrc, const std::string &mid, bool isRtp) {
+	if (const auto session = sessions.find(mid); session != sessions.end()) {
+		if (ssrcToMid.find(ssrc) == ssrcToMid.end()) {
+			ssrcToMid[ssrc] = mid;
 			ortp_message("RtpBundle[%p] SSRC [%u] paired with mid [%s] from [%s]", this, ssrc, mid.c_str(),
 			             isRtp ? "RTP" : "RTCP");
-			return true;
-		} else if ((*entry).second.mid != mid) {
-			if (isRtp) {
-				ortp_message("RtpBundle[%p]: received a mid update via RTP.", this);
-				if (entry->second.sequenceNumber < sequenceNumber) {
-					Mid value = {mid, sequenceNumber};
-					ssrcToMid[ssrc] = value;
-				}
-			} else {
-				// We should normally update the mid but we chose not to for simplicity
-				// since RTCP does not have a sequence number.
-				// https://tools.ietf.org/html/draft-ietf-mmusic-sdp-bundle-negotiation-54#page-24
-				ortp_warning("RtpBundle[%p]: received a mid update via RTCP, ignoring it.", this);
-			}
 		}
+
+		// Return true here, we don't want to return false if we already have an entry
 		return true;
 	}
-	/* The mid is totally unknown, this is an error. */
 	return false;
 }
 
@@ -376,6 +360,13 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 			break;
 		case RTCP_RTPFB:
 			*ssrc = rtcp_RTPFB_get_media_source_ssrc(m);
+
+			// In case of TMMBR or TMMBN, media ssrc is always 0 but we can use the ssrc in the FCI field
+			if (const auto type = rtcp_RTPFB_get_type(m);
+			    *ssrc == 0 && (type == RTCP_RTPFB_TMMBR || type == RTCP_RTPFB_TMMBN)) {
+				if (const auto *fci = rtcp_RTPFB_tmmbr_get_fci(m); fci != nullptr)
+					*ssrc = rtcp_fb_tmmbr_fci_get_ssrc(fci);
+			}
 			return true;
 		case RTCP_PSFB:
 			*ssrc = rtcp_PSFB_get_media_source_ssrc(m);
@@ -384,8 +375,6 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 			/* not handled, but no so necessary*/
 			break;
 		default:
-			ortp_warning("Unknown RTCP packet type (%u) while retrieving referred SSRC",
-			             rtcp_common_header_get_packet_type(ch));
 			break;
 	}
 
@@ -393,18 +382,11 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 }
 
 void RtpBundleCxx::checkForSessionSdesCallback(
-    void *userData, uint32_t ssrc, rtcp_sdes_type_t t, const char *content, uint8_t contentLen) {
-	RtpBundleCxx *bundle = (RtpBundleCxx *)userData;
-	std::string value(content, contentLen);
+    void *userData, BCTBX_UNUSED(uint32_t ssrc), rtcp_sdes_type_t t, const char *content, uint8_t contentLen) {
+	auto *bundle = static_cast<RtpBundleCxx *>(userData);
 
 	if (t == RTCP_SDES_MID) {
-		// Update the mid map with the corresponding session
-		if (!bundle->updateMid(value, ssrc, UINT16_MAX, false)) {
-			ortp_warning("Rtp Bundle [%p]: SSRC %u not found and SDES mid \"%s\" from msg does not "
-			             "correspond to any sessions",
-			             bundle, ssrc, value.c_str());
-		}
-		bundle->sdesParseMid = value;
+		bundle->sdesParseMid = std::string(content, contentLen);
 	}
 }
 RtpSession *RtpBundleCxx::getFecSessionFromRTCP(const mblk_t *m) {
@@ -446,192 +428,166 @@ bool RtpBundleCxx::assignmentPossible(RtpSession *session, const mblk_t *m, uint
 	return false;
 }
 
+std::string RtpBundleCxx::getMid(const mblk_t *m, bool isRtp) {
+	if (isRtp && rtp_get_extbit(m)) {
+		uint8_t *data;
+		if (const size_t midSize = rtp_get_extension_header(m, midId != -1 ? midId : RTP_EXTENSION_MID, &data);
+		    midSize != static_cast<size_t>(-1)) {
+			return {reinterpret_cast<char *>(data), midSize};
+		}
+	} else {
+		if (rtcp_is_SDES(m)) {
+			/* The checkForSessionSdesCallback() checks for presence of mid */
+			sdesParseMid.clear();
+			rtcp_sdes_parse(m, checkForSessionSdesCallback, this);
+
+			return sdesParseMid;
+		}
+	}
+
+	return "";
+}
+
 RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOutgoing) {
-	const std::lock_guard<std::mutex> guard(ssrcToMidMutex);
-	uint32_t ssrc;
-	std::string mid;
+	const std::lock_guard guard(ssrcToMidMutex);
 
 	if (isRtp && rtp_get_version(m) != 2) {
 		/* STUN packet*/
 		return primary;
 	}
 
-	ssrc = getSsrcFromMessage(m, isRtp);
-	auto it = ssrcToMid.find(ssrc);
+	if (!isRtp && rtcp_is_RTPFB(m) && getFecSessionFromRTCP(m) != nullptr) {
+		ortp_error("[flexfec] Received an RTCP packet for flexfec session");
+		return nullptr;
+	}
 
-	if (isRtp) {
-		if (rtp_get_extbit(m)) {
-			size_t midSize;
-			uint8_t *data;
+	uint32_t ssrc = getSsrcFromMessage(m, isRtp);
+	std::string mid = getMid(m, isRtp);
 
-			midSize = rtp_get_extension_header(m, midId != -1 ? midId : RTP_EXTENSION_MID, &data);
-			if (midSize != (size_t)-1) {
-				mid = std::string((char *)data, midSize);
+	if (const auto it = ssrcToMid.find(ssrc); mid.empty()) {
+		// If there is no mid in the packet, check if we have it stored for this ssrc
+		if (it == ssrcToMid.end()) {
+			ortp_warning("RtpBundle[%p]: Packet with SSRC %u doesn't have any mid and no corresponding mid in bundle",
+			             this, ssrc);
+			return nullptr;
+		}
 
-				// Update the mid map with the corresponding session
-				if (!updateMid(mid, ssrc, rtp_get_seqnumber(m), true)) {
-					if (it == ssrcToMid.end()) {
-						ortp_warning("RtpBundle[%p]: SSRC %u not found and mid \"%s\" from msg (%d) does not "
-						             "correspond to any sessions",
-						             this, ssrc, mid.c_str(), (int)rtp_get_seqnumber(m));
-						return NULL;
+		mid = it->second;
+	} else if (it == ssrcToMid.end()) {
+		// We have a mid in the packet, but not in the association map. Insert it if we have a corresponding session.
+		if (!assignSsrcToMid(ssrc, mid, isRtp)) {
+			ortp_warning("RtpBundle[%p]: SSRC %u not found and mid \"%s\" from msg (%d) does not "
+			             "correspond to any sessions",
+			             this, ssrc, mid.c_str(), static_cast<int>(rtp_get_seqnumber(m)));
+			return nullptr;
+		}
+	}
+
+	// If the RTCP packet is referring to another SSRC, then use this one instead
+	if (uint32_t referredSsrc; !isRtp && getRTCPReferedSSRC(m, &referredSsrc) && referredSsrc != 0) {
+		ssrc = referredSsrc;
+	}
+
+	// Return the corresponding session if we find it
+	const auto [first, last] = sessions.equal_range(mid);
+	if (first == last) {
+		ortp_warning("RtpBundle[%p]: Unable to find session with mid %s (SSRC %u)", this, mid.c_str(), ssrc);
+		return nullptr;
+	}
+
+	// TODO: change this loop into a map<SSRC, RtpSession*> lookup
+	for (auto s = first; s != last; ++s) {
+		const auto session = s->second;
+		if (isOutgoing && session->snd.ssrc == ssrc) {
+			return session;
+		}
+
+		if (!isOutgoing && session->ssrc_set) {
+			/* This session already has a SSRC assigned, do they match? */
+			if (session->rcv.ssrc == ssrc) {
+				return session;
+			}
+
+			/* check if there is a fec session that could do */
+			/* TODO: move out this in FecStream, using on_new_incoming_ssrc_in_bundle callback */
+			if (session->fec_stream) {
+				RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
+				if (rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)) {
+					/* payload type are matching */
+					if (fec_session->ssrc_set && fec_session->rcv.ssrc == ssrc) {
+						/* ssrc are matching */
+						return fec_session;
+					}
+					if (!fec_session->ssrc_set) {
+						ortp_message("RtpBundle[%p]: assign incoming SSRC %u to FEC session %p with pt %d", this, ssrc,
+						             fec_session, rtp_get_payload_type(m));
+						/* TODO shall we check the CSRC in the packet to check that this is the correct FEC
+						 * session for the associated RTP session ?*/
+						return fec_session;
 					}
 				}
-			} else {
-				if (it == ssrcToMid.end()) {
-					ortp_warning("RtpBundle[%p]: SSRC %u not found and msg (%d) does not have a mid extension header",
-					             this, ssrc, (int)rtp_get_seqnumber(m));
-					return NULL;
-				}
-			}
-		} else {
-			if (it == ssrcToMid.end()) {
-				ortp_warning("RtpBundle[%p]: SSRC %u not found and msg (%d) does not have an extension header", this,
-				             ssrc, (int)rtp_get_seqnumber(m));
-				return NULL;
-			}
-		}
-	} else {
-
-		if (rtcp_is_RTPFB(m) && getFecSessionFromRTCP(m) != NULL) {
-			ortp_error("[flexfec] Received an RTCP packet for flexfec session");
-			return NULL;
-		}
-		if (rtcp_is_SDES(m)) {
-			/* The checkForSessionSdesCallback() checks for presence of mid and may associate
-			 * mid and SSRC */
-			sdesParseMid.clear();
-			rtcp_sdes_parse(m, checkForSessionSdesCallback, this);
-
-			if (sdesParseMid.empty()) {
-				if (it == ssrcToMid.end()) {
-					return NULL;
-				}
-			} else {
-				sdesParseMid = "";
-			}
-		} else {
-			if (it == ssrcToMid.end()) {
-				// Cannot look at mid in RTCP as it is not a SDES
-				ortp_message("RtpBundle[%p]: No mid found in RTCP", this);
-				return NULL;
 			}
 		}
 	}
 
-	// Get the value again in case it has been updated
-	it = ssrcToMid.find(ssrc);
-	if (it == ssrcToMid.end()) {
-		ortp_warning("RtpBundle[%p]: SSRC %u not found in map to convert it to mid", this, ssrc);
-	} else {
-		auto range = sessions.equal_range(it->second.mid);
-		if (range.first == range.second) {
-			ortp_warning("RtpBundle[%p]: Unable to find session with mid %s (SSRC %u)", this, it->second.mid.c_str(),
-			             ssrc);
-			return nullptr;
-		} else {
-			/*
-			 * TODO: change this loop into a map<SSRC, RtpSession*> lookup
-			 */
-			for (auto s = range.first; s != range.second; ++s) {
-				auto session = s->second;
-				if (isOutgoing && session->snd.ssrc == ssrc) {
+	// If we are here, it is because we did not found an already assigned RtpSession for this SSRC.
+	// Now, lookup if one of these session can be assigned
+	if (!isOutgoing) {
+		for (auto s = first; s != last; ++s) {
+			if (const auto session = s->second; assignmentPossible(session, m, ssrc, isRtp)) {
+				session->ssrc_set = TRUE;
+				session->rcv.ssrc = ssrc;
+				/* TODO: insert the session into the map */
+				return session;
+			}
+		}
+
+		if (!isRtp) {
+			for (auto s = first; s != last; ++s) {
+				const auto session = s->second;
+				uint32_t local_ssrc = 0;
+				if (getRTCPReferedSSRC(m, &local_ssrc) && session->snd.ssrc == local_ssrc) {
+					const rtcp_common_header_t *ch = rtcp_get_common_header(m);
+					ortp_message("RtpBundle[%p]: RTCP msg (%d) refering to SSRC %u with unknown sender-ssrc %u "
+					             "routed to session %p",
+					             this, rtcp_common_header_get_packet_type(ch), local_ssrc, ssrc, session);
 					return session;
 				}
-
-				if (!isOutgoing && session->ssrc_set) {
-					/* This session already has a SSRC assigned, do they match? */
-					if (session->rcv.ssrc == ssrc) {
-						return session;
-					} else { /* check if there is a fec session that could do */
-						/* TODO: move out this in FecStream, using on_new_incoming_ssrc_in_bundle callback */
-						if (session->fec_stream) {
-							RtpSession *fec_session = fec_stream_get_fec_session(session->fec_stream);
-							if (rtp_session_get_recv_payload_type(fec_session) == rtp_get_payload_type(m)) {
-								/* payload type are matching */
-								if (fec_session->ssrc_set && fec_session->rcv.ssrc == ssrc) {
-									/* ssrc are matching */
-									return fec_session;
-								}
-								if (!fec_session->ssrc_set) {
-									ortp_message("RtpBundle[%p]: assign incoming SSRC %u to FEC session %p with pt %d",
-									             this, ssrc, fec_session, rtp_get_payload_type(m));
-									/* TODO shall we check the CSRC in the packet to check that this is the correct FEC
-									 * session for the associated RTP session ?*/
-									return fec_session;
-								}
-							}
-						}
-					}
-				}
 			}
-			/* If we are here, it is because we did not found an already assigned RtpSession for this SSRC.
-			 * Now, lookup if one of these session can be assigned*/
-			if (!isOutgoing) {
-				for (auto s = range.first; s != range.second; ++s) {
-					auto session = s->second;
-					if (assignmentPossible(session, m, ssrc, isRtp)) {
-						session->ssrc_set = TRUE;
-						session->rcv.ssrc = ssrc;
-						/* TODO: insert the session into the map */
-						return session;
-					}
-				}
-				if (!isRtp) {
-					for (auto s = range.first; s != range.second; ++s) {
-						auto session = s->second;
-						uint32_t local_ssrc = 0;
-						if (getRTCPReferedSSRC(m, &local_ssrc) && session->snd.ssrc == local_ssrc) {
-							const rtcp_common_header_t *ch = rtcp_get_common_header(m);
-							ortp_message("RtpBundle[%p]: RTCP msg (%d) refering to SSRC %u with unknown sender-ssrc %u "
-							             "routed to session %p",
-							             this, rtcp_common_header_get_packet_type(ch), local_ssrc, ssrc, session);
-							return session;
-						}
-					}
-					// ortp_warning("RtpBundle[%p]: unrouted RTCP packet with sender-ssrc %u", this, ssrc);
-				}
-			}
-			/* if we are, it means that we have no existing RtpSession for this SSRC.
-			 * Invoke the callbacks to let the application layer decide what to do.
-			 */
-
-			RtpSession *newRtpSession = nullptr;
-			if (isRtp && !mid.empty()) { // Do not create new session for unknown RTCP or when mid is unknown
-				if (isOutgoing) {
-					ortp_message(
-					    "RtpBundle[%p]: emit on_new_outgoing_ssrc_in_bundle on SSRC %u from session %p with pt %d",
-					    this, ssrc, getPrimarySession(), rtp_get_payload_type(m));
-					rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (void *)m,
-					                       &newRtpSession);
-					if (newRtpSession) {
-						newRtpSession->snd.ssrc = ssrc;
-					}
-				} else {
-					ortp_message(
-					    "RtpBundle[%p]: emit on_new_incoming_ssrc_in_bundle on SSRC %u from session %p with pt %d",
-					    this, ssrc, getPrimarySession(), rtp_get_payload_type(m));
-					rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m,
-					                       &newRtpSession);
-					if (newRtpSession) {
-						/* the new session is associated to the incoming SSRC */
-						newRtpSession->ssrc_set = TRUE;
-						newRtpSession->rcv.ssrc = ssrc;
-					}
-				}
-				if (newRtpSession) {
-					/* TODO: insert or update the map<SSRC, RtpSession> */
-					if (newRtpSession->bundle == NULL) {
-						addSession(mid, newRtpSession);
-					}
-				}
-			}
-			return newRtpSession;
+			// ortp_warning("RtpBundle[%p]: unrouted RTCP packet with sender-ssrc %u", this, ssrc);
 		}
-		ortp_warning("RtpBundle[%p]: SSRC %u not found map mid is %s but no associated RtpSession found", this, ssrc,
-		             it->second.mid.c_str());
 	}
-	return nullptr;
+
+	// If we are, it means that we have no existing RtpSession for this SSRC.
+	// Invoke the callbacks to let the application layer decide what to do.
+	RtpSession *newRtpSession = nullptr;
+	if (isRtp && !mid.empty()) { // Do not create new session for unknown RTCP or when mid is unknown
+		if (isOutgoing) {
+			ortp_message("RtpBundle[%p]: emit on_new_outgoing_ssrc_in_bundle on SSRC %u from session %p with pt %d",
+			             this, ssrc, getPrimarySession(), rtp_get_payload_type(m));
+			rtp_signal_table_emit3(&(getPrimarySession()->on_new_outgoing_ssrc_in_bundle), (void *)m, &newRtpSession);
+			if (newRtpSession) {
+				newRtpSession->snd.ssrc = ssrc;
+			}
+		} else {
+			ortp_message("RtpBundle[%p]: emit on_new_incoming_ssrc_in_bundle on SSRC %u from session %p with pt %d",
+			             this, ssrc, getPrimarySession(), rtp_get_payload_type(m));
+			rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m, &newRtpSession);
+			if (newRtpSession) {
+				/* the new session is associated to the incoming SSRC */
+				newRtpSession->ssrc_set = TRUE;
+				newRtpSession->rcv.ssrc = ssrc;
+			}
+		}
+
+		if (newRtpSession) {
+			/* TODO: insert or update the map<SSRC, RtpSession> */
+			if (newRtpSession->bundle == nullptr) {
+				addSession(mid, newRtpSession);
+			}
+		}
+	}
+	return newRtpSession;
 }
 
 bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
