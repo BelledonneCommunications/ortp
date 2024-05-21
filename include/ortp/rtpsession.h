@@ -309,10 +309,10 @@ typedef struct _OrtpStream {
 	socklen_t used_loc_addrlen;
 	struct sockaddr_storage used_loc_addr; /*Address used to redirect packets from this source*/
 	struct _RtpTransport *tr;
-	OrtpBwEstimator recv_bw_estimator;
-	OrtpBwEstimator recv_average_bw_estimator;
-	OrtpBwEstimator send_bw_estimator;
-	OrtpBwEstimator send_average_bw_estimator;
+	OrtpBandwidthMeasurer *recv_bw_estimator;
+	OrtpBandwidthMeasurer *recv_average_bw_estimator;
+	OrtpBandwidthMeasurer *send_bw_estimator;
+	OrtpBandwidthMeasurer *send_average_bw_estimator;
 	bctbx_list_t *aux_destinations; /*list of OrtpAddress */
 	queue_t bundleq;                /* For bundle mode */
 	ortp_mutex_t bundleq_lock;

@@ -298,15 +298,15 @@ void rtp_session_init(RtpSession *session, RtpSessionMode mode) {
 	}
 	session->tev_send_pt = -1; /*check in rtp profile when needed*/
 
-	ortp_bw_estimator_init(&session->rtp.gs.recv_bw_estimator, 0.95f, 0.01f);
-	ortp_bw_estimator_init(&session->rtcp.gs.recv_bw_estimator, 0.95f, 0.01f);
-	ortp_bw_estimator_init(&session->rtp.gs.recv_average_bw_estimator, 0.985f, 0.01f);
-	ortp_bw_estimator_init(&session->rtcp.gs.recv_average_bw_estimator, 0.985f, 0.01f);
+	session->rtp.gs.recv_bw_estimator = ortp_bandwidth_measurer_short_term_new();
+	session->rtcp.gs.recv_bw_estimator = ortp_bandwidth_measurer_short_term_new();
+	session->rtp.gs.recv_average_bw_estimator = ortp_bandwidth_measurer_long_term_new();
+	session->rtcp.gs.recv_average_bw_estimator = ortp_bandwidth_measurer_long_term_new();
 
-	ortp_bw_estimator_init(&session->rtp.gs.send_bw_estimator, 0.95f, 0.01f);
-	ortp_bw_estimator_init(&session->rtcp.gs.send_bw_estimator, 0.95f, 0.01f);
-	ortp_bw_estimator_init(&session->rtp.gs.send_average_bw_estimator, 0.985f, 0.01f);
-	ortp_bw_estimator_init(&session->rtcp.gs.send_average_bw_estimator, 0.985f, 0.01f);
+	session->rtp.gs.send_bw_estimator = ortp_bandwidth_measurer_short_term_new();
+	session->rtcp.gs.send_bw_estimator = ortp_bandwidth_measurer_short_term_new();
+	session->rtp.gs.send_average_bw_estimator = ortp_bandwidth_measurer_long_term_new();
+	session->rtcp.gs.send_average_bw_estimator = ortp_bandwidth_measurer_long_term_new();
 
 #if defined(_WIN32) || defined(_WIN32_WCE)
 	session->rtp.is_win_thread_running = FALSE;
@@ -2137,6 +2137,10 @@ void rtp_session_uninit(RtpSession *session) {
 	if (session->rtp.audio_bw_estimator) {
 		ortp_audio_bandwidth_estimator_destroy(session->rtp.audio_bw_estimator);
 	}
+	ortp_bandwidth_measurer_destroy(session->rtp.gs.recv_bw_estimator);
+	ortp_bandwidth_measurer_destroy(session->rtp.gs.recv_average_bw_estimator);
+	ortp_bandwidth_measurer_destroy(session->rtcp.gs.recv_bw_estimator);
+	ortp_bandwidth_measurer_destroy(session->rtcp.gs.recv_average_bw_estimator);
 
 	rtp_session_get_transports(session, &rtp_meta_transport, &rtcp_meta_transport);
 	if (rtp_meta_transport) meta_rtp_transport_destroy(rtp_meta_transport);
@@ -2376,42 +2380,42 @@ void rtp_session_set_connected_mode(RtpSession *session, bool_t yesno) {
  * Get last computed recv bandwidth.
  **/
 float rtp_session_get_recv_bandwidth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator) +
-	       ortp_bw_estimator_get_value(&session->rtcp.gs.recv_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtp.gs.recv_bw_estimator) +
+	       ortp_bandwidth_measurer_get_bandwdith(session->rtcp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_recv_bandwidth_smooth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_average_bw_estimator) +
-	       ortp_bw_estimator_get_value(&session->rtcp.gs.recv_average_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtp.gs.recv_average_bw_estimator) +
+	       ortp_bandwidth_measurer_get_bandwdith(session->rtcp.gs.recv_average_bw_estimator);
 }
 
 /**
  * Get last computed send bandwidth.
  **/
 float rtp_session_get_send_bandwidth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtp.gs.send_bw_estimator) +
-	       ortp_bw_estimator_get_value(&session->rtcp.gs.send_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtp.gs.send_bw_estimator) +
+	       ortp_bandwidth_measurer_get_bandwdith(session->rtcp.gs.send_bw_estimator);
 }
 
 float rtp_session_get_send_bandwidth_smooth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtp.gs.send_average_bw_estimator) +
-	       ortp_bw_estimator_get_value(&session->rtcp.gs.send_average_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtp.gs.send_average_bw_estimator) +
+	       ortp_bandwidth_measurer_get_bandwdith(session->rtcp.gs.send_average_bw_estimator);
 }
 
 float rtp_session_get_rtp_recv_bandwidth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtp.gs.recv_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_rtp_send_bandwidth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtp.gs.send_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtp.gs.send_bw_estimator);
 }
 
 float rtp_session_get_rtcp_recv_bandwidth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtcp.gs.recv_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtcp.gs.recv_bw_estimator);
 }
 
 float rtp_session_get_rtcp_send_bandwidth(RtpSession *session) {
-	return ortp_bw_estimator_get_value(&session->rtcp.gs.send_bw_estimator);
+	return ortp_bandwidth_measurer_get_bandwdith(session->rtcp.gs.send_bw_estimator);
 }
 
 int rtp_session_get_last_send_error_code(RtpSession *session) {

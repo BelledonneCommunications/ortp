@@ -1443,14 +1443,14 @@ void ortp_stream_update_sent_bytes(OrtpStream *os, int nbytes) {
 	struct timeval current;
 	bctbx_gettimeofday(&current, NULL);
 
-	ortp_bw_estimator_packet_received(&os->send_bw_estimator, nbytes + overhead, &current);
-	ortp_bw_estimator_packet_received(&os->send_average_bw_estimator, nbytes + overhead, &current);
+	ortp_bandwidth_measurer_add_bytes(os->send_bw_estimator, nbytes + overhead, &current);
+	ortp_bandwidth_measurer_add_bytes(os->send_average_bw_estimator, nbytes + overhead, &current);
 }
 
 static void update_recv_bytes(OrtpStream *os, size_t nbytes, const struct timeval *recv_time) {
 	int overhead = ortp_stream_is_ipv6(os) ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
-	ortp_bw_estimator_packet_received(&os->recv_bw_estimator, nbytes + overhead, recv_time);
-	ortp_bw_estimator_packet_received(&os->recv_average_bw_estimator, nbytes + overhead, recv_time);
+	ortp_bandwidth_measurer_add_bytes(os->recv_bw_estimator, nbytes + overhead, recv_time);
+	ortp_bandwidth_measurer_add_bytes(os->recv_average_bw_estimator, nbytes + overhead, recv_time);
 }
 
 static void

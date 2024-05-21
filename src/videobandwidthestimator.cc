@@ -19,9 +19,9 @@
  */
 
 #include "videobandwidthestimator.h"
+#include "ortp/logging.h"
+#include "ortp/rtpsession.h"
 #include <math.h>
-#include <ortp/logging.h>
-#include <ortp/rtpsession.h>
 
 #include <algorithm>
 #include <deque>

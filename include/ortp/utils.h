@@ -72,25 +72,22 @@ typedef struct _OrtpKalmanRLS {
 ORTP_PUBLIC void ortp_kalman_rls_init(OrtpKalmanRLS *obj, double m0, double b0);
 ORTP_PUBLIC void ortp_kalman_rls_record(OrtpKalmanRLS *obj, double xmes, double ymes);
 
-typedef struct _OrtpBwEstimator {
-	float one_minus_alpha;
-	float inv_step;
-	float exp_constant;
-	struct timeval last_packet_recv;
-	float value;
-} OrtpBwEstimator;
-
 /**
- * Utility object to compute a sliding exponential mean bitrate.
- * @param obj the estimator structure to initialize
- * @param alpha the weight of previous estimation (between 0 and 1)
- * @param step a time constant in seconds representing the sampling period
+ * Object to compute bandwidth of incoming or outgoing streams.
+ * Two variants are proposed for short-term (1 sec), or long term (3 secs).
+ * The computation by doing a sliding average over the considered time interval
  **/
-ORTP_PUBLIC void ortp_bw_estimator_init(OrtpBwEstimator *obj, float alpha, float step);
+typedef struct _OrtpBandwidthMeasurer OrtpBandwidthMeasurer;
 
-ORTP_PUBLIC void ortp_bw_estimator_packet_received(OrtpBwEstimator *obj, size_t bytes, const struct timeval *recv_time);
+ORTP_PUBLIC OrtpBandwidthMeasurer *ortp_bandwidth_measurer_long_term_new(void);
 
-ORTP_PUBLIC float ortp_bw_estimator_get_value(OrtpBwEstimator *obj);
+ORTP_PUBLIC OrtpBandwidthMeasurer *ortp_bandwidth_measurer_short_term_new(void);
+
+ORTP_PUBLIC void ortp_bandwidth_measurer_add_bytes(OrtpBandwidthMeasurer *obj, size_t bytes, const struct timeval *t);
+
+ORTP_PUBLIC float ortp_bandwidth_measurer_get_bandwdith(OrtpBandwidthMeasurer *obj);
+
+ORTP_PUBLIC void ortp_bandwidth_measurer_destroy(OrtpBandwidthMeasurer *obj);
 
 #ifdef __cplusplus
 }

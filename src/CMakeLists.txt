@@ -68,6 +68,7 @@ set(ORTP_SOURCE_FILES_CXX
 	dblk.cc	#HAVE_ATOMIC is mandatory
 	rtpbundle.cc
 	videobandwidthestimator.cc
+	bandwidth-measurer.cc
 	fecstream/fecstream.cc
 	fecstream/fec-encoder.cpp
 	fecstream/packet-api.cpp
