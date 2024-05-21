@@ -2142,6 +2142,11 @@ void rtp_session_uninit(RtpSession *session) {
 	ortp_bandwidth_measurer_destroy(session->rtcp.gs.recv_bw_estimator);
 	ortp_bandwidth_measurer_destroy(session->rtcp.gs.recv_average_bw_estimator);
 
+	ortp_bandwidth_measurer_destroy(session->rtp.gs.send_bw_estimator);
+	ortp_bandwidth_measurer_destroy(session->rtp.gs.send_average_bw_estimator);
+	ortp_bandwidth_measurer_destroy(session->rtcp.gs.send_bw_estimator);
+	ortp_bandwidth_measurer_destroy(session->rtcp.gs.send_average_bw_estimator);
+
 	rtp_session_get_transports(session, &rtp_meta_transport, &rtcp_meta_transport);
 	if (rtp_meta_transport) meta_rtp_transport_destroy(rtp_meta_transport);
 	if (rtcp_meta_transport) meta_rtp_transport_destroy(rtcp_meta_transport);
