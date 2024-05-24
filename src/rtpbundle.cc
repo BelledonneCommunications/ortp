@@ -132,7 +132,6 @@ void RtpBundleCxx::addFecSession(const RtpSession *sourceSession, RtpSession *fe
 	std::string mid = getSessionMid(it->second);
 	fec_sessions.emplace(mid, fecSession);
 	rtp_session_set_bundle(fecSession, (RtpBundle *)this);
-	ortp_message("Fec session [%u] added to the bundle", rtp_session_get_send_ssrc(fecSession));
 }
 
 void RtpBundleCxx::removeSession(const std::string &mid) {

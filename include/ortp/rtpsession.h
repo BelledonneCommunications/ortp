@@ -985,6 +985,7 @@ ORTP_PUBLIC uint8_t fec_params_estimate_best_level(
 
 ORTP_PUBLIC FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSession *fec, FecParams *fecParams);
 ORTP_PUBLIC void fec_stream_destroy(FecStream *fec_stream);
+ORTP_PUBLIC void fec_stream_unsubscribe(FecStream *fec_stream, FecParams *fecParams);
 ORTP_PUBLIC void fec_stream_reset_cluster(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_receive_repair_packet(FecStream *fec_stream, uint32_t timestamp);
 ORTP_PUBLIC mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16_t seqnum);

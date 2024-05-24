@@ -36,12 +36,13 @@ namespace ortp {
 class ORTP_PUBLIC FecStreamCxx : public FecParamsSubscriber {
 
 private:
-	RtpSession *mSourceSession;
-	RtpSession *mFecSession;
+	RtpSession *mSourceSession = nullptr;
+	RtpSession *mFecSession = nullptr;
 	FecEncoder mEncoder;
 	ReceiveCluster mCluster;
 	fec_stats mStats;
-	RtpTransportModifier *mModifier;
+	RtpTransport *mTransport = nullptr;
+	RtpTransportModifier *mModifier = nullptr;
 	bool mIsEnabled;
 	Overhead mMeasuredOverhead;
 	queue_t mSourcePackets;
@@ -62,6 +63,7 @@ private:
 public:
 	FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParamsController *fecParams);
 	void init();
+	void removeFromParamSubscribers(FecParamsController *fecParams);
 	static int processOnSend(struct _RtpTransportModifier *m, mblk_t *packet);
 	static int processOnReceive(struct _RtpTransportModifier *m, mblk_t *packet);
 	void onNewSourcePacketSent(mblk_t *packet);

@@ -33,6 +33,9 @@ extern "C" FecStream *fec_stream_new(struct _RtpSession *source, struct _RtpSess
 extern "C" void fec_stream_destroy(FecStream *fec_stream) {
 	delete (FecStreamCxx *)fec_stream;
 }
+extern "C" void fec_stream_unsubscribe(FecStream *fec_stream, FecParams *fecParams) {
+	((FecStreamCxx *)fec_stream)->removeFromParamSubscribers((FecParamsController *)fecParams);
+}
 extern "C" void fec_stream_reset_cluster(FecStream *fec_stream) {
 	((FecStreamCxx *)fec_stream)->resetCluster();
 }
@@ -84,11 +87,9 @@ FecStreamCxx::FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, 
 }
 
 void FecStreamCxx::init() {
-	RtpTransport *transport = NULL;
 	RtpBundle *bundle = mSourceSession->bundle;
 	RtpSession *session = rtp_bundle_get_primary_session(bundle);
-	rtp_session_get_transports(session, &transport, NULL);
-
+	rtp_session_get_transports(session, &mTransport, NULL);
 	mModifier = ortp_new0(RtpTransportModifier, 1);
 	mModifier->level = RtpTransportModifierLevelForwardErrorCorrection;
 	mModifier->data = this;
@@ -96,7 +97,8 @@ void FecStreamCxx::init() {
 	mModifier->t_process_on_receive = FecStreamCxx::processOnReceive;
 	mModifier->t_process_on_schedule = NULL;
 	mModifier->t_destroy = modifierFree;
-	meta_rtp_transport_append_modifier(transport, mModifier);
+	meta_rtp_transport_append_modifier(mTransport, mModifier);
+
 	mEncoder.init(mFecSession, mSourceSession);
 	mMeasuredOverhead.reset(0);
 	mEncoderUpdate.isUpdated = true;
@@ -105,6 +107,15 @@ void FecStreamCxx::init() {
 FecStreamCxx::~FecStreamCxx() {
 	std::lock_guard<std::mutex> guard(mQueueMutex);
 	flushq(&mSourcePackets, FLUSHALL);
+
+	meta_rtp_transport_remove_modifier(mTransport, mModifier);
+	modifierFree(mModifier);
+	mModifier = nullptr;
+	mTransport = nullptr;
+}
+
+void FecStreamCxx::removeFromParamSubscribers(FecParamsController *fecParams) {
+	fecParams->removeSubscriber(this);
 }
 
 int FecStreamCxx::processOnSend(struct _RtpTransportModifier *m, mblk_t *packet) {
@@ -306,12 +317,11 @@ mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 		if (meta_rtp_transport_apply_all_except_one_on_receive(transport, mModifier, mp) >= 0) {
 			mStats.packets_recovered++;
 			mStats.packets_lost = mStats.packets_not_recovered + mStats.packets_recovered;
-			// ortp_message(
-			//     "fecstream[%p] Source packet recovered : SeqNum = %u, current stats : %u lost, %u recovered, %u "
-			//     "not repaired",
-			//     this, rtp_get_seqnumber(mp), static_cast<unsigned int>(mStats.packets_lost),
-			//     static_cast<unsigned int>(mStats.packets_recovered),
-			//     static_cast<unsigned int>(mStats.packets_not_recovered));
+			ortp_debug("fecstream[%p] Source packet recovered : SeqNum = %u, current stats : %u lost, %u recovered, %u "
+			           "not repaired",
+			           this, rtp_get_seqnumber(mp), static_cast<unsigned int>(mStats.packets_lost),
+			           static_cast<unsigned int>(mStats.packets_recovered),
+			           static_cast<unsigned int>(mStats.packets_not_recovered));
 			return mp;
 		}
 	}

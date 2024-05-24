@@ -99,7 +99,7 @@ std::shared_ptr<FecSourcePacket> ReceiveCluster::getSourcePacket(uint16_t seqnum
 void ReceiveCluster::repair(uint16_t seqNum) {
 
 	if (getSourcePacket(seqNum)) {
-		ortp_message("receive-cluster[%p] packet %d already repaired", this, seqNum);
+		ortp_debug("receive-cluster[%p] packet %d already repaired", this, seqNum);
 		return;
 	}
 
