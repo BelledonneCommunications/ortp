@@ -264,15 +264,23 @@ void FecStreamCxx::countLostPackets(int16_t diff) {
 void FecStreamCxx::printStats() {
 
 	double initialLossRate =
-	    static_cast<double>(mStats.packets_lost) / static_cast<double>(mSourceSession->stats.packet_recv);
-	double residualLossRate = static_cast<double>(mStats.packets_lost - mStats.packets_recovered) /
-	                          static_cast<double>(mSourceSession->stats.packet_recv);
+	    (mSourceSession->stats.packet_recv == 0)
+	        ? 0.
+	        : static_cast<double>(mStats.packets_lost) / static_cast<double>(mSourceSession->stats.packet_recv);
+	double residualLossRate = (mSourceSession->stats.packet_recv == 0)
+	                              ? 0.
+	                              : static_cast<double>(mStats.packets_lost - mStats.packets_recovered) /
+	                                    static_cast<double>(mSourceSession->stats.packet_recv);
 	double recoveringRate = (mStats.packets_lost == 0) ? 0.
 	                                                   : static_cast<double>(mStats.packets_recovered) /
 	                                                         static_cast<double>(mStats.packets_lost);
 	auto stats = rtp_session_get_stats(mFecSession);
-	double ratio_sent = static_cast<double>(stats->sent) / static_cast<double>(mSourceSession->stats.sent);
-	double ratio_recv = static_cast<double>(stats->recv) / static_cast<double>(mSourceSession->stats.recv);
+	double ratio_sent = (mSourceSession->stats.sent == 0)
+	                        ? 0.
+	                        : static_cast<double>(stats->sent) / static_cast<double>(mSourceSession->stats.sent);
+	double ratio_recv = (mSourceSession->stats.recv == 0)
+	                        ? 0.
+	                        : static_cast<double>(stats->recv) / static_cast<double>(mSourceSession->stats.recv);
 
 	ortp_log(ORTP_MESSAGE, "===========================================================");
 	ortp_log(ORTP_MESSAGE, "               Forward Error Correction Stats              ");
