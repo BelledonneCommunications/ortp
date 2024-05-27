@@ -46,7 +46,7 @@ class BandwidthMeasurer : public BandwidthMeasurerBase {
 public:
 	static_assert(windowsMs % numSlots == 0);
 	static constexpr size_t slotMs = windowsMs / numSlots;
-	static constexpr float timeNormalization = (float)(1000.0 / (float)(windowsMs - slotMs));
+	static constexpr float timeNormalization = 1000.0f / (float)(windowsMs - slotMs);
 	void addBytes(size_t bytes, const struct timeval &tv) override {
 		size_t absoluteIndex = moveToTimeval(tv);
 		unsigned int relativeIndex = (unsigned int)(absoluteIndex % numSlots);
@@ -63,7 +63,7 @@ public:
 		// The current slot may not be filled yet: we then choose to exclude it
 		// to avoid a permanent bias. timeNormalization takes into account its exclusion.
 		ret -= mSlots[mCurrentAbsoluteIndex % numSlots];
-		return (float)(((float)ret) * 8.0 * timeNormalization);
+		return ((float)ret) * 8.0f * timeNormalization;
 	}
 
 private:
