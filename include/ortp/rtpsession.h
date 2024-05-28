@@ -992,7 +992,6 @@ ORTP_PUBLIC mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16
 ORTP_PUBLIC RtpSession *fec_stream_get_fec_session(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_count_lost_packets(FecStream *fec_stream, int16_t diff);
 ORTP_PUBLIC void fec_stream_print_stats(FecStream *fec_stream);
-ORTP_PUBLIC void fec_stream_init(FecStream *fec_stream);
 ORTP_PUBLIC fec_stats *fec_stream_get_stats(FecStream *fec_stream);
 ORTP_PUBLIC bool_t fec_stream_enabled(FecStream *fec_stream);
 ORTP_PUBLIC float fec_stream_get_overhead(FecStream *fec_stream);

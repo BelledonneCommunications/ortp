@@ -54,9 +54,6 @@ extern "C" void fec_stream_count_lost_packets(FecStream *fec_stream, int16_t dif
 extern "C" void fec_stream_print_stats(FecStream *fec_stream) {
 	((FecStreamCxx *)fec_stream)->printStats();
 }
-extern "C" void fec_stream_init(FecStream *fec_stream) {
-	((FecStreamCxx *)fec_stream)->init();
-}
 extern "C" fec_stats *fec_stream_get_stats(FecStream *fec_stream) {
 	return ((FecStreamCxx *)fec_stream)->getStats();
 }
@@ -79,14 +76,7 @@ FecStreamCxx::FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, 
 	mFecSession->fec_stream = NULL;
 	qinit(&mSourcePackets);
 	memset(&mStats, 0, sizeof(fec_stats));
-	mEncoderUpdate.L = fecParams->getL();
-	mEncoderUpdate.D = fecParams->getD();
-	mEncoderUpdate.is2D = fecParams->is2D();
-	mEncoderUpdate.isUpdated = false;
-	fecParams->addSubscriber(this);
-}
 
-void FecStreamCxx::init() {
 	RtpBundle *bundle = mSourceSession->bundle;
 	RtpSession *session = rtp_bundle_get_primary_session(bundle);
 	rtp_session_get_transports(session, &mTransport, NULL);
@@ -99,6 +89,11 @@ void FecStreamCxx::init() {
 	mModifier->t_destroy = modifierFree;
 	meta_rtp_transport_append_modifier(mTransport, mModifier);
 
+	mEncoderUpdate.L = fecParams->getL();
+	mEncoderUpdate.D = fecParams->getD();
+	mEncoderUpdate.is2D = fecParams->is2D();
+	mEncoderUpdate.isUpdated = false;
+	fecParams->addSubscriber(this);
 	mEncoder.init(mFecSession, mSourceSession);
 	mMeasuredOverhead.reset(0);
 	mEncoderUpdate.isUpdated = true;

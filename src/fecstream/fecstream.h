@@ -62,7 +62,6 @@ private:
 
 public:
 	FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, FecParamsController *fecParams);
-	void init();
 	void removeFromParamSubscribers(FecParamsController *fecParams);
 	static int processOnSend(struct _RtpTransportModifier *m, mblk_t *packet);
 	static int processOnReceive(struct _RtpTransportModifier *m, mblk_t *packet);
