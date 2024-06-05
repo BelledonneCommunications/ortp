@@ -336,7 +336,7 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 			rb = rtcp_SR_get_report_block(m, 0);
 			if (rb) {
 				*ssrc = report_block_get_ssrc(rb);
-				return true;
+				return *ssrc != 0;
 			}
 			break;
 		case RTCP_RR:
@@ -344,7 +344,7 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 			rb = rtcp_RR_get_report_block(m, 0);
 			if (rb) {
 				*ssrc = report_block_get_ssrc(rb);
-				return true;
+				return *ssrc != 0;
 			}
 			break;
 		case RTCP_APP:
@@ -366,10 +366,11 @@ static bool getRTCPReferedSSRC(const mblk_t *m, uint32_t *ssrc) {
 				if (const auto *fci = rtcp_RTPFB_tmmbr_get_fci(m); fci != nullptr)
 					*ssrc = rtcp_fb_tmmbr_fci_get_ssrc(fci);
 			}
-			return true;
+
+			return *ssrc != 0;
 		case RTCP_PSFB:
 			*ssrc = rtcp_PSFB_get_media_source_ssrc(m);
-			return true;
+			return *ssrc != 0;
 		case RTCP_XR:
 			/* not handled, but no so necessary*/
 			break;
@@ -482,18 +483,27 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 		}
 	}
 
-	// If the RTCP packet is referring to another SSRC, then use this one instead
-	if (uint32_t referredSsrc; !isRtp && getRTCPReferedSSRC(m, &referredSsrc) && referredSsrc != 0) {
-		ssrc = referredSsrc;
-	}
-
-	// Return the corresponding session if we find it
+	// Check if we have some corresponding session(s)
 	const auto [first, last] = sessions.equal_range(mid);
 	if (first == last) {
 		ortp_warning("RtpBundle[%p]: Unable to find session with mid %s (SSRC %u)", this, mid.c_str(), ssrc);
 		return nullptr;
 	}
 
+	// If we are in RTCP and have a referred ssrc, try to route it to the correct session now
+	if (uint32_t referredSsrc; !isRtp && getRTCPReferedSSRC(m, &referredSsrc)) {
+		for (auto s = first; s != last; ++s) {
+			if (const auto session = s->second; referredSsrc == session->snd.ssrc) {
+				const rtcp_common_header_t *ch = rtcp_get_common_header(m);
+				ortp_message("RtpBundle[%p]: RTCP msg (%d) refering to SSRC %u with sender-ssrc %u "
+				             "routed to session %p",
+				             this, rtcp_common_header_get_packet_type(ch), referredSsrc, ssrc, session);
+				return session;
+			}
+		}
+	}
+
+	// Route the packet to the corresponding session
 	// TODO: change this loop into a map<SSRC, RtpSession*> lookup
 	for (auto s = first; s != last; ++s) {
 		const auto session = s->second;
@@ -529,9 +539,9 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 		}
 	}
 
-	// If we are here, it is because we did not found an already assigned RtpSession for this SSRC.
-	// Now, lookup if one of these session can be assigned
-	if (!isOutgoing) {
+	// We did not found an already assigned RtpSession for this SSRC.
+	// Now, lookup if one of these session can be assigned with RTP
+	if (!isOutgoing && isRtp) {
 		for (auto s = first; s != last; ++s) {
 			if (const auto session = s->second; assignmentPossible(session, m, ssrc, isRtp)) {
 				session->ssrc_set = TRUE;
@@ -540,24 +550,9 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 				return session;
 			}
 		}
-
-		if (!isRtp) {
-			for (auto s = first; s != last; ++s) {
-				const auto session = s->second;
-				uint32_t local_ssrc = 0;
-				if (getRTCPReferedSSRC(m, &local_ssrc) && session->snd.ssrc == local_ssrc) {
-					const rtcp_common_header_t *ch = rtcp_get_common_header(m);
-					ortp_message("RtpBundle[%p]: RTCP msg (%d) refering to SSRC %u with unknown sender-ssrc %u "
-					             "routed to session %p",
-					             this, rtcp_common_header_get_packet_type(ch), local_ssrc, ssrc, session);
-					return session;
-				}
-			}
-			// ortp_warning("RtpBundle[%p]: unrouted RTCP packet with sender-ssrc %u", this, ssrc);
-		}
 	}
 
-	// If we are, it means that we have no existing RtpSession for this SSRC.
+	// We have no existing RtpSession for this SSRC.
 	// Invoke the callbacks to let the application layer decide what to do.
 	RtpSession *newRtpSession = nullptr;
 	if (isRtp && !mid.empty()) { // Do not create new session for unknown RTCP or when mid is unknown
