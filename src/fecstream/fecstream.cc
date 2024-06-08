@@ -313,7 +313,7 @@ mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 	RtpTransport *transport = NULL;
 	ortp_mutex_lock(&mSourceSession->main_mutex);
 	RtpBundle *bundle = mSourceSession->bundle;
-	RtpSession *session = rtp_bundle_get_primary_session(bundle);
+	RtpSession *session = bundle ? rtp_bundle_get_primary_session(bundle) : nullptr;
 	ortp_mutex_unlock(&mSourceSession->main_mutex);
 	if (session) {
 		rtp_session_get_transports(session, &transport, NULL);
