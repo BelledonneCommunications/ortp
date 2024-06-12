@@ -44,7 +44,7 @@ struct _OrtpEventData {
 		bool_t dtls_stream_encrypted;
 		bool_t zrtp_stream_encrypted;
 		bool_t ice_processing_successful;
-		struct _ZrtpInfo {
+		struct _zrtp_info {
 			char sas[32];              // up to 31 + null characters
 			char incorrect_sas[3][32]; // List of 3 half bad SAS. Up to 31 + null characters
 			bool_t verified;
@@ -56,7 +56,7 @@ struct _OrtpEventData {
 			int authTagAlgo;
 			int sasAlgo;
 		} zrtp_info;
-		struct _SrtpInfo {
+		struct _srtp_info {
 			bool_t is_send;  /**< stream direction this is applied too */
 			bool_t is_inner; /**< this info applies to inner encryption (in case of SRTP double encryption) */
 			int source;      /**< the source of the key material as defined in MSSrtpKeySource enum in ms_strp.h */
