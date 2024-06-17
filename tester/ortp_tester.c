@@ -100,6 +100,7 @@ void ortp_tester_init(void (*ftester_printf)(int level, const char *fmt, va_list
 	bc_tester_add_suite(&extension_header_test_suite);
 	bc_tester_add_suite(&fec_test_suite);
 	bc_tester_add_suite(&rtp_test_suite);
+	bc_tester_add_suite(&bundle_test_suite);
 }
 
 void ortp_tester_uninit(void) {
@@ -121,7 +122,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_CONFIG_H
 	// If the tester is not installed we configure it, so it can be launched without installing
-	if (!ortp_is_executable_installed(argv[0], "raw/h265-iframe")) {
+	if (!ortp_tester_is_executable_installed(argv[0], "raw/h265-iframe")) {
 		bc_tester_set_resource_dir_prefix(ORTP_LOCAL_RESOURCE_LOCATION);
 		printf("Resource dir set to %s\n", ORTP_LOCAL_RESOURCE_LOCATION);
 	}

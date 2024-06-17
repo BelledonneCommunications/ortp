@@ -24,6 +24,28 @@
 
 #include <bctoolbox/utils.hh>
 
-bool_t ortp_is_executable_installed(const char *executable, const char *resource) {
+#include "rtpsession_priv.h"
+
+bool_t ortp_tester_is_executable_installed(const char *executable, const char *resource) {
 	return bctoolbox::Utils::isExecutableInstalled(std::string(executable), std::string(resource));
+}
+
+mblk_t *ortp_tester_make_dummy_rtcp_fb_pli(RtpSession *session, uint32_t sender_ssrc, uint32_t media_ssrc) {
+	int size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t);
+	mblk_t *h = allocb(size, 0);
+	rtcp_common_header_t *ch;
+	rtcp_fb_header_t *fbh;
+
+	/* Fill PLI */
+	ch = (rtcp_common_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_common_header_t);
+	fbh = (rtcp_fb_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_header_t);
+	fbh->packet_sender_ssrc = htonl(sender_ssrc);
+	fbh->media_source_ssrc = htonl(media_ssrc);
+
+	/* Fill common header */
+	rtcp_common_header_init(ch, session, RTCP_PSFB, RTCP_PSFB_PLI, msgdsize(h));
+
+	return h;
 }

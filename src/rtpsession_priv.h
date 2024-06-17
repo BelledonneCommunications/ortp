@@ -129,6 +129,8 @@ size_t rtp_session_calculate_packet_header_size(int cc, const char *mid);
 void _rtp_session_release_sockets(RtpSession *session, bool_t release_transports);
 void rtp_session_set_bundle(RtpSession *session, RtpBundle *bundle);
 
+void rtp_bundle_session_mode_updated(RtpBundle *bundle, RtpSession *session, RtpSessionMode previous_mode);
+
 #ifdef __cplusplus
 }
 #endif

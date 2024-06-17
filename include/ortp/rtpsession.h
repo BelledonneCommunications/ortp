@@ -462,6 +462,8 @@ struct _RtpSession {
 	uint32_t send_ts_offset; /*additional offset to add when sending packets */
 	/* bundle mode */
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
+	int mid_sent;
+	uint64_t last_mid_sent_time;
 	/* fec option */
 	struct _FecStream *fec_stream;
 	RtcpSdesItems sdes_items;
@@ -926,6 +928,9 @@ ORTP_PUBLIC int rtp_session_unsplice(RtpSession *session, RtpSession *to_session
 ORTP_PUBLIC bool_t ortp_stream_is_ipv6(OrtpStream *os);
 
 /* RtpBundle api */
+#define RTP_BUNDLE_MAX_SENT_MID_START 10
+#define RTP_BUNDLE_MID_SENDING_INTERVAL 1000
+
 typedef struct _RtpBundle RtpBundle;
 
 ORTP_PUBLIC RtpBundle *rtp_bundle_new(void);
@@ -935,15 +940,13 @@ ORTP_PUBLIC int rtp_bundle_get_mid_extension_id(RtpBundle *bundle);
 ORTP_PUBLIC void rtp_bundle_set_mid_extension_id(RtpBundle *bundle, int id);
 
 ORTP_PUBLIC void rtp_bundle_add_session(RtpBundle *bundle, const char *mid, RtpSession *session);
-ORTP_PUBLIC void
-rtp_bundle_add_fec_session(RtpBundle *bundle, const RtpSession *source_session, RtpSession *fec_session);
 
-ORTP_PUBLIC void rtp_bundle_remove_session_by_id(RtpBundle *bundle, const char *mid);
+ORTP_PUBLIC void rtp_bundle_remove_sessions_by_id(RtpBundle *bundle, const char *mid);
 ORTP_PUBLIC void rtp_bundle_remove_session(RtpBundle *bundle, RtpSession *session);
 ORTP_PUBLIC void rtp_bundle_clear(RtpBundle *bundle);
 
 ORTP_PUBLIC RtpSession *rtp_bundle_get_primary_session(RtpBundle *bundle);
-ORTP_PUBLIC void rtp_bundle_set_primary_session(RtpBundle *bundle, const char *mid);
+ORTP_PUBLIC void rtp_bundle_set_primary_session(RtpBundle *bundle, RtpSession *session);
 
 ORTP_PUBLIC const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session);
 

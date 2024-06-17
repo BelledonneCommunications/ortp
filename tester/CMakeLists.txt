@@ -39,6 +39,7 @@ set(SOURCE_FILES_C
 
 set(IOS_RESOURCE_FILE)
 set(SOURCE_FILES_CXX
+	bundle_tester.cc
 	fec_tester.cc
 	ortp_tester_utils.cc
 )

@@ -82,6 +82,21 @@ static int tester_after_all(void) {
 	return 0;
 }
 
+/* reset mid sent infos as mid is not sent every packet */
+static void tester_before_each(void) {
+	session->mid_sent = 0;
+	session->last_mid_sent_time = 0;
+
+	bundled_session->mid_sent = 0;
+	bundled_session->last_mid_sent_time = 0;
+
+	csrc_session->mid_sent = 0;
+	csrc_session->last_mid_sent_time = 0;
+
+	csrc_bundled_session->mid_sent = 0;
+	csrc_bundled_session->last_mid_sent_time = 0;
+}
+
 #define NO_PAYLOAD 0
 #define PAYLOAD 1
 #define DETACHED_PAYLOAD 2
@@ -799,7 +814,7 @@ test_suite_t extension_header_test_suite = {
     "Extension header",               // Name of test suite
     tester_before_all,                // Before all callback
     tester_after_all,                 // After all callback
-    NULL,                             // Before each callback
+    tester_before_each,               // Before each callback
     NULL,                             // After each callback
     sizeof(tests) / sizeof(tests[0]), // Size of test table
     tests                             // Table of test suite

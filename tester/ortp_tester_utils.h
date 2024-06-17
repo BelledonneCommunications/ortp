@@ -21,13 +21,15 @@
 #ifndef ORTP_TESTER_UTILS_H
 #define ORTP_TESTER_UTILS_H
 
-#include "ortp/port.h"
+#include "ortp/ortp.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-bool_t ortp_is_executable_installed(const char *executable, const char *resource);
+bool_t ortp_tester_is_executable_installed(const char *executable, const char *resource);
+
+mblk_t *ortp_tester_make_dummy_rtcp_fb_pli(RtpSession *session, uint32_t sender_ssrc, uint32_t media_ssrc);
 
 #ifdef __cplusplus
 }

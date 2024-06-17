@@ -325,7 +325,14 @@ void rtp_session_init(RtpSession *session, RtpSessionMode mode) {
 }
 
 void rtp_session_set_mode(RtpSession *session, RtpSessionMode mode) {
+	const RtpSessionMode previous_mode = session->mode;
+
 	session->mode = mode;
+
+	// If we have a bundle, we warn it about the change
+	if (session->bundle) {
+		rtp_bundle_session_mode_updated(session->bundle, session, previous_mode);
+	}
 }
 
 void rtp_session_enable_congestion_detection(RtpSession *session, bool_t enabled) {
@@ -956,6 +963,21 @@ static void rtp_header_add_csrcs_from_session(rtp_header_t *header, RtpSession *
 	}
 }
 
+static bool_t rtp_session_should_send_mid(RtpSession *session) {
+	if (session->mid_sent < RTP_BUNDLE_MAX_SENT_MID_START) {
+		session->mid_sent++;
+		return TRUE;
+	}
+
+	const uint64_t now = bctbx_get_cur_time_ms();
+	if (now - session->last_mid_sent_time > RTP_BUNDLE_MID_SENDING_INTERVAL) {
+		session->last_mid_sent_time = now;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_header_size) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
@@ -963,7 +985,7 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 	const char *mid = NULL;
 
 	ortp_mutex_lock(&session->main_mutex);
-	if (session->bundle) {
+	if (session->bundle && rtp_session_should_send_mid(session)) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 	}
 
@@ -998,7 +1020,7 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 	size_t header_size;
 
 	ortp_mutex_lock(&fecSession->main_mutex);
-	if (fecSession->bundle) {
+	if (fecSession->bundle && rtp_session_should_send_mid(fecSession)) {
 		mid = rtp_bundle_get_session_mid(fecSession->bundle, fecSession);
 	}
 
@@ -1046,7 +1068,7 @@ mblk_t *rtp_session_create_packet_header_with_mixer_to_client_audio_level(RtpSes
 
 	ortp_mutex_lock(&session->main_mutex);
 	// Calculate ext header size for mid
-	if (session->bundle) {
+	if (session->bundle && rtp_session_should_send_mid(session)) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 		if (mid != NULL) {
@@ -1146,7 +1168,7 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 
 	ortp_mutex_lock(&session->main_mutex);
 
-	if (session->bundle) {
+	if (session->bundle && rtp_session_should_send_mid(session)) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 	}
 
@@ -1219,7 +1241,7 @@ mblk_t *rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *s
 
 	// Calculate ext header size for mid
 	ortp_mutex_lock(&session->main_mutex);
-	if (session->bundle) {
+	if (session->bundle && rtp_session_should_send_mid(session)) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 
 		if (mid != NULL) {
@@ -1308,7 +1330,7 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 	const char *mid = NULL;
 
 	ortp_mutex_lock(&session->main_mutex);
-	if (session->bundle) {
+	if (session->bundle && rtp_session_should_send_mid(session)) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
 	}
 

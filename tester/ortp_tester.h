@@ -37,6 +37,7 @@ extern "C" {
 extern test_suite_t extension_header_test_suite;
 extern test_suite_t fec_test_suite;
 extern test_suite_t rtp_test_suite;
+extern test_suite_t bundle_test_suite;
 
 void ortp_tester_init(void (*ftester_printf)(int level, const char *fmt, va_list args));
 void ortp_tester_uninit(void);

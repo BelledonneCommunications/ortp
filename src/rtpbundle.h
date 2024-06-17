@@ -27,8 +27,6 @@
 
 #include "ortp/rtpsession.h"
 
-#include <vector>
-
 class RtpBundleCxx {
 
 public:
@@ -40,44 +38,69 @@ public:
 
 	int getMidId() const;
 	void setMidId(int id);
-	void addFecSession(const RtpSession *sourceSession, RtpSession *fecSession);
 	void addSession(const std::string &mid, RtpSession *session);
-	void removeSession(const std::string &mid);
+	bool findSession(RtpSession *session) const;
+	bool findMid(const std::string &mid) const;
+	void removeSessions(const std::string &mid);
 	void removeSession(RtpSession *session);
 	void clear();
 
+	void sessionModeUpdated(RtpSession *session, RtpSessionMode previousMode);
+
 	RtpSession *getPrimarySession() const;
-	void setPrimarySession(const std::string &mid);
+	void setPrimarySession(RtpSession *session);
 
 	const std::string &getSessionMid(RtpSession *session) const;
 
-	/* Dispatch an incoming packet to one of the bundled secondary session.
-	 * Returns true if dispatched, false is the packet belongs to the primary session where it was received.*/
+	// Dispatch an incoming packet to one of the bundled secondary session.
+	// Returns true if dispatched, false is the packet belongs to the primary session where it was received.
 	bool dispatch(bool isRtp, mblk_t *m);
 
 	RtpSession *checkForSession(const mblk_t *m, bool isRtp, bool isOutgoing = false);
 
 private:
+	struct Mid {
+		std::string mid;
+		uint32_t sequenceNumber;
+	};
+
+	struct BundleSession {
+		Mid mid;
+		RtpSession *rtpSession = nullptr;
+	};
+
 	static void checkForSessionSdesCallback(void *, uint32_t, rtcp_sdes_type_t, const char *, uint8_t);
 	std::string getMid(const mblk_t *m, bool isRtp);
 
-	bool assignSsrcToMid(uint32_t ssrc, const std::string &mid, bool isRtp);
+	BundleSession *findReferredSession(const uint32_t referredSsrc);
 
-	RtpSession *getFecSessionFromRTCP(const mblk_t *m);
+	static void updateBundleSession(BundleSession &session, const std::string &mid, uint32_t sequenceNumber);
+
 	bool dispatchRtpMessage(mblk_t *m);
 	bool dispatchRtcpMessage(mblk_t *m);
-	bool assignmentPossible(RtpSession *session, const mblk_t *m, uint32_t ssrc, bool isRtp);
 
 	void clearSession(RtpSession *session);
 
-	RtpSession *primary = NULL;
-	std::map<uint32_t, std::string> ssrcToMid;
-	std::multimap<std::string, RtpSession *> sessions;
-	std::map<std::string, RtpSession *> fec_sessions;
-	std::mutex ssrcToMidMutex;
+	RtpSession *mPrimary = nullptr;
 
-	std::string sdesParseMid;
-	int midId = -1;
+	// Used to remember MID from incoming packets, as not all packets contains a MID.
+	// This only serves in cases where we are receiving packets for a session that has not been yet added to the bundle
+	// or being assigned.
+	std::map<uint32_t, std::string> mSsrcToMid;
+
+	// Main map of the bundle, we can directly assign a session to a ssrc (incoming or outgoing) which will speed up the
+	// transfer to the correct destination.
+	std::map<uint32_t, BundleSession> mSsrcToSession;
+
+	// RCVONLY and SENDRCV sessions do not know their reception's SSRC before receiving any packet. So they are inserted
+	// into this map. When we receive a packet, we will retrieve all sessions that have the corresponding MID and the
+	// correct session will be removed from this map and added to the mSsrcToSession for direct access.
+	std::multimap<std::string, RtpSession *> mWaitingForAssignment;
+
+	std::mutex mAssignmentMutex;
+
+	std::string mSdesParseMid;
+	int mMidId = -1;
 };
 
 #endif /* RTPBUNDLE_H */
