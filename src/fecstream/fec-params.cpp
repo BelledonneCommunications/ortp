@@ -80,7 +80,7 @@ void FecParamsController::computeLossRateTables() {
 	                                  mOverheadLimits.at(3));
 	computeLossRateTableGivenOverhead(&mLossRateLimitsMediumBandwidth, 0.5f, mOverheadLimits.at(1), 5.f,
 	                                  mOverheadLimits.at(5));
-	computeLossRateTableGivenOverhead(&mLossRateLimitsHighBandwidth, 0.0f, mOverheadLimits.at(0), 1.f,
+	computeLossRateTableGivenOverhead(&mLossRateLimitsHighBandwidth, 0.0f, mOverheadLimits.at(1), 1.f,
 	                                  mOverheadLimits.at(5));
 }
 

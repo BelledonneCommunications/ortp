@@ -158,12 +158,11 @@ static void fec_params_level_test(void) {
 	BC_ASSERT_EQUAL(params.estimateBestLevel(1.4, med_bw, crt_ov, &new_ov), 2, int, "%d");
 	BC_ASSERT_EQUAL(params.estimateBestLevel(20.0, med_bw, crt_ov, &new_ov), 2, int, "%d");
 	int high_bw = 400000;
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.14, high_bw, crt_ov, &new_ov), 0, int, "%d");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.16, high_bw, crt_ov, &new_ov), 1, int, "%d");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.29, high_bw, crt_ov, &new_ov), 1, int, "%d");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.31, high_bw, crt_ov, &new_ov), 2, int, "%d");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.59, high_bw, crt_ov, &new_ov), 2, int, "%d");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.61, high_bw, crt_ov, &new_ov), 3, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0., high_bw, crt_ov, &new_ov), 1, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.17, high_bw, crt_ov, &new_ov), 1, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.18, high_bw, crt_ov, &new_ov), 2, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.51, high_bw, crt_ov, &new_ov), 2, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.53, high_bw, crt_ov, &new_ov), 3, int, "%d");
 	BC_ASSERT_EQUAL(params.estimateBestLevel(20.0, high_bw, crt_ov, &new_ov), 3, int, "%d");
 
 	// check that the best FEC level is 0 when the loss rate is too high
@@ -174,22 +173,20 @@ static void fec_params_level_test(void) {
 	// check the value of the estimated overhead when the measurement of the current overhead is 0
 	float overhead_factor = 2.;
 	params.estimateBestLevel(0., high_bw, crt_ov, &new_ov);
-	BC_ASSERT_EQUAL(new_ov, 0., float, "%f");
-	params.estimateBestLevel(0.2, high_bw, crt_ov, &new_ov);
 	BC_ASSERT_EQUAL(new_ov, overhead_factor * 0.1, float, "%f");
-	params.estimateBestLevel(0.4, high_bw, crt_ov, &new_ov);
+	params.estimateBestLevel(0.2, high_bw, crt_ov, &new_ov);
 	BC_ASSERT_EQUAL(new_ov, overhead_factor * 0.2, float, "%f");
+	params.estimateBestLevel(0.6, high_bw, crt_ov, &new_ov);
+	BC_ASSERT_EQUAL(new_ov, overhead_factor * 0.4, float, "%f");
 	params.estimateBestLevel(0.75, high_bw, crt_ov, &new_ov);
 	BC_ASSERT_EQUAL(new_ov, overhead_factor * 0.4, float, "%f");
-	params.estimateBestLevel(20.0, high_bw, crt_ov, &new_ov);
+	params.estimateBestLevel(2.0, high_bw, crt_ov, &new_ov);
 	BC_ASSERT_EQUAL(new_ov, overhead_factor * 0.4, float, "%f");
 
 	// check the fec level and the estimated overhead when it is not necessary to reduce the fec level
 	crt_ov = 0.5;
 	params.updateParams(3);
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0., high_bw, crt_ov, &new_ov), 0, int, "%d");
-	BC_ASSERT_EQUAL(new_ov, 0., float, "%f");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.2, high_bw, crt_ov, &new_ov), 1, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0., high_bw, crt_ov, &new_ov), 1, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, 0.1 / 0.4 * crt_ov, float, "%f");
 	BC_ASSERT_EQUAL(params.estimateBestLevel(0.4, high_bw, crt_ov, &new_ov), 2, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, 0.2 / 0.4 * crt_ov, float, "%f");
@@ -205,7 +202,7 @@ static void fec_params_level_test(void) {
 	crt_ov = 0.2;
 	BC_ASSERT_EQUAL(params.estimateBestLevel(2.8, med_bw, crt_ov, &new_ov), 2, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, crt_ov, float, "%f");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.59, high_bw, crt_ov, &new_ov), 2, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.4, high_bw, crt_ov, &new_ov), 2, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, crt_ov, float, "%f");
 	params.updateParams(3);
 	crt_ov = 0.4;
@@ -213,9 +210,9 @@ static void fec_params_level_test(void) {
 	BC_ASSERT_EQUAL(new_ov, crt_ov, float, "%f");
 	BC_ASSERT_EQUAL(params.estimateBestLevel(3.6, med_bw, crt_ov, &new_ov), 3, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, crt_ov, float, "%f");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.61, high_bw, crt_ov, &new_ov), 3, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.53, high_bw, crt_ov, &new_ov), 3, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, crt_ov, float, "%f");
-	BC_ASSERT_EQUAL(params.estimateBestLevel(0.74, high_bw, crt_ov, &new_ov), 3, int, "%d");
+	BC_ASSERT_EQUAL(params.estimateBestLevel(0.69, high_bw, crt_ov, &new_ov), 3, int, "%d");
 	BC_ASSERT_EQUAL(new_ov, crt_ov, float, "%f");
 	params.updateParams(4);
 	crt_ov = 0.5;
