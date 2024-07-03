@@ -1759,9 +1759,10 @@ end:
 		uint32_t packet_ts;
 		if ((session->flags & RTP_SESSION_FIRST_PACKET_DELIVERED) && (session->fec_stream != NULL)) {
 			/* count missing rtp packets for FEC stats*/
-			if (rtp_get_seqnumber(mp) > session->rtp.rcv_last_seq + 1) {
-				int16_t seq_num_diff = (int16_t)rtp_get_seqnumber(mp) - (int16_t)session->rtp.rcv_last_seq - 1;
-				fec_stream_count_lost_packets(session->fec_stream, seq_num_diff);
+			uint16_t seq_num = (int16_t)rtp_get_seqnumber(mp);
+			if (seq_num > session->rtp.rcv_last_seq + 1) {
+				int16_t seq_num_diff = seq_num - (int16_t)session->rtp.rcv_last_seq - 1;
+				fec_stream_count_lost_packets(session->fec_stream, seq_num, seq_num_diff);
 			}
 		}
 		ortp_global_stats.recv += msgsize;

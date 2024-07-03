@@ -990,7 +990,7 @@ ORTP_PUBLIC void fec_stream_reset_cluster(FecStream *fec_stream);
 ORTP_PUBLIC void fec_stream_receive_repair_packet(FecStream *fec_stream, uint32_t timestamp);
 ORTP_PUBLIC mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16_t seqnum);
 ORTP_PUBLIC RtpSession *fec_stream_get_fec_session(FecStream *fec_stream);
-ORTP_PUBLIC void fec_stream_count_lost_packets(FecStream *fec_stream, int16_t diff);
+ORTP_PUBLIC void fec_stream_count_lost_packets(FecStream *fec_stream, uint16_t seqnum, int16_t diff);
 ORTP_PUBLIC void fec_stream_print_stats(FecStream *fec_stream);
 ORTP_PUBLIC fec_stats *fec_stream_get_stats(FecStream *fec_stream);
 ORTP_PUBLIC bool_t fec_stream_enabled(FecStream *fec_stream);

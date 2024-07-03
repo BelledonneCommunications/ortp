@@ -22,6 +22,7 @@
 #define FECSTREAM_H
 
 #include "fec-encoder.h"
+#include "fec-stream-stats.h"
 #include "overhead.h"
 #include "receive-cluster.h"
 #include <mutex>
@@ -40,7 +41,7 @@ private:
 	RtpSession *mFecSession = nullptr;
 	FecEncoder mEncoder;
 	ReceiveCluster mCluster;
-	fec_stats mStats;
+	FecStreamStats mStats;
 	RtpTransport *mTransport = nullptr;
 	RtpTransportModifier *mModifier = nullptr;
 	bool mIsEnabled;
@@ -73,7 +74,7 @@ public:
 	RtpSession *getFecSession() const;
 	RtpSession *getSourceSession() const;
 	fec_stats *getStats();
-	void countLostPackets(int16_t diff);
+	void countLostPackets(uint16_t seqnum, int16_t diff);
 	void printStats();
 	void update(FecParamsController *) override;
 	bool isEnabled();

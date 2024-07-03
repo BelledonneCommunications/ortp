@@ -70,6 +70,7 @@ set(ORTP_SOURCE_FILES_CXX
 	videobandwidthestimator.cc
 	bandwidth-measurer.cc
 	fecstream/fecstream.cc
+	fecstream/fec-stream-stats.cc
 	fecstream/fec-encoder.cpp
 	fecstream/packet-api.cpp
 	fecstream/receive-cluster.cpp

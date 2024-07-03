@@ -48,8 +48,8 @@ extern "C" mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16_
 extern "C" RtpSession *fec_stream_get_fec_session(FecStream *fec_stream) {
 	return ((FecStreamCxx *)fec_stream)->getFecSession();
 }
-extern "C" void fec_stream_count_lost_packets(FecStream *fec_stream, int16_t diff) {
-	((FecStreamCxx *)fec_stream)->countLostPackets(diff);
+extern "C" void fec_stream_count_lost_packets(FecStream *fec_stream, uint16_t seqnum, int16_t diff) {
+	((FecStreamCxx *)fec_stream)->countLostPackets(seqnum, diff);
 }
 extern "C" void fec_stream_print_stats(FecStream *fec_stream) {
 	((FecStreamCxx *)fec_stream)->printStats();
@@ -75,8 +75,6 @@ FecStreamCxx::FecStreamCxx(struct _RtpSession *source, struct _RtpSession *fec, 
 	mSourceSession->fec_stream = (FecStream *)this;
 	mFecSession->fec_stream = NULL;
 	qinit(&mSourcePackets);
-	memset(&mStats, 0, sizeof(fec_stats));
-
 	RtpBundle *bundle = mSourceSession->bundle;
 	RtpSession *session = rtp_bundle_get_primary_session(bundle);
 	rtp_session_get_transports(session, &mTransport, NULL);
@@ -176,7 +174,7 @@ void FecStreamCxx::onNewSourcePacketSent(mblk_t *packet) {
 			size_t msgSizeRepair = msgdsize(rowRepair);
 			mMeasuredOverhead.sendRepairPacket(msgSizeRepair, mEncoder.getCurrentColumn());
 			rtp_session_sendm_with_ts(mFecSession, rowRepair, timestamp);
-			mStats.row_repair_sent++;
+			mStats.rowRepairSent();
 		}
 	}
 	if (mEncoder.isColFull()) {
@@ -190,7 +188,7 @@ void FecStreamCxx::onNewSourcePacketSent(mblk_t *packet) {
 			size_t msgSizeRepair = msgdsize(colRepair);
 			mMeasuredOverhead.sendRepairPacket(msgSizeRepair, mEncoder.getCurrentColumn());
 			rtp_session_sendm_with_ts(mFecSession, colRepair, timestamp);
-			mStats.col_repair_sent++;
+			mStats.colRepairSent();
 		}
 	}
 
@@ -231,14 +229,15 @@ void FecStreamCxx::receiveRepairPacket(uint32_t timestamp) {
 	auto repair = std::make_shared<FecRepairPacket>(repair_packet);
 	std::lock_guard<std::recursive_mutex> guard(mReceiveMutex);
 	mCluster.add(repair);
-	mStats.col_repair_received = mCluster.getColRepairCpt();
-	mStats.row_repair_received = mCluster.getRowRepairCpt();
+	mStats.rowRepairReceived(mCluster.getRowRepairCpt());
+	mStats.colRepairReceived(mCluster.getColRepairCpt());
 	freemsg(repair_packet);
 }
 
 void FecStreamCxx::resetCluster() {
 	std::lock_guard<std::recursive_mutex> guard(mReceiveMutex);
 	mCluster.reset();
+	mStats.clearAll();
 }
 
 void FecStreamCxx::updateReceivedSourcePackets() {
@@ -249,52 +248,17 @@ void FecStreamCxx::updateReceivedSourcePackets() {
 	}
 }
 
-void FecStreamCxx::countLostPackets(int16_t diff) {
-	if (diff > 0) {
-		mStats.packets_not_recovered += static_cast<uint64_t>(diff);
-		mStats.packets_lost = mStats.packets_not_recovered + mStats.packets_recovered;
-	}
+void FecStreamCxx::countLostPackets(uint16_t seqnum, int16_t diff) {
+	mStats.definitelyLostPacket(seqnum, diff);
 }
 
 void FecStreamCxx::printStats() {
-
-	double initialLossRate =
-	    (mSourceSession->stats.packet_recv == 0)
-	        ? 0.
-	        : static_cast<double>(mStats.packets_lost) / static_cast<double>(mSourceSession->stats.packet_recv);
-	double residualLossRate = (mSourceSession->stats.packet_recv == 0)
-	                              ? 0.
-	                              : static_cast<double>(mStats.packets_lost - mStats.packets_recovered) /
-	                                    static_cast<double>(mSourceSession->stats.packet_recv);
-	double recoveringRate = (mStats.packets_lost == 0) ? 0.
-	                                                   : static_cast<double>(mStats.packets_recovered) /
-	                                                         static_cast<double>(mStats.packets_lost);
-	auto stats = rtp_session_get_stats(mFecSession);
-	double ratio_sent = (mSourceSession->stats.sent == 0)
-	                        ? 0.
-	                        : static_cast<double>(stats->sent) / static_cast<double>(mSourceSession->stats.sent);
-	double ratio_recv = (mSourceSession->stats.recv == 0)
-	                        ? 0.
-	                        : static_cast<double>(stats->recv) / static_cast<double>(mSourceSession->stats.recv);
-
-	ortp_log(ORTP_MESSAGE, "===========================================================");
-	ortp_log(ORTP_MESSAGE, "               Forward Error Correction Stats              ");
-	ortp_log(ORTP_MESSAGE, "-----------------------------------------------------------");
-	ortp_log(ORTP_MESSAGE, "	row repair sent             	%10" PRId64 " packets", mStats.row_repair_sent);
-	ortp_log(ORTP_MESSAGE, "	row repair received         	%10" PRId64 " packets", mStats.row_repair_received);
-	ortp_log(ORTP_MESSAGE, "	col repair sent             	%10" PRId64 " packets", mStats.col_repair_sent);
-	ortp_log(ORTP_MESSAGE, "	col repair received         	%10" PRId64 " packets", mStats.col_repair_received);
-	ortp_log(ORTP_MESSAGE, "	packets lost                	%10" PRId64 " packets", mStats.packets_lost);
-	ortp_log(ORTP_MESSAGE, "	packets recovered           	%10" PRId64 " packets", mStats.packets_recovered);
-	ortp_log(ORTP_MESSAGE, "	initial loss rate           	%10.3f", initialLossRate);
-	ortp_log(ORTP_MESSAGE, "	recovering rate             	%10.3f", recoveringRate);
-	ortp_log(ORTP_MESSAGE, "	residual loss rate          	%10.3f", residualLossRate);
-	ortp_log(ORTP_MESSAGE, "	ratio repair/source sizes sent  %10.3f", ratio_sent);
-	ortp_log(ORTP_MESSAGE, "	ratio repair/source sizes recv  %10.3f", ratio_recv);
-	ortp_log(ORTP_MESSAGE, "===========================================================");
+	mStats.printStats(mSourceSession, mFecSession);
 }
+
 mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 
+	mStats.askedPacket(seqnum);
 	std::shared_ptr<FecSourcePacket> packet;
 
 	// recover
@@ -318,13 +282,12 @@ mblk_t *FecStreamCxx::findMissingPacket(uint16_t seqnum) {
 	if (session) {
 		rtp_session_get_transports(session, &transport, NULL);
 		if (meta_rtp_transport_apply_all_except_one_on_receive(transport, mModifier, mp) >= 0) {
-			mStats.packets_recovered++;
-			mStats.packets_lost = mStats.packets_not_recovered + mStats.packets_recovered;
+			mStats.repairedPacket(seqnum);
 			ortp_debug("fecstream[%p] Source packet recovered : SeqNum = %u, current stats : %u lost, %u recovered, %u "
 			           "not repaired",
-			           this, rtp_get_seqnumber(mp), static_cast<unsigned int>(mStats.packets_lost),
-			           static_cast<unsigned int>(mStats.packets_recovered),
-			           static_cast<unsigned int>(mStats.packets_not_recovered));
+			           this, rtp_get_seqnumber(mp), static_cast<unsigned int>(mStats.getPacketsLost()),
+			           static_cast<unsigned int>(mStats.getPacketsRecovered()),
+			           static_cast<unsigned int>(mStats.getPacketsNotRecovered()));
 			return mp;
 		}
 	}
@@ -341,7 +304,7 @@ RtpSession *FecStreamCxx::getSourceSession() const {
 }
 
 fec_stats *FecStreamCxx::getStats() {
-	return &mStats;
+	return mStats.getFecStats();
 }
 
 bool FecStreamCxx::isEnabled() {
