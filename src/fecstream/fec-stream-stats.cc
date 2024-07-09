@@ -173,7 +173,7 @@ void FecStreamStats::printLostPacketsHisto() {
 
 	size_t index = mBins - 1;
 	for (uint16_t seqNum : repairedPackets) {
-		index = std::min(mBins - 1, mMissingPackets[seqNum]);
+		index = (mMissingPackets[seqNum] < mBins - 1) ? mMissingPackets[seqNum] : mBins - 1;
 		++mLocalHistoRecovering[index];
 		++mGlobalHistoRecovering[index];
 		mMissingPackets.erase(seqNum);
@@ -183,7 +183,7 @@ void FecStreamStats::printLostPacketsHisto() {
 			++mLocalHistoLost[0];
 			++mGlobalHistoLost[0];
 		} else {
-			index = std::min(mBins - 1, mMissingPackets[seqNum]);
+			index = (mMissingPackets[seqNum] < mBins - 1) ? mMissingPackets[seqNum] : mBins - 1;
 			++mLocalHistoLost[index];
 			++mGlobalHistoLost[index];
 			mMissingPackets.erase(seqNum);
@@ -192,7 +192,7 @@ void FecStreamStats::printLostPacketsHisto() {
 	size_t lost_sequence_size = 1;
 	for (size_t i = 0; i < mergedMissingPackets.size() - 1; i++) {
 		uint16_t gap = mergedMissingPackets.at(i + 1) - mergedMissingPackets.at(i);
-		index = std::min(mBins - 1, (size_t)gap);
+		index = ((size_t)gap < mBins - 1) ? (size_t)gap : mBins - 1;
 		++mLocalHistoMissingGap[index];
 		++mGlobalHistoMissingGap[index];
 		if (gap == 1) {
