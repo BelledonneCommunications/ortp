@@ -154,6 +154,8 @@ void FecStreamStats::printGlobalHistoAndClear() {
 
 void FecStreamStats::printLostPacketsHisto() {
 
+	if (mMissingPackets.empty()) return;
+
 	std::vector<uint16_t> repairedPackets(mRepairedPackets.begin(), mRepairedPackets.end());
 	std::vector<uint16_t> lostPackets(mLostPackets.begin(), mLostPackets.end());
 	std::sort(repairedPackets.begin(), repairedPackets.end());
@@ -165,35 +167,39 @@ void FecStreamStats::printLostPacketsHisto() {
 	int count_missing = (int)mergedMissingPackets.size();
 	int count_repaired = (int)repairedPackets.size();
 	int count_lost = (int)lostPackets.size();
-	float recovery_rate = (float)count_repaired / (float)count_missing;
+	float recovery_rate = (count_missing == 0) ? 0. : (float)count_repaired / (float)count_missing;
 	ortp_message("[flexfec] local stats: %d packets missing, %d repaired, %d lost (recovery rate: %f)", count_missing,
 	             count_repaired, count_lost, recovery_rate);
 
+	size_t index = mBins - 1;
 	for (uint16_t seqNum : repairedPackets) {
-		mLocalHistoRecovering.at(std::min(mBins - 1, mMissingPackets[seqNum]))++;
-		mGlobalHistoRecovering.at(std::min(mBins - 1, mMissingPackets[seqNum]))++;
+		index = std::min(mBins - 1, mMissingPackets[seqNum]);
+		++mLocalHistoRecovering[index];
+		++mGlobalHistoRecovering[index];
 		mMissingPackets.erase(seqNum);
 	}
 	for (uint16_t seqNum : lostPackets) {
 		if (mMissingPackets.find(seqNum) == mMissingPackets.end()) {
-			mLocalHistoLost.at(0)++;
-			mGlobalHistoLost.at(0)++;
+			++mLocalHistoLost[0];
+			++mGlobalHistoLost[0];
 		} else {
-			mLocalHistoLost.at(std::min(mBins - 1, mMissingPackets[seqNum]))++;
-			mGlobalHistoLost.at(std::min(mBins - 1, mMissingPackets[seqNum]))++;
+			index = std::min(mBins - 1, mMissingPackets[seqNum]);
+			++mLocalHistoLost[index];
+			++mGlobalHistoLost[index];
 			mMissingPackets.erase(seqNum);
 		}
 	}
-	uint8_t lost_sequence_size = 1;
+	size_t lost_sequence_size = 1;
 	for (size_t i = 0; i < mergedMissingPackets.size() - 1; i++) {
 		uint16_t gap = mergedMissingPackets.at(i + 1) - mergedMissingPackets.at(i);
-		mLocalHistoMissingGap[std::min(mBins - 1, (size_t)gap)]++;
-		mGlobalHistoMissingGap[std::min(mBins - 1, (size_t)gap)]++;
+		index = std::min(mBins - 1, (size_t)gap);
+		++mLocalHistoMissingGap[index];
+		++mGlobalHistoMissingGap[index];
 		if (gap == 1) {
-			lost_sequence_size++;
+			++lost_sequence_size;
 		} else {
-			mLocalHistoGapSize.at(lost_sequence_size)++;
-			mGlobalHistoGapSize.at(lost_sequence_size)++;
+			++mLocalHistoGapSize[lost_sequence_size];
+			++mGlobalHistoGapSize[lost_sequence_size];
 			lost_sequence_size = 1;
 		}
 	}

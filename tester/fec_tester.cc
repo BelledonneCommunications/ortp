@@ -1,4 +1,5 @@
 
+#include "fecstream/fec-stream-stats.h"
 #include "fecstream/fecstream.h"
 #include "ortp/payloadtype.h"
 #include "ortp_tester.h"
@@ -1584,6 +1585,66 @@ static void receive_cluster_reset_test(void) {
 	rtp_session_destroy(session);
 }
 
+static void stats_sent_packets(void) {
+	FecStreamStats stats;
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->row_repair_sent), 0, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->col_repair_sent), 0, int, "%d");
+
+	int rowNum = 12;
+	int colNum = 27;
+	for (int i = 0; i < rowNum; i++)
+		stats.rowRepairSent();
+	for (int i = 0; i < colNum; i++)
+		stats.colRepairSent();
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->row_repair_sent), rowNum, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->col_repair_sent), colNum, int, "%d");
+}
+
+static void stats_received_packets(void) {
+	FecStreamStats stats;
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->row_repair_received), 0, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->col_repair_received), 0, int, "%d");
+
+	stats.rowRepairReceived(2);
+	stats.colRepairReceived(3);
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->row_repair_received), 2, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->col_repair_received), 3, int, "%d");
+	stats.rowRepairReceived(7);
+	stats.colRepairReceived(4);
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->row_repair_received), 7, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getFecStats()->col_repair_received), 4, int, "%d");
+}
+
+static void stats_count_packets(void) {
+	FecStreamStats stats;
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsLost()), 0, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsRecovered()), 0, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsNotRecovered()), 0, int, "%d");
+
+	stats.askedPacket(0);
+	stats.askedPacket(0);
+	stats.askedPacket(1);
+	stats.definitelyLostPacket(1, 2); // 0, 1 never repaired
+	stats.askedPacket(5);
+	stats.repairedPacket(5); // 5 repaired
+	stats.askedPacket(7);
+	stats.askedPacket(8);
+	stats.askedPacket(7);
+	stats.askedPacket(8);
+	stats.repairedPacket(5);          // 8 repaired
+	stats.definitelyLostPacket(7, 1); // 7 never repaired
+	stats.askedPacket(9);
+	stats.askedPacket(9);
+	stats.askedPacket(9);
+	stats.askedPacket(9);
+	stats.repairedPacket(9); // 9 repaired
+	stats.askedPacket(10);
+	stats.repairedPacket(10); // 10 repaired
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsLost()), 7, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsRecovered()), 4, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsNotRecovered()), 3, int, "%d");
+}
+
 static test_t tests[] = {
 
     TEST_NO_TAG("fec parameters update", fec_params_update_test),
@@ -1621,6 +1682,10 @@ static test_t tests[] = {
     TEST_NO_TAG("receive cluster add repair", receive_cluster_add_repair_test),
     TEST_NO_TAG("receive cluster repair", receive_cluster_repair_test),
     TEST_NO_TAG("receive cluster reset", receive_cluster_reset_test),
+
+    TEST_NO_TAG("stats sent packets", stats_sent_packets),
+    TEST_NO_TAG("stats received packets", stats_received_packets),
+    TEST_NO_TAG("stats count packets", stats_count_packets),
 };
 
 test_suite_t fec_test_suite = {
