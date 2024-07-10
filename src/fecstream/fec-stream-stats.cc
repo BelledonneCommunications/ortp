@@ -50,11 +50,9 @@ FecStreamStats::FecStreamStats() {
 }
 
 void FecStreamStats::askedPacket(uint16_t seqNum) {
-	if (mMissingPackets.find(seqNum) == mMissingPackets.end()) {
-		mMissingPackets[seqNum] = 1;
-	} else {
-		mMissingPackets[seqNum]++;
-	}
+	auto &count = mMissingPackets[seqNum];
+	if (count == 0) count = 1;
+	else ++count;
 
 	if (mMissingPackets.size() > mMaxSize) {
 		printHistoAndClear();
@@ -129,9 +127,9 @@ void FecStreamStats::printHistoAndClear() {
 	mRepairedPackets.clear();
 }
 
-std::string FecStreamStats::histoToString(std::vector<uint8_t> *histo) {
+std::string FecStreamStats::histoToString(const std::vector<uint8_t> &histo) const {
 	std::string histoStr;
-	for (auto it = histo->begin(); it != histo->end(); ++it) {
+	for (auto it = histo.begin(); it != histo.end(); ++it) {
 		histoStr += std::to_string(*it);
 		histoStr += ",";
 	}
@@ -142,12 +140,12 @@ std::string FecStreamStats::histoToString(std::vector<uint8_t> *histo) {
 void FecStreamStats::printGlobalHistoAndClear() {
 	printLostPacketsHisto();
 	ortp_message("[flexfec] global histogram of successful repair attempts: %s",
-	             histoToString(&mGlobalHistoRecovering).c_str());
-	ortp_message("[flexfec] global histogram of failed repair attempts: %s", histoToString(&mGlobalHistoLost).c_str());
+	             histoToString(mGlobalHistoRecovering).c_str());
+	ortp_message("[flexfec] global histogram of failed repair attempts: %s", histoToString(mGlobalHistoLost).c_str());
 	ortp_message("[flexfec] global histogram of gaps between missing packets: %s",
-	             histoToString(&mGlobalHistoMissingGap).c_str());
+	             histoToString(mGlobalHistoMissingGap).c_str());
 	ortp_message("[flexfec] global histogram of number of consecutive packets loss: %s",
-	             histoToString(&mGlobalHistoGapSize).c_str());
+	             histoToString(mGlobalHistoGapSize).c_str());
 	mLostPackets.clear();
 	mRepairedPackets.clear();
 }
@@ -190,27 +188,29 @@ void FecStreamStats::printLostPacketsHisto() {
 		}
 	}
 	size_t lost_sequence_size = 1;
-	for (size_t i = 0; i < mergedMissingPackets.size() - 1; i++) {
-		uint16_t gap = mergedMissingPackets.at(i + 1) - mergedMissingPackets.at(i);
-		index = ((size_t)gap < mBins - 1) ? (size_t)gap : mBins - 1;
-		++mLocalHistoMissingGap[index];
-		++mGlobalHistoMissingGap[index];
-		if (gap == 1) {
-			++lost_sequence_size;
-		} else {
-			++mLocalHistoGapSize[lost_sequence_size];
-			++mGlobalHistoGapSize[lost_sequence_size];
-			lost_sequence_size = 1;
+	if (mergedMissingPackets.size() > 1) {
+		for (size_t i = 0; i < mergedMissingPackets.size() - 1; i++) {
+			uint16_t gap = mergedMissingPackets.at(i + 1) - mergedMissingPackets.at(i);
+			index = ((size_t)gap < mBins - 1) ? (size_t)gap : mBins - 1;
+			++mLocalHistoMissingGap[index];
+			++mGlobalHistoMissingGap[index];
+			if (gap == 1) {
+				++lost_sequence_size;
+			} else {
+				++mLocalHistoGapSize[lost_sequence_size];
+				++mGlobalHistoGapSize[lost_sequence_size];
+				lost_sequence_size = 1;
+			}
 		}
 	}
 
 	ortp_message("[flexfec] local histogram of successful repair attempts: %s",
-	             histoToString(&mLocalHistoRecovering).c_str());
-	ortp_message("[flexfec] local histogram of failed repair attempts: %s", histoToString(&mLocalHistoLost).c_str());
+	             histoToString(mLocalHistoRecovering).c_str());
+	ortp_message("[flexfec] local histogram of failed repair attempts: %s", histoToString(mLocalHistoLost).c_str());
 	ortp_message("[flexfec] local histogram of gaps between missing packets: %s",
-	             histoToString(&mLocalHistoMissingGap).c_str());
+	             histoToString(mLocalHistoMissingGap).c_str());
 	ortp_message("[flexfec] local histogram of number of consecutive packets loss: %s",
-	             histoToString(&mLocalHistoGapSize).c_str());
+	             histoToString(mLocalHistoGapSize).c_str());
 
 	std::fill(mLocalHistoRecovering.begin(), mLocalHistoRecovering.end(), 0);
 	std::fill(mLocalHistoLost.begin(), mLocalHistoLost.end(), 0);

@@ -22,7 +22,6 @@
 #define FECSTREAMSTATS_H
 
 #include "ortp/rtpsession.h"
-#include <list>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -36,8 +35,8 @@ namespace ortp {
 
 class FecStreamStats {
 private:
-	std::list<uint16_t> mLostPackets;
-	std::list<uint16_t> mRepairedPackets;
+	std::vector<uint16_t> mLostPackets;
+	std::vector<uint16_t> mRepairedPackets;
 	std::unordered_map<uint16_t, size_t> mMissingPackets;
 	fec_stats mFecStats;
 	size_t mMaxSize = 100;
@@ -54,7 +53,7 @@ private:
 	void printHistoAndClear();
 	void printGlobalHistoAndClear();
 	void printLostPacketsHisto();
-	std::string histoToString(std::vector<uint8_t> *histo);
+	std::string histoToString(const std::vector<uint8_t> &histo) const;
 
 public:
 	FecStreamStats();
@@ -71,13 +70,13 @@ public:
 	void colRepairReceived(uint64_t cpt) {
 		mFecStats.col_repair_received = cpt;
 	};
-	uint64_t getPacketsLost() {
+	uint64_t getPacketsLost() const {
 		return mFecStats.packets_lost;
 	};
-	uint64_t getPacketsRecovered() {
+	uint64_t getPacketsRecovered() const {
 		return mFecStats.packets_recovered;
 	};
-	uint64_t getPacketsNotRecovered() {
+	uint64_t getPacketsNotRecovered() const {
 		return mFecStats.packets_not_recovered;
 	};
 	fec_stats *getFecStats() {
