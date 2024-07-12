@@ -165,7 +165,7 @@ void FecStreamStats::printLostPacketsHisto() {
 	int count_missing = (int)mergedMissingPackets.size();
 	int count_repaired = (int)repairedPackets.size();
 	int count_lost = (int)lostPackets.size();
-	float recovery_rate = (count_missing == 0) ? 0. : (float)count_repaired / (float)count_missing;
+	float recovery_rate = (count_missing == 0) ? 0.0f : (float)count_repaired / (float)count_missing;
 	ortp_message("[flexfec] local stats: %d packets missing, %d repaired, %d lost (recovery rate: %f)", count_missing,
 	             count_repaired, count_lost, recovery_rate);
 
