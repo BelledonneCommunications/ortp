@@ -39,8 +39,8 @@ private:
 	std::vector<uint16_t> mRepairedPackets;
 	std::unordered_map<uint16_t, size_t> mMissingPackets;
 	fec_stats mFecStats;
-	size_t mMaxSize = 100;
-	size_t mBins = 31;
+	const size_t mMaxSize = 100;
+	const size_t mBins = 31;
 	std::vector<uint8_t> mLocalHistoRecovering;
 	std::vector<uint8_t> mLocalHistoLost;
 	std::vector<uint8_t> mLocalHistoMissingGap;

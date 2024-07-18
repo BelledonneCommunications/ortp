@@ -63,7 +63,7 @@ void FecStreamStats::definitelyLostPacket(uint16_t seqNum, int16_t diff) {
 	if (diff > 0) {
 		mFecStats.packets_not_recovered += static_cast<uint64_t>(diff);
 		mFecStats.packets_lost = mFecStats.packets_not_recovered + mFecStats.packets_recovered;
-		for (uint16_t seqNumPrec = seqNum - (uint16_t)diff; seqNumPrec < seqNum; seqNumPrec++) {
+		for (uint16_t seqNumPrec = seqNum - (uint16_t)diff + 1; seqNumPrec <= seqNum; seqNumPrec++) {
 			mLostPackets.emplace_back(seqNumPrec);
 		}
 	}
@@ -148,6 +148,7 @@ void FecStreamStats::printGlobalHistoAndClear() {
 	             histoToString(mGlobalHistoGapSize).c_str());
 	mLostPackets.clear();
 	mRepairedPackets.clear();
+	mMissingPackets.clear();
 }
 
 void FecStreamStats::printLostPacketsHisto() {
@@ -166,8 +167,15 @@ void FecStreamStats::printLostPacketsHisto() {
 	int count_repaired = (int)repairedPackets.size();
 	int count_lost = (int)lostPackets.size();
 	float recovery_rate = (count_missing == 0) ? 0.0f : (float)count_repaired / (float)count_missing;
+	if (count_missing == 0 && mMissingPackets.size() >= mMaxSize) {
+		ortp_message("[flexfec] clear list of %d forgotten missing packets", (int)mMissingPackets.size());
+		mMissingPackets.clear();
+		return;
+	}
 	ortp_message("[flexfec] local stats: %d packets missing, %d repaired, %d lost (recovery rate: %f)", count_missing,
 	             count_repaired, count_lost, recovery_rate);
+
+	if (count_missing == 0) return;
 
 	size_t index = mBins - 1;
 	for (uint16_t seqNum : repairedPackets) {
@@ -202,6 +210,22 @@ void FecStreamStats::printLostPacketsHisto() {
 				lost_sequence_size = 1;
 			}
 		}
+		++mLocalHistoGapSize[lost_sequence_size];
+		++mGlobalHistoGapSize[lost_sequence_size];
+	}
+
+	if (count_lost > 0 && mMissingPackets.size() > 1) {
+		uint16_t lastSeqNum = lostPackets.back();
+		int count_forgotten = 0;
+		for (auto it = mMissingPackets.begin(); it != mMissingPackets.end();) {
+			if (it->first <= lastSeqNum) {
+				it = mMissingPackets.erase(it);
+				++count_forgotten;
+			} else {
+				++it;
+			}
+		}
+		ortp_message("[flexfec] clear list of %d forgotten missing packets", count_forgotten);
 	}
 
 	ortp_message("[flexfec] local histogram of successful repair attempts: %s",

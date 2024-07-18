@@ -1631,7 +1631,7 @@ static void stats_count_packets(void) {
 	stats.askedPacket(8);
 	stats.askedPacket(7);
 	stats.askedPacket(8);
-	stats.repairedPacket(5);          // 8 repaired
+	stats.repairedPacket(8);          // 8 repaired
 	stats.definitelyLostPacket(7, 1); // 7 never repaired
 	stats.askedPacket(9);
 	stats.askedPacket(9);
