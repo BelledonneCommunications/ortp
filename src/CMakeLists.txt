@@ -79,9 +79,7 @@ set(ORTP_SOURCE_FILES_CXX
 	fecstream/overhead.cpp
 )
 
-add_definitions(
-	-DBCTBX_LOG_DOMAIN="ortp"
-)
+add_definitions(-DBCTBX_LOG_DOMAIN="ortp")
 
 if(WIN32)
 	list(APPEND ORTP_SOURCE_FILES_C dll_entry.c)
