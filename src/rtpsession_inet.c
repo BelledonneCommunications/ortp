@@ -24,6 +24,12 @@
 
 #if __APPLE__
 #include "TargetConditionals.h"
+#ifndef _DARWIN_C_SOURCE
+#define _DARWIN_C_SOURCE
+#endif
+#ifndef IPV6_RECVDSTADDR
+#define IPV6_RECVDSTADDR 7
+#endif
 #endif
 
 #ifdef HAVE_CONFIG_H
