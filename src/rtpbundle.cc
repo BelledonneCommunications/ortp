@@ -73,10 +73,10 @@ extern "C" void rtp_bundle_set_primary_session(RtpBundle *bundle, RtpSession *se
 	reinterpret_cast<RtpBundleCxx *>(bundle)->setPrimarySession(session);
 }
 
-extern "C" const char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
+extern "C" char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
 	try {
 		auto &mid = reinterpret_cast<RtpBundleCxx *>(bundle)->getSessionMid(session);
-		return mid.c_str();
+		return bctbx_strdup(mid.c_str());
 	} catch (std::string const &e) {
 		ortp_warning("RtpBundle[%p]: cannot get mid for session (%p): %s", bundle, session, e.c_str());
 		return nullptr;

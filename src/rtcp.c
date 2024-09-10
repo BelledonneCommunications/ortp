@@ -139,7 +139,7 @@ void rtcp_sdes_items_uninit(RtcpSdesItems *items) {
 
 static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 	RtcpSdesItems *items = &session->sdes_items;
-	const char *mid = NULL;
+	char *mid = NULL;
 	mblk_t *m = NULL;
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
 	if (strlen(items->cname) > 255) {
@@ -167,6 +167,7 @@ static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 		}
 		m = sdes_chunk_pad(m);
 	}
+	if (mid) bctbx_free(mid);
 	ortp_mutex_unlock(&session->main_mutex);
 	return chunk;
 }
@@ -221,7 +222,7 @@ void rtp_session_add_contributing_source(RtpSession *session,
                                          const char *loc,
                                          const char *tool,
                                          const char *note) {
-	const char *mid = NULL;
+	char *mid = NULL;
 	mblk_t *chunk = sdes_chunk_new(csrc);
 
 	/* Add mid to chunck if there is a bundle */
@@ -231,6 +232,8 @@ void rtp_session_add_contributing_source(RtpSession *session,
 
 	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, mid);
 	putq(&session->contributing_sources, chunk);
+
+	if (mid != NULL) bctbx_free(mid);
 }
 
 void rtp_session_remove_contributing_source(RtpSession *session, uint32_t ssrc) {

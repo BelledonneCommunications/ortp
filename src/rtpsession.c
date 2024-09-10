@@ -982,7 +982,7 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 	mblk_t *mp;
 	rtp_header_t *rtp;
 	size_t header_size;
-	const char *mid = NULL;
+	char *mid = NULL;
 
 	ortp_mutex_lock(&session->main_mutex);
 	if (session->bundle && rtp_session_should_send_mid(session)) {
@@ -1003,6 +1003,7 @@ mblk_t *rtp_session_create_packet_header(RtpSession *session, size_t extra_heade
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		bctbx_free(mid);
 	}
 
 	ortp_mutex_unlock(&session->main_mutex);
@@ -1016,7 +1017,7 @@ mblk_t *
 rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sourceSession, size_t extra_header_size) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
-	const char *mid = NULL;
+	char *mid = NULL;
 	size_t header_size;
 
 	ortp_mutex_lock(&fecSession->main_mutex);
@@ -1039,6 +1040,7 @@ rtp_session_create_repair_packet_header(RtpSession *fecSession, RtpSession *sour
 		int midId = rtp_bundle_get_mid_extension_id(fecSession->bundle);
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		bctbx_free(mid);
 	}
 
 	ortp_mutex_unlock(&fecSession->main_mutex);
@@ -1054,7 +1056,7 @@ mblk_t *rtp_session_create_packet_header_with_mixer_to_client_audio_level(RtpSes
                                                                           rtp_audio_level_t *audio_levels) {
 	mblk_t *mp;
 	rtp_header_t *rtp;
-	const char *mid = NULL;
+	char *mid = NULL;
 
 	/** Compute the header size **/
 	size_t header_size = RTP_FIXED_HEADER_SIZE;
@@ -1098,6 +1100,7 @@ mblk_t *rtp_session_create_packet_header_with_mixer_to_client_audio_level(RtpSes
 	if (session->bundle && mid != NULL) {
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		bctbx_free(mid);
 	}
 	ortp_mutex_unlock(&session->main_mutex);
 
@@ -1164,7 +1167,7 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 	size_t msglen = payload_size;
 	rtp_header_t *rtp;
 	size_t computed_header_size;
-	const char *mid = NULL;
+	char *mid = NULL;
 
 	ortp_mutex_lock(&session->main_mutex);
 
@@ -1191,6 +1194,7 @@ rtp_session_create_packet(RtpSession *session, size_t header_size, const uint8_t
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		bctbx_free(mid);
 	}
 
 	ortp_mutex_unlock(&session->main_mutex);
@@ -1227,7 +1231,7 @@ mblk_t *rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *s
 	mblk_t *mp;
 	size_t msglen = payload_size;
 	rtp_header_t *rtp;
-	const char *mid = NULL;
+	char *mid = NULL;
 
 	/** Compute the header size **/
 	size_t computed_header_size = RTP_FIXED_HEADER_SIZE;
@@ -1278,6 +1282,7 @@ mblk_t *rtp_session_create_packet_with_mixer_to_client_audio_level(RtpSession *s
 	if (session->bundle && mid != NULL) {
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		bctbx_free(mid);
 	}
 	ortp_mutex_unlock(&session->main_mutex);
 
@@ -1327,7 +1332,7 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 	mblk_t *mp, *mpayload;
 	size_t header_size;
 	rtp_header_t *rtp;
-	const char *mid = NULL;
+	char *mid = NULL;
 
 	ortp_mutex_lock(&session->main_mutex);
 	if (session->bundle && rtp_session_should_send_mid(session)) {
@@ -1347,6 +1352,7 @@ mblk_t *rtp_session_create_packet_with_data(RtpSession *session,
 		int midId = rtp_bundle_get_mid_extension_id(session->bundle);
 		// storage is already allocated so use rtp_insert instead of rtp_add
 		rtp_write_extension_header(mp, midId != -1 ? midId : RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+		bctbx_free(mid);
 	}
 	ortp_mutex_unlock(&session->main_mutex);
 
@@ -1421,7 +1427,7 @@ static int __rtp_session_sendm_with_ts_2(
 				RtpSession *bundle_session = NULL;
 				RtpBundle *bundle = session->bundle;
 				if (transfer_set_mid == TRUE) {
-					const char *mid = rtp_bundle_get_session_mid(bundle, session);
+					char *mid = rtp_bundle_get_session_mid(bundle, session);
 
 					if (mid != NULL) {
 						/* ensure the paquet MID is matching the bundle one */
@@ -1431,6 +1437,8 @@ static int __rtp_session_sendm_with_ts_2(
 						rtp =
 						    (rtp_header_t *)
 						        mp->b_rptr; // rtp_add_extension might pullup the message so reset the pointer to header
+
+						bctbx_free(mid);
 					}
 				}
 
