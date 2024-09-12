@@ -975,9 +975,9 @@ typedef struct fec_stats_t {
 	uint64_t col_repair_received;
 	uint64_t row_repair_sent;
 	uint64_t row_repair_received;
-	uint64_t packets_lost;
-	uint64_t packets_not_recovered;
-	uint64_t packets_recovered;
+	uint64_t packets_lost;          // number of source packets lost during the call, that can be repaired by FEC or not
+	uint64_t packets_not_recovered; // number of source packets lost and not repaired
+	uint64_t packets_recovered;     // number of source packets lost and repaired by FEC
 } fec_stats;
 
 ORTP_PUBLIC FecParams *fec_params_new(uint32_t repairWindow);

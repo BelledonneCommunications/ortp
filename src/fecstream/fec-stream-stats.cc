@@ -54,18 +54,38 @@ void FecStreamStats::askedPacket(uint16_t seqNum) {
 	if (count == 0) count = 1;
 	else ++count;
 
-	if (mMissingPackets.size() > mMaxSize) {
+	if (mMissingPackets.size() >= mMaxSize) {
 		printHistoAndClear();
 	}
 }
 
-void FecStreamStats::definitelyLostPacket(uint16_t seqNum, int16_t diff) {
+void FecStreamStats::definitelyLostPacket(uint16_t newSeqNumReceived, int16_t diff) {
 	if (diff > 0) {
-		mFecStats.packets_not_recovered += static_cast<uint64_t>(diff);
-		mFecStats.packets_lost = mFecStats.packets_not_recovered + mFecStats.packets_recovered;
-		for (uint16_t seqNumPrec = seqNum - (uint16_t)diff + 1; seqNumPrec <= seqNum; seqNumPrec++) {
-			mLostPackets.emplace_back(seqNumPrec);
+		uint64_t lost_packets = static_cast<uint64_t>(diff);
+		uint16_t lastSeqNumReceived = newSeqNumReceived - (uint16_t)diff - 1;
+		if (diff > (int)mMaxSize) {
+			ortp_message(
+			    "[flexfec] too much packets (%d) lost between packets %u and %u, do not count all of them in FEC stats",
+			    diff, lastSeqNumReceived, newSeqNumReceived);
+			lost_packets = 0;
+			for (auto missingPacket : mMissingPackets) {
+				if ((missingPacket.first > lastSeqNumReceived) && (missingPacket.first < newSeqNumReceived)) {
+					mLostPackets.emplace_back(missingPacket.first);
+					lost_packets++;
+				}
+			}
+			printHistoAndClear();
+		} else {
+			for (uint16_t seqNumPrec = lastSeqNumReceived + 1; seqNumPrec < newSeqNumReceived; seqNumPrec++) {
+				mLostPackets.emplace_back(seqNumPrec);
+			}
+			if (mLostPackets.size() >= mMaxSize) {
+				printHistoAndClear();
+			}
 		}
+
+		mFecStats.packets_not_recovered += lost_packets;
+		mFecStats.packets_lost = mFecStats.packets_not_recovered + mFecStats.packets_recovered;
 	}
 }
 
@@ -205,15 +225,19 @@ void FecStreamStats::printLostPacketsHisto() {
 			if (gap == 1) {
 				++lost_sequence_size;
 			} else {
+				lost_sequence_size = (lost_sequence_size < mBins - 1) ? lost_sequence_size : mBins - 1;
 				++mLocalHistoGapSize[lost_sequence_size];
 				++mGlobalHistoGapSize[lost_sequence_size];
 				lost_sequence_size = 1;
 			}
 		}
+		lost_sequence_size = (lost_sequence_size < mBins - 1) ? lost_sequence_size : mBins - 1;
 		++mLocalHistoGapSize[lost_sequence_size];
 		++mGlobalHistoGapSize[lost_sequence_size];
 	}
 
+	// erase missing packets that are too old and where never repaired nor lost
+	// this could occur because they arrived later in the jitter buffer
 	if (count_lost > 0 && mMissingPackets.size() > 1) {
 		uint16_t lastSeqNum = lostPackets.back();
 		int count_forgotten = 0;
@@ -225,7 +249,7 @@ void FecStreamStats::printLostPacketsHisto() {
 				++it;
 			}
 		}
-		ortp_message("[flexfec] clear list of %d forgotten missing packets", count_forgotten);
+		if (count_forgotten > 0) ortp_message("[flexfec] clear list of %d old packets", count_forgotten);
 	}
 
 	ortp_message("[flexfec] local histogram of successful repair attempts: %s",

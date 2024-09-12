@@ -35,16 +35,20 @@ namespace ortp {
 
 class FecStreamStats {
 private:
-	std::vector<uint16_t> mLostPackets;
-	std::vector<uint16_t> mRepairedPackets;
-	std::unordered_map<uint16_t, size_t> mMissingPackets;
+	std::vector<uint16_t> mLostPackets;                   // sequence numbers of the lost packets
+	                                                      // that are not found when the jitter buffer is read
+	std::vector<uint16_t> mRepairedPackets;               // sequence numbers of the packets repaired by FEC
+	std::unordered_map<uint16_t, size_t> mMissingPackets; // number of repair attempts of each packet
+	                                                      // given its sequence number
 	fec_stats mFecStats;
 	const size_t mMaxSize = 100;
 	const size_t mBins = 31;
-	std::vector<uint8_t> mLocalHistoRecovering;
-	std::vector<uint8_t> mLocalHistoLost;
-	std::vector<uint8_t> mLocalHistoMissingGap;
-	std::vector<uint8_t> mLocalHistoGapSize;
+
+	// histograms, bins from 0 to mBins - 1
+	std::vector<uint8_t> mLocalHistoRecovering; // number of attemps before a successful repair
+	std::vector<uint8_t> mLocalHistoLost;       // number of repair attemps of definitely lost packets
+	std::vector<uint8_t> mLocalHistoMissingGap; // number of packets between two lost packets
+	std::vector<uint8_t> mLocalHistoGapSize;    // number of consecutive lost packets
 	std::vector<uint8_t> mGlobalHistoRecovering;
 	std::vector<uint8_t> mGlobalHistoLost;
 	std::vector<uint8_t> mGlobalHistoMissingGap;
@@ -84,7 +88,7 @@ public:
 	};
 	void askedPacket(uint16_t seqNum);
 	void repairedPacket(uint16_t seqNum);
-	void definitelyLostPacket(uint16_t seqNum, int16_t diff);
+	void definitelyLostPacket(uint16_t newSeqNumReceived, int16_t diff);
 	void printStats(RtpSession *sourceSession, RtpSession *fecSession);
 	void clearAll();
 };

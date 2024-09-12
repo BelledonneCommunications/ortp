@@ -48,8 +48,8 @@ extern "C" mblk_t *fec_stream_find_missing_packet(FecStream *fec_stream, uint16_
 extern "C" RtpSession *fec_stream_get_fec_session(FecStream *fec_stream) {
 	return ((FecStreamCxx *)fec_stream)->getFecSession();
 }
-extern "C" void fec_stream_count_lost_packets(FecStream *fec_stream, uint16_t seqnum, int16_t diff) {
-	((FecStreamCxx *)fec_stream)->countLostPackets(seqnum, diff);
+extern "C" void fec_stream_count_lost_packets(FecStream *fec_stream, uint16_t new_seqnum_received, int16_t diff) {
+	((FecStreamCxx *)fec_stream)->countLostPackets(new_seqnum_received, diff);
 }
 extern "C" void fec_stream_print_stats(FecStream *fec_stream) {
 	((FecStreamCxx *)fec_stream)->printStats();
@@ -248,8 +248,8 @@ void FecStreamCxx::updateReceivedSourcePackets() {
 	}
 }
 
-void FecStreamCxx::countLostPackets(uint16_t seqnum, int16_t diff) {
-	mStats.definitelyLostPacket(seqnum, diff);
+void FecStreamCxx::countLostPackets(uint16_t newSeqnumReceived, int16_t diff) {
+	mStats.definitelyLostPacket(newSeqnumReceived, diff);
 }
 
 void FecStreamCxx::printStats() {

@@ -74,7 +74,7 @@ public:
 	RtpSession *getFecSession() const;
 	RtpSession *getSourceSession() const;
 	fec_stats *getStats();
-	void countLostPackets(uint16_t seqnum, int16_t diff);
+	void countLostPackets(uint16_t newSeqnumReceived, int16_t diff);
 	void printStats();
 	void update(FecParamsController *) override;
 	bool isEnabled();

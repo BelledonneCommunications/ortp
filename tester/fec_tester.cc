@@ -1,9 +1,7 @@
 
 #include "fecstream/fec-stream-stats.h"
 #include "fecstream/fecstream.h"
-#include "ortp/payloadtype.h"
 #include "ortp_tester.h"
-#include <algorithm>
 #include <numeric>
 
 using namespace ortp;
@@ -1621,28 +1619,61 @@ static void stats_count_packets(void) {
 	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsRecovered()), 0, int, "%d");
 	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsNotRecovered()), 0, int, "%d");
 
-	stats.askedPacket(0);
-	stats.askedPacket(0);
-	stats.askedPacket(1);
-	stats.definitelyLostPacket(1, 2); // 0, 1 never repaired
-	stats.askedPacket(5);
-	stats.repairedPacket(5); // 5 repaired
-	stats.askedPacket(7);
-	stats.askedPacket(8);
-	stats.askedPacket(7);
-	stats.askedPacket(8);
-	stats.repairedPacket(8);          // 8 repaired
-	stats.definitelyLostPacket(7, 1); // 7 never repaired
-	stats.askedPacket(9);
-	stats.askedPacket(9);
-	stats.askedPacket(9);
-	stats.askedPacket(9);
-	stats.repairedPacket(9); // 9 repaired
-	stats.askedPacket(10);
-	stats.repairedPacket(10); // 10 repaired
-	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsLost()), 7, int, "%d");
-	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsRecovered()), 4, int, "%d");
-	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsNotRecovered()), 3, int, "%d");
+	int16_t diff = 0;
+	uint16_t new_seqnum_received = 0;
+	int last_seqnum = 0;
+
+	// packets 0-18: missing, try to repair
+	for (uint16_t i = 0; i < 19; i++) {
+		stats.askedPacket(i);
+	}
+	// packets 0-9: missing and repaired at the second try
+	for (uint16_t i = 0; i < 10; i++) {
+		stats.askedPacket(i);
+		stats.repairedPacket(i);
+	}
+	// packets 10-14: arrive in the jitter buffer
+	// -> not asked any more
+	// -> not counted as recovered nor lost
+	// 10-14
+	// packets 15-19: definitely lost
+	// packet 20: read from jitter buffer, oldest missing packets are lost forever
+	new_seqnum_received = 20;
+	last_seqnum = 14;
+	diff = new_seqnum_received - last_seqnum - 1;
+	last_seqnum = (int)new_seqnum_received - (int)diff - 1;
+	stats.definitelyLostPacket(new_seqnum_received, diff);
+	// packets 21-29: missing, try to repair
+	for (uint16_t i = 21; i < 30; i++) {
+		stats.askedPacket(i);
+	}
+	// packets 30-39: missing and repaired
+	for (uint16_t i = 30; i < 40; i++) {
+		stats.askedPacket(i);
+		stats.repairedPacket(i);
+	}
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsLost()), 25, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsRecovered()), 20, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsNotRecovered()), 5, int, "%d");
+	// packets 40-69: missing, try to repair
+	for (uint16_t i = 40; i < 70; i++) {
+		stats.askedPacket(i);
+	}
+	// packets 70-199 skipped, never asked
+	// packets 201-204: missing, try to repair
+	for (uint16_t i = 201; i < 205; i++) {
+		stats.askedPacket(i);
+	}
+	// packet 200: read from jitter buffer, oldest missing packets (21-29 and 40-199) are lost forever
+	new_seqnum_received = 200;
+	last_seqnum = 39;
+	diff = new_seqnum_received - last_seqnum - 1;
+	last_seqnum = (int)new_seqnum_received - (int)diff - 1;
+	stats.definitelyLostPacket(new_seqnum_received, diff);
+
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsLost()), 55, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsRecovered()), 20, int, "%d");
+	BC_ASSERT_EQUAL(static_cast<int>(stats.getPacketsNotRecovered()), 35, int, "%d");
 }
 
 static test_t tests[] = {
