@@ -46,6 +46,7 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 	if (rtp_putq(q, mp) < 0) {
 		/* It was a duplicate packet */
 		(*duplicate)++;
+		return FALSE;
 	}
 
 	/* make some checks: q size must not exceed RtpStream::max_rq_size */

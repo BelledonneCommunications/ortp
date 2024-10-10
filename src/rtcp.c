@@ -142,6 +142,8 @@ static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 	char *mid = NULL;
 	mblk_t *m = NULL;
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
+
+	ortp_mutex_lock(&session->main_mutex);
 	if (strlen(items->cname) > 255) {
 		/*
 		 * rfc3550,
@@ -152,7 +154,7 @@ static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 		 * */
 		ortp_warning("Cname [%s] too long for session [%p]", items->cname, session);
 	}
-	ortp_mutex_lock(&session->main_mutex);
+
 	/* Add mid to chunck if there is a bundle */
 	if (session->bundle) {
 		mid = rtp_bundle_get_session_mid(session->bundle, session);
