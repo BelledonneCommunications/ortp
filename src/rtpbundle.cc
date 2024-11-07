@@ -683,8 +683,10 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 	}
 
 	if (mPrimarymsg) {
-		msgpullup(mPrimarymsg, static_cast<size_t>(-1));
 		msgpullup(m, static_cast<size_t>(-1));
+
+		// Make sure mPrimarymsg owns its data, so that memcpy cannot overlap in some cases.
+		msgown(mPrimarymsg);
 
 		// FIXME: not so elegant to copy back to the original mblk_t.
 		const size_t len = mPrimarymsg->b_wptr - mPrimarymsg->b_rptr;
