@@ -282,6 +282,57 @@ static mblk_t *make_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 	return h;
 }
 
+// See https://datatracker.ietf.org/doc/html/draft-alvestrand-rmcat-remb-03
+static mblk_t *make_rtcp_fb_goog_remb(RtpSession *session, uint64_t mxtbr) {
+	const int size =
+	    sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_goog_remb_fci_t) + sizeof(uint32_t);
+	mblk_t *h = allocb(size, 0);
+	uint8_t mxtbr_exp = 0;
+	uint32_t mxtbr_mantissa = 0;
+
+	/* Compute mxtbr exp and mantissa */
+	while (mxtbr >= (1 << 18)) {
+		mxtbr >>= 1;
+		mxtbr_exp++;
+	}
+	mxtbr_mantissa = mxtbr & 0x0003FFFF;
+
+	rtcp_common_header_t *ch = (rtcp_common_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_common_header_t);
+
+	/* Fill RTCP FB header */
+	rtcp_fb_header_t *fbh = (rtcp_fb_header_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_header_t);
+
+	fbh->packet_sender_ssrc = htonl(rtp_session_get_send_ssrc(session));
+	fbh->media_source_ssrc = htonl(0);
+
+	/* Fill REMB */
+	rtcp_fb_goog_remb_fci_t *fci = (rtcp_fb_goog_remb_fci_t *)h->b_wptr;
+	h->b_wptr += sizeof(rtcp_fb_goog_remb_fci_t);
+
+	fci->identifier = htonl(0x52454D42); // REMB in ascii
+
+	rtcp_fb_goog_remb_fci_set_num_ssrc(fci, 1);
+	rtcp_fb_goog_remb_fci_set_mxtbr_exp(fci, mxtbr_exp);
+	rtcp_fb_goog_remb_fci_set_mxtbr_mantissa(fci, mxtbr_mantissa);
+
+	/* Fill SSRCs */
+	uint32_t *ssrc = (uint32_t *)h->b_wptr;
+	h->b_wptr += sizeof(uint32_t);
+
+	*ssrc = htonl(session->rcv.ssrc);
+
+	/* Fill common header */
+	rtcp_common_header_init(ch, session, RTCP_PSFB, RTCP_PSFB_AFB, msgdsize(h));
+
+	/* Store packet to be able to retransmit. */
+	if (session->rtcp.goog_remb_info.sent) freemsg(session->rtcp.goog_remb_info.sent);
+	session->rtcp.goog_remb_info.sent = copymsg(h);
+
+	return h;
+}
+
 bool_t rtp_session_rtcp_psfb_scheduled(RtpSession *session, rtcp_psfb_type_t type) {
 	mblk_t *m = session->rtcp.send_algo.fb_packets;
 	while (m != NULL) {
@@ -408,6 +459,20 @@ void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc) {
 			session->rtcp.send_algo.tmmbn_scheduled = TRUE;
 		}
 		rtp_session_send_fb_rtcp_packet_and_reschedule(session);
+	}
+}
+
+void rtp_session_send_rtcp_fb_goog_remb(RtpSession *session, uint64_t mxtbr) {
+	if ((rtp_session_avpf_enabled(session) == TRUE) &&
+	    (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GOOG_REMB) == TRUE)) {
+		bool_t can_send_immediately = FALSE;
+		if (rtp_session_rtcp_psfb_scheduled(session, RTCP_PSFB_AFB) != TRUE) {
+			mblk_t *m = make_rtcp_fb_goog_remb(session, mxtbr);
+			can_send_immediately = is_fb_packet_to_be_sent_immediately(session);
+			rtp_session_add_fb_packet_to_send(session, m);
+			session->rtcp.send_algo.goog_remb_scheduled = TRUE;
+		}
+		if (can_send_immediately) rtp_session_send_fb_rtcp_packet_and_reschedule(session);
 	}
 }
 

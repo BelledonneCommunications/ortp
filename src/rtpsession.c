@@ -2205,6 +2205,7 @@ void rtp_session_uninit(RtpSession *session) {
 
 	if (session->rtcp.tmmbr_info.sent) freemsg(session->rtcp.tmmbr_info.sent);
 	if (session->rtcp.tmmbr_info.received) freemsg(session->rtcp.tmmbr_info.received);
+	if (session->rtcp.goog_remb_info.sent) freemsg(session->rtcp.goog_remb_info.sent);
 	if (session->rtcp.send_algo.fb_packets) freemsg(session->rtcp.send_algo.fb_packets);
 	ortp_mutex_destroy(&session->main_mutex);
 	if (session->recv_block_cache) freemsg(session->recv_block_cache);

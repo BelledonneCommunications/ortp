@@ -312,13 +312,13 @@ typedef struct rtcp_fb_tmmbr_fci {
 #define rtcp_fb_tmmbr_fci_get_ssrc(tmmbr) ntohl((tmmbr)->ssrc)
 #define rtcp_fb_tmmbr_fci_get_mxtbr_exp(tmmbr) ((uint8_t)((ntohl((tmmbr)->value) >> 26) & 0x0000003F))
 #define rtcp_fb_tmmbr_fci_set_mxtbr_exp(tmmbr, mxtbr_exp)                                                              \
-	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0x03FFFFFF) | (((mxtbr_exp)&0x0000003F) << 26))
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0x03FFFFFF) | (((mxtbr_exp) & 0x0000003F) << 26))
 #define rtcp_fb_tmmbr_fci_get_mxtbr_mantissa(tmmbr) ((uint32_t)((ntohl((tmmbr)->value) >> 9) & 0x0001FFFF))
 #define rtcp_fb_tmmbr_fci_set_mxtbr_mantissa(tmmbr, mxtbr_mantissa)                                                    \
-	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFC0001FF) | (((mxtbr_mantissa)&0x0001FFFF) << 9))
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFC0001FF) | (((mxtbr_mantissa) & 0x0001FFFF) << 9))
 #define rtcp_fb_tmmbr_fci_get_measured_overhead(tmmbr) ((uint16_t)(ntohl((tmmbr)->value) & 0x000001FF))
 #define rtcp_fb_tmmbr_fci_set_measured_overhead(tmmbr, measured_overhead)                                              \
-	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFFFFFE00) | ((measured_overhead)&0x000001FF))
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFFFFFE00) | ((measured_overhead) & 0x000001FF))
 
 typedef struct rtcp_fb_fir_fci {
 	uint32_t ssrc;
@@ -336,13 +336,13 @@ typedef struct rtcp_fb_sli_fci {
 
 #define rtcp_fb_sli_fci_get_first(fci) ((uint16_t)((ntohl((fci)->value) >> 19) & 0x00001FFF))
 #define rtcp_fb_sli_fci_set_first(fci, first)                                                                          \
-	((fci)->value) = htonl((ntohl((fci)->value) & 0x0007FFFF) | (((first)&0x00001FFF) << 19))
+	((fci)->value) = htonl((ntohl((fci)->value) & 0x0007FFFF) | (((first) & 0x00001FFF) << 19))
 #define rtcp_fb_sli_fci_get_number(fci) ((uint16_t)((ntohl((fci)->value) >> 6) & 0x00001FFF))
 #define rtcp_fb_sli_fci_set_number(fci, number)                                                                        \
-	((fci)->value) = htonl((ntohl((fci)->value) & 0xFFF8003F) | (((number)&0x00001FFF) << 6))
+	((fci)->value) = htonl((ntohl((fci)->value) & 0xFFF8003F) | (((number) & 0x00001FFF) << 6))
 #define rtcp_fb_sli_fci_get_picture_id(fci) ((uint8_t)(ntohl((fci)->value) & 0x0000003F))
 #define rtcp_fb_sli_fci_set_picture_id(fci, picture_id)                                                                \
-	((fci)->value) = htonl((ntohl((fci)->value) & 0xFFFFFFC0) | ((picture_id)&0x0000003F))
+	((fci)->value) = htonl((ntohl((fci)->value) & 0xFFFFFFC0) | ((picture_id) & 0x0000003F))
 
 typedef struct rtcp_fb_rpsi_fci {
 	uint8_t pb;
@@ -355,6 +355,21 @@ typedef struct rtcp_fb_rpsi_fci {
 
 #define MIN_RTCP_PSFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
 #define MIN_RTCP_RTPFB_PACKET_SIZE (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t))
+
+typedef struct rtcp_fb_goog_remb_fci {
+	uint32_t identifier;
+	uint32_t value;
+} rtcp_fb_goog_remb_fci_t;
+
+#define rtcp_fb_goog_remb_fci_get_num_ssrc(tmmbr) ((uint8_t)((ntohl((tmmbr)->value) >> 24) & 0x000000FF))
+#define rtcp_fb_goog_remb_fci_set_num_ssrc(tmmbr, num)                                                                 \
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0x00FFFFFF) | (((num) & 0x000000FF) << 24))
+#define rtcp_fb_goog_remb_fci_get_mxtbr_exp(tmmbr) ((uint8_t)((ntohl((tmmbr)->value) >> 18) & 0x0000003F))
+#define rtcp_fb_goog_remb_fci_set_mxtbr_exp(tmmbr, mxtbr_exp)                                                          \
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFF03FFFF) | (((mxtbr_exp) & 0x0000003F) << 18))
+#define rtcp_fb_goog_remb_fci_get_mxtbr_mantissa(tmmbr) ((uint32_t)(ntohl((tmmbr)->value) & 0x0003FFFF))
+#define rtcp_fb_goog_remb_fci_set_mxtbr_mantissa(tmmbr, mxtbr_mantissa)                                                \
+	((tmmbr)->value) = htonl((ntohl((tmmbr)->value) & 0xFFFC0000) | ((mxtbr_mantissa) & 0x0003FFFF))
 
 /* RTCP structs */
 
@@ -489,6 +504,7 @@ ORTP_PUBLIC bool_t rtcp_is_RTPFB(const mblk_t *m);
 ORTP_PUBLIC rtcp_rtpfb_type_t rtcp_RTPFB_get_type(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_generic_nack_fci_t *rtcp_RTPFB_generic_nack_get_fci(const mblk_t *m);
 ORTP_PUBLIC rtcp_fb_tmmbr_fci_t *rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m);
+ORTP_PUBLIC rtcp_fb_goog_remb_fci_t *rtcp_PSFB_goog_remb_get_fci(const mblk_t *m);
 /**
  * Return the maximum bitrate in bits / sec contained in the packet.
  *
@@ -496,6 +512,7 @@ ORTP_PUBLIC rtcp_fb_tmmbr_fci_t *rtcp_RTPFB_tmmbr_get_fci(const mblk_t *m);
  * @return maximum bitrate in bits / sec.
  */
 ORTP_PUBLIC uint64_t rtcp_RTPFB_tmmbr_get_max_bitrate(const mblk_t *m);
+ORTP_PUBLIC uint64_t rtcp_PSFB_goog_remb_get_max_bitrate(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_RTPFB_get_packet_sender_ssrc(const mblk_t *m);
 ORTP_PUBLIC uint32_t rtcp_RTPFB_get_media_source_ssrc(const mblk_t *m);
 
@@ -508,6 +525,7 @@ ORTP_PUBLIC rtcp_fb_fir_fci_t *rtcp_PSFB_fir_get_fci(const mblk_t *m, unsigned i
 ORTP_PUBLIC rtcp_fb_sli_fci_t *rtcp_PSFB_sli_get_fci(const mblk_t *m, unsigned int idx);
 ORTP_PUBLIC rtcp_fb_rpsi_fci_t *rtcp_PSFB_rpsi_get_fci(const mblk_t *m);
 ORTP_PUBLIC uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m);
+ORTP_PUBLIC bool_t rtcp_PSFB_is_goog_remb(const mblk_t *m);
 
 typedef struct OrtpLossRateEstimator {
 	int min_packet_count_interval;

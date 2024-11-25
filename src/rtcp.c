@@ -512,6 +512,24 @@ static void append_fb_packets(RtpSession *session, mblk_t *m) {
 
 	session->rtcp.send_algo.tmmbr_scheduled = FALSE;
 	session->rtcp.send_algo.tmmbn_scheduled = FALSE;
+
+	/* Repeat goog-remb packet at an interval as it is what WebRTC is doing */
+	if (rtp_session_avpf_feature_enabled(session, ORTP_AVPF_FEATURE_GOOG_REMB) &&
+	    session->rtcp.goog_remb_info.sent != NULL) {
+		uint64_t time = bctbx_get_cur_time_ms();
+
+		if (session->rtcp.send_algo.goog_remb_scheduled == FALSE) {
+			if (time - session->rtcp.goog_remb_info.sent_time > 1000) {
+				concatb(m, copymsg(session->rtcp.goog_remb_info.sent));
+				session->rtcp.goog_remb_info.sent_time = time;
+			}
+		} else {
+			/* If goog_remb_scheduled is TRUE we are actually sending a goog-remb so update the sent time */
+			session->rtcp.goog_remb_info.sent_time = time;
+		}
+	}
+
+	session->rtcp.send_algo.goog_remb_scheduled = FALSE;
 }
 
 static void rtp_session_create_and_send_rtcp_packet(RtpSession *session, bool_t full) {

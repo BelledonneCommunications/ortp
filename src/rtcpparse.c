@@ -636,6 +636,25 @@ uint64_t rtcp_RTPFB_tmmbr_get_max_bitrate(const mblk_t *m) {
 	return rtcp_fb_tmmbr_fci_get_mxtbr_mantissa(fci) * (1 << rtcp_fb_tmmbr_fci_get_mxtbr_exp(fci));
 }
 
+rtcp_fb_goog_remb_fci_t *rtcp_PSFB_goog_remb_get_fci(const mblk_t *m) {
+	size_t size = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + sizeof(rtcp_fb_goog_remb_fci_t);
+	size_t rtcp_size = rtcp_get_size(m);
+	if (size > rtcp_size) {
+		return NULL;
+	}
+	return (rtcp_fb_goog_remb_fci_t *)(m->b_rptr + size - sizeof(rtcp_fb_goog_remb_fci_t));
+}
+
+uint64_t rtcp_PSFB_goog_remb_get_max_bitrate(const mblk_t *m) {
+	rtcp_fb_goog_remb_fci_t *fci = rtcp_PSFB_goog_remb_get_fci(m);
+	return rtcp_fb_goog_remb_fci_get_mxtbr_mantissa(fci) * (1 << rtcp_fb_goog_remb_fci_get_mxtbr_exp(fci));
+}
+
+bool_t rtcp_PSFB_is_goog_remb(const mblk_t *m) {
+	const rtcp_fb_goog_remb_fci_t *remb_fci = rtcp_PSFB_goog_remb_get_fci(m);
+	return (remb_fci != NULL && ntohl(remb_fci->identifier) == 0x52454d42);
+}
+
 /* RTCP PSFB accessors */
 bool_t rtcp_is_PSFB(const mblk_t *m) {
 	const rtcp_common_header_t *ch = rtcp_get_common_header(m);

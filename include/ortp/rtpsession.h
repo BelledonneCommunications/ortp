@@ -47,6 +47,7 @@
 #define ORTP_AVPF_FEATURE_TMMBR (1 << 0)
 #define ORTP_AVPF_FEATURE_GENERIC_NACK (1 << 1)
 #define ORTP_AVPF_FEATURE_IMMEDIATE_NACK (1 << 2)
+#define ORTP_AVPF_FEATURE_GOOG_REMB (1 << 3)
 
 typedef enum { RTP_SESSION_RECVONLY, RTP_SESSION_SENDONLY, RTP_SESSION_SENDRECV } RtpSessionMode;
 
@@ -214,11 +215,13 @@ typedef struct OrtpRtcpSendAlgorithm {
 	bool_t allow_early;
 	bool_t tmmbr_scheduled;
 	bool_t tmmbn_scheduled;
+	bool_t goog_remb_scheduled;
 } OrtpRtcpSendAlgorithm;
 
 typedef struct OrtpRtcpFbConfiguration {
 	bool_t generic_nack_enabled;
 	bool_t tmmbr_enabled;
+	bool_t goog_remb_enabled;
 } OrtpRtcpFbConfiguration;
 
 #define ORTP_RTCP_XR_UNAVAILABLE_PARAMETER 127
@@ -290,6 +293,11 @@ typedef struct OrtpRtcpTmmbrInfo {
 	mblk_t *sent;
 	mblk_t *received;
 } OrtpRtcpTmmbrInfo;
+
+typedef struct OrtpRtcpGooRembInfo {
+	mblk_t *sent;
+	uint64_t sent_time;
+} OrtpRtcpGooRembInfo;
 
 typedef struct _OrtpAddress {
 	struct sockaddr_storage addr;
@@ -370,6 +378,7 @@ typedef struct _RtcpStream {
 	OrtpRtcpXrConfiguration xr_conf;
 	OrtpRtcpXrMediaCallbacks xr_media_callbacks;
 	OrtpRtcpTmmbrInfo tmmbr_info;
+	OrtpRtcpGooRembInfo goog_remb_info;
 	bool_t enabled; /*tells whether we can send RTCP packets */
 	bool_t rtcp_xr_dlrr_to_send;
 	uint8_t rtcp_fb_fir_seq_nr; /* The FIR command sequence number */
@@ -877,6 +886,7 @@ ORTP_PUBLIC void rtp_session_send_rtcp_fb_sli(RtpSession *session, uint16_t firs
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_rpsi(RtpSession *session, uint8_t *bit_string, uint16_t bit_string_len);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbr(RtpSession *session, uint64_t mxtbr);
 ORTP_PUBLIC void rtp_session_send_rtcp_fb_tmmbn(RtpSession *session, uint32_t ssrc);
+ORTP_PUBLIC void rtp_session_send_rtcp_fb_goog_remb(RtpSession *session, uint64_t mxtbr);
 
 ORTP_PUBLIC void rtp_session_enable_transfer_mode(RtpSession *session, bool_t enable);
 ORTP_PUBLIC bool_t rtp_session_transfer_mode_enabled(RtpSession *session);
