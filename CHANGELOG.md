@@ -4,10 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-### Changed
+## [5.4.0] - 2025-01-14
+
+### Added
 - Flexible forward error correction (FEC) algorithm implemented according to https://datatracker.ietf.org/doc/html/rfc8627
   The flexible mask is not implemented.
+- Added goog-remb RTCP message parser
+
+### Changed
+- RtpBundle logic to handle receiving of multiple RTP streams identified by SSRC under the same mid identifier
+- Optimisations and refactoring of RtpBundle for faster processing
+- RtpBundle can be used as well to send packets (in transfer mode)
+- Improve accuracy of upload bandwidth measurement
+
 
 ## [5.3.0] - 2023-12-18
 

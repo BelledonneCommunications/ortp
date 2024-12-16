@@ -90,4 +90,4 @@ starting point.
 ----------------------------------------
 
 
-[1] git://git.linphone.org/bctoolbox.git *or* <http://www.linphone.org/releases/sources/bctoolbox>
+[1] http://www.linphone.org/releases/sources/bctoolbox
