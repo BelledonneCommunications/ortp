@@ -284,7 +284,7 @@ static int simulate_jitter_by_bit_budget_reduction(OrtpNetworkSimulatorCtx *sim,
 }
 
 static int get_packet_overhead(RtpSession *session, mblk_t *packet) {
-	bool_t is_rtp_packet = packet->reserved1;
+	bool_t is_rtp_packet = ortp_mblk_get_netsim_is_rtp_flag(packet);
 	bool_t is_ipv6 = is_rtp_packet ? ortp_stream_is_ipv6(&session->rtp.gs) : ortp_stream_is_ipv6(&session->rtcp.gs);
 	return is_ipv6 ? IP6_UDP_OVERHEAD : IP_UDP_OVERHEAD;
 }
@@ -387,7 +387,7 @@ mblk_t *rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t 
 	/*while packet is stored in network simulator queue, keep its type in reserved1 space*/
 	if (om != NULL) {
 		sim->total_count++;
-		om->reserved1 = *is_rtp_packet;
+		ortp_mblk_set_netsim_is_rtp_flag(om, *is_rtp_packet);
 	}
 
 	if (sim->params.latency > 0) {
@@ -408,11 +408,11 @@ mblk_t *rtp_session_network_simulate(RtpSession *session, mblk_t *input, bool_t 
 		om = simulate_bandwidth_limit_and_jitter(session, om);
 	}
 
-	/*finally when releasing the packet from the simulator, reset the reserved1 space to default,
-	since it will be used by mediastreamer later*/
+	/*finally when releasing the packet from the simulator, reset the flag to default,
+	since it is stored in a space used by mediastreamer later (mblk_t.reserved1) */
 	if (om != NULL) {
-		*is_rtp_packet = om->reserved1;
-		om->reserved1 = 0;
+		*is_rtp_packet = ortp_mblk_get_netsim_is_rtp_flag(om);
+		ortp_mblk_set_netsim_is_rtp_flag(om, 0);
 	}
 	return om;
 }
@@ -455,7 +455,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 		while ((om = getq(&session->net_sim_ctx->send_q)) != NULL) {
 			count++;
 			ortp_mutex_unlock(&session->main_mutex);
-			is_rtp_packet = om->reserved1; /*it was set by rtp_session_sendto()*/
+			is_rtp_packet = ortp_mblk_get_netsim_is_rtp_flag(om); /*it was set by rtp_session_sendto()*/
 			om = rtp_session_network_simulate(session, om, &is_rtp_packet);
 			if (om) {
 				_ortp_sendto(rtp_session_get_socket(session, is_rtp_packet), om, 0, (struct sockaddr *)&om->net_addr,
@@ -482,7 +482,7 @@ static void rtp_session_schedule_outbound_network_simulator(RtpSession *session,
 
 		ortp_mutex_lock(&session->main_mutex);
 		while ((om = rtp_session_netsim_find_next_packet_to_send(session)) != NULL) {
-			is_rtp_packet = om->reserved1; /*it was set by rtp_session_sendto()*/
+			is_rtp_packet = ortp_mblk_get_netsim_is_rtp_flag(om); /*it was set by rtp_session_sendto()*/
 			ortp_mutex_unlock(&session->main_mutex);
 			if (todrop) {
 				freemsg(todrop); /*free the last message while the mutex is not held*/

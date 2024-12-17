@@ -189,16 +189,27 @@ ORTP_PUBLIC void msgb_allocator_uninit(msgb_allocator_t *pa);
 ORTP_PUBLIC void ortp_recvaddr_to_sockaddr(ortp_recv_addr_t *recvaddr, struct sockaddr *addr, socklen_t *socklen);
 ORTP_PUBLIC void ortp_sockaddr_to_recvaddr(const struct sockaddr *addr, ortp_recv_addr_t *recvaddr);
 
-/* API to store retrieve a sequence number or payload type in the packet
- * it is used by double encryption to store the original seqnum/pt in the paquet
- * as we need it to decrypt
- * The information is stored in reserved1 which is also used by netsim but later
- * reserved1 is "locked" by the seqnum/pt from the begining od rtp_session_send_with_ts
- * until all the modifiers are passed (SRTP needs this info and is the last modifier */
+/* API to store retrieve a sequence number, payload type, ekt tag flag and netsim rtp flag in the packet
+ * These informations are used by double encryption to store the original seqnum/pt in the paquet
+ * and allows ms2 to force the full ekt on specific video frames.
+ *
+ * The information is stored in reserved1. reserved1 is also used by netsim. The mapping is:
+ * 32        24          16          8         1
+ * | RuuuuuuE |   PType  |    Sequence number  |
+ * With u unused, R netsim RTP flag, E force EKT tag flag
+ * reserved1 is "locked" by the seqnum/pt from the begining of rtp_session_send_with_ts
+ * until all the modifiers are passed (SRTP needs this info and is the last modifier) */
 #define ortp_mblk_set_original_seqnum(m, seqnum) (m)->reserved1 = ((m)->reserved1 & 0xFFFF0000) | (seqnum & 0x0000FFFF)
 #define ortp_mblk_get_original_seqnum(m) (((m)->reserved1) & 0x0000FFFF)
+
 #define ortp_mblk_set_original_pt(m, pt) (m)->reserved1 = ((m)->reserved1 & 0xFF00FFFF) | ((pt & 0x000000FF) << 16)
 #define ortp_mblk_get_original_pt(m) ((((m)->reserved1) & 0x00FF0000) >> 16)
+
+#define ortp_mblk_set_ekt_tag_flag(m, f) (m)->reserved1 = ((m)->reserved1 & 0xFEFFFFFF) | ((f & 0x00000001) << 24)
+#define ortp_mblk_get_ekt_tag_flag(m) ((((m)->reserved1) & 0x01000000) >> 24)
+
+#define ortp_mblk_set_netsim_is_rtp_flag(m, f) (m)->reserved1 = ((m)->reserved1 & 0x7FFFFFFF) | ((f & 0x00000001) << 31)
+#define ortp_mblk_get_netsim_is_rtp_flag(m) ((((m)->reserved1) & 0x80000000) >> 31)
 #ifdef __cplusplus
 }
 #endif

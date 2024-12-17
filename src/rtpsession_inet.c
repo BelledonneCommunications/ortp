@@ -1329,7 +1329,7 @@ int rtp_session_sendto(
 			m = dupmsg(m);
 			memcpy(&m->net_addr, destaddr, destlen);
 			m->net_addrlen = destlen;
-			m->reserved1 = is_rtp;
+			ortp_mblk_set_netsim_is_rtp_flag(m, is_rtp);
 			using_simulator = TRUE;
 			ortp_mutex_lock(&session->main_mutex);
 			if (session->net_sim_ctx) putq(&session->net_sim_ctx->send_q, m);
