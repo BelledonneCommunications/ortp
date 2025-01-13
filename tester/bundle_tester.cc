@@ -190,7 +190,7 @@ static void dispatch_packet_without_mid() {
 	rtp_session_destroy(session2);
 }
 
-static void dispatch_rtcp_packet_with_referred_ssrc() {
+static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned) {
 	RtpBundleCxx bundle;
 
 	auto *session = rtp_session_new(RTP_SESSION_SENDRECV);
@@ -200,25 +200,28 @@ static void dispatch_rtcp_packet_with_referred_ssrc() {
 
 	// A SENDONLY session is already assigned as we know it's ssrc
 	auto *session2 = rtp_session_new(RTP_SESSION_SENDONLY);
+	session2->rcv.ssrc = 19112024; // So that the dummy RTCP function have a ssrc to set
 	bundle.addSession("secondary", session2);
 
-	RtpProfile profile2 = {};
-	rtp_profile_set_payload(&profile2, 97, &payload_type_av1);
+	RtpProfile profile = {};
+	rtp_profile_set_payload(&profile, 97, &payload_type_av1);
 
 	auto *session3 = rtp_session_new(RTP_SESSION_SENDRECV);
-	rtp_session_set_recv_profile(session3, &profile2);
+	rtp_session_set_recv_profile(session3, &profile);
 	bundle.addSession("tertiary", session3);
 
-	// Send a packet so that this session is assigned otherwise, referring won't work
-	auto *packet = rtp_session_create_packet_header(session3, 0);
-	rtp_set_payload_type(packet, 97);
-	rtp_set_ssrc(packet, 22081992);
+	if (assigned) {
+		// Send a packet so that this session is assigned otherwise, referring won't work
+		auto *packet = rtp_session_create_packet_header(session3, 0);
+		rtp_set_payload_type(packet, 97);
+		rtp_set_ssrc(packet, 22081992);
 
-	BC_ASSERT_TRUE(bundle.dispatch(true, packet));
-	BC_ASSERT_EQUAL(session3->rtp.gs.bundleq.q_mcount, 1, int, "%d");
+		BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+		BC_ASSERT_EQUAL(session3->rtp.gs.bundleq.q_mcount, 1, int, "%d");
+	}
 
-	// Create a RTCP packet at destination of session but is referring session2
-	auto *rtcpPacket = ortp_tester_make_dummy_rtcp_fb_pli(session, session->rcv.ssrc, session2->snd.ssrc);
+	// Create a RTCP packet but is referring session2
+	auto *rtcpPacket = ortp_tester_make_dummy_rtcp_fb_pli(session2);
 
 	// Packet should be dispatched and in the RCTP bundle queue of session2
 	BC_ASSERT_TRUE(bundle.dispatch(false, rtcpPacket));
@@ -226,20 +229,44 @@ static void dispatch_rtcp_packet_with_referred_ssrc() {
 	BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
 	BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
 
-	// Create another RTCP packet at destination of session but is referring session3
-	rtcpPacket = ortp_tester_make_dummy_rtcp_fb_pli(session, session->rcv.ssrc, session3->snd.ssrc);
+	// Create another RTCP packet at session3
+	rtcpPacket = ortp_tester_make_dummy_rtcp_fb_pli(session3);
 
-	// Packet should be dispatched and in the RCTP bundle queue of session3
 	BC_ASSERT_TRUE(bundle.dispatch(false, rtcpPacket));
 	BC_ASSERT_EQUAL(session->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
 	BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
-	BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
+	// Packet should be dispatched and in the RCTP bundle queue of session3 only if assigned before
+	// Otherwise it should be dropped
+	BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, (assigned ? 1 : 0), int, "%d");
+
+	// If we test without session3 assignation we have to make a compound RTCP packet that contains session3's mid via
+	// SDES so that it can be routed correctly
+	if (!assigned) {
+		session3->rcv.ssrc = 22081992;
+		rtcpPacket = ortp_tester_make_dummy_sr(session3);
+
+		BC_ASSERT_TRUE(bundle.dispatch(false, rtcpPacket));
+		BC_ASSERT_EQUAL(session->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
+		BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
+		// Packet should be dispatched and in the RCTP bundle queue of session3
+		// Only 1 even though the compound is in 3 parts (SR, SDES, PLI) because in this dummy packet, only the PLI is
+		// referring to another ssrc
+		BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
+	}
 
 	bundle.clear();
 
 	rtp_session_destroy(session);
 	rtp_session_destroy(session2);
 	rtp_session_destroy(session3);
+}
+
+static void dispatch_rtcp_packet_with_referred_ssrc_assigned() {
+	dispatch_rtcp_packet_with_referred_ssrc_assigned_base(true);
+}
+
+static void dispatch_rtcp_packet_with_referred_ssrc_unassigned() {
+	dispatch_rtcp_packet_with_referred_ssrc_assigned_base(false);
 }
 
 static void on_incoming_ssrc_in_bundle(BCTBX_UNUSED(RtpSession *session), void *mp, void *s, void *userData) {
@@ -378,7 +405,10 @@ static test_t tests[] = {
     TEST_NO_TAG("Primary change", primary_change),
     TEST_NO_TAG("Dispatch packet", dispatch_packet),
     TEST_NO_TAG("Dispatch packet without mid", dispatch_packet_without_mid),
-    TEST_NO_TAG("Dispatch RTCP packet with referred SSRC", dispatch_rtcp_packet_with_referred_ssrc),
+    TEST_NO_TAG("Dispatch RTCP packet with referred SSRC to an assigned session",
+                dispatch_rtcp_packet_with_referred_ssrc_assigned),
+    TEST_NO_TAG("Dispatch RTCP packet with referred SSRC to an unassigned session",
+                dispatch_rtcp_packet_with_referred_ssrc_unassigned),
     TEST_NO_TAG("Dispatch new SSRC with incoming callback set", dispatch_new_ssrc_with_incoming_callback_set),
     TEST_NO_TAG("Look for outgoing session", look_out_for_outgoing_session),
     TEST_NO_TAG("Look for outgoing session with outgoing callback set",

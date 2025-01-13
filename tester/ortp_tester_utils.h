@@ -29,7 +29,8 @@ extern "C" {
 
 bool_t ortp_tester_is_executable_installed(const char *executable, const char *resource);
 
-mblk_t *ortp_tester_make_dummy_rtcp_fb_pli(RtpSession *session, uint32_t sender_ssrc, uint32_t media_ssrc);
+mblk_t *ortp_tester_make_dummy_rtcp_fb_pli(RtpSession *session);
+mblk_t *ortp_tester_make_dummy_sr(RtpSession *session);
 
 #ifdef __cplusplus
 }

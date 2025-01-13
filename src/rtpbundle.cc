@@ -543,27 +543,39 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 		mSsrcToMid[ssrc] = mid;
 	}
 
-	// If we are in RTP and not outgoing, check if we have a corresponding mid in the assignment map.
-	if (isRtp && !isOutgoing) {
-		const auto [first, last] = mWaitingForAssignment.equal_range(mid);
+	if (!isOutgoing) {
+		// If we are in RTP, check if we have a corresponding mid in the assignment map.
+		if (isRtp) {
+			const auto [first, last] = mWaitingForAssignment.equal_range(mid);
 
-		for (auto s = first; s != last; ++s) {
-			RtpSession *session = s->second;
+			for (auto s = first; s != last; ++s) {
+				RtpSession *session = s->second;
 
-			// Check if this blank session knows the payload type of the incoming packet.
-			const RtpProfile *profile = rtp_session_get_recv_profile(session);
-			if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != nullptr) {
-				ortp_message("RtpBundle[%p]: Assigning incoming SSRC %u to session %p using RTP with pt %d", this, ssrc,
-				             session, rtp_get_payload_type(m));
+				// Check if this blank session knows the payload type of the incoming packet.
+				const RtpProfile *profile = rtp_session_get_recv_profile(session);
+				if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != nullptr) {
+					ortp_message("RtpBundle[%p]: Assigning incoming SSRC %u to session %p using RTP with pt %d", this,
+					             ssrc, session, rtp_get_payload_type(m));
 
-				session->ssrc_set = TRUE;
-				session->rcv.ssrc = ssrc;
+					session->ssrc_set = TRUE;
+					session->rcv.ssrc = ssrc;
 
-				// Assign the session to the incoming ssrc and remove this session from the assignment map.
-				mSsrcToSession.emplace(ssrc, BundleSession{{mid, 0}, session});
-				mWaitingForAssignment.erase(s);
+					// Assign the session to the incoming ssrc and remove this session from the assignment map.
+					mSsrcToSession.emplace(ssrc, BundleSession{{mid, 0}, session});
+					mWaitingForAssignment.erase(s);
 
-				return session;
+					return session;
+				}
+			}
+		} else {
+			// Handle case where RTCP is received before RTP and the corresponding session is not yet assigned.
+			// We do NOT assign it, but we still return the correct session.
+			if (uint32_t referredSsrc; getRTCPReferedSSRC(m, &referredSsrc)) {
+				const auto [first, last] = mWaitingForAssignment.equal_range(mid);
+
+				for (auto s = first; s != last; ++s) {
+					if (s->second->snd.ssrc == referredSsrc) return s->second;
+				}
 			}
 		}
 	}
