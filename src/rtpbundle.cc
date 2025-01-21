@@ -105,6 +105,8 @@ void RtpBundleCxx::setMidId(int id) {
 }
 
 void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
+	const std::lock_guard guard(mAssignmentMutex);
+
 	// Search for the session in both maps to check if it hasn't already been inserted.
 	if (findSession(session))
 		ortp_error("RtpBundle[%p]: Cannot add session (%p) as it is already in the bundle", this, session);
