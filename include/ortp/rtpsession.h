@@ -962,13 +962,23 @@ ORTP_PUBLIC char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *sess
 
 ORTP_PUBLIC int rtp_bundle_send_through_primary(
     RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
-/* Returns FALSE if the rtp packet or at least one of the RTCP packet (compound) was for the primary */
-ORTP_PUBLIC bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m);
+
+/**
+ * @brief Dispatch a received packet through the bundle
+ *
+ * @param[in]	bundle	The bundle holding the rtp sessions
+ * @param[in]	is_rtp	The type of the packet, RTP or RTCP
+ * @param[in]	m	The packet to dispatch
+ *
+ * @return	the packet at destination of the primary session, NULL if there is none
+ */
+ORTP_PUBLIC mblk_t *rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m);
+
 /**
  * @brief Retrieve a session from a bundle using an outgoing message
  *
  * @param[in]	bundle	The bundle holding the rtp sessions
- * @param[in]	m	The ougoing message
+ * @param[in]	m	The outgoing message
  * @return	the Rtp session used to send this message, NULL if not found in the bundle
  *
  * Warning: this function current implementation assumes a match MID/SSRC, it may change
