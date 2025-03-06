@@ -609,6 +609,13 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 			rtp_signal_table_emit3(&(getPrimarySession()->on_new_incoming_ssrc_in_bundle), (void *)m, &newRtpSession);
 
 			if (newRtpSession) {
+				// If the current rcv.ssrc is set to another ssrc and has an entry in the association map, remove it
+				// first. This is in case the newRtpSession is an existing session being reused.
+				if (newRtpSession->ssrc_set && newRtpSession->rcv.ssrc != ssrc &&
+				    mSsrcToSession.find(newRtpSession->rcv.ssrc) != mSsrcToSession.end()) {
+					mSsrcToSession.erase(newRtpSession->rcv.ssrc);
+				}
+
 				// The new session is associated to the incoming SSRC.
 				newRtpSession->ssrc_set = TRUE;
 				newRtpSession->rcv.ssrc = ssrc;
@@ -616,12 +623,11 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 		}
 
 		if (newRtpSession) {
-			if (newRtpSession->bundle == nullptr) {
-				// We do not use addSession as we already know it's ssrc
-				mSsrcToSession.emplace(isOutgoing ? newRtpSession->snd.ssrc : newRtpSession->rcv.ssrc,
-				                       BundleSession{{mid, 0}, newRtpSession});
+			// We do not use addSession as we already know it's ssrc
+			mSsrcToSession.emplace(isOutgoing ? newRtpSession->snd.ssrc : newRtpSession->rcv.ssrc,
+			                       BundleSession{{mid, 0}, newRtpSession});
+			if (newRtpSession->bundle == nullptr)
 				rtp_session_set_bundle(newRtpSession, reinterpret_cast<RtpBundle *>(this));
-			}
 		}
 	}
 
