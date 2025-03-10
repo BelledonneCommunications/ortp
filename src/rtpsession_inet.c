@@ -2042,7 +2042,7 @@ void *rtp_session_recvfrom_async(void *obj) {
 
 	while (session->rtp.is_win_thread_running) {
 		int ret = WSAPoll(&fdarray, 1, 10);
-
+		addrlen = sizeof(struct sockaddr_storage);
 		if (ret == SOCKET_ERROR) {
 			ortp_warning("Error rtp recv async thread for windows: error while polling [%i]", WSAGetLastError());
 		} else if (ret > 0) {
