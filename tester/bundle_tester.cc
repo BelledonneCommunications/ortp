@@ -109,8 +109,9 @@ static void dispatch_packet() {
 	rtp_set_payload_type(packet, 90);
 	rtp_set_ssrc(packet, 1021991);
 
-	// That packet should not be dispatched as it for the primary session.
-	BC_ASSERT_FALSE(bundle.dispatch(true, packet));
+	// That packet should not be dispatched and be returned as it for the primary session.
+	packet = bundle.dispatch(true, packet).value_or(nullptr);
+	BC_ASSERT_PTR_NOT_NULL(packet);
 	BC_ASSERT_EQUAL(session->rtp.gs.bundleq.q_mcount, 0, int, "%d");
 
 	freemsg(packet);
@@ -120,7 +121,7 @@ static void dispatch_packet() {
 	rtp_set_ssrc(packet, 18173254);
 
 	// That packet should be dispatched and present in the bundleq.
-	BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+	BC_ASSERT_FALSE(bundle.dispatch(true, packet).has_value());
 	BC_ASSERT_EQUAL(session2->rtp.gs.bundleq.q_mcount, 1, int, "%d");
 
 	// And the session should now know it's recv ssrc.
@@ -131,8 +132,8 @@ static void dispatch_packet() {
 	rtp_set_payload_type(packet, 96);
 	rtp_set_ssrc(packet, 78986545);
 
-	// That packet has an unkown ssrc, it should be marked has dispatched but is freed and no session received it.
-	BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+	// That packet has an unkown ssrc, it should be dispatched but is freed and no session received it.
+	BC_ASSERT_FALSE(bundle.dispatch(true, packet).has_value());
 	BC_ASSERT_EQUAL(session->rtp.gs.bundleq.q_mcount, 0, int, "%d");
 	BC_ASSERT_EQUAL(session2->rtp.gs.bundleq.q_mcount, 1, int, "%d");
 
@@ -163,8 +164,8 @@ static void dispatch_packet_without_mid() {
 	auto *mid = "secondary";
 	rtp_add_extension_header(packet, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
 
-	// That packet should marked as dispatched but freed because the session isn't in the bundle.
-	BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+	// That packet should be dispatched but freed because the session isn't in the bundle.
+	BC_ASSERT_FALSE(bundle.dispatch(true, packet).has_value());
 	BC_ASSERT_EQUAL(session->rtp.gs.bundleq.q_mcount, 0, int, "%d");
 	BC_ASSERT_EQUAL(session2->rtp.gs.bundleq.q_mcount, 0, int, "%d");
 
@@ -181,7 +182,7 @@ static void dispatch_packet_without_mid() {
 	rtp_delete_extension_header(packet, RTP_EXTENSION_MID);
 
 	// That packet should be dispatched and present in bundleq.
-	BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+	BC_ASSERT_FALSE(bundle.dispatch(true, packet).has_value());
 	BC_ASSERT_EQUAL(session2->rtp.gs.bundleq.q_mcount, 1, int, "%d");
 
 	bundle.clear();
@@ -216,7 +217,7 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 		rtp_set_payload_type(packet, 97);
 		rtp_set_ssrc(packet, 22081992);
 
-		BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+		BC_ASSERT_FALSE(bundle.dispatch(true, packet).has_value());
 		BC_ASSERT_EQUAL(session3->rtp.gs.bundleq.q_mcount, 1, int, "%d");
 	}
 
@@ -224,7 +225,7 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 	auto *rtcpPacket = ortp_tester_make_dummy_rtcp_fb_pli(session2);
 
 	// Packet should be dispatched and in the RCTP bundle queue of session2
-	BC_ASSERT_TRUE(bundle.dispatch(false, rtcpPacket));
+	BC_ASSERT_FALSE(bundle.dispatch(false, rtcpPacket).has_value());
 	BC_ASSERT_EQUAL(session->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
 	BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
 	BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
@@ -232,7 +233,7 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 	// Create another RTCP packet at session3
 	rtcpPacket = ortp_tester_make_dummy_rtcp_fb_pli(session3);
 
-	BC_ASSERT_TRUE(bundle.dispatch(false, rtcpPacket));
+	BC_ASSERT_FALSE(bundle.dispatch(false, rtcpPacket).has_value());
 	BC_ASSERT_EQUAL(session->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
 	BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
 	// Packet should be dispatched and in the RCTP bundle queue of session3 only if assigned before
@@ -245,7 +246,7 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 		session3->rcv.ssrc = 22081992;
 		rtcpPacket = ortp_tester_make_dummy_sr(session3);
 
-		BC_ASSERT_TRUE(bundle.dispatch(false, rtcpPacket));
+		BC_ASSERT_FALSE(bundle.dispatch(false, rtcpPacket).has_value());
 		BC_ASSERT_EQUAL(session->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
 		BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
 		// Packet should be dispatched and in the RCTP bundle queue of session3
@@ -305,7 +306,8 @@ static void dispatch_new_ssrc_with_incoming_callback_set() {
 	auto *packet = rtp_session_create_packet_header(session2, 0);
 	rtp_set_ssrc(packet, 36587422);
 
-	BC_ASSERT_TRUE(bundle.dispatch(true, packet));
+	// Nothing is returned as it has been dispatched
+	BC_ASSERT_FALSE(bundle.dispatch(true, packet).has_value());
 
 	// The callback should have been called and set newSession to the new session created.
 	if (BC_ASSERT_PTR_NOT_NULL(newSession)) {

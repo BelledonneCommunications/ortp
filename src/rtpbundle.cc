@@ -83,8 +83,8 @@ extern "C" char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *sessi
 	}
 }
 
-extern "C" bool_t rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m) {
-	return reinterpret_cast<RtpBundleCxx *>(bundle)->dispatch(is_rtp, m);
+extern "C" mblk_t *rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m) {
+	return reinterpret_cast<RtpBundleCxx *>(bundle)->dispatch(is_rtp, m).value_or(nullptr);
 }
 
 extern "C" RtpSession *rtp_bundle_lookup_session_for_outgoing_packet(RtpBundle *bundle, mblk_t *m) {
@@ -105,6 +105,8 @@ void RtpBundleCxx::setMidId(int id) {
 }
 
 void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
+	const std::lock_guard guard(mAssignmentMutex);
+
 	// Search for the session in both maps to check if it hasn't already been inserted.
 	if (findSession(session))
 		ortp_error("RtpBundle[%p]: Cannot add session (%p) as it is already in the bundle", this, session);
@@ -620,32 +622,30 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 	return newRtpSession;
 }
 
-bool RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
-	if (isRtp) {
-		return dispatchRtpMessage(m);
-	} else {
-		return dispatchRtcpMessage(m);
-	}
+std::optional<mblk_t *> RtpBundleCxx::dispatch(bool isRtp, mblk_t *m) {
+	if (isRtp) return dispatchRtpMessage(m);
+
+	return dispatchRtcpMessage(m);
 }
 
-bool RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
+std::optional<mblk_t *> RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 	RtpSession *session = checkForSession(m, true);
 	if (session == nullptr) {
 		freemsg(m);
-		return true;
+		return {};
 	}
 
 	if (session != mPrimary) {
 		ortp_mutex_lock(&session->rtp.gs.bundleq_lock);
 		putq(&session->rtp.gs.bundleq, m);
 		ortp_mutex_unlock(&session->rtp.gs.bundleq_lock);
-		return true;
+		return {};
 	}
 
-	return false;
+	return m;
 }
 
-bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
+std::optional<mblk_t *> RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 	mblk_t *mPrimarymsg = nullptr;
 
 	// Check if the packet contains a SDES first
@@ -694,19 +694,12 @@ bool RtpBundleCxx::dispatchRtcpMessage(mblk_t *m) {
 		}
 	}
 
+	freemsg(m);
+
 	if (mPrimarymsg) {
-		msgpullup(m, static_cast<size_t>(-1));
 		msgpullup(mPrimarymsg, static_cast<size_t>(-1));
-
-		// FIXME: not so elegant to copy back to the original mblk_t.
-		const size_t len = mPrimarymsg->b_wptr - mPrimarymsg->b_rptr;
-		memmove(m->b_rptr, mPrimarymsg->b_rptr, len);
-		m->b_wptr = m->b_rptr + len;
-
-		freemsg(mPrimarymsg);
-		return false;
+		return mPrimarymsg;
 	}
 
-	freemsg(m);
-	return true;
+	return {};
 }

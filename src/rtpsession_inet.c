@@ -2162,10 +2162,9 @@ int rtp_session_rtp_recv(RtpSession *session, uint32_t user_ts) {
 						}
 					}
 				}
-				if (bundle && rtp_bundle_dispatch(bundle, packet_is_rtp, mp)) {
-					/* the packet has been dispatched to another session. */
-					mp = NULL;
-				}
+
+				// RtpBundle's dispatch method will return a packet if the destination is the primary.
+				if (bundle) mp = rtp_bundle_dispatch(bundle, packet_is_rtp, mp);
 			} else {
 				more_data = FALSE;
 			}

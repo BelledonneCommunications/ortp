@@ -23,6 +23,7 @@
 
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 
 #include "ortp/rtpsession.h"
@@ -52,9 +53,9 @@ public:
 
 	const std::string &getSessionMid(RtpSession *session) const;
 
-	// Dispatch an incoming packet to one of the bundled secondary session.
-	// Returns true if dispatched, false is the packet belongs to the primary session where it was received.
-	bool dispatch(bool isRtp, mblk_t *m);
+	// Dispatch an incoming packet to it's correct destination.
+	// If a packet is returned then it's destination is the primary session, else it has been dispatched.
+	std::optional<mblk_t *> dispatch(bool isRtp, mblk_t *m);
 
 	RtpSession *checkForSession(const mblk_t *m, bool isRtp, bool isOutgoing = false);
 
@@ -76,8 +77,8 @@ private:
 
 	static void updateBundleSession(BundleSession &session, const std::string &mid, uint32_t sequenceNumber);
 
-	bool dispatchRtpMessage(mblk_t *m);
-	bool dispatchRtcpMessage(mblk_t *m);
+	std::optional<mblk_t *> dispatchRtpMessage(mblk_t *m);
+	std::optional<mblk_t *> dispatchRtcpMessage(mblk_t *m);
 
 	void clearSession(RtpSession *session);
 
