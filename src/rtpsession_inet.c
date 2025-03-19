@@ -733,13 +733,17 @@ int rtp_session_set_dscp(RtpSession *session, int dscp) {
 		}
 		if (session->rtp.QoSHandle != NULL) {
 			BOOL QoSResult;
-			QoSResult = QOSAddSocketToFlow(session->rtp.QoSHandle, session->rtp.gs.socket,
-			                               (struct sockaddr *)&session->rtp.gs.rem_addr, tos, QOS_NON_ADAPTIVE_FLOW,
-			                               &session->rtp.QoSFlowID);
-
-			if (QoSResult != TRUE) {
-				ortp_error("QOSAddSocketToFlow failed to add a flow with error %d", GetLastError());
-				retval = -1;
+			bool_t socket_connected = session->flags & RTP_SOCKET_CONNECTED;
+			// If there is no address destination QOSAddSocketToFlow cannot be used unless it is already connected
+			// (which become optional). As the remote address is only known after being connected, it is preferred to
+			// let the API to do its stuff by not specifying any address.
+			if (socket_connected) {
+				QoSResult = QOSAddSocketToFlow(session->rtp.QoSHandle, session->rtp.gs.socket, NULL, tos,
+				                               QOS_NON_ADAPTIVE_FLOW, &session->rtp.QoSFlowID);
+				if (QoSResult != TRUE) {
+					ortp_error("QOSAddSocketToFlow failed to add a flow with error %d", GetLastError());
+					retval = -1;
+				}
 			}
 		}
 	} else {
@@ -1100,7 +1104,7 @@ static int rtp_sendmsg(ortp_socket_t sock, mblk_t *m, const struct sockaddr *rem
 
 	for (wsabufLen = 0; wsabufLen < MAX_BUF && mTrack != NULL; mTrack = mTrack->b_cont, ++wsabufLen) {
 		wsabuf[wsabufLen].len = (ULONG)(mTrack->b_wptr - mTrack->b_rptr);
-		wsabuf[wsabufLen].buf = mTrack->b_rptr;
+		wsabuf[wsabufLen].buf = (CHAR *)mTrack->b_rptr;
 	}
 	msg.lpBuffers = wsabuf; // contents
 	msg.dwBufferCount = wsabufLen;
@@ -2019,8 +2023,8 @@ static void rtp_session_recycle_recv_block(RtpSession *session, mblk_t *m) {
 		ortp_mutex_unlock(&session->rtp.winrq_lock);
 #else
 	} else {
+		ortp_error("Should not happen with mono-thread: Only one cache should be used.");
 #endif
-		ortp_error("Should not happen");
 		freeb(m);
 	}
 }
