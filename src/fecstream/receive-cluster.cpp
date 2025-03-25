@@ -108,14 +108,14 @@ void ReceiveCluster::repair(uint16_t seqNum) {
 	mFecGraph.getRepairPacketsToRecoverSource(seqNum, seqNumBaseToRepairRow, seqNumBaseToRepairCol);
 	mRowRepairForDecoding.clear();
 	mColRepairForDecoding.clear();
-	for (uint16_t seqNum : seqNumBaseToRepairRow) {
-		if (mRowRepairAll.count(seqNum) != 0) {
-			mRowRepairForDecoding.emplace_back(mRowRepairAll.at(seqNum));
+	for (uint16_t seqNumRow : seqNumBaseToRepairRow) {
+		if (mRowRepairAll.count(seqNumRow) != 0) {
+			mRowRepairForDecoding.emplace_back(mRowRepairAll.at(seqNumRow));
 		}
 	}
-	for (uint16_t seqNum : seqNumBaseToRepairCol) {
-		if (mColRepairAll.count(seqNum) != 0) {
-			mColRepairForDecoding.emplace_back(mColRepairAll.at(seqNum));
+	for (uint16_t seqNumCol : seqNumBaseToRepairCol) {
+		if (mColRepairAll.count(seqNumCol) != 0) {
+			mColRepairForDecoding.emplace_back(mColRepairAll.at(seqNumCol));
 		}
 	}
 
