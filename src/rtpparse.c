@@ -53,7 +53,7 @@ static bool_t queue_packet(queue_t *q, int maxrqsz, mblk_t *mp, rtp_header_t *rt
 		/* remove the oldest mblk_t */
 		tmp = getq(q);
 
-		ortp_warning("rtp_putq: Queue is full. Discarding message with ts=%u", rtp_get_timestamp(tmp));
+		ortp_warning("rtp_putq: Queue is full (%d). Discarding message with ts=%u", maxrqsz, rtp_get_timestamp(tmp));
 		freemsg(tmp);
 		(*discarded)++;
 	}
