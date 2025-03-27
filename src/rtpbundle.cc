@@ -554,8 +554,7 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 				RtpSession *session = s->second;
 
 				// Check if this blank session knows the payload type of the incoming packet.
-				const RtpProfile *profile = rtp_session_get_recv_profile(session);
-				if (rtp_profile_get_payload(profile, rtp_get_payload_type(m)) != nullptr) {
+				if (session->rcv.pt == rtp_get_payload_type(m)) {
 					ortp_message("RtpBundle[%p]: Assigning incoming SSRC %u to session %p using RTP with pt %d", this,
 					             ssrc, session, rtp_get_payload_type(m));
 

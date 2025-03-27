@@ -20,6 +20,7 @@
 
 #include <bctoolbox/defs.h>
 
+#include "ortp/rtpsession.h"
 #include "ortp_tester.h"
 #include "ortp_tester_utils.h"
 #include "rtpbundle.h"
@@ -90,7 +91,8 @@ static void dispatch_packet() {
 	rtp_profile_set_payload(&profile, 90, &payload_type_opus);
 
 	auto *session = rtp_session_new(RTP_SESSION_SENDRECV);
-	rtp_session_set_recv_profile(session, &profile);
+	int pt_number = rtp_profile_get_payload_number_from_mime(&profile, "opus");
+	rtp_session_set_payload_type(session, pt_number);
 
 	// Add a session that already knows it's ssrc.
 	bundle.addSession("main", session);
@@ -99,7 +101,8 @@ static void dispatch_packet() {
 	rtp_profile_set_payload(&profile2, 96, &payload_type_vp8);
 
 	auto *session2 = rtp_session_new(RTP_SESSION_SENDRECV);
-	rtp_session_set_recv_profile(session2, &profile2);
+	int pt_number2 = rtp_profile_get_payload_number_from_mime(&profile2, "VP8");
+	rtp_session_set_payload_type(session2, pt_number2);
 
 	// Add a session that do not know it's ssrc yet.
 	bundle.addSession("secondary", session2);
@@ -154,7 +157,8 @@ static void dispatch_packet_without_mid() {
 	rtp_profile_set_payload(&profile, 96, &payload_type_vp8);
 
 	auto *session2 = rtp_session_new(RTP_SESSION_SENDRECV);
-	rtp_session_set_recv_profile(session2, &profile);
+	int pt_number = rtp_profile_get_payload_number_from_mime(&profile, "VP8");
+	rtp_session_set_payload_type(session2, pt_number);
 
 	// Send a first packet with the mid that we'll use for session2.
 	auto *packet = rtp_session_create_packet_header(session2, 0);
@@ -208,7 +212,8 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 	rtp_profile_set_payload(&profile, 97, &payload_type_av1);
 
 	auto *session3 = rtp_session_new(RTP_SESSION_SENDRECV);
-	rtp_session_set_recv_profile(session3, &profile);
+	int pt_number = rtp_profile_get_payload_number_from_mime(&profile, "AV1");
+	rtp_session_set_payload_type(session3, pt_number);
 	bundle.addSession("tertiary", session3);
 
 	if (assigned) {
