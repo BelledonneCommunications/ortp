@@ -161,6 +161,7 @@ ORTP_PUBLIC void rtp_add_extension_header(mblk_t *packet, int id, size_t size, u
 ORTP_PUBLIC void rtp_write_extension_header(mblk_t *packet, int id, size_t size, uint8_t *data);
 ORTP_PUBLIC void rtp_delete_extension_header(mblk_t *packet, int id);
 ORTP_PUBLIC int rtp_get_extension_header(const mblk_t *packet, int id, uint8_t **data);
+ORTP_PUBLIC void rtp_remap_header_extension_ids(mblk_t *packet, const int mapping[16]);
 
 /* Audio Level api */
 ORTP_PUBLIC void rtp_add_client_to_mixer_audio_level(mblk_t *packet, int id, bool_t voice_activity, int audio_level);

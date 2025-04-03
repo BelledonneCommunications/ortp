@@ -715,6 +715,53 @@ static void create_packet_with_payload_in_bundled_session(void) {
 	freemsg(packet);
 }
 
+static void remap_extension_header_ids_from_packet(void) {
+	size_t size;
+	int ret;
+	uint8_t result;
+
+	mblk_t *packet = rtp_session_create_packet_header(session, 0);
+
+	// Add multiple extensions with default IDs
+	const char *mid = "as";
+	rtp_add_extension_header(packet, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+
+	uint8_t marker = RTP_FRAME_MARKER_START | RTP_FRAME_MARKER_INDEPENDENT;
+	rtp_add_frame_marker(packet, RTP_EXTENSION_FRAME_MARKING, marker);
+
+	rtp_add_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL, TRUE, -127);
+
+	// Remap IDs
+	int mapping[16] = {0};
+	mapping[RTP_EXTENSION_MID] = 4;
+	mapping[RTP_EXTENSION_FRAME_MARKING] = 8;
+
+	rtp_remap_header_extension_ids(packet, mapping);
+
+	// Verify that all extensions are correct with updated ID except client to mixer since it wasn't remaped
+	size = rtp_get_extheader(packet, NULL, NULL);
+	BC_ASSERT_GREATER(size, 0, size_t, "%zu");
+
+	uint8_t *data = NULL;
+	ret = rtp_get_extension_header(packet, 4, &data);
+	BC_ASSERT_EQUAL(ret, (int)(strlen(mid)), int, "%d");
+	if (ret == (int)strlen(mid)) {
+		BC_ASSERT_TRUE(memcmp(data, mid, ret) == 0);
+	}
+
+	ret = rtp_get_frame_marker(packet, 8, &result);
+	BC_ASSERT_EQUAL(ret, 1, int, "%d");
+	BC_ASSERT_TRUE(result & RTP_FRAME_MARKER_START);
+	BC_ASSERT_TRUE(result & RTP_FRAME_MARKER_INDEPENDENT);
+
+	bool_t voice_activity = FALSE;
+	ret = rtp_get_client_to_mixer_audio_level(packet, RTP_EXTENSION_CLIENT_TO_MIXER_AUDIO_LEVEL, &voice_activity);
+	BC_ASSERT_EQUAL(ret, -127, int, "%d");
+	BC_ASSERT_TRUE(voice_activity);
+
+	freemsg(packet);
+}
+
 static test_t tests[] = {
     TEST_NO_TAG("Create packet with payload in a bundled session", create_packet_with_payload_in_bundled_session),
     TEST_NO_TAG("Insert an extension header into a packet", insert_extension_header_into_packet),
@@ -808,7 +855,8 @@ static test_t tests[] = {
                 insert_frame_marking_into_packet_in_bundled_session),
     TEST_NO_TAG("Insert frame marking into a packet with payload in bundled session",
                 insert_frame_marking_into_packet_with_payload_in_bundled_session),
-    TEST_NO_TAG("Padding", padding_test)};
+    TEST_NO_TAG("Padding", padding_test),
+    TEST_NO_TAG("Remap extension header ids from packet", remap_extension_header_ids_from_packet)};
 
 test_suite_t extension_header_test_suite = {
     "Extension header",               // Name of test suite

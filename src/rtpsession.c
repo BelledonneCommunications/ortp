@@ -2811,6 +2811,69 @@ int rtp_get_extension_header(const mblk_t *packet, int id, uint8_t **data) {
 }
 
 /**
+ * Remaps the IDs of RTP header extensions in the provided packet according to a mapping table.
+ *
+ * This function examines and updates each extension header in the RTP packet. Extensions with IDs
+ * (defined by RTP header extension type) are remapped based on the passed mapping table. The table
+ * maps original extension IDs to new ones.
+ *
+ * @param[in,out] packet Pointer to the RTP packet (mblk_t) where header extensions will be remapped.
+ *                       The packet is modified in place.
+ * @param[in] mapping    Array containing the mapping for extension IDs. Array indices represent the
+ *                       current extension IDs, and their corresponding values define the new IDs.
+ *                       Values greater than 0 are valid remappings; IDs with a mapping of 0 are left unchanged.
+ */
+void rtp_remap_header_extension_ids(mblk_t *packet, const int mapping[16]) {
+	uint8_t *ext_header, *tmp;
+	uint16_t profile;
+	size_t ext_header_size, size;
+	int id = 0;
+
+	if (!rtp_get_extbit(packet)) return;
+
+	ext_header_size = rtp_get_extheader(packet, &profile, &ext_header);
+
+	if (ext_header_size == (size_t)-1) {
+		return;
+	}
+
+	tmp = ext_header;
+	if (profile == 0xBEDE) { // 1-byte header
+		while (tmp < ext_header + ext_header_size) {
+			if (*tmp == RTP_EXTENSION_MAX) break;
+
+			if (*tmp == RTP_EXTENSION_NONE) {
+				tmp++;
+				continue;
+			}
+
+			id = *tmp >> 4;
+			size = (size_t)(*tmp & 0xF) + 1; // Length is a 4-bit number minus 1
+
+			// Remap the extension id according to the provided array
+			if (mapping[id] > 0) *tmp = (uint8_t)((mapping[id] << 4) | (size - 1));
+
+			tmp += size + 1;
+		}
+	} else { // 2-bytes header
+		while (tmp < ext_header + ext_header_size) {
+			if (*tmp == RTP_EXTENSION_NONE) {
+				tmp++; // Padding
+				continue;
+			}
+
+			id = tmp[0];
+			size = (size_t)tmp[1];
+
+			// Remap the extension id according to the provided array
+			if (mapping[id] > 0) tmp[0] = (uint8_t)mapping[id];
+
+			tmp += size + 2;
+		}
+	}
+}
+
+/**
  *  Gets last time a valid RTP or RTCP packet was received.
  * @param session RtpSession to get last receive time from.
  * @param tv Pointer to struct timeval to fill.
