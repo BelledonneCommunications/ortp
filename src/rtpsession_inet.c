@@ -82,12 +82,7 @@
 #if defined(_WIN32) || defined(_WIN32_WCE)
 #ifndef WSAID_WSARECVMSG
 /* http://source.winehq.org/git/wine.git/blob/HEAD:/include/mswsock.h */
-#define WSAID_WSARECVMSG                                                                                               \
-	{                                                                                                                  \
-		0xf689d7c8, 0x6f1f, 0x436b, {                                                                                  \
-			0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22                                                             \
-		}                                                                                                              \
-	}
+#define WSAID_WSARECVMSG {0xf689d7c8, 0x6f1f, 0x436b, {0x8a, 0x53, 0xe5, 0x4f, 0xe3, 0x51, 0xc3, 0x22}}
 #ifndef MAX_NATURAL_ALIGNMENT
 #define MAX_NATURAL_ALIGNMENT sizeof(DWORD)
 #endif
@@ -1313,16 +1308,8 @@ int _ortp_sendto(
 int rtp_session_sendto(
     RtpSession *session, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen) {
 	int ret = 0;
-	OrtpStream *ostr = is_rtp ? &session->rtp.gs : &session->rtcp.gs;
 	int using_simulator = FALSE;
 	_rtp_session_check_socket_refresh(session);
-
-	/*
-	 * If the "recv_addr" (which is the source address to use for sending) is not specified for this packet,
-	 * default to the source address specified in the RtpSession for the rtp or rtcp stream.
-	 */
-	if (m->recv_addr.family == AF_UNSPEC && ostr->used_loc_addrlen != 0)
-		ortp_sockaddr_to_recvaddr((const struct sockaddr *)&ostr->used_loc_addr, &m->recv_addr);
 
 	if (session->net_sim_ctx) {
 		ortp_mutex_lock(&session->main_mutex);
@@ -1472,6 +1459,7 @@ rtp_session_rtp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destaddr
 	int error;
 	RtpSession *send_session = session;
 	RtpBundle *bundle = session->bundle;
+	OrtpStream *ostr;
 
 	if (bundle && !session->is_primary) {
 		send_session = rtp_bundle_get_primary_session(bundle);
@@ -1482,6 +1470,15 @@ rtp_session_rtp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destaddr
 		destaddr = (struct sockaddr *)&send_session->rtp.gs.rem_addr;
 		destlen = send_session->rtp.gs.rem_addrlen;
 	}
+	ostr = &send_session->rtp.gs;
+	/*
+	 * If the "recv_addr" (which is the source address to use for sending) is not specified for this packet,
+	 * default to the source address specified in the RtpSession for the rtp stream.
+	 * It may be altered by modifiers or endpoint of the RtpTransport if present.
+	 */
+	if (m->recv_addr.family == AF_UNSPEC && ostr->used_loc_addrlen != 0)
+		ortp_sockaddr_to_recvaddr((const struct sockaddr *)&ostr->used_loc_addr, &m->recv_addr);
+
 	if (rtp_session_using_transport(send_session, rtp)) {
 		error = (send_session->rtp.gs.tr->t_sendto)(send_session->rtp.gs.tr, m, 0, destaddr, destlen);
 	} else {
@@ -1537,6 +1534,7 @@ rtp_session_rtcp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destadd
 	int error = 0;
 	RtpSession *send_session = session;
 	RtpBundle *bundle = session->bundle;
+	OrtpStream *ostr;
 
 	if (bundle && !session->is_primary) {
 		send_session = rtp_bundle_get_primary_session(bundle);
@@ -1545,6 +1543,15 @@ rtp_session_rtcp_sendto(RtpSession *session, mblk_t *m, struct sockaddr *destadd
 			destlen = send_session->rtp.gs.rem_addrlen;
 		} else send_session = session;
 	}
+	ostr = &send_session->rtcp.gs;
+	/*
+	 * If the "recv_addr" (which is the source address to use for sending) is not specified for this packet,
+	 * default to the source address specified in the RtpSession for the rtcp stream.
+	 * It may be altered by modifiers or endpoint of the RtpTransport if present.
+	 */
+	if (m->recv_addr.family == AF_UNSPEC && ostr->used_loc_addrlen != 0)
+		ortp_sockaddr_to_recvaddr((const struct sockaddr *)&ostr->used_loc_addr, &m->recv_addr);
+
 	/* Even in RTCP mux, we send through the RTCP RtpTransport, which will itself take in charge to do the sending of
 	 * the packet through the RTP endpoint*/
 	if (rtp_session_using_transport(send_session, rtcp)) {
