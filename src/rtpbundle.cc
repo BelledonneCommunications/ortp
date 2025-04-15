@@ -113,10 +113,17 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 
 	// Check for the mode. If SENDONLY, we already know it's SSRC, and we can assign it now.
 	// Otherwise, add it in the waiting for assignment map.
-	if (session->mode == RTP_SESSION_SENDONLY) {
-		mSsrcToSession.emplace(session->snd.ssrc, BundleSession{{mid, 0}, session});
-	} else {
-		mWaitingForAssignment.emplace(mid, session);
+	switch (session->mode) {
+		case RTP_SESSION_SENDONLY:
+			mSsrcToSession.emplace(session->snd.ssrc, BundleSession{{mid, 0}, session});
+			break;
+		case RTP_SESSION_RECVONLY:
+			mWaitingForAssignment.emplace(mid, session);
+			break;
+		case RTP_SESSION_SENDRECV:
+			mSsrcToSession.emplace(session->snd.ssrc, BundleSession{{mid, 0}, session});
+			mWaitingForAssignment.emplace(mid, session);
+			break;
 	}
 
 	if (!mPrimary) {
@@ -526,7 +533,7 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 
 	// Try to route the packet to the correct session.
 	if (const auto it = mSsrcToSession.find(ssrc); it != mSsrcToSession.end()) {
-		updateBundleSession(it->second, mid, rtp_get_seqnumber(m));
+		updateBundleSession(it->second, mid, isRtp ? rtp_get_seqnumber(m) : 0);
 		return it->second.rtpSession;
 	}
 
