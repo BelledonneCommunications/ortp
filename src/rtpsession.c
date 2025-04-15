@@ -2671,6 +2671,9 @@ static void rtp_add_extension_header_base(mblk_t *packet, int id, size_t size, u
 			return;
 		}
 
+		// If the packet already contains this id, then remove it first
+		rtp_delete_extension_header(packet, id);
+
 		// Use existing padding if there is since we place it at the end of the extension header
 		// Padding can occur between extensions, it is ignored in this case
 		tmp = ext_header;

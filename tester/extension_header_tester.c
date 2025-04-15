@@ -762,6 +762,64 @@ static void remap_extension_header_ids_from_packet(void) {
 	freemsg(packet);
 }
 
+static void add_existing_extensions_to_packet(void) {
+	size_t size;
+	int ret;
+	uint8_t *data = NULL;
+
+	// Create a packet
+	mblk_t *packet = rtp_session_create_packet_header(session, 0);
+
+	// Add the first extension (MID)
+	const char *mid = "first";
+	rtp_add_extension_header(packet, RTP_EXTENSION_MID, strlen(mid), (uint8_t *)mid);
+
+	// Add another extension (FRAME_MARKING)
+	uint8_t marker = RTP_FRAME_MARKER_START | RTP_FRAME_MARKER_INDEPENDENT;
+	rtp_add_frame_marker(packet, RTP_EXTENSION_FRAME_MARKING, marker);
+
+	// Try to add another MID with the same extension ID again
+	const char *mid2 = "second";
+	rtp_add_extension_header(packet, RTP_EXTENSION_MID, strlen(mid2), (uint8_t *)mid2);
+
+	// Verify the extensions were added properly
+	size = rtp_get_extheader(packet, NULL, NULL);
+	BC_ASSERT_GREATER(size, 0, size_t, "%zu");
+
+	// Verify the MID extension
+	ret = rtp_get_extension_header(packet, RTP_EXTENSION_MID, &data);
+	BC_ASSERT_EQUAL(ret, (int)(strlen(mid2)), int, "%d");
+	if (ret == (int)strlen(mid)) {
+		BC_ASSERT_TRUE(memcmp(data, mid2, ret) == 0);
+	}
+
+	// Verify the FRAME_MARKING extension
+	uint8_t result;
+	ret = rtp_get_frame_marker(packet, RTP_EXTENSION_FRAME_MARKING, &result);
+	BC_ASSERT_EQUAL(ret, 1, int, "%d");
+	BC_ASSERT_TRUE(result & RTP_FRAME_MARKER_START);
+	BC_ASSERT_TRUE(result & RTP_FRAME_MARKER_INDEPENDENT);
+
+	// Verify that adding the same MID extension does not create duplicates
+	int count = 0;
+	size = rtp_get_extheader(packet, NULL, &data);
+
+	uint8_t *tmp = data;
+	while (tmp < data + size) {
+		if (*tmp == RTP_EXTENSION_NONE) {
+			tmp += 1; // Padding
+		} else {
+			if (*tmp >> 4 == RTP_EXTENSION_MID) count++;
+			tmp += (size_t)(*tmp & 0xF) + 1 + 1; // Length is a 4-bit number minus 1
+		}
+	}
+
+	BC_ASSERT_EQUAL(count, 1, int, "%d"); // Ensure no duplicates of the same extension were added
+
+	// Free the packet
+	freemsg(packet);
+}
+
 static test_t tests[] = {
     TEST_NO_TAG("Create packet with payload in a bundled session", create_packet_with_payload_in_bundled_session),
     TEST_NO_TAG("Insert an extension header into a packet", insert_extension_header_into_packet),
@@ -856,7 +914,8 @@ static test_t tests[] = {
     TEST_NO_TAG("Insert frame marking into a packet with payload in bundled session",
                 insert_frame_marking_into_packet_with_payload_in_bundled_session),
     TEST_NO_TAG("Padding", padding_test),
-    TEST_NO_TAG("Remap extension header ids from packet", remap_extension_header_ids_from_packet)};
+    TEST_NO_TAG("Remap extension header ids from packet", remap_extension_header_ids_from_packet),
+    TEST_NO_TAG("Adding existing extensions into packet", add_existing_extensions_to_packet)};
 
 test_suite_t extension_header_test_suite = {
     "Extension header",               // Name of test suite
