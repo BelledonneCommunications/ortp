@@ -241,9 +241,8 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 	BC_ASSERT_FALSE(bundle.dispatch(false, rtcpPacket).has_value());
 	BC_ASSERT_EQUAL(session->rtcp.gs.bundleq.q_mcount, 0, int, "%d");
 	BC_ASSERT_EQUAL(session2->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
-	// Packet should be dispatched and in the RCTP bundle queue of session3 only if assigned before
-	// Otherwise it should be dropped
-	BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, (assigned ? 1 : 0), int, "%d");
+	// Packet should be dispatched in the RCTP bundle queue of session3 thanks to the referred SSRC in RR block.
+	BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
 
 	// If we test without session3 assignation we have to make a compound RTCP packet that contains session3's mid via
 	// SDES so that it can be routed correctly
@@ -257,7 +256,7 @@ static void dispatch_rtcp_packet_with_referred_ssrc_assigned_base(bool assigned)
 		// Packet should be dispatched and in the RCTP bundle queue of session3
 		// Only 1 even though the compound is in 3 parts (SR, SDES, PLI) because in this dummy packet, only the PLI is
 		// referring to another ssrc
-		BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 1, int, "%d");
+		BC_ASSERT_EQUAL(session3->rtcp.gs.bundleq.q_mcount, 2, int, "%d");
 	}
 
 	bundle.clear();
