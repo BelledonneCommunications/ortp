@@ -175,7 +175,7 @@ ORTP_PUBLIC int rtp_get_mixer_to_client_audio_level(mblk_t *packet, int id, rtp_
 
 /* Frame marking api */
 ORTP_PUBLIC void rtp_add_frame_marker(mblk_t *packet, int id, uint8_t marker);
-ORTP_PUBLIC int rtp_get_frame_marker(mblk_t *packet, int id, uint8_t *marker);
+ORTP_PUBLIC int rtp_get_frame_marker(const mblk_t *packet, int id, uint8_t *marker);
 
 #ifdef __cplusplus
 }
