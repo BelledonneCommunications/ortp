@@ -40,7 +40,7 @@ void rtp_add_frame_marker(mblk_t *packet, int id, uint8_t marker) {
  * @param marker the frame marker to set.
  * @return 1 if the frame marker if present, 0 otherwise.
  **/
-int rtp_get_frame_marker(mblk_t *packet, int id, uint8_t *marker) {
+int rtp_get_frame_marker(const mblk_t *packet, int id, uint8_t *marker) {
 	uint8_t *data;
 
 	int ret = rtp_get_extension_header(packet, id, &data);
