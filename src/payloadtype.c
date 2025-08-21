@@ -123,6 +123,11 @@ bool_t payload_type_is_vbr(const PayloadType *pt) {
 	return !!(pt->flags & PAYLOAD_TYPE_IS_VBR);
 }
 
+// https://datatracker.ietf.org/doc/html/rfc6871
+bool_t payload_type_is_valid(const PayloadType *pt) {
+	return !!pt->mime_type && (pt->clock_rate > 0);
+}
+
 /**
  * Frees a PayloadType.
  **/

@@ -113,6 +113,7 @@ ORTP_PUBLIC void payload_type_append_send_fmtp(PayloadType *pt, const char *fmtp
 #define payload_type_get_avpf_params(pt) ((pt)->avpf)
 ORTP_PUBLIC void payload_type_set_avpf_params(PayloadType *pt, PayloadTypeAvpfParams params);
 ORTP_PUBLIC bool_t payload_type_is_vbr(const PayloadType *pt);
+ORTP_PUBLIC bool_t payload_type_is_valid(const PayloadType *pt);
 
 #define payload_type_get_bitrate(pt) ((pt)->normal_bitrate)
 #define payload_type_get_rate(pt) ((pt)->clock_rate)
