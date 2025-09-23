@@ -20,9 +20,10 @@
 
 #include <algorithm>
 
-#include <bctoolbox/defs.h>
+#include "bctoolbox/defs.h"
 
 #include "ortp/logging.h"
+#include "ortp/ortp.h"
 #include "ortp/rtpsession.h"
 #include "rtpbundle.h"
 #include "rtpsession_priv.h"
@@ -630,6 +631,16 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 				rtp_session_set_bundle(newRtpSession, reinterpret_cast<RtpBundle *>(this));
 		}
 	}
+	if (newRtpSession == nullptr) {
+		if (isRtp) {
+			ortp_warning(
+			    "RtpBundle[%p]: don't know what to do with received RTP packet with mid: %s SSRC: %u payload-type: %i)",
+			    this, mid.c_str(), ssrc, rtp_get_payload_type(m));
+		} else {
+			ortp_warning("RtpBundle[%p]: don't know what to do with received RTCP packet with mid: %s.", this,
+			             mid.c_str());
+		}
+	}
 
 	return newRtpSession;
 }
@@ -644,6 +655,8 @@ std::optional<mblk_t *> RtpBundleCxx::dispatchRtpMessage(mblk_t *m) {
 	RtpSession *session = checkForSession(m, true);
 	if (session == nullptr) {
 		freemsg(m);
+		mPrimary->stats.discarded++;
+		ortp_global_stats.discarded++;
 		return {};
 	}
 
