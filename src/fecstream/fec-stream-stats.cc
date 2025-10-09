@@ -19,7 +19,7 @@
  */
 
 #include <algorithm>
-#include <inttypes.h>
+#include <cinttypes>
 
 #include "fec-stream-stats.h"
 #include "ortp/logging.h"
