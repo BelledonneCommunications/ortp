@@ -80,7 +80,10 @@ private:
 	std::optional<mblk_t *> dispatchRtpMessage(mblk_t *m);
 	std::optional<mblk_t *> dispatchRtcpMessage(mblk_t *m);
 
+	/* make a session enter the bundle, so it is ready to be assigned */
+	void enterSession(RtpSession *session, const std::string &mid);
 	void clearSession(RtpSession *session);
+	void clearFromWaitingMap(RtpSession *session, const std::string &mid);
 
 	RtpSession *mPrimary = nullptr;
 

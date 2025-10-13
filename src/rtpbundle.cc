@@ -74,6 +74,11 @@ extern "C" void rtp_bundle_set_primary_session(RtpBundle *bundle, RtpSession *se
 	reinterpret_cast<RtpBundleCxx *>(bundle)->setPrimarySession(session);
 }
 
+/*
+ * TODO: optimize this to return without copy.
+ * This function is heavily used, when creating RTP packets.
+ * It must be fast.
+ */
 extern "C" char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
 	try {
 		auto &mid = reinterpret_cast<RtpBundleCxx *>(bundle)->getSessionMid(session);
@@ -105,13 +110,7 @@ void RtpBundleCxx::setMidId(int id) {
 	mMidId = id;
 }
 
-void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
-	const std::lock_guard guard(mAssignmentMutex);
-
-	// Search for the session in both maps to check if it hasn't already been inserted.
-	if (findSession(session))
-		ortp_error("RtpBundle[%p]: Cannot add session (%p) as it is already in the bundle", this, session);
-
+void RtpBundleCxx::enterSession(RtpSession *session, const std::string &mid) {
 	// Check for the mode. If SENDONLY, we already know it's SSRC, and we can assign it now.
 	// Otherwise, add it in the waiting for assignment map.
 	switch (session->mode) {
@@ -126,6 +125,16 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 			mWaitingForAssignment.emplace(mid, session);
 			break;
 	}
+}
+
+void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
+	const std::lock_guard guard(mAssignmentMutex);
+
+	// Search for the session in both maps to check if it hasn't already been inserted.
+	if (findSession(session))
+		ortp_error("RtpBundle[%p]: Cannot add session (%p) as it is already in the bundle", this, session);
+
+	enterSession(session, mid);
 
 	if (!mPrimary) {
 		mPrimary = session;
@@ -248,6 +257,15 @@ void RtpBundleCxx::clearSession(RtpSession *session) {
 				rtp_signal_table_remove_by_source_session(t, session);
 			}
 		}
+	}
+}
+
+void RtpBundleCxx::clearFromWaitingMap(RtpSession *session, const std::string &mid) {
+	const auto [first, last] = mWaitingForAssignment.equal_range(mid);
+	for (auto s = first; s != last;) {
+		if (s->second == session) {
+			s = mWaitingForAssignment.erase(s);
+		} else ++s;
 	}
 }
 
@@ -532,23 +550,41 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 		}
 	}
 
-	// Try to route the packet to the correct session.
-	if (const auto it = mSsrcToSession.find(ssrc); it != mSsrcToSession.end()) {
-		updateBundleSession(it->second, mid, isRtp ? rtp_get_seqnumber(m) : 0);
-		return it->second.rtpSession;
+	// Try to route the packet to the correct session by SSRC
+	auto bundleSessionIt = mSsrcToSession.find(ssrc);
+
+	if (bundleSessionIt != mSsrcToSession.end() && isRtp) {
+		/* The SSRC is known.
+		 * Detect when a SSRC gets its mid changed
+		 */
+		const std::string &previouslyKnownMid = bundleSessionIt->second.mid.mid;
+		if (!mid.empty() && !previouslyKnownMid.empty() && previouslyKnownMid != mid) {
+			ortp_warning("RtpBundle[%p]: SSRC %u moved from mid %s to %s", this, ssrc, previouslyKnownMid.c_str(),
+			             mid.c_str());
+			/* We need to clear everything for this SSRC, so that everything restarts as it was new. */
+			mSsrcToSession.erase(ssrc);
+			mSsrcToMid.erase(ssrc);
+			bundleSessionIt = mSsrcToSession.end();
+		}
 	}
 
+	if (bundleSessionIt != mSsrcToSession.end()) {
+		updateBundleSession(bundleSessionIt->second, mid, isRtp ? rtp_get_seqnumber(m) : 0);
+		return bundleSessionIt->second.rtpSession;
+	}
+
+	auto ssrcToMidIt = mSsrcToMid.find(ssrc);
 	// Retrieve or update the MID from the association map.
-	if (const auto it = mSsrcToMid.find(ssrc); mid.empty()) {
+	if (mid.empty()) {
 		// If there is no mid in the packet, check if we have it stored for this ssrc.
-		if (it == mSsrcToMid.end()) {
+		if (ssrcToMidIt == mSsrcToMid.end()) {
 			ortp_warning("RtpBundle[%p]: Packet with SSRC %u doesn't have any mid and no corresponding mid in bundle",
 			             this, ssrc);
 			return nullptr;
 		}
 
-		mid = it->second;
-	} else if (it == mSsrcToMid.end()) {
+		mid = ssrcToMidIt->second;
+	} else if (ssrcToMidIt == mSsrcToMid.end()) {
 		// We have a mid in the packet, but not in the map. Insert it.
 		mSsrcToMid[ssrc] = mid;
 	}
@@ -563,8 +599,9 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 
 				// Check if this blank session knows the payload type of the incoming packet.
 				if (session->rcv.pt == rtp_get_payload_type(m)) {
-					ortp_message("RtpBundle[%p]: Assigning incoming SSRC %u to session %p using RTP with pt %d", this,
-					             ssrc, session, rtp_get_payload_type(m));
+					ortp_message(
+					    "RtpBundle[%p]: Assigning incoming SSRC %u with mid %s to session %p using RTP with pt %d",
+					    this, ssrc, mid.c_str(), session, rtp_get_payload_type(m));
 
 					session->ssrc_set = TRUE;
 					session->rcv.ssrc = ssrc;
@@ -572,7 +609,6 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 					// Assign the session to the incoming ssrc and remove this session from the assignment map.
 					mSsrcToSession.emplace(ssrc, BundleSession{{mid, 0}, session});
 					mWaitingForAssignment.erase(s);
-
 					return session;
 				}
 			}
