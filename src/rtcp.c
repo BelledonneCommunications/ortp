@@ -139,7 +139,6 @@ void rtcp_sdes_items_uninit(RtcpSdesItems *items) {
 
 static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 	RtcpSdesItems *items = &session->sdes_items;
-	char *mid = NULL;
 	mblk_t *m = NULL;
 	mblk_t *chunk = sdes_chunk_new(session->snd.ssrc);
 
@@ -155,21 +154,16 @@ static mblk_t *rtp_session_make_sdes(RtpSession *session, bool_t minimal) {
 		ortp_warning("Cname [%s] too long for session [%p]", items->cname, session);
 	}
 
-	/* Add mid to chunck if there is a bundle */
-	if (session->bundle) {
-		mid = rtp_bundle_get_session_mid(session->bundle, session);
-	}
 	if (!minimal) {
 		m = sdes_chunk_set_full_items(chunk, items->cname, items->name, items->email, items->phone, items->loc,
-		                              items->tool, items->note, mid);
+		                              items->tool, items->note, session->mid);
 	} else {
 		m = sdes_chunk_set_minimal_items(chunk, items->cname);
-		if (mid) {
-			m = sdes_chunk_append_item(m, RTCP_SDES_MID, mid);
+		if (session->mid) {
+			m = sdes_chunk_append_item(m, RTCP_SDES_MID, session->mid);
 		}
 		m = sdes_chunk_pad(m);
 	}
-	if (mid) bctbx_free(mid);
 	ortp_mutex_unlock(&session->main_mutex);
 	return chunk;
 }
@@ -229,7 +223,7 @@ void rtp_session_add_contributing_source(RtpSession *session,
 
 	/* Add mid to chunck if there is a bundle */
 	if (session->bundle) {
-		mid = rtp_bundle_get_session_mid(session->bundle, session);
+		mid = rtp_session_get_mid(session);
 	}
 
 	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, mid);

@@ -74,19 +74,12 @@ extern "C" void rtp_bundle_set_primary_session(RtpBundle *bundle, RtpSession *se
 	reinterpret_cast<RtpBundleCxx *>(bundle)->setPrimarySession(session);
 }
 
-/*
- * TODO: optimize this to return without copy.
- * This function is heavily used, when creating RTP packets.
- * It must be fast.
- */
-extern "C" char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session) {
-	try {
-		auto &mid = reinterpret_cast<RtpBundleCxx *>(bundle)->getSessionMid(session);
-		return bctbx_strdup(mid.c_str());
-	} catch (std::string const &e) {
-		ortp_warning("RtpBundle[%p]: cannot get mid for session (%p): %s", bundle, session, e.c_str());
-		return nullptr;
-	}
+extern "C" char *rtp_session_get_mid(RtpSession *session) {
+	char *ret_value = NULL;
+	bctbx_mutex_lock(&session->main_mutex);
+	if (session->mid) ret_value = bctbx_strdup(session->mid);
+	bctbx_mutex_unlock(&session->main_mutex);
+	return ret_value;
 }
 
 extern "C" mblk_t *rtp_bundle_dispatch(RtpBundle *bundle, bool_t is_rtp, mblk_t *m) {
@@ -141,7 +134,7 @@ void RtpBundleCxx::addSession(const std::string &mid, RtpSession *session) {
 		session->is_primary = TRUE;
 	}
 
-	rtp_session_set_bundle(session, reinterpret_cast<RtpBundle *>(this));
+	rtp_session_set_bundle(session, reinterpret_cast<RtpBundle *>(this), mid.c_str());
 }
 
 bool RtpBundleCxx::findSession(RtpSession *session) const {
@@ -244,7 +237,7 @@ void RtpBundleCxx::removeSession(RtpSession *session) {
 }
 
 void RtpBundleCxx::clearSession(RtpSession *session) {
-	rtp_session_set_bundle(session, nullptr);
+	rtp_session_set_bundle(session, nullptr, nullptr);
 
 	if (mPrimary != nullptr) {
 		if (session == mPrimary) {
@@ -349,26 +342,6 @@ void RtpBundleCxx::setPrimarySession(RtpSession *session) {
 		mPrimary = session;
 		mPrimary->is_primary = TRUE;
 	}
-}
-
-const std::string &RtpBundleCxx::getSessionMid(RtpSession *session) const {
-	const auto inMainMap = std::find_if(
-	    mSsrcToSession.begin(), mSsrcToSession.end(),
-	    [session](const std::pair<uint32_t, BundleSession> &t) -> bool { return t.second.rtpSession == session; });
-
-	if (inMainMap != mSsrcToSession.end()) {
-		return inMainMap->second.mid.mid;
-	}
-
-	const auto inWaitingMap =
-	    std::find_if(mWaitingForAssignment.begin(), mWaitingForAssignment.end(),
-	                 [session](const std::pair<std::string, RtpSession *> &t) -> bool { return t.second == session; });
-
-	if (inWaitingMap != mWaitingForAssignment.end()) {
-		return inWaitingMap->first;
-	}
-
-	throw std::string("the session must be in the bundle!");
 }
 
 static void getSsrcFromSdes(void *userData,
@@ -664,7 +637,7 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 			mSsrcToSession.emplace(isOutgoing ? newRtpSession->snd.ssrc : newRtpSession->rcv.ssrc,
 			                       BundleSession{{mid, 0}, newRtpSession});
 			if (newRtpSession->bundle == nullptr)
-				rtp_session_set_bundle(newRtpSession, reinterpret_cast<RtpBundle *>(this));
+				rtp_session_set_bundle(newRtpSession, reinterpret_cast<RtpBundle *>(this), mid.c_str());
 		}
 	}
 	if (newRtpSession == nullptr) {

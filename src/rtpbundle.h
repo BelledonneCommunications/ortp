@@ -51,8 +51,6 @@ public:
 	RtpSession *getPrimarySession() const;
 	void setPrimarySession(RtpSession *session);
 
-	const std::string &getSessionMid(RtpSession *session) const;
-
 	// Dispatch an incoming packet to it's correct destination.
 	// If a packet is returned then it's destination is the primary session, else it has been dispatched.
 	std::optional<mblk_t *> dispatch(bool isRtp, mblk_t *m);

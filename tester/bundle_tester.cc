@@ -32,19 +32,25 @@ static void add_sessions() {
 	bundle.addSession("main", session);
 
 	BC_ASSERT_TRUE(bundle.findSession(session));
-	BC_ASSERT_STRING_EQUAL(bundle.getSessionMid(session).c_str(), "main");
+	char *mid = rtp_session_get_mid(session);
+	BC_ASSERT_STRING_EQUAL(mid, "main");
+	if (mid) bctbx_free(mid);
 
 	auto *session2 = rtp_session_new(RTP_SESSION_SENDRECV);
 	bundle.addSession("secondary", session2);
 
 	BC_ASSERT_TRUE(bundle.findSession(session2));
-	BC_ASSERT_STRING_EQUAL(bundle.getSessionMid(session2).c_str(), "secondary");
+	mid = rtp_session_get_mid(session2);
+	BC_ASSERT_STRING_EQUAL(mid, "secondary");
+	if (mid) bctbx_free(mid);
 
 	auto *session3 = rtp_session_new(RTP_SESSION_SENDONLY);
 	bundle.addSession("secondary", session3);
 
 	BC_ASSERT_TRUE(bundle.findSession(session3));
-	BC_ASSERT_STRING_EQUAL(bundle.getSessionMid(session3).c_str(), "secondary");
+	mid = rtp_session_get_mid(session3);
+	BC_ASSERT_STRING_EQUAL(mid, "secondary");
+	if (mid) bctbx_free(mid);
 
 	bundle.removeSession(session);
 

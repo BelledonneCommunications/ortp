@@ -471,6 +471,7 @@ struct _RtpSession {
 	uint32_t send_ts_offset; /*additional offset to add when sending packets */
 	/* bundle mode */
 	struct _RtpBundle *bundle; /* back pointer to the rtp bundle object */
+	char *mid;                 /* the mid of the present session, used when part of a bundle */
 	int mid_sent;
 	uint64_t last_mid_sent_time;
 	/* fec option */
@@ -958,7 +959,7 @@ ORTP_PUBLIC void rtp_bundle_clear(RtpBundle *bundle);
 ORTP_PUBLIC RtpSession *rtp_bundle_get_primary_session(RtpBundle *bundle);
 ORTP_PUBLIC void rtp_bundle_set_primary_session(RtpBundle *bundle, RtpSession *session);
 
-ORTP_PUBLIC char *rtp_bundle_get_session_mid(RtpBundle *bundle, RtpSession *session);
+ORTP_PUBLIC char *rtp_session_get_mid(RtpSession *session);
 
 ORTP_PUBLIC int rtp_bundle_send_through_primary(
     RtpBundle *bundle, bool_t is_rtp, mblk_t *m, int flags, const struct sockaddr *destaddr, socklen_t destlen);
