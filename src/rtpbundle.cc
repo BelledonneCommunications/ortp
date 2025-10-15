@@ -263,14 +263,7 @@ void RtpBundleCxx::clearFromWaitingMap(RtpSession *session, const std::string &m
 }
 
 void RtpBundleCxx::clear() {
-	for (const auto &entry : mSsrcToSession) {
-		entry.second.rtpSession->bundle = nullptr;
-	}
 	mSsrcToSession.clear();
-
-	for (const auto &entry : mWaitingForAssignment) {
-		entry.second->bundle = nullptr;
-	}
 	mWaitingForAssignment.clear();
 
 	mSsrcToMid.clear();

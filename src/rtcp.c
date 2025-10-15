@@ -218,22 +218,18 @@ void rtp_session_add_contributing_source(RtpSession *session,
                                          const char *loc,
                                          const char *tool,
                                          const char *note) {
-	char *mid = NULL;
 	mblk_t *chunk = sdes_chunk_new(csrc);
 
-	/* Add mid to chunck if there is a bundle */
-	if (session->bundle) {
-		mid = rtp_session_get_mid(session);
-	}
-
-	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, mid);
+	ortp_mutex_lock(&session->main_mutex);
+	sdes_chunk_set_full_items(chunk, cname, name, email, phone, loc, tool, note, session->mid);
 	putq(&session->contributing_sources, chunk);
-
-	if (mid != NULL) bctbx_free(mid);
+	ortp_mutex_unlock(&session->main_mutex);
 }
 
 void rtp_session_remove_contributing_source(RtpSession *session, uint32_t ssrc) {
-	queue_t *q = &session->contributing_sources;
+	queue_t *q;
+	ortp_mutex_lock(&session->main_mutex);
+	q = &session->contributing_sources;
 	mblk_t *tmp;
 	for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, tmp)) {
 		uint32_t csrc = sdes_chunk_get_ssrc(tmp);
@@ -243,12 +239,17 @@ void rtp_session_remove_contributing_source(RtpSession *session, uint32_t ssrc) 
 		}
 	}
 	tmp = rtcp_create_simple_bye_packet(ssrc, NULL);
+	ortp_mutex_unlock(&session->main_mutex);
+	/* FIXME: doing this outside of the thread that does the send/recv for the RtpSession
+	 * is unsafe.
+	 */
 	rtp_session_rtcp_send(session, tmp);
 }
 
 void rtp_session_clear_contributing_sources(RtpSession *session) {
-	queue_t *q = &session->contributing_sources;
-	flushq(q, 0);
+	ortp_mutex_lock(&session->main_mutex);
+	flushq(&session->contributing_sources, 0);
+	ortp_mutex_unlock(&session->main_mutex);
 }
 
 void rtcp_common_header_init(
@@ -277,11 +278,13 @@ mblk_t *rtp_session_create_rtcp_sdes_packet(RtpSession *session, bool_t full) {
 	rc++;
 
 	if (full == TRUE) {
+		ortp_mutex_lock(&session->main_mutex);
 		q = &session->contributing_sources;
 		for (tmp = qbegin(q); !qend(q, tmp); tmp = qnext(q, tmp)) {
 			m = concatb(m, dupmsg(tmp));
 			rc++;
 		}
+		ortp_mutex_unlock(&session->main_mutex);
 	}
 	rtcp_common_header_init(rtcp, session, RTCP_SDES, rc, msgdsize(mp));
 

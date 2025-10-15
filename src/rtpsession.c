@@ -2112,6 +2112,8 @@ void rtp_session_uninit(RtpSession *session) {
 	RtpTransport *rtp_meta_transport = NULL;
 	RtpTransport *rtcp_meta_transport = NULL;
 
+	if (session->mid) bctbx_free(session->mid);
+
 	/* Stop and destroy network simulator first, as its thread must be stopped before we free anything else in the
 	 * RtpSession. */
 	if (session->net_sim_ctx) {
