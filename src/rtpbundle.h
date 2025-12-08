@@ -73,7 +73,7 @@ private:
 
 	BundleSession *findReferredSession(const uint32_t referredSsrc);
 
-	static void updateBundleSession(BundleSession &session, const std::string &mid, uint32_t sequenceNumber);
+	void updateBundleSession(BundleSession &session, const std::string &mid, uint32_t sequenceNumber);
 
 	std::optional<mblk_t *> dispatchRtpMessage(mblk_t *m);
 	std::optional<mblk_t *> dispatchRtcpMessage(mblk_t *m);

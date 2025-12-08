@@ -489,6 +489,8 @@ void RtpBundleCxx::updateBundleSession(BundleSession &session, const std::string
 	if (!mid.empty() && mid != session.mid.mid && sequenceNumber > session.mid.sequenceNumber) {
 		session.mid.mid = mid;
 		session.mid.sequenceNumber = sequenceNumber;
+		/* reflect the change into the RtpSession's own mid attribute. */
+		rtp_session_set_bundle(session.rtpSession, reinterpret_cast<RtpBundle *>(this), mid.c_str());
 	}
 }
 
@@ -521,16 +523,25 @@ RtpSession *RtpBundleCxx::checkForSession(const mblk_t *m, bool isRtp, bool isOu
 
 	if (bundleSessionIt != mSsrcToSession.end() && isRtp) {
 		/* The SSRC is known.
-		 * Detect when a SSRC gets its mid changed
+		 * Detect when an incoming SSRC gets its mid changed.
+		 * For outgoing sessions, we don't care.
 		 */
 		const std::string &previouslyKnownMid = bundleSessionIt->second.mid.mid;
 		if (!mid.empty() && !previouslyKnownMid.empty() && previouslyKnownMid != mid) {
-			ortp_warning("RtpBundle[%p]: SSRC %u moved from mid %s to %s", this, ssrc, previouslyKnownMid.c_str(),
+			ortp_message("RtpBundle[%p]: SSRC %u moved from mid %s to %s", this, ssrc, previouslyKnownMid.c_str(),
 			             mid.c_str());
-			/* We need to clear everything for this SSRC, so that everything restarts as it was new. */
-			mSsrcToSession.erase(ssrc);
-			mSsrcToMid.erase(ssrc);
-			bundleSessionIt = mSsrcToSession.end();
+			if (!isOutgoing) {
+				/*
+				 * We need to clear everything for this SSRC, so that everything restarts as it was new, and the packets
+				 * be routed to the correct media stream.
+				 */
+				mSsrcToSession.erase(ssrc);
+				mSsrcToMid.erase(ssrc);
+				bundleSessionIt = mSsrcToSession.end();
+			}
+			/* For outgoing stream, we don't care: let's reuse the former RtpSession
+			 * to ensure continuity of sequence numbers.
+			 */
 		}
 	}
 
