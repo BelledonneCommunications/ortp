@@ -2865,11 +2865,12 @@ void rtp_remap_header_extension_ids(mblk_t *packet, const int mapping[16]) {
 				continue;
 			}
 
+			if (tmp + 1 >= ext_header + ext_header_size) break;
 			id = tmp[0];
 			size = (size_t)tmp[1];
 
 			// Remap the extension id according to the provided array
-			if (mapping[id] > 0) tmp[0] = (uint8_t)mapping[id];
+			if (id < 16 && mapping[id] > 0) tmp[0] = (uint8_t)mapping[id];
 
 			tmp += size + 2;
 		}
