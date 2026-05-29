@@ -712,8 +712,10 @@ rtcp_fb_rpsi_fci_t *rtcp_PSFB_rpsi_get_fci(const mblk_t *m) {
 }
 
 uint16_t rtcp_PSFB_rpsi_get_fci_bit_string_len(const mblk_t *m) {
+	size_t required = sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + 2;
+	size_t pkt_size = rtcp_get_size(m);
+	if (pkt_size < required) return 0;
 	rtcp_fb_rpsi_fci_t *fci = rtcp_PSFB_rpsi_get_fci(m);
-	uint16_t bit_string_len_in_bytes =
-	    (uint16_t)(rtcp_get_size(m) - (sizeof(rtcp_common_header_t) + sizeof(rtcp_fb_header_t) + 2));
+	uint16_t bit_string_len_in_bytes = (uint16_t)(pkt_size - required);
 	return ((bit_string_len_in_bytes * 8) - fci->pb);
 }
