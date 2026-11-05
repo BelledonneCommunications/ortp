@@ -1401,7 +1401,7 @@ static int __rtp_session_sendm_with_ts_2(
 	}
 
 	if (mp == NULL) { /*for people who just want to be blocked but
-		     do not want to send anything.*/
+	         do not want to send anything.*/
 		session->rtp.snd_last_ts = packet_ts;
 		return 0;
 	}
@@ -2081,8 +2081,7 @@ void rtp_session_unregister_event_queues(RtpSession *session) {
 
 void rtp_session_dispatch_event(RtpSession *session, OrtpEvent *ev) {
 	OList *it;
-	int i;
-	for (i = 0, it = session->eventqs; it != NULL; it = it->next, ++i) {
+	for (it = session->eventqs; it != NULL; it = it->next) {
 		ortp_ev_queue_put((OrtpEvQueue *)it->data, ortp_event_dup(ev));
 	}
 	ortp_event_destroy(ev);
@@ -2528,7 +2527,7 @@ int rtp_get_payload(mblk_t *packet, unsigned char **start) {
 	}
 
 	if (tmp >= packet->b_wptr) { // pointing after the header(+ ext) gets us out of the first block. We shall have a
-		                         // fragmented message block
+	                             // fragmented message block
 		if (packet->b_cont != NULL) {
 			tmp = packet->b_cont->b_rptr + (header_len - (packet->b_wptr - packet->b_rptr));
 			if (tmp <= packet->b_cont->b_wptr) {
@@ -3002,7 +3001,7 @@ int meta_rtp_transport_sendto(RtpTransport *t, mblk_t *msg, int flags, const str
 		prev_ret = ret;
 	}
 	if (!m->is_rtp && t->session->rtcp_mux) { /*if this meta transport is handling RTCP and using rtcp-mux, then we
-		 should expedite the packet through the rtp endpoint.*/
+	     should expedite the packet through the rtp endpoint.*/
 		if (m->other_meta_rtp) {
 			ret = _meta_rtp_transport_send_through_endpoint(m->other_meta_rtp, msg, flags, to, tolen);
 		} else {
